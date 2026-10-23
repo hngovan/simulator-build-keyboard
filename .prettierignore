@@ -1,0 +1,8 @@
+bun.lock
+dist/
+node_modules/
+assets/
+public/models/
+*.glb
+*.step
+*.stp

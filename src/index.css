@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/* Token màu / font của game, dùng như class Tailwind: bg-panel, text-muted, font-head... */
+@theme {
+  --color-bg: #141821;
+  --color-panel: #1f2633;
+  --color-panel-2: #283142;
+  --color-line: #3a4559;
+  --color-ink: #f1f3f8;
+  --color-muted: #94a0b8;
+  --color-yellow: #ffcc2e;
+  --color-green: #3ecf6e;
+  --color-red: #ff5d5d;
+  --color-blue: #3d8bff;
+  --color-orange: #ff6a3d;
+  --color-purple: #7b5cff;
+
+  --font-sans: 'Nunito', system-ui, 'Segoe UI', sans-serif;
+  --font-head: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+
+  --animate-pop: pop 0.2s ease-out;
+  --animate-bob: bob 2.4s ease-in-out infinite;
+
+  @keyframes pop {
+    from {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+  }
+  @keyframes bob {
+    50% {
+      transform: translateY(-10px) rotate(-4deg);
+    }
+  }
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+  body {
+    @apply bg-bg font-sans text-sm text-ink select-none;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-head;
+  }
+  button {
+    @apply cursor-pointer;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
+}
