@@ -1,7 +1,14 @@
 import type { StateCreator } from 'zustand'
-import { groupPosts, randomOrder } from '@/data/orders'
+import { groupPosts, randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
-import { CASES, TOOLS, checkInventory, itemName } from '@/data/parts'
+import {
+  CASES,
+  TOOLS,
+  checkInventory,
+  itemName,
+  stabStock,
+  type InventoryCheck,
+} from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import type {
   CaseItem,
@@ -11,6 +18,7 @@ import type {
   Order,
   PartCategory,
   PartItem,
+  StabItem,
   SupplyItem,
   SwitchItem,
   ToolItem,
@@ -18,6 +26,7 @@ import type {
 } from '@/types'
 import type { GameState } from '.'
 import { newBuild } from './buildSlice'
+import type { Job, JobSession, PackedOrder } from './persistence'
 
 export type BuyResult = 'ok' | 'scam' | 'fail'
 export interface LubePick {
@@ -29,7 +38,19 @@ export interface LubePick {
 
 // Đơn hàng, kho đồ, mua sắm (Shopii, Hội Phím Cơ, Tiệm Đồ Nghề)
 export interface ShopSlice {
-  offer: Order | null
+  lastSolderPurchase: {
+    level: number
+    cost: number
+    previousLevel: number
+    previousWear: number
+    previousOwned: Record<number, number>
+  } | null
+  equipSolder: (level: number) => boolean
+  undoSolderPurchase: () => void
+  /** đơn mới trong ngày (1–5 đơn), nhận đơn nào cũng được */
+  offers: Order[]
+  /** đơn đã nhận, chờ làm (đơn đang làm nằm ở order) */
+  jobs: Job[]
   order: Order | null
   inventory: Inventory
   /** món nào do khách gửi trong kit */
@@ -40,8 +61,14 @@ export interface ShopSlice {
   result: DeliveryResult | null
   /** lube đang chọn cho switch / housing stab / dây stab / lò xo */
   lubePick: LubePick
-  acceptOrder: () => void
-  declineOrder: () => void
+  acceptOrder: (id: string) => void
+  declineOrder: (id: string) => void
+  /** chuyển sang làm 1 đơn đã nhận (đơn đang làm dở được cất lại nguyên trạng) */
+  switchJob: (id: string) => void
+  /** đơn đã đóng gói hôm nay, chờ kết thúc ngày mới gửi cho khách */
+  packed: PackedOrder[]
+  /** gửi 1 đơn đã đóng gói cho khách ngay: cộng tiền + uy tín */
+  shipOrder: (id: string) => void
   nextDay: () => void
   buy: (cat: PartCategory, item: PartItem, price: number, scamRate?: number) => BuyResult
   buyPost: (post: GroupPost) => BuyResult
@@ -49,8 +76,17 @@ export interface ShopSlice {
   buyTool: (kind: ToolKind, level: number, price?: number, scamRate?: number) => BuyResult
   useSupply: (id: string, n: number) => boolean
   setLubePick: (kind: keyof LubePick, id: string) => void
+  /** loại thiếc đang dùng ở bước hàn */
+  solderPick: string
+  setSolderPick: (id: string) => void
   setMount: (mount: string) => void
   startBuild: () => void
+  /**
+   * Chọn 1 đơn để build ngay từ bàn build trống (đơn mới thì nhận luôn, đơn chờ thì chuyển sang).
+   * Đủ linh kiện thì vào build luôn (tự chọn mount); thiếu thì trả về các mục còn thiếu.
+   * null = không chuyển được đơn (vd vừa giao xong, chưa kết thúc ngày)
+   */
+  buildOrder: (id: string) => InventoryCheck[] | null
 }
 
 export const emptyInventory = (): Inventory => ({
@@ -62,9 +98,85 @@ export const emptyInventory = (): Inventory => ({
   keycap: null,
 })
 const KIT_PARTS = ['case', 'pcb', 'plate', 'stab'] as const
+/** trễ hạn quá số ngày này thì khách huỷ đơn */
+const CANCEL_AFTER = 3
+
+/** Kho đồ ban đầu của 1 đơn: món khách gửi trong kit */
+function freshSession(order: Order): JobSession {
+  const inventory = emptyInventory()
+  const provided: JobSession['provided'] = {}
+  if (order.kit)
+    for (const cat of KIT_PARTS) {
+      const part = order.kit[cat]
+      if (part) {
+        ;(inventory[cat] as PartItem) = part
+        provided[cat] = true
+      }
+    }
+  return {
+    inventory,
+    provided,
+    spent: 0,
+    posts: groupPosts(order),
+    mount: order.mount ?? (order.kit?.case ? CASES[order.kit.case.id].mounts[0] : null),
+    build: null,
+    history: [],
+    supplyUsed: {},
+  }
+}
+/** Cất đơn đang làm (nếu có) thành 1 job */
+const stashActive = (s: GameState): Job[] =>
+  s.order && !s.result
+    ? [
+        ...s.jobs,
+        {
+          order: s.order,
+          session: {
+            inventory: s.inventory,
+            provided: s.provided,
+            spent: s.spent,
+            posts: s.posts,
+            mount: s.mount,
+            build: s.build,
+            history: s.history,
+            supplyUsed: s.supplyUsed,
+          },
+        },
+      ]
+    : s.jobs
 
 export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set, get) => ({
-  offer: randomOrder(),
+  lastSolderPurchase: null,
+  equipSolder: (level) => {
+    const s = get()
+    const owned = {
+      ...s.solderOwned,
+      ...(s.tools.solder > 0 ? { [s.tools.solder]: s.wear.solder ?? 0 } : {}),
+    }
+    if (owned[level] === undefined || !TOOLS.solder[level] || TOOLS.solder[level].none) return false
+    set({
+      solderOwned: owned,
+      tools: { ...s.tools, solder: level },
+      wear: { ...s.wear, solder: owned[level] },
+    })
+    s.toast(`Đang dùng ${TOOLS.solder[level].name}`, 'good')
+    return true
+  },
+  undoSolderPurchase: () => {
+    const s = get(),
+      purchase = s.lastSolderPurchase
+    if (!purchase) return
+    set({
+      money: s.money + purchase.cost,
+      tools: { ...s.tools, solder: purchase.previousLevel },
+      wear: { ...s.wear, solder: purchase.previousWear },
+      solderOwned: purchase.previousOwned,
+      lastSolderPurchase: null,
+    })
+    s.toast(`Đã hoàn tác mua ${TOOLS.solder[purchase.level].name}, hoàn ${purchase.cost}k`, 'good')
+  },
+  offers: randomOffers(),
+  jobs: [],
   order: null,
   inventory: emptyInventory(),
   provided: {},
@@ -72,49 +184,133 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   posts: [],
   mount: null,
   result: null,
+  packed: [],
   lubePick: { switch: 'g0', housing: 'g2', wire: 'bdz', spring: 'gpl105' },
+  solderPick: 'solder6337',
 
   // ---------- đơn hàng ----------
-  acceptOrder: () => {
-    const offer = get().offer
+  acceptOrder: (id) => {
+    const s = get()
+    const offer = s.offers.find((o) => o.id === id)
     if (!offer) return
-    const inventory = emptyInventory()
-    const provided: ShopSlice['provided'] = {}
-    if (offer.kit) {
-      for (const cat of KIT_PARTS) {
-        const part = offer.kit[cat]
-        if (part) {
-          ;(inventory[cat] as PartItem) = part
-          provided[cat] = true
-        }
-      }
+    const order = { ...offer, dueDay: s.day + offer.days }
+    const offers = s.offers.filter((o) => o.id !== id)
+    // chưa làm đơn nào thì làm luôn đơn này, không thì xếp vào danh sách chờ
+    // (vừa giao xong thì cũng xếp chờ: phải bấm kết thúc ngày để sang ngày mới)
+    if (!s.order) {
+      const job = freshSession(order)
+      set({ offers, order, ...job, ctx: null, result: null, pressed: {}, future: [] })
+      s.toast('Đã nhận đơn! Mở Shopii hoặc Hội Phím Cơ để mua linh kiện', 'good')
+    } else {
+      set({ offers, jobs: [...s.jobs, { order, session: freshSession(order) }] })
+      s.toast(`Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}`, 'good')
     }
+  },
+  declineOrder: (id) => set((s) => ({ offers: s.offers.filter((o) => o.id !== id) })),
+  switchJob: (id) => {
+    const s = get()
+    if (s.stabAnim || s.lubeAnim || s.order?.id === id) return
+    if (s.result) return s.toast('Bấm "Kết thúc ngày" trước rồi làm đơn tiếp nhé', 'bad')
+    const jobs = stashActive(s)
+    const job = jobs.find((j) => j.order.id === id)
+    if (!job) return
+    const { session, order } = job
     set({
-      order: offer,
-      offer: null,
-      inventory,
-      provided,
-      spent: 0,
-      posts: groupPosts(offer),
-      build: null,
-      ctx: null,
-      mount: offer.mount ?? (offer.kit ? CASES[offer.kit.case.id].mounts[0] : null),
+      jobs: jobs.filter((j) => j.order.id !== id),
+      order,
+      ...session,
+      future: [],
       result: null,
       pressed: {},
-    })
-    get().toast('Đã nhận đơn! Mở Shopii hoặc Hội Phím Cơ để mua linh kiện', 'good')
-  },
-  declineOrder: () => set({ offer: randomOrder() }),
-  nextDay: () =>
-    set((s) => ({
-      offer: randomOrder(),
-      order: null,
-      result: null,
-      build: null,
-      ctx: null,
-      day: s.day + 1,
+      ctx:
+        session.build && session.mount
+          ? buildContext(order, session.inventory, session.mount)
+          : null,
       screen: 'pc',
-    })),
+    })
+    s.toast(`Chuyển sang đơn của ${order.customer}`)
+  },
+  shipOrder: (id) => {
+    const s = get()
+    const p = s.packed.find((x) => x.order.id === id && !x.shipped)
+    if (!p) return
+    const gain = p.result.reimburse + p.result.labor
+    set({
+      packed: s.packed.map((x) => (x === p ? { ...x, shipped: true } : x)),
+      money: s.money + gain,
+      rep: s.rep + p.result.stars - 3 - (p.result.late ?? 0),
+      done: s.done + 1,
+    })
+    s.toast(`📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · +${gain}k`, 'good')
+  },
+  // sang ngày mới: gửi nốt đơn đã đóng gói, đợt đơn mới, đơn chờ quá hạn lâu thì khách huỷ
+  nextDay: () => {
+    const s = get()
+    // gửi các đơn đã đóng gói chưa gửi: khách hoàn tiền linh kiện + trả công, chấm sao → uy tín
+    let money = s.money
+    let repGain = 0
+    const unsent = s.packed.filter((p) => !p.shipped)
+    for (const p of unsent) {
+      money += p.result.reimburse + p.result.labor
+      repGain += p.result.stars - 3 - (p.result.late ?? 0)
+      s.toast(
+        `📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · +${p.result.reimburse + p.result.labor}k`,
+        'good',
+      )
+    }
+    const day = s.day + 1
+    const cancelled = s.jobs.filter((j) => day - (j.order.dueDay ?? day) > CANCEL_AFTER)
+    const rep = s.rep + repGain - cancelled.length * 3
+    set({
+      lastSolderPurchase: null,
+      equipSolder: (level) => {
+        const s = get()
+        const owned = {
+          ...s.solderOwned,
+          ...(s.tools.solder > 0 ? { [s.tools.solder]: s.wear.solder ?? 0 } : {}),
+        }
+        if (owned[level] === undefined || !TOOLS.solder[level] || TOOLS.solder[level].none)
+          return false
+        set({
+          solderOwned: owned,
+          tools: { ...s.tools, solder: level },
+          wear: { ...s.wear, solder: owned[level] },
+        })
+        s.toast(`Đang dùng ${TOOLS.solder[level].name}`, 'good')
+        return true
+      },
+      undoSolderPurchase: () => {
+        const s = get(),
+          purchase = s.lastSolderPurchase
+        if (!purchase) return
+        set({
+          money: s.money + purchase.cost,
+          tools: { ...s.tools, solder: purchase.previousLevel },
+          wear: { ...s.wear, solder: purchase.previousWear },
+          solderOwned: purchase.previousOwned,
+          lastSolderPurchase: null,
+        })
+        s.toast(
+          `Đã hoàn tác mua ${TOOLS.solder[purchase.level].name}, hoàn ${purchase.cost}k`,
+          'good',
+        )
+      },
+      offers: randomOffers(),
+      jobs: s.jobs.filter((j) => !cancelled.includes(j)),
+      // đơn đang làm dở (chưa đóng gói) vẫn giữ để làm tiếp ngày mai
+      order: s.result ? null : s.order,
+      result: null,
+      packed: [],
+      money,
+      done: s.done + unsent.length,
+      ...(s.result ? { build: null, ctx: null } : {}),
+      day,
+      rep,
+      screen: 'pc',
+    })
+    for (const j of cancelled)
+      s.toast(`😡 ${j.order.customer} huỷ đơn vì trễ hạn quá lâu (−3 uy tín)`, 'bad')
+  },
 
   // ---------- mua sắm ----------
   buy: (cat, item, price, scamRate = 0) => {
@@ -142,6 +338,13 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     let value: PartItem = item
     if (cat === 'switch' && s.inventory.switch?.type === sw.type)
       value = { ...sw, count: s.inventory.switch.count + sw.count }
+    // stab cùng loại thì cộng dồn (bộ + lẻ), khác loại thì thay bộ cũ
+    const st = item as StabItem
+    if (cat === 'stab' && s.inventory.stab?.type === st.type) {
+      const have = stabStock(s.inventory.stab)
+      const add = stabStock(st)
+      value = { type: st.type, short: have.short + add.short, long: have.long + add.long }
+    }
     set({
       inventory: { ...s.inventory, [cat]: value },
       spent: s.spent + price,
@@ -161,7 +364,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
             post.price,
             0.2,
           )
-        : cat === 'tool'
+        : cat === 'tool' || cat === 'cert'
           ? s.buyTool(
               (post.opt.item as ToolItem).kind,
               (post.opt.item as ToolItem).level,
@@ -187,13 +390,33 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const s = get()
     const tool = TOOLS[kind][level]
     const cost = price ?? tool.price
-    if (s.tools[kind] >= level)
+    if (kind === 'solder' && (s.solderOwned[level] !== undefined || s.tools.solder === level)) {
+      s.equipSolder(level)
+      return 'ok'
+    }
+    if (kind !== 'solder' && s.tools[kind] >= level)
       return (s.toast('Bạn đã có dụng cụ này hoặc bản tốt hơn', 'bad'), 'fail')
     if (s.money < cost) return (s.toast('Không đủ tiền!', 'bad'), 'fail')
     set({ money: s.money - cost })
     if (Math.random() < scamRate)
       return (s.toast(`😱 Seller bùng hàng! Mất trắng ${cost}k`, 'bad'), 'scam')
-    set({ tools: { ...get().tools, [kind]: level } })
+    if (kind === 'solder') {
+      const previousOwned = {
+        ...s.solderOwned,
+        ...(s.tools.solder > 0 ? { [s.tools.solder]: s.wear.solder ?? 0 } : {}),
+      }
+      set({
+        solderOwned: { ...previousOwned, [level]: 0 },
+        lastSolderPurchase: {
+          level,
+          cost,
+          previousLevel: s.tools.solder,
+          previousWear: s.wear.solder ?? 0,
+          previousOwned,
+        },
+      })
+    }
+    set({ tools: { ...get().tools, [kind]: level }, wear: { ...get().wear, [kind]: 0 } })
     s.toast(`🔧 Đã mua ${tool.name}`, 'good')
     return 'ok'
   },
@@ -216,10 +439,32 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     return true
   },
   setLubePick: (kind, id) => set((s) => ({ lubePick: { ...s.lubePick, [kind]: id } })),
+  setSolderPick: (solderPick) => set({ solderPick }),
   setMount: (mount) => {
     if (!get().build) set({ mount })
   },
 
+  buildOrder: (id) => {
+    let s = get()
+    if (s.offers.some((o) => o.id === id)) {
+      s.acceptOrder(id)
+      s = get()
+    }
+    if (s.order?.id !== id) {
+      s.switchJob(id)
+      s = get()
+    }
+    if (!s.order || s.order.id !== id) return null
+    // thiếu đồ thì giữ bảng chọn đơn mở để hiện danh sách còn thiếu
+    set({ screen: 'bench' })
+    if (s.build) return (set({ benchPicker: false }), [])
+    const missing = checkInventory(s.inventory, s.order).filter((c) => !c.ok)
+    if (missing.length) return missing
+    if (!s.mount) s.setMount(s.order.mount ?? CASES[s.inventory.case!.id].mounts[0])
+    set({ benchPicker: false })
+    get().startBuild()
+    return []
+  },
   startBuild: () => {
     const s = get()
     if (s.result) return s.toast('Đơn này đã giao rồi', 'bad')
@@ -233,6 +478,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       windows: [],
       viewFlip: false,
       history: [],
+      future: [],
       supplyUsed: {},
     })
   },

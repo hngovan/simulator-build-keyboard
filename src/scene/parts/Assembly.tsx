@@ -15,7 +15,8 @@ export function Assembly() {
   const viewFlip = useGame((s) => s.viewFlip)
   const ref = useRef<THREE.Group>(null)
   const showCase = step === 'caseOpen' || stepIdx >= ctx.steps.indexOf('caseIn')
-  const flipped = autoFlip(step, ctx) || (viewFlip && !NO_FLIP_STEPS.includes(step))
+  // Auto-flipped work steps must still let the player flip back to inspect the top.
+  const flipped = NO_FLIP_STEPS.includes(step) ? false : autoFlip(step, ctx) ? !viewFlip : viewFlip
   useFrame((_, dt) => {
     if (!ref.current) return
     const r = ref.current.rotation

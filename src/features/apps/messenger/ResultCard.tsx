@@ -3,7 +3,8 @@ import { fmt } from '@/lib/format'
 import type { DeliveryResult } from '@/types'
 
 /** Kết quả chấm điểm sau khi giao hàng */
-export function ResultCard({ result, onNext }: { result: DeliveryResult; onNext: () => void }) {
+/** onNext: nút kết thúc ngày (bỏ trống khi hiện trong danh sách đơn đã đóng gói) */
+export function ResultCard({ result, onNext }: { result: DeliveryResult; onNext?: () => void }) {
   return (
     <Panel>
       <div className="text-[34px] text-yellow [text-shadow:0_3px_0_#0006]">
@@ -21,9 +22,11 @@ export function ResultCard({ result, onNext }: { result: DeliveryResult; onNext:
       <Muted>
         Khách hoàn tiền linh kiện {fmt(result.reimburse)} + tiền công {fmt(result.labor)}
       </Muted>
-      <Button tone="green" wide onClick={onNext}>
-        🌙 Kết thúc ngày, nhận đơn mới
-      </Button>
+      {onNext && (
+        <Button tone="green" wide onClick={onNext}>
+          🌙 Kết thúc ngày, nhận đơn mới
+        </Button>
+      )}
     </Panel>
   )
 }

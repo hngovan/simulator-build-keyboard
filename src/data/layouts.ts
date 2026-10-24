@@ -1,4 +1,5 @@
 import type { Key, LayoutGeometry, LayoutId, FormFactor, Variant, VariantKey } from '@/types'
+import { ALICE_KEYS, ALICE_OUTLINE } from './aliceKeys'
 
 // Mỗi hàng: { x, y, items } — item là số (khoảng trống, đơn vị u) hoặc [nhãn, rộng, KeyboardEvent.code, cao]
 type KeyTuple = [label: string, w?: number, code?: string | null, h?: number]
@@ -7,6 +8,10 @@ interface RowSpec {
   x: number
   y: number
   items: Item[]
+  /** xoay cả hàng (độ, dương = ngược chiều kim đồng hồ nhìn từ trên) quanh tâm (rx, ry) — như KLE */
+  rot?: number
+  rx?: number
+  ry?: number
 }
 
 const PUNCT: Record<string, string> = {
@@ -168,6 +173,62 @@ const tklRows = (v: Variant): RowSpec[] => [
   },
 ]
 
+/** TKL bỏ hàng F (Function Row Less): cả cụm phím dời lên 1.25u */
+const frlRows = (v: Variant): RowSpec[] =>
+  tklRows(v)
+    .filter((r) => r.y > 0)
+    .map((r) => ({ ...r, y: r.y - 1.25 }))
+
+/** 65%: 75% bỏ hàng F (cột điều hướng bên phải, mũi tên dưới Shift) */
+const rows65 = (): RowSpec[] =>
+  rows75()
+    .filter((r) => r.y > 0)
+    .map((r) => ({ ...r, y: r.y - 1 }))
+
+/** 75% gọn (kiểu KBD75 / Q1): hàng F sát hàng số, cột điều hướng bên phải, mũi tên lọt dưới Shift */
+const rows75 = (): RowSpec[] =>
+  stack([
+    [
+      ['Esc', 1, 'Escape'],
+      ...Array.from({ length: 12 }, (_, i) => F(i + 1)),
+      ['PrtSc', 1, 'PrintScreen'],
+      ['Pause', 1, 'Pause'],
+      ['Del', 1, 'Delete'],
+    ],
+    [...chars('`1234567890-='), ['Backspace', 2, 'Backspace'], ['Home', 1, 'Home']],
+    [
+      ['Tab', 1.5, 'Tab'],
+      ...chars('qwertyuiop[]'),
+      ['\\', 1.5, 'Backslash'],
+      ['PgUp', 1, 'PageUp'],
+    ],
+    [
+      ['Caps', 1.75, 'CapsLock'],
+      ...chars("asdfghjkl;'"),
+      ['Enter', 2.25, 'Enter'],
+      ['PgDn', 1, 'PageDown'],
+    ],
+    [
+      ['Shift', 2.25, 'ShiftLeft'],
+      ...chars('zxcvbnm,./'),
+      ['Shift', 1.75, 'ShiftRight'],
+      ['↑', 1, 'ArrowUp'],
+      ['End', 1, 'End'],
+    ],
+    [
+      ['Ctrl', 1.25, 'ControlLeft'],
+      ['Win', 1.25, 'MetaLeft'],
+      ['Alt', 1.25, 'AltLeft'],
+      ['', 6.25, 'Space'],
+      ['Alt', 1, 'AltRight'],
+      ['Fn', 1],
+      ['Ctrl', 1, 'ControlRight'],
+      ['←', 1, 'ArrowLeft'],
+      ['↓', 1, 'ArrowDown'],
+      ['→', 1, 'ArrowRight'],
+    ],
+  ])
+
 const numpad: RowSpec[] = [
   {
     x: 18.5,
@@ -224,6 +285,10 @@ interface LayoutDef {
   ff: FormFactor
   variants: Partial<Record<VariantKey, string[]>>
   rows: (v: Variant) => RowSpec[]
+  /** layout lấy toạ độ thật từ PCB CAD (Alice / Blossom): bỏ qua rows */
+  fixed?: typeof ALICE_KEYS
+  /** đường viền PCB thật (cùng hệ toạ độ với fixed) */
+  outline?: [number, number][]
 }
 
 export const LAYOUTS: Record<LayoutId, LayoutDef> = {
@@ -285,6 +350,58 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     variants: { backspace: ['2u', 'split'], bottom: ['wk', 'wkl'] },
     rows: (v) => [...tklRows(v), ...numpad],
   },
+  '65': {
+    name: '65%',
+    ff: '65',
+    variants: {},
+    rows: rows65,
+  },
+  '75': {
+    name: '75%',
+    ff: '75',
+    variants: {},
+    rows: rows75,
+  },
+  frl: {
+    name: 'FRL (TKL không hàng F)',
+    ff: 'frl',
+    variants: { backspace: ['2u', 'split'], bottom: ['wk', 'wkl'] },
+    rows: frlRows,
+  },
+  // Alice (Blossom, doughnut923/Blossom, MIT): 67 phím đúng tâm / góc / cỡ switch trên PCB KiCad (scripts/alice-layout.mjs)
+  alice: {
+    name: 'Alice (ergo)',
+    ff: 'alice',
+    variants: {},
+    rows: () => [],
+    fixed: ALICE_KEYS,
+    outline: ALICE_OUTLINE,
+  },
+  // Planck (OLKB, case MIT từ MajorKoos/KBDParts): ortholinear 12 × 4, hàng dưới MIT (space 2u giữa)
+  planck: {
+    name: 'Planck (ortho 40%)',
+    ff: 'planck',
+    variants: {},
+    rows: () =>
+      stack([
+        [['Tab', 1, 'Tab'], ...chars('qwertyuiop'), ['Back', 1, 'Backspace']],
+        [['Esc', 1, 'Escape'], ...chars("asdfghjkl;'")],
+        [['Shift', 1, 'ShiftLeft'], ...chars('zxcvbnm,./'), ['Enter', 1, 'Enter']],
+        [
+          ['Ctrl', 1, 'ControlLeft'],
+          ['Fn', 1],
+          ['Win', 1, 'MetaLeft'],
+          ['Alt', 1, 'AltLeft'],
+          ['Lower', 1],
+          ['', 2, 'Space'],
+          ['Raise', 1],
+          ['←', 1, 'ArrowLeft'],
+          ['↓', 1, 'ArrowDown'],
+          ['↑', 1, 'ArrowUp'],
+          ['→', 1, 'ArrowRight'],
+        ],
+      ]),
+  },
 }
 
 export const VARIANT_INFO: Record<VariantKey, Record<string, string>> = {
@@ -311,8 +428,30 @@ export function getLayout(layoutId: LayoutId, variant: Variant = {}): LayoutGeom
   const ck = layoutId + JSON.stringify(variant)
   const hit = cache.get(ck)
   if (hit) return hit
-  const raw: Omit<Key, 'id' | 'cx' | 'cz' | 'stab'>[] = []
-  for (const { x: x0, y, items } of LAYOUTS[layoutId].rows(variant)) {
+  type Raw = Omit<Key, 'id' | 'cx' | 'cz' | 'stab' | 'row'> & { px: number; pz: number }
+  const raw: Raw[] = []
+  const def = LAYOUTS[layoutId]
+  // layout toạ độ thật: x = thứ tự trong hàng, y = hàng (để chia hàng keycap / bus PCB)
+  def.fixed?.forEach((k, i) =>
+    raw.push({
+      label: k.label,
+      w: k.w,
+      h: 1,
+      code: k.code,
+      x: i,
+      y: k.row,
+      rot: (k.deg * Math.PI) / 180,
+      px: k.cx,
+      pz: k.cz,
+    }),
+  )
+  for (const { x: x0, y, items, rot = 0, rx = 0, ry = 0 } of def.rows(variant)) {
+    // xoay quanh trục đứng như three.js (rotation-y): (x, z) → (x cos + z sin, −x sin + z cos)
+    const a = (rot * Math.PI) / 180
+    const turn = (px: number, pz: number) => [
+      rx + (px - rx) * Math.cos(a) + (pz - ry) * Math.sin(a),
+      ry - (px - rx) * Math.sin(a) + (pz - ry) * Math.cos(a),
+    ]
     let x = x0
     for (const it of items) {
       if (typeof it === 'number') {
@@ -320,20 +459,76 @@ export function getLayout(layoutId: LayoutId, variant: Variant = {}): LayoutGeom
         continue
       }
       const [label, w = 1, code = null, h = 1] = it
-      raw.push({ label, w, h, code, x, y })
+      const [px, pz] = turn(x + w / 2, y + h / 2)
+      raw.push({ label, w, h, code, x, y, rot: a, px, pz })
       x += w
     }
   }
-  const width = Math.max(...raw.map((k) => k.x + k.w))
-  const depth = Math.max(...raw.map((k) => k.y + k.h))
-  const keys: Key[] = raw.map((k, i) => ({
+  // khung bao theo 4 góc từng phím (đã xoay)
+  const corners = raw.flatMap((k) =>
+    [
+      [-1, -1],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+    ].map(([sx, sz]) => {
+      const dx = (sx * k.w) / 2
+      const dz = (sz * k.h) / 2
+      return [
+        k.px + dx * Math.cos(k.rot) + dz * Math.sin(k.rot),
+        k.pz - dx * Math.sin(k.rot) + dz * Math.cos(k.rot),
+      ]
+    }),
+  )
+  const minX = Math.min(...corners.map((c) => c[0]))
+  const minZ = Math.min(...corners.map((c) => c[1]))
+  const width = Math.max(...corners.map((c) => c[0])) - minX
+  const depth = Math.max(...corners.map((c) => c[1])) - minZ
+  // hàng keycap đếm từ dưới lên: hàng dưới cùng = 4, Shift = 3, ASDF = 2, QWERTY = 1, hàng số và F = 0
+  // (layout có hàng F / 40% không có hàng số vẫn khớp đúng hàng R của profile)
+  const rowYs = [...new Set(raw.map((k) => k.y))].sort((a, b) => b - a)
+  const keys: Key[] = raw.map(({ px, pz, ...k }, i) => ({
     ...k,
     id: String(i),
-    cx: k.x + k.w / 2 - width / 2,
-    cz: k.y + k.h / 2 - depth / 2,
+    cx: px - minX - width / 2,
+    cz: pz - minZ - depth / 2,
     stab: k.w >= 2 || k.h >= 2,
+    row: Math.max(0, 4 - rowYs.indexOf(k.y)),
   }))
-  const result = { keys, width, depth }
+  // tâm khung phím trong hệ toạ độ gốc của layout (Alice: theo tâm case CAD) → case dời theo
+  // chỉ layout toạ độ thật (Alice / Blossom) mới lệch tâm so với gốc case CAD; layout thường đã canh giữa = 0
+  const origin: [number, number] = def.fixed ? [minX + width / 2, minZ + depth / 2] : [0, 0]
+  const outline = def.outline?.map(([x, z]): [number, number] => [x - origin[0], z - origin[1]])
+  const result = { keys, width, depth, origin, outline }
   cache.set(ck, result)
   return result
 }
+
+/**
+ * Khối chặn liền case ở chỗ trống ≥ 0.75u hàng dưới cùng (2 đầu HHKB, giữa Ctrl / Alt của WKL...).
+ * Khối kéo ra tới thành trước case, chỗ trống ở đầu / cuối hàng kéo vào tới thành bên (edge = phần ăn vào
+ * thành case, u) để liền 1 khối với case, không có đường cắt. Trả về tâm x, z và kích thước w × d (u, quanh gốc).
+ * Layout có phím xoay (Alice) không tính
+ */
+export function blockerGaps(keys: Key[], width: number, depth: number, edge: number) {
+  if (keys.some((k) => k.rot)) return []
+  const y = Math.max(...keys.map((k) => k.y))
+  const row = keys.filter((k) => k.y === y).sort((a, b) => a.x - b.x)
+  if (!row.length) return []
+  const back = row[0].cz - 0.5
+  const front = depth / 2 + edge
+  const out: { x: number; z: number; w: number; d: number }[] = []
+  let at = 0
+  for (const k of [...row, { x: width, w: 0 }]) {
+    if (k.x - at >= 0.75) {
+      const x0 = (at <= 0 ? -edge : at) - width / 2
+      const x1 = (k.x >= width ? width + edge : k.x) - width / 2
+      out.push({ x: (x0 + x1) / 2, z: (back + front) / 2, w: x1 - x0, d: front - back })
+    }
+    at = Math.max(at, k.x + k.w)
+  }
+  return out
+}
+
+/** Cao độ mặt trên khối chặn (u, mặt plate = 0): ngang mép case, thấp hơn mặt keycap một chút */
+export const BLOCKER_TOP = 0.62

@@ -1,6 +1,7 @@
 import { OPTIONAL_STEPS, stepProgress } from '@/data/steps'
 import { SOUND_WISH, TOOLS, buildSound, soundMatch } from '@/data/parts'
 import { stabQuality, switchLubeEval } from '@/data/mods'
+import { SUPPLIES } from '@/data/supplies'
 import type {
   BuildContext,
   BuildState,
@@ -67,6 +68,24 @@ export function scoreDelivery({
     got: 10 * lube.q,
   }
 
+  // Mối hàn (chỉ PCB hàn): bóng / xỉn theo loại thiếc, cháy xém thì gần như hỏng
+  const soldered = ctx.steps.includes('solder')
+  const joints = Object.values(build.solder)
+  const burnt = joints.filter((j) => j !== true && j.burnt).length
+  const jointQ = joints.length
+    ? joints.reduce(
+        (a, j) =>
+          a +
+          (j === true
+            ? 0.85
+            : j.burnt
+              ? 0.15
+              : 0.55 + 0.45 * (SUPPLIES[j.wire]?.solder?.shine ?? 0.65)),
+        0,
+      ) / nKeys
+    : 0
+  const buildPts = soldered ? 12 : 20
+
   const checks: ScoreCheck[] = [
     {
       label: `Âm thanh "${SOUND_WISH[order.wish].name}" (khớp ${Math.round(match * 100)}%)`,
@@ -78,7 +97,8 @@ export function scoreDelivery({
       pts: 10,
       got: inventory.keycap!.color === order.keycapColor ? 10 : 0,
     },
-    order.kit
+    // khách gửi case thì dặn mount; không gửi case thì chấm màu case shop chọn
+    order.mount
       ? { label: 'Đúng kiểu mount khách yêu cầu', pts: 10, got: mount === order.mount ? 10 : 0 }
       : {
           label: order.caseColor ? 'Đúng màu case' : 'Màu case (khách để shop chọn)',
@@ -87,9 +107,18 @@ export function scoreDelivery({
         },
     {
       label: `Build hoàn chỉnh (${Math.round(completeness * 100)}%)`,
-      pts: 20,
-      got: 20 * completeness,
+      pts: buildPts,
+      got: buildPts * completeness,
     },
+    ...(soldered
+      ? [
+          {
+            label: `Mối hàn đẹp (${Math.round(jointQ * 100)}%)${burnt ? ` — ${burnt} mối cháy xém` : ''}`,
+            pts: 8,
+            got: 8 * jointQ,
+          },
+        ]
+      : []),
     {
       label: ctx.stabKeys.length
         ? `Stab êm, không lạch cạch (${Math.round(stab.q * 100)}%)${stab.notes.length ? ' — ' + stab.notes.join('; ') : ''}`

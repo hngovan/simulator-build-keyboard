@@ -20,6 +20,14 @@
 
   --animate-pop: pop 0.2s ease-out;
   --animate-bob: bob 2.4s ease-in-out infinite;
+  /* trễ 150ms để lần tải nhanh không bị nháy */
+  --animate-fade-in: fade-in 0.25s ease-out 0.15s both;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
 
   @keyframes pop {
     from {

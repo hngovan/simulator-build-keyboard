@@ -5,6 +5,7 @@ import type {
   Key,
   Order,
   Point,
+  ScrewBit,
   ScrewPoint,
   ScrewStep,
   StepId,
@@ -12,6 +13,7 @@ import type {
 import { getLayout } from './layouts'
 import { CASES, STABS } from './parts'
 import { stabModRules } from './mods'
+import stabModel from './stabModel.json'
 
 export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   unbox: { title: 'Mở hộp hàng', hint: 'Click vào thùng hàng để mở' },
@@ -21,14 +23,20 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   stabMod: {
     title: 'Mod stab (tuỳ chọn)',
-    hint: 'Theo mũi tên vàng: cắt chân stem → Holee mod (băng Urgo) → phết mỡ housing + slider → lắp slider → phết mỡ dây → tra dây vào ngàm',
+    hint: 'Theo mũi tên vàng: cắt chân stem → Holee mod (băng Urgo) → phết mỡ housing + slider → lắp slider → phết mỡ wire → lắp wire vào ngàm',
   },
   stab: { title: 'Lắp stab', hint: 'Click vào vị trí các phím dài (≥ 2u) để lắp stab' },
-  switchLube: { title: 'Lube switch (tuỳ chọn)', hint: 'Click vào switch đã mở để lube 1 mẻ' },
+  switchLube: {
+    title: 'Lube switch (tuỳ chọn)',
+    hint: 'Click switch trên đồ mở để tách vỏ (mỗi lần 1 con), rồi click switch đã mở để lube 1 mẻ',
+  },
   stabScrew: { title: 'Vặn vít stab', hint: 'Stab screw-in: vặn chặt 2 vít cho mỗi stab' },
   plate: { title: 'Đặt plate lên PCB', hint: 'Click vào board để đặt plate xuống' },
   switch: { title: 'Lắp switch', hint: 'Click vào lỗ trên plate để cắm switch' },
-  solder: { title: 'Hàn switch', hint: 'Board đã lật. Giữ chuột lên chân switch tới khi chì chảy' },
+  solder: {
+    title: 'Hàn switch',
+    hint: 'Board đã lật. Giữ chuột lên từng chân, nhả trong vùng xanh; giữ quá lâu hoặc hụt quá 3 lần sẽ làm cháy chân và đen mũi hàn.',
+  },
   gasket: { title: 'Dán gasket', hint: 'Click các vị trí quanh plate để dán miếng đệm silicon' },
   ring: { title: 'Lắp vòng silicon', hint: 'Click vào board để bọc vòng silicon quanh' },
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
@@ -38,7 +46,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   keycap: { title: 'Lắp keycap', hint: 'Click vào switch để cắm keycap' },
   test: {
     title: 'Test phím',
-    hint: 'Gõ bàn phím thật hoặc click phím 3D. Phím đã test có chấm xanh',
+    hint: 'Gõ bàn phím thật hoặc click phím 3D. Phím đã test có chấm xanh; phím không có trên bàn phím của bạn (Fn, macro...) thì click',
   },
 }
 
@@ -47,6 +55,19 @@ export const SCREW_STEPS: Record<ScrewStep, 'remove' | 'tighten'> = {
   stabScrew: 'tighten',
   trayScrew: 'tighten',
   caseScrew: 'tighten',
+}
+/** Đầu vít cần cho từng bước vặn vít */
+export const SCREW_BITS: Record<ScrewStep, ScrewBit> = {
+  caseOpen: 'hex',
+  stabScrew: 'phillips',
+  trayScrew: 'torx',
+  caseScrew: 'hex',
+}
+export const BIT_LABELS: Record<ScrewBit, string> = {
+  phillips: 'Chữ thập',
+  hex: 'Lục giác',
+  torx: 'Torx',
+  flat: 'Dẹt',
 }
 export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'switchLube', 'test']
 export const CASE_WALL = 0.45
@@ -72,7 +93,7 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   const ck = JSON.stringify([order.layout, order.variant, inv.case, inv.pcb, inv.stab, mount])
   const hit = cache.get(ck)
   if (hit) return hit
-  const { keys, width, depth } = getLayout(order.layout, order.variant)
+  const { keys, width, depth, origin, outline } = getLayout(order.layout, order.variant)
   const caseDef = CASES[inv.case!.id]
   const stabKeys = keys.filter((k) => k.stab)
   const stabModel = inv.stab?.type
@@ -119,15 +140,21 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
 
   const stabScrews = stabKeys.flatMap((k) => {
     const s = stabSpan(k)
-    return k.h >= 2
-      ? [
-          { x: k.cx + 0.3, z: k.cz - s },
-          { x: k.cx + 0.3, z: k.cz + s },
-        ]
-      : [
-          { x: k.cx - s, z: k.cz - 0.32 },
-          { x: k.cx + s, z: k.cz - 0.32 },
-        ]
+    const local: [number, number][] =
+      k.h >= 2
+        ? [
+            [0.3, -s],
+            [0.3, s],
+          ]
+        : [
+            [-s, -0.32],
+            [s, -0.32],
+          ]
+    // phím xoay (Alice): xoay độ lệch theo phím
+    return local.map(([dx, dz]) => ({
+      x: k.cx + dx * Math.cos(k.rot) + dz * Math.sin(k.rot),
+      z: k.cz - dx * Math.sin(k.rot) + dz * Math.cos(k.rot),
+    }))
   })
 
   const name = (prefix: string, list: Point[]): ScrewPoint[] =>
@@ -151,7 +178,11 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   ])
 
   const ctx: BuildContext = {
+    layout: order.layout,
+    variant: order.variant,
     keys,
+    origin,
+    outline,
     width,
     depth,
     caseDef,
@@ -173,6 +204,72 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
 export const stabSpan = (k: Key) => {
   const len = Math.max(k.w, k.h)
   return len >= 6 ? (len - 1) / 2 : 0.62
+}
+
+/** Nhóm stab theo loại dây: phím 2u–2.75u dùng chung dây 2.25u, mỗi cỡ phím dài (6u / 6.25u / 7u) 1 nhóm */
+export interface StabSet {
+  long: boolean
+  /** vd "2u · 2.25u · 2.75u" hoặc "6.25u" */
+  label: string
+  count: number
+  /** khoảng cách tâm stab → tâm slider (mm) của dây */
+  spanMm: number
+}
+
+const keyLen = (k: Key) => Math.max(k.w, k.h)
+
+export function stabSets(stabKeys: Key[]): StabSet[] {
+  const sets: StabSet[] = []
+  const short = stabKeys.filter((k) => keyLen(k) < 6)
+  if (short.length) {
+    const sizes = [...new Set(short.map(keyLen))].sort((a, b) => a - b)
+    sets.push({
+      long: false,
+      label: sizes.map((s) => `${s}u`).join(' · '),
+      count: short.length,
+      spanMm: stabModel.spans['2.25u'],
+    })
+  }
+  const longs = [...new Set(stabKeys.map(keyLen).filter((l) => l >= 6))].sort((a, b) => a - b)
+  for (const len of longs) {
+    const keys = stabKeys.filter((k) => keyLen(k) === len)
+    sets.push({
+      long: true,
+      label: `${len}u`,
+      count: keys.length,
+      spanMm: stabSpan(keys[0]) * 19.05,
+    })
+  }
+  return sets
+}
+
+/**
+ * Từng stab thật trên PCB (bàn mod bày đúng số stab theo layout): phím ngắn trước (theo cỡ), phím dài sau.
+ * Mỗi phần tử count = 1, label = cỡ phím
+ */
+export function stabUnits(stabKeys: Key[]): StabSet[] {
+  return [...stabKeys]
+    .sort((a, b) => keyLen(a) - keyLen(b))
+    .map((k) => {
+      const long = keyLen(k) >= 6
+      return {
+        long,
+        label: `${keyLen(k)}u`,
+        count: 1,
+        spanMm: long ? stabSpan(k) * 19.05 : stabModel.spans['2.25u'],
+      }
+    })
+}
+
+/** Tiến độ cả build 0..1: bước đã qua tính đủ, các bước còn lại theo stepProgress */
+export function buildPercent(b: BuildState, ctx: BuildContext, clicks: number) {
+  if (!ctx.steps.length) return 0
+  const sum = ctx.steps.reduce((acc, st, i) => {
+    if (i < b.stepIdx) return acc + 1
+    const [d, t] = stepProgress(st, b, ctx, clicks)
+    return acc + (t > 0 ? Math.min(1, d / t) : 0)
+  }, 0)
+  return sum / ctx.steps.length
 }
 
 export function stepProgress(
@@ -206,7 +303,10 @@ export function stepProgress(
     case 'switch':
       return [count(b.switches), ctx.keys.length]
     case 'solder':
-      return [count(b.solder), ctx.keys.length]
+      return [
+        Object.values(b.solder).filter((joint) => joint === true || !joint.burnt).length,
+        ctx.keys.length,
+      ]
     case 'gasket':
       return [count(b.gaskets), ctx.gaskets.length]
     case 'ring':

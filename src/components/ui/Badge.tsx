@@ -12,7 +12,20 @@ const TONES = {
   day: 'bg-[#2a4a7a]',
 } as const
 
-export type BadgeTone = keyof typeof TONES
+// Nhãn nhỏ: nền nhạt cùng màu + viền mảnh, chữ đậm màu (đỡ thô hơn khối màu đặc)
+const BADGE_TONES = {
+  default: 'bg-white/8 text-[#d5dae6] ring-white/15',
+  green: 'bg-green/15 text-green ring-green/35',
+  blue: 'bg-blue/15 text-[#7fb0ff] ring-blue/35',
+  yellow: 'bg-yellow/15 text-yellow ring-yellow/35',
+  orange: 'bg-orange/15 text-orange ring-orange/35',
+  red: 'bg-red/15 text-[#ff8a8a] ring-red/35',
+  money: 'bg-green/15 text-green ring-green/35',
+  rep: 'bg-[#d9a441]/15 text-[#f0c060] ring-[#d9a441]/35',
+  day: 'bg-blue/15 text-[#7fb0ff] ring-blue/35',
+} as const
+
+export type BadgeTone = keyof typeof BADGE_TONES
 
 /** Nhãn bo tròn nhỏ */
 export function Badge({
@@ -27,8 +40,8 @@ export function Badge({
   return (
     <span
       className={cn(
-        'ml-1.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-extrabold',
-        TONES[tone],
+        'ml-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold whitespace-nowrap ring-1 ring-inset',
+        BADGE_TONES[tone],
         className,
       )}
     >
@@ -38,7 +51,13 @@ export function Badge({
 }
 
 /** Chip trạng thái lớn hơn (tiền, uy tín, ngày) */
-export function Chip({ tone = 'default', children }: { tone?: BadgeTone; children: ReactNode }) {
+export function Chip({
+  tone = 'default',
+  children,
+}: {
+  tone?: keyof typeof TONES
+  children: ReactNode
+}) {
   return (
     <span
       className={cn(

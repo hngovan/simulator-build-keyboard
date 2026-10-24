@@ -46,8 +46,8 @@ export function stabModRules(modelId: string): StabModRule[] {
       reason: m.prelubed ? 'Đã lube sẵn từ nhà máy' : undefined,
     },
     { kind: 'assembled', label: 'Lắp slider vào housing', needed: true, allowed: true },
-    { kind: 'wire', label: 'Lube dây stab', needed: true, allowed: true },
-    { kind: 'wired', label: 'Tra dây vào slider + ngàm', needed: true, allowed: true },
+    { kind: 'wire', label: 'Lube wire stab', needed: true, allowed: true },
+    { kind: 'wired', label: 'Lắp wire vào slider + ngàm', needed: true, allowed: true },
   ]
 }
 
@@ -86,7 +86,7 @@ export function stabQuality(modelId: string, mods: StabMods, brushQ: number): Qu
     if (!v)
       notes.push(
         r.kind === 'wire' && mods.wired
-          ? 'Tra dây trước khi lube nên dây khô'
+          ? 'Lắp wire trước khi lube nên wire khô'
           : `Chưa ${r.label.toLowerCase()}`,
       )
     got += w * v
@@ -157,18 +157,23 @@ export interface StabAnim {
   dur: number
 }
 
-/** Thời lượng hoạt cảnh: mỡ càng đặc cọ quét càng chậm */
-export function stabAnimDuration(kind: StabModKind, lube?: string) {
+/**
+ * Thời lượng hoạt cảnh: mỡ càng đặc cọ quét càng chậm.
+ * sets: số bộ mẫu trên bàn mod (dây ngắn + dây dài); dụng cụ làm lần lượt từng bộ nên lâu hơn, làm quen tay thì nhanh dần
+ */
+export function stabAnimDuration(kind: StabModKind, lube?: string, sets = 1) {
   const visc = lube ? (SUPPLIES[lube].viscosity ?? 0.5) : 0
+  // mỗi bộ thêm vào làm nối tiếp nhưng nhanh dần (tay quen) để full size 8 stab không quá lâu
+  const seq = 1 + 0.4 * (sets - 1)
   switch (kind) {
     case 'clip':
-      return 1.8
+      return 1.8 * seq
     case 'bandaid':
-      return 3.4
+      return 3.4 * seq
     case 'housing':
-      return 3 + visc * 1.8 // 8 nét: 2 housing + 2 slider
+      return (4.2 + visc * 2.6) * seq // mỗi bộ 12 nét: 2 thành × 2 housing + 2 mặt × 2 nét × 2 slider
     case 'wire':
-      return 1.6 + visc * 1.4
+      return (1.6 + visc * 1.4) * seq
     case 'assembled':
       return 1.5
     case 'wired':

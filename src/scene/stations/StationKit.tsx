@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
 import type * as THREE from 'three'
-import { Text } from '@react-three/drei'
+import { Line } from '@react-three/drei'
+import { Text } from '@/scene/common/Text3D'
 import type { GroupProps } from '@react-three/fiber'
 import { useHover } from '../common/useHover'
+import { CuttingMat } from '../common/CuttingMat'
 
 /** Chữ nằm trên mặt bàn */
 export function Label({
@@ -53,32 +55,87 @@ export function Part({
   )
 }
 
+/**
+ * Ô trống nét đứt cho món đồ còn thiếu trên bàn (chưa mua dụng cụ / hết vật tư).
+ * Click để mở Shopii mua; mua xong món đồ tự hiện lại thay ô này.
+ * Vẽ đè lên mặt bàn (không bị tấm lót / mặt bàn che)
+ */
+export function MissingSlot({
+  at,
+  size: [w, d],
+  label,
+  onAct,
+}: {
+  at: THREE.Vector3
+  size: [number, number]
+  label: string
+  onAct: () => void
+}) {
+  const { hover, bind } = useHover(true)
+  const color = hover ? '#ffe07a' : '#ffcc2e'
+  const y = 0.02
+  const outline: [number, number, number][] = [
+    [-w / 2, y, -d / 2],
+    [w / 2, y, -d / 2],
+    [w / 2, y, d / 2],
+    [-w / 2, y, d / 2],
+    [-w / 2, y, -d / 2],
+  ]
+  return (
+    <group
+      position={at}
+      {...bind}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        onAct()
+      }}
+    >
+      <mesh position-y={y} rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[w, d]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={hover ? 0.18 : 0.09}
+          depthWrite={false}
+        />
+      </mesh>
+      <Line
+        points={outline}
+        color={color}
+        lineWidth={2.5}
+        dashed
+        dashSize={0.1}
+        gapSize={0.07}
+        renderOrder={2}
+      />
+      <Label position={[0, y + 0.02, d / 2 + 0.25]} color={color}>
+        {label}
+      </Label>
+    </group>
+  )
+}
+
 // Lớp lube bóng phủ lên bộ phận đã mod
 export const lubed = (on: boolean) =>
   on
     ? { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05 }
     : { roughness: 0.55, clearcoat: 0 }
 
-/** Mặt bàn làm việc của station; đặt sát mặt bàn bất kể tỉ lệ k */
+/** Mặt bàn làm việc của station = tấm cutting mat (mặt trên y = -0.55); đặt sát mặt bàn bất kể tỉ lệ k */
 export function StationTable({
   k,
   w,
   d,
-  color,
   children,
 }: {
   k: number
   w: number
   d: number
-  color: string
   children: ReactNode
 }) {
   return (
     <group scale={k} position-y={-0.95 + 0.65 * k}>
-      <mesh position-y={-0.6}>
-        <boxGeometry args={[w, 0.1, d]} />
-        <meshStandardMaterial color={color} roughness={1} />
-      </mesh>
+      <CuttingMat w={w} d={d} h={0.1} fit="stretch" position-y={-0.65} />
       {children}
     </group>
   )

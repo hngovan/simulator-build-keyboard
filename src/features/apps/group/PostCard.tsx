@@ -19,7 +19,12 @@ export function PostCard({ post, onBuy }: { post: GroupPost; onBuy: () => void }
       </div>
       <div className="mt-2.5 flex items-center gap-3">
         <div className="w-[90px] shrink-0">
-          <ProductImage product={post.product} swatch={post.opt.swatch} className="h-16" />
+          <ProductImage
+            product={post.product}
+            swatch={post.opt.swatch}
+            item={post.opt.item}
+            className="h-24"
+          />
         </div>
         <div>
           <div className="font-extrabold">{itemName(post.product.cat, post.opt.item)}</div>

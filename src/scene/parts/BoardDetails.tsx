@@ -13,7 +13,15 @@ const padMat = new THREE.MeshStandardMaterial({ color: '#d4a64a', metalness: 0.9
 export function HotswapSockets() {
   const keys = useCtx().keys
   return keys.map((k) => (
-    <group key={k.id} position={[k.cx + 0.05, Y.pcbBot - 0.045, k.cz + 0.1]}>
+    <group
+      key={k.id}
+      position={[
+        k.cx + 0.05 * Math.cos(k.rot) + 0.1 * Math.sin(k.rot),
+        Y.pcbBot - 0.045,
+        k.cz - 0.05 * Math.sin(k.rot) + 0.1 * Math.cos(k.rot),
+      ]}
+      rotation-y={k.rot}
+    >
       <mesh geometry={socketGeo} material={socketMat} />
       <mesh geometry={padGeo} material={padMat} position-x={-0.3} />
       <mesh geometry={padGeo} material={padMat} position-x={0.3} />

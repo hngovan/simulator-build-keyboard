@@ -1,15 +1,19 @@
-import { useRef, type ReactNode } from 'react'
+import { useMemo, useRef, type ReactNode } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
-import { RoundedBox } from '@react-three/drei'
+import { RoundedBox, useGLTF } from '@react-three/drei'
+import { DoubleSide } from 'three'
 import type * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import { CASE_MARGIN, CASE_WALL, Y } from '@/data/steps'
-import type { StepId } from '@/types'
+import { BLOCKER_TOP, blockerGaps } from '@/data/layouts'
+import type { Key, StepId } from '@/types'
 import { playClick } from '@/sound'
 import { lerpTo } from '../common/anim'
 import { useHover } from '../common/useHover'
-import { CaseMaterial } from '../materials'
+import { CaseMaterial, WEIGHT_METALS, woodBoxGeometry } from '../materials'
 import { ScrewSet } from './Screw'
+import { caseModelOf } from '@/data/parts'
+import { MM } from '../models/Switch'
 
 type Rect = [x: number, z: number, w: number, d: number]
 
@@ -30,21 +34,56 @@ interface ShellProps {
   y0: number
   y1: number
   mat: ReactNode
+  wood?: boolean
 }
 
-function Walls({ W, D, y0, y1, mat }: ShellProps) {
-  const h = y1 - y0
-  return wallRects(W, D).map(([x, z, w, d], i) => (
-    <RoundedBox
-      key={i}
-      args={[w, h, d]}
-      radius={Math.min(0.08, h / 3)}
-      position={[x, (y0 + y1) / 2, z]}
-      castShadow
-      receiveShadow
-    >
+function CaseBox({
+  w,
+  h,
+  d,
+  radius,
+  position,
+  mat,
+  wood,
+}: {
+  w: number
+  h: number
+  d: number
+  radius: number
+  position: [number, number, number]
+  mat: ReactNode
+  wood?: boolean
+}) {
+  const geometry = useMemo(
+    () => (wood ? woodBoxGeometry(w, h, d, radius) : null),
+    [w, h, d, radius, wood],
+  )
+  if (wood)
+    return (
+      <mesh geometry={geometry!} position={position} castShadow receiveShadow>
+        {mat}
+      </mesh>
+    )
+  return (
+    <RoundedBox args={[w, h, d]} radius={radius} position={position} castShadow receiveShadow>
       {mat}
     </RoundedBox>
+  )
+}
+
+function Walls({ W, D, y0, y1, mat, wood }: ShellProps) {
+  const h = y1 - y0
+  return wallRects(W, D).map(([x, z, w, d], i) => (
+    <CaseBox
+      key={i}
+      w={w}
+      h={h}
+      d={d}
+      radius={Math.min(0.08, h / 3)}
+      position={[x, (y0 + y1) / 2, z]}
+      mat={mat}
+      wood={wood}
+    />
   ))
 }
 
@@ -74,6 +113,47 @@ function Layers({ W, D, y0, y1, mat, floor }: ShellProps & { floor?: boolean }) 
   })
 }
 
+/**
+ * Khối chặn (blocker) liền case ở chỗ trống hàng dưới cùng: 2 đầu HHKB, giữa Ctrl / Alt của WKL...
+ * (vị trí từ blockerGaps), lấp bằng khối cùng chất liệu case
+ */
+function Blockers({
+  keys,
+  width,
+  depth,
+  mat,
+  wood,
+  top = BLOCKER_TOP,
+}: {
+  keys: Key[]
+  width: number
+  depth: number
+  mat: ReactNode
+  wood?: boolean
+  /** mặt trên khối chặn: ngang mép trên case đang dùng (case dựng bằng code thấp hơn case CAD) */
+  top?: number
+}) {
+  const blocks = useMemo(
+    () => blockerGaps(keys, width, depth, CASE_MARGIN + 0.05),
+    [keys, width, depth],
+  )
+  // khối vuông cạnh từ mặt plate lên ngang mép case, ăn nhẹ vào thành trong (0.2u từ mép phím) →
+  // liền với thành case mà không lòi ra ngoài case CAD mỏng (Bakeneko...)
+  const h = top - Y.plateBot
+  return blocks.map((b, i) => (
+    <CaseBox
+      key={i}
+      w={b.w}
+      h={h}
+      d={b.d}
+      radius={0}
+      position={[b.x, Y.plateBot + h / 2, b.z]}
+      mat={mat}
+      wood={wood}
+    />
+  ))
+}
+
 function RubberFeet({ W, D }: { W: number; D: number }) {
   return [
     [-1, -1],
@@ -88,6 +168,47 @@ function RubberFeet({ W, D }: { W: number; D: number }) {
   ))
 }
 
+/**
+ * Case từ bản vẽ CAD thật (MIT, `bun run convert:cases`): hệ mm, đáy ở y = 0, tâm ở gốc.
+ * Đặt đáy trùng đáy case dựng bằng code, vẫn tô theo chất liệu + màu khách chọn
+ */
+function CaseModel({
+  model,
+  origin,
+  weight = 'brass',
+  bottomMat,
+  children,
+}: {
+  model: string
+  origin: [number, number]
+  weight?: keyof typeof WEIGHT_METALS
+  /** vật liệu đáy (node "bottom"), không có thì dùng chung vật liệu nắp */
+  bottomMat?: ReactNode
+  children: ReactNode
+}) {
+  const { nodes } = useGLTF(`/models/cases/${model}.glb`) as unknown as {
+    nodes: Record<string, THREE.Mesh>
+  }
+  // vỏ tô theo chất liệu + màu khách chọn; tạ / badge (node "weight") tô kim loại riêng
+  return (
+    <group position={[-origin[0], Y.floorBot, -origin[1]]} scale={MM}>
+      <mesh geometry={nodes.case.geometry} castShadow receiveShadow>
+        {children}
+      </mesh>
+      {nodes.bottom && (
+        <mesh geometry={nodes.bottom.geometry} castShadow receiveShadow>
+          {bottomMat ?? children}
+        </mesh>
+      )}
+      {nodes.weight && (
+        <mesh geometry={nodes.weight.geometry} castShadow receiveShadow>
+          <meshStandardMaterial {...WEIGHT_METALS[weight]} side={DoubleSide} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
 /** Case 1 hoặc 2 mảnh, nhiều chất liệu; vít ở đáy hoặc trên (mica) */
 export function Case() {
   const ctx = useCtx()
@@ -98,8 +219,12 @@ export function Case() {
   const { dropInCase, closeCase } = useGame.getState()
   const topRef = useRef<THREE.Group>(null)
   const { caseDef, screwSide } = ctx
+  const order = useGame((s) => s.order)
+  // nắp CAD riêng theo layout (Exodus60: WK / WKL / HHKB)
+  const model = order ? caseModelOf(caseDef, order.layout, order.variant) : caseDef.model
   const two = caseDef.pieces === 2
   const mica = caseDef.material === 'mica'
+  const wood = caseDef.material === 'wood'
   const W = ctx.width + 2 * (CASE_MARGIN + CASE_WALL)
   const D = ctx.depth + 2 * (CASE_MARGIN + CASE_WALL)
   const at = (name: StepId) => ctx.steps.indexOf(name)
@@ -112,6 +237,24 @@ export function Case() {
   const mat = (hover: boolean) => (
     <CaseMaterial material={caseDef.material} color={color} hover={hover} />
   )
+  // case 2 tông: đáy chất liệu / màu riêng (vd nắp PC, đáy nhôm)
+  const lower = caseDef.bottom
+  const bottomMat = (hover: boolean, doubleSide?: boolean) =>
+    lower ? (
+      <CaseMaterial
+        material={lower.material}
+        color={lower.color}
+        hover={hover}
+        doubleSide={doubleSide}
+      />
+    ) : (
+      <CaseMaterial
+        material={caseDef.material}
+        color={color}
+        hover={hover}
+        doubleSide={doubleSide}
+      />
+    )
   const wallTop = two ? Y.split : Y.caseTop
   const screwY = screwSide === 'top' ? Y.caseTop : Y.floorBot
   const onClick = (target: StepId, action: () => void) => (e: ThreeEvent<PointerEvent>) => {
@@ -124,23 +267,54 @@ export function Case() {
   return (
     <group>
       <group onPointerDown={onClick('caseIn', dropInCase)} {...bottom.bind}>
-        {mica ? (
+        {model ? (
+          <CaseModel
+            model={model}
+            origin={ctx.origin}
+            weight={caseDef.weight}
+            bottomMat={lower && bottomMat(bottom.hover, true)}
+          >
+            {/* STL in 3D hay có mặt lật chiều → vẽ 2 mặt cho khỏi trong suốt */}
+            <CaseMaterial
+              material={caseDef.material}
+              color={color}
+              hover={bottom.hover}
+              doubleSide
+            />
+          </CaseModel>
+        ) : mica ? (
           <Layers W={W} D={D} y0={Y.floorBot} y1={wallTop} mat={mat(bottom.hover)} floor />
         ) : (
           <>
-            <RoundedBox
-              args={[W, Y.floorTop - Y.floorBot, D]}
+            <CaseBox
+              w={W}
+              h={Y.floorTop - Y.floorBot}
+              d={D}
               radius={0.12}
-              position-y={(Y.floorTop + Y.floorBot) / 2}
-              castShadow
-              receiveShadow
-            >
-              {mat(bottom.hover)}
-            </RoundedBox>
-            <Walls W={W} D={D} y0={Y.floorBot} y1={wallTop} mat={mat(bottom.hover)} />
+              position={[0, (Y.floorTop + Y.floorBot) / 2, 0]}
+              mat={bottomMat(bottom.hover)}
+              wood={wood && !lower}
+            />
+            <Walls
+              W={W}
+              D={D}
+              y0={Y.floorBot}
+              y1={wallTop}
+              mat={bottomMat(bottom.hover)}
+              wood={wood && !lower}
+            />
           </>
         )}
         <RubberFeet W={W} D={D} />
+        {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên */}
+        <Blockers
+          keys={ctx.keys}
+          width={ctx.width}
+          depth={ctx.depth}
+          mat={mat(bottom.hover)}
+          wood={wood}
+          top={model ? BLOCKER_TOP : Y.caseTop}
+        />
       </group>
       {showTop && (
         <group
@@ -152,7 +326,7 @@ export function Case() {
           {mica ? (
             <Layers W={W} D={D} y0={Y.split} y1={Y.caseTop} mat={mat(top.hover)} />
           ) : (
-            <Walls W={W} D={D} y0={Y.split} y1={Y.caseTop} mat={mat(top.hover)} />
+            <Walls W={W} D={D} y0={Y.split} y1={Y.caseTop} mat={mat(top.hover)} wood={wood} />
           )}
         </group>
       )}

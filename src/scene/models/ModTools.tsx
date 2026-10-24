@@ -1,28 +1,44 @@
+import { createClipper } from './clipperModel'
 import { forwardRef, useMemo, useRef, type MutableRefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { RoundedBox } from '@react-three/drei'
+import { RoundedBox, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { SUPPLIES } from '@/data/supplies'
 
 // Dụng cụ mod stab (đơn vị: u của bàn mod). Gốc toạ độ = đầu làm việc của dụng cụ
 
-/** Cọ lube: cán gỗ, đai kim loại, chùm lông dẹt (đầu lông dính màu mỡ đang dùng). Gốc = mũi cọ */
+// Cọ vẽ tròn đầu nhỏ "Round Brush" (Zsky, Poly Pizza, CC BY 4.0), hệ mét, dài 0.33m.
+// Trong GLB lông ở trên (y 0.044..0.104, mũi ở y = 0.104), cán xuống tới đuôi y = -0.224
+const BRUSH_GLB = '/models/lube/brush.glb'
+useGLTF.preload(BRUSH_GLB)
+const BRUSH_TIP_Y = 0.104
+/** thu về dài ~1.8u như dụng cụ bàn mod */
+const BRUSH_SCALE = 5.5
+
+/** Cọ lube đầu nhỏ; gốc = đầu lông, cán hướng +y */
 export const LubeBrush = forwardRef<THREE.Group, { lube?: string }>(function LubeBrush(
   { lube },
   ref,
 ) {
   const sp = lube ? SUPPLIES[lube] : null
+  const { scene } = useGLTF(BRUSH_GLB)
+  const model = useMemo(() => {
+    const copy = scene.clone(true)
+    copy.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) o.castShadow = true
+    })
+    return copy
+  }, [scene])
   return (
     <group ref={ref}>
-      {/* chùm lông: dẹt, thuôn về mũi */}
-      <mesh position-y={0.2} scale={[1, 1, 0.45]}>
-        <cylinderGeometry args={[0.1, 0.035, 0.4, 14]} />
-        <meshStandardMaterial color="#4a3320" roughness={0.95} />
-      </mesh>
+      {/* lật ngược cho mũi lông ở gốc, cán hướng lên */}
+      <group scale={BRUSH_SCALE}>
+        <primitive object={model} rotation-x={Math.PI} position-y={BRUSH_TIP_Y} />
+      </group>
       {/* mũi lông dính mỡ */}
-      <mesh position-y={0.05} scale={[1, 1, 0.5]}>
-        <sphereGeometry args={[0.055, 12, 8]} />
-        {sp ? (
+      {sp && (
+        <mesh position-y={0.06} scale={[1, 1.4, 1]}>
+          <sphereGeometry args={[0.07, 12, 8]} />
           <meshPhysicalMaterial
             color={sp.color}
             roughness={0.05}
@@ -30,93 +46,63 @@ export const LubeBrush = forwardRef<THREE.Group, { lube?: string }>(function Lub
             transparent
             opacity={0.45 + (sp.opacity ?? 0.5) * 0.55}
           />
-        ) : (
-          <meshStandardMaterial color="#2e2014" roughness={0.95} />
-        )}
-      </mesh>
-      {/* đai kim loại */}
-      <mesh position-y={0.48}>
-        <cylinderGeometry args={[0.085, 0.1, 0.2, 14]} />
-        <meshStandardMaterial color="#c7ced9" metalness={1} roughness={0.25} />
-      </mesh>
-      {/* cán gỗ */}
-      <mesh position-y={1.15} castShadow>
-        <cylinderGeometry args={[0.06, 0.085, 1.15, 14]} />
-        <meshStandardMaterial color="#d9a35b" roughness={0.6} />
-      </mesh>
-      <mesh position-y={1.74}>
-        <sphereGeometry args={[0.06, 10, 8]} />
-        <meshStandardMaterial color="#c9302c" roughness={0.5} />
-      </mesh>
+        </mesh>
+      )}
     </group>
   )
 })
 
-/** Kìm cắt: 2 cán cao su + 2 lưỡi (con 0, 1 xoay theo trục y để mở / khép) */
+/** Kìm cắt chân linh kiện kiểu flush cutter: cán mảnh, mũi cắt vát phẳng. */
 export const Clipper = forwardRef<THREE.Group>(function Clipper(_, ref) {
+  const model = useMemo(() => createClipper(), [])
+  return <primitive ref={ref} object={model} />
+})
+
+// Kéo "Loop scissors" (Innerscene Free Parts Library, CC0), hệ mét, mũi kéo chĩa +x, đinh tán ở gốc
+const SCISSORS_GLB = '/models/scissors.glb'
+useGLTF.preload(SCISSORS_GLB)
+/** góc mở sẵn của mỗi nửa kéo trong model (rad) */
+const SCISSORS_OPEN = 0.435
+/** dài ~0.2m → ~1.4u trên bàn mod */
+const SCISSORS_SCALE = 7
+
+/** Kéo: con 0, 1 là 2 nửa (lưỡi + cán + quai) xoay quanh đinh tán theo trục y để mở / khép */
+export const Scissors = forwardRef<THREE.Group>(function Scissors(_, ref) {
+  const { scene } = useGLTF(SCISSORS_GLB)
+  const halves = useMemo(() => {
+    const out = [new THREE.Group(), new THREE.Group(), new THREE.Group()]
+    // nửa không hậu tố: lưỡi bên +z nối qua đinh tán sang quai bên -z; nửa ".001" ngược lại
+    for (const o of [...scene.clone(true).children[0].children]) {
+      o.traverse((m) => ((m as THREE.Mesh).isMesh ? (m.castShadow = true) : null))
+      out[/pivot/i.test(o.name) ? 2 : o.name.endsWith('.001') ? 1 : 0].add(o)
+    }
+    return out
+  }, [scene])
   return (
-    <group ref={ref}>
-      {[-1, 1].map((side) => (
-        <group key={side} rotation-y={side * 0.33}>
-          <mesh position-x={0.18}>
-            <boxGeometry args={[0.36, 0.06, 0.07]} />
-            <meshStandardMaterial color="#c7ced9" metalness={1} roughness={0.25} />
-          </mesh>
-          <mesh position-x={-0.55} rotation-y={side * 0.12}>
-            <boxGeometry args={[0.85, 0.08, 0.12]} />
-            <meshStandardMaterial color={side < 0 ? '#c9302c' : '#2f6fd8'} roughness={0.7} />
-          </mesh>
-        </group>
+    <group ref={ref} scale={SCISSORS_SCALE}>
+      {halves.map((h, i) => (
+        <primitive key={i} object={h} />
       ))}
-      <mesh rotation-x={Math.PI / 2}>
-        <cylinderGeometry args={[0.06, 0.06, 0.12, 12]} />
-        <meshStandardMaterial color="#5b6273" metalness={0.8} />
-      </mesh>
     </group>
   )
 })
 
-/** Kéo: 2 lưỡi thép + 2 quai cầm (con 0, 1 xoay theo trục y để mở / khép) */
-export const Scissors = forwardRef<THREE.Group>(function Scissors(_, ref) {
-  return (
-    <group ref={ref}>
-      {[-1, 1].map((side) => (
-        <group key={side} rotation-y={side * 0.3}>
-          {/* lưỡi: thuôn nhọn về mũi */}
-          <mesh position={[0.34, side * 0.012, 0]} rotation-z={Math.PI / 2} scale={[1, 1, 0.35]}>
-            <cylinderGeometry args={[0.012, 0.06, 0.68, 4]} />
-            <meshStandardMaterial color="#d6dae0" metalness={1} roughness={0.2} />
-          </mesh>
-          {/* cán nối từ đinh tán ra quai */}
-          <mesh position={[-0.2, side * 0.012, side * 0.05]} rotation-y={side * 0.35}>
-            <boxGeometry args={[0.3, 0.035, 0.07]} />
-            <meshStandardMaterial color="#d6dae0" metalness={1} roughness={0.2} />
-          </mesh>
-          {/* quai cầm */}
-          <mesh position={[-0.45, 0, side * 0.16]} rotation-x={Math.PI / 2}>
-            <torusGeometry args={[0.13, 0.035, 8, 20]} />
-            <meshStandardMaterial color="#26262b" roughness={0.6} />
-          </mesh>
-        </group>
-      ))}
-      {/* đinh tán */}
-      <mesh position-y={0.01}>
-        <cylinderGeometry args={[0.045, 0.045, 0.07, 12]} />
-        <meshStandardMaterial color="#8a8f99" metalness={1} roughness={0.3} />
-      </mesh>
-    </group>
-  )
-})
+/** Mở (1, như model) / khép (0) 2 nửa kéo */
+export function setScissors(tool: THREE.Object3D | null, open: number) {
+  tool?.children
+    .slice(0, 2)
+    .forEach((half, s) => (half.rotation.y = (s === 0 ? 1 : -1) * SCISSORS_OPEN * (1 - open)))
+}
 
 /** Mở (1) / khép (0) 2 nhánh của kìm hoặc kéo */
-export function setJaw(tool: THREE.Object3D | null, open: number, base = 0.06, range = 0.27) {
+export function setJaw(tool: THREE.Object3D | null, open: number, base = 0.22, range = 0.16) {
   tool?.children
     .slice(0, 2)
     .forEach((side, s) => (side.rotation.y = (s === 0 ? -1 : 1) * (base + open * range)))
 }
 
 // ---------- băng Urgo ----------
-export const URGO = { endLen: 0.85, padLen: 0.9, width: 0.85, color: '#e3b58e' }
+export const URGO = { endLen: 0.6, padLen: 0.62, width: 0.6, color: '#e3b58e' }
 
 /** 1 đầu dính của băng Urgo (phần được cắt ra để Holee mod) */
 export function UrgoEnd({ side }: { side: -1 | 1 }) {
@@ -129,10 +115,14 @@ export function UrgoEnd({ side }: { side: -1 | 1 }) {
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <mesh
           key={i}
-          position={[side * (-0.25 + (i % 3) * 0.18), 0.017, i < 3 ? -0.18 : 0.18]}
+          position={[
+            side * (-0.29 + (i % 3) * 0.21) * URGO.endLen,
+            0.017,
+            (i < 3 ? -0.21 : 0.21) * URGO.width,
+          ]}
           rotation-x={-Math.PI / 2}
         >
-          <circleGeometry args={[0.02, 6]} />
+          <circleGeometry args={[0.015, 6]} />
           <meshBasicMaterial color="#b98a63" />
         </mesh>
       ))}
@@ -149,7 +139,7 @@ export function UrgoPad() {
         <meshStandardMaterial color={URGO.color} roughness={0.95} />
       </mesh>
       <mesh position-y={0.022}>
-        <boxGeometry args={[URGO.padLen - 0.04, 0.02, 0.6]} />
+        <boxGeometry args={[URGO.padLen - 0.04, 0.02, URGO.width * 0.7]} />
         <meshStandardMaterial color="#f7efe6" roughness={1} />
       </mesh>
     </group>
@@ -201,13 +191,68 @@ export interface Stroke {
   tube?: number
 }
 
-// capsule cao 1 (thân 0.5 + 2 đầu bo 0.25), rộng 0.5 → scale ra đúng kích thước dải mỡ
-const capsule = new THREE.CapsuleGeometry(0.25, 0.5, 4, 12)
-const sleeve = new THREE.CylinderGeometry(1, 1, 1, 14, 1, true)
+/** Grid mesh with indices ordered by length so drawRange reveals it from the brush tip. */
+function greaseGrid(vertices: number[], longitudinal: number, radial: number) {
+  const indices: number[] = []
+  for (let i = 0; i < longitudinal; i++) {
+    for (let j = 0; j < radial; j++) {
+      const a = i * radial + j
+      const b = (i + 1) * radial + j
+      const c = (i + 1) * radial + ((j + 1) % radial)
+      const d = i * radial + ((j + 1) % radial)
+      indices.push(a, b, d, b, c, d)
+    }
+  }
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
+const smoothBlob = (t: number, center: number, spread: number) =>
+  Math.exp(-Math.pow((t - center) / spread, 2) * 2.2)
+
+function strokeSeed(stroke: Stroke) {
+  return Math.abs(
+    Math.round(stroke.a[0] * 31 + stroke.a[1] * 17 + stroke.a[2] * 13 + stroke.b[2] * 7),
+  )
+}
+
+/** Raised smear with a drifting swirl ridge and rounded, connected grease deposits. */
+function greaseFilmGeometry(stroke: Stroke, thick: number) {
+  const longitudinal = 56
+  const radial = 16
+  const seed = strokeSeed(stroke) * 0.071
+  const vertices: number[] = []
+  for (let i = 0; i <= longitudinal; i++) {
+    const t = i / longitudinal
+    const ends = Math.min(1, t / 0.045, (1 - t) / 0.045)
+    const taper = Math.max(0.04, ends * ends * (3 - 2 * ends))
+    const deposits =
+      0.52 * smoothBlob(t, 0.2 + (seed % 7) * 0.004, 0.065) +
+      0.65 * smoothBlob(t, 0.53 + (seed % 5) * 0.006, 0.075) +
+      0.45 * smoothBlob(t, 0.82 - (seed % 6) * 0.005, 0.06)
+    const wave =
+      Math.sin(t * Math.PI * 4 + seed) * 0.14 + Math.sin(t * Math.PI * 9 + seed * 0.7) * 0.08
+    const width = (stroke.w / 2) * taper * Math.max(0.58, 0.78 + wave * 0.7 + deposits * 0.3)
+    const height = thick * taper * Math.max(0.3, 0.48 + wave * 0.55 + deposits * 0.65)
+    // Slow sideways drift makes the smear curl instead of forming a ruler-straight bead.
+    const swirl = Math.sin(t * Math.PI * 2.4 + seed) * stroke.w * 0.08 * taper
+    for (let j = 0; j < radial; j++) {
+      const angle = (j / radial) * Math.PI * 2
+      vertices.push(
+        swirl + Math.cos(angle) * width,
+        t,
+        height * 0.5 + Math.sin(angle) * height * 0.5,
+      )
+    }
+  }
+  return greaseGrid(vertices, longitudinal, radial)
+}
 
 /**
- * Lớp mỡ phết theo 1 đường: dài dần ra theo progress (0..1, đọc mỗi khung hình).
- * Mặt phẳng: dải mỏng dẹt; quanh dây: ống bọc mỏng
+ * Lớp mỡ phết theo 1 đường: dài dần ra theo progress (0..1), có vệt miết và điểm mỡ đọng.
  */
 export function GreaseStroke({
   lube,
@@ -220,6 +265,7 @@ export function GreaseStroke({
 }) {
   const ref = useRef<THREE.Mesh>(null)
   const { thick } = lubeLook(lube)
+  const geometry = useMemo(() => greaseFilmGeometry(stroke, thick), [stroke, thick])
   const frame = useMemo(() => {
     const a = new THREE.Vector3(...stroke.a)
     const b = new THREE.Vector3(...stroke.b)
@@ -229,22 +275,20 @@ export function GreaseStroke({
     z.sub(y.clone().multiplyScalar(z.dot(y))).normalize()
     const x = new THREE.Vector3().crossVectors(y, z)
     const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z))
-    return { a, y, len, q }
+    return { a, len, q }
   }, [stroke])
   useFrame(() => {
     const m = ref.current
     if (!m) return
     const p = Math.min(1, progress?.current ?? 1)
     m.visible = p > 0.01
-    const l = Math.max(0.001, frame.len * p)
-    m.position.copy(frame.a).addScaledVector(frame.y, l / 2)
-    if (stroke.tube) {
-      const r = stroke.tube + 0.05 + thick * 0.4
-      m.scale.set(r, l, r)
-    } else m.scale.set(stroke.w * 2, l, thick * 2)
+    m.position.copy(frame.a)
+    m.quaternion.copy(frame.q)
+    m.scale.set(1, frame.len, 1)
+    geometry.setDrawRange(0, Math.ceil(56 * p) * 16 * 6)
   })
   return (
-    <mesh ref={ref} geometry={stroke.tube ? sleeve : capsule} quaternion={frame.q}>
+    <mesh ref={ref} geometry={geometry}>
       <GreaseMaterial lube={lube} />
     </mesh>
   )
@@ -261,10 +305,10 @@ export const WIRE_PATH = {
   bendR: 0.9,
   /** tâm stab lệch nhẹ so với tâm dây trong CAD */
   offsetX: 0.06,
-  /** mỡ bắt đầu từ đoạn móc nằm trong lỗ slider */
-  greaseFromZ: -1.2,
-  /** mỡ lan sang thanh ngang bao nhiêu mm kể từ góc uốn */
-  barLen: 4.5,
+  /** mỡ phủ kín đoạn móc, trùm qua mặt cắt đầu dây (z = -2.99); đầu ống mỡ bịt bằng nắp tròn */
+  greaseFromZ: -3.05,
+  /** mỡ qua khỏi góc uốn 1 đoạn ngắn (phần cọ vào ngàm), không phết dọc cả thanh ngang */
+  barLen: 2,
 }
 
 /** x tâm đoạn móc ở mỗi bên */
@@ -288,8 +332,44 @@ export function wireGreaseCurve(side: -1 | 1, spanMm: number) {
 const TUBE_SEG = 64
 const TUBE_RAD = 16
 
+/** Uneven coating follows the wire curve; localized blobs sweep around its circumference. */
+function irregularWireGeometry(curve: THREE.Curve<THREE.Vector3>, layer: number, seed: number) {
+  const vertices: number[] = []
+  const frames = curve.computeFrenetFrames(TUBE_SEG, false)
+  const phase = seed * 0.113
+  for (let i = 0; i <= TUBE_SEG; i++) {
+    const t = i / TUBE_SEG
+    const center = curve.getPointAt(t)
+    const wave =
+      Math.sin(t * Math.PI * 6 + phase) * 0.19 + Math.sin(t * Math.PI * 17 + phase * 0.6) * 0.11
+    const deposits = [0.2, 0.48, 0.73, 0.91].reduce((sum, at, k) => {
+      const around = t * Math.PI * 5 + phase + k * 1.7
+      return (
+        sum +
+        1.35 *
+          smoothBlob(t, at + Math.sin(phase + k) * 0.018, 0.043) *
+          smoothBlob(Math.atan2(Math.sin(around), Math.cos(around)), 0, 0.72)
+      )
+    }, 0)
+    for (let j = 0; j < TUBE_RAD; j++) {
+      const angle = (j / TUBE_RAD) * Math.PI * 2
+      const irregularity = Math.sin(t * Math.PI * 9 + angle * 2 + phase) * 0.1
+      const coat = Math.max(0.08, 0.48 + wave + irregularity + deposits)
+      const radius = WIRE_PATH.r + layer * coat
+      const normal = frames.normals[i]
+      const binormal = frames.binormals[i]
+      const point = center
+        .clone()
+        .addScaledVector(normal, Math.cos(angle) * radius)
+        .addScaledVector(binormal, -Math.sin(angle) * radius)
+      vertices.push(point.x, point.y, point.z)
+    }
+  }
+  return greaseGrid(vertices, TUBE_SEG, TUBE_RAD)
+}
+
 /**
- * Lớp mỡ bọc tròn đều quanh dây, chạy theo đường tâm dây (hệ mm của dây).
+ * Lớp mỡ bọc dây có chỗ dày mỏng và mỡ đọng quanh móc/góc uốn.
  * progress: dài dần theo cọ
  */
 export function WireGrease({
@@ -303,18 +383,14 @@ export function WireGrease({
   side: -1 | 1
   progress?: MutableRefObject<number>
 }) {
-  const ref = useRef<THREE.Mesh>(null)
+  const ref = useRef<THREE.Group>(null)
   const { thick } = lubeLook(lube)
+  const layer = 0.03 + thick * 0.22
+  const rad = WIRE_PATH.r + layer * 0.48
+  const curve = useMemo(() => wireGreaseCurve(side, spanMm), [side, spanMm])
   const geom = useMemo(
-    () =>
-      new THREE.TubeGeometry(
-        wireGreaseCurve(side, spanMm),
-        TUBE_SEG,
-        WIRE_PATH.r + 0.05 + thick * 0.4,
-        TUBE_RAD,
-        false,
-      ),
-    [side, spanMm, thick],
+    () => irregularWireGeometry(curve, layer, Math.round(spanMm * 17 + side * 29)),
+    [curve, layer, side, spanMm],
   )
   useFrame(() => {
     const p = Math.min(1, progress?.current ?? 1)
@@ -322,9 +398,19 @@ export function WireGrease({
     geom.setDrawRange(0, Math.ceil(TUBE_SEG * p) * TUBE_RAD * 6)
   })
   return (
-    <mesh ref={ref} geometry={geom}>
-      <GreaseMaterial lube={lube} />
-    </mesh>
+    <group ref={ref}>
+      <mesh geometry={geom}>
+        <GreaseMaterial lube={lube} />
+      </mesh>
+      {/* nắp mỡ bịt kín đầu móc (ống hở đầu sẽ lộ lõi dây) */}
+      <mesh
+        position={[hookCenterX(side, spanMm), WIRE_PATH.y, WIRE_PATH.greaseFromZ]}
+        scale={[1, 1, 0.55]}
+      >
+        <sphereGeometry args={[rad, TUBE_RAD, 10]} />
+        <GreaseMaterial lube={lube} />
+      </mesh>
+    </group>
   )
 }
 

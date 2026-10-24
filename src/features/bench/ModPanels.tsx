@@ -1,11 +1,31 @@
 import type { ReactNode } from 'react'
 import { useGame, useBuild, useCtx } from '@/store'
 import { STABS, SWITCHES, TOOLS } from '@/data/parts'
-import { LUBE_IDS, SUPPLIES, lubeUseFit, type LubeUse } from '@/data/supplies'
+import {
+  JOINTS_PER_KEY,
+  LUBE_IDS,
+  SOLDER_IDS,
+  SUPPLIES,
+  lubeUseFit,
+  solderWindow,
+  type LubeUse,
+} from '@/data/supplies'
 import { stabModRules } from '@/data/mods'
+import { stabSets } from '@/data/steps'
 import type { LubePick } from '@/store/shopSlice'
-import { Button, HudCard, Muted, OptionChip, ProgressBar } from '@/components/ui'
-import { cn } from '@/lib/format'
+import type { ToolKind } from '@/types'
+import {
+  Alert,
+  Button,
+  HudPanel,
+  HudSection,
+  Muted,
+  OptionChip,
+  ProgressBar,
+  StepDot,
+  type StepDotState,
+} from '@/components/ui'
+import { cn, fmt } from '@/lib/format'
 
 const fitTone = (fit: number) =>
   fit >= 0.9 ? 'text-green' : fit >= 0.7 ? 'text-yellow' : 'text-red'
@@ -50,34 +70,38 @@ function LubePicker({
 }
 
 interface ModRowProps {
-  done: boolean
+  /** thứ tự hiện trong chấm trạng thái */
+  index: number
+  state: StepDotState
   name: string
   req: ReactNode
-  skip?: boolean
   /** nút làm bước này (ẩn khi đã xong / không làm được) */
   onDo?: () => void
 }
 
-function ModRow({ done, name, req, skip, onDo }: ModRowProps) {
+/** 1 mod: chấm trạng thái giống danh sách bước (✓ xong · số vàng = nên làm tiếp · – không cần) */
+function ModRow({ index, state, name, req, onDo }: ModRowProps) {
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-2 border-b border-dashed border-line py-1.5',
-        done && 'text-[#9fe6b6]',
-        skip && 'text-muted',
+        'flex items-center gap-2 border-b border-dashed border-line py-1.5 last:border-b-0',
+        state === 'done' && 'text-[#9fe6b6]',
+        state === 'cur' && 'font-extrabold text-white',
+        state === 'skip' && 'text-muted',
       )}
     >
-      <span>
-        {done ? '✅' : skip ? '➖' : '⬜'} {name}
+      <StepDot state={state}>{index}</StepDot>
+      {/* tên bước + lý do (dòng dưới, chữ nhỏ) để tên không bị bóp vỡ dòng */}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span>{name}</span>
+        {req && <span className="text-xs font-normal text-muted">{req}</span>}
       </span>
-      <span className="flex items-center gap-1.5 text-right text-xs">
-        {req}
-        {onDo && !done && (
-          <Button size="sm" tone="blue" onClick={onDo}>
-            Làm
-          </Button>
-        )}
-      </span>
+      {/* chưa làm được (đang chạy hoạt cảnh / không cần / không cho phép) thì chỉ mờ đi, không ẩn */}
+      {state !== 'done' && (
+        <Button size="sm" tone="blue" onClick={onDo} disabled={!onDo} className="shrink-0">
+          Làm
+        </Button>
+      )}
     </div>
   )
 }
@@ -85,12 +109,21 @@ function ModRow({ done, name, req, skip, onDo }: ModRowProps) {
 /** Cảnh báo thiếu dụng cụ */
 function ToolWarn({ kinds }: { kinds: ('brush' | 'clipper' | 'opener')[] }) {
   const tools = useGame((s) => s.tools)
+  const openShop = useGame((s) => s.openShop)
   const missing = kinds.filter((k) => TOOLS[k][tools[k]].none)
   if (!missing.length) return null
+  // khung cảnh báo nổi bật (thay dòng chữ đỏ nhỏ), kèm nút mở Shopii đúng mục dụng cụ
   return (
-    <div className="text-xs text-red">
-      ⚠️ Thiếu: {missing.map((k) => TOOLS[k][1].name).join(', ')} (Tiệm Đồ Nghề / Shopii)
-    </div>
+    <Alert title="Thiếu dụng cụ">
+      <ul className="list-disc pl-5">
+        {missing.map((k) => (
+          <li key={k}>{TOOLS[k][1].name}</li>
+        ))}
+      </ul>
+      <Button size="sm" tone="red" onClick={() => openShop('tool')}>
+        🛒 Mua ở Shopii
+      </Button>
+    </Alert>
   )
 }
 
@@ -103,35 +136,53 @@ export function StabModPanel() {
   const busy = useGame((s) => !!s.stabAnim)
   const n = ctx.stabKeys.length
   const m = STABS[model]
+  const rules = stabModRules(model)
+  // mod nên làm tiếp theo (cùng thứ tự mũi tên vàng trên bàn)
+  const next = rules.find((r) => r.needed && r.allowed && !mods[r.kind])?.kind
   return (
-    <HudCard className="flex flex-col gap-1.5">
-      <h4 className="text-base">🛠 Mod stab ({n} stab)</h4>
+    <HudPanel
+      id="stabMod"
+      title={`🛠 Mod stab (${n} stab)`}
+      footer={
+        <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
+          {mods.wired ? 'Xong, đi lắp stab →' : 'Bỏ qua mod →'}
+        </Button>
+      }
+    >
+      <Muted>
+        {stabSets(ctx.stabKeys)
+          .map((s) => `${s.label} ×${s.count}`)
+          .join(' · ')}
+      </Muted>
       <Muted>
         {m.name}: {m.desc}
       </Muted>
-      {stabModRules(model).map((r) => (
-        <ModRow
-          key={r.kind}
-          name={r.label}
-          done={!!mods[r.kind]}
-          skip={!r.needed && !mods[r.kind]}
-          req={r.reason ?? ''}
-          onDo={r.allowed && !busy ? () => modStab(r.kind) : undefined}
-        />
-      ))}
-      <ToolWarn kinds={['brush', 'clipper']} />
-      <Muted>Lube housing + slider:</Muted>
-      <LubePicker slot="housing" use="housing" disabled={!!mods.housing} />
-      <Muted>Lube dây stab:</Muted>
-      <LubePicker slot="wire" use="wire" disabled={!!mods.wire} />
-      <Muted>
-        Click bộ phận trên bàn (theo mũi tên vàng) hoặc bấm "Làm". Mỗi lần lube / dán băng dùng {n}{' '}
-        lượt vật tư.
-      </Muted>
-      <Button tone="green" wide onClick={finishOptional}>
-        {mods.wired ? 'Xong, đi lắp stab →' : 'Bỏ qua mod →'}
-      </Button>
-    </HudCard>
+      <HudSection id="stabMod.steps" title="Các bước mod">
+        {rules.map((r, i) => (
+          <ModRow
+            key={r.kind}
+            index={i + 1}
+            name={r.label}
+            state={mods[r.kind] ? 'done' : !r.needed ? 'skip' : r.kind === next ? 'cur' : 'todo'}
+            req={r.reason ?? ''}
+            onDo={r.allowed && !busy ? () => modStab(r.kind) : undefined}
+          />
+        ))}
+        <ToolWarn kinds={['brush', 'clipper']} />
+      </HudSection>
+      <HudSection id="stabMod.housing" title="Housing + slider">
+        <LubePicker slot="housing" use="housing" disabled={!!mods.housing} />
+      </HudSection>
+      <HudSection id="stabMod.wire" title="Wire">
+        <LubePicker slot="wire" use="wire" disabled={!!mods.wire} />
+      </HudSection>
+      <HudSection id="stabMod.help" title="Hướng dẫn">
+        <Muted>
+          Click bộ phận trên bàn (theo mũi tên vàng) hoặc bấm "Làm". Mỗi lần lube / dán băng dùng{' '}
+          {n} lượt vật tư.
+        </Muted>
+      </HudSection>
+    </HudPanel>
   )
 }
 
@@ -145,42 +196,191 @@ export function LubePanel() {
   const ctx = useCtx()
   const build = useBuild()
   const opener = useGame((s) => TOOLS.opener[s.tools.opener])
+  const certLv = useGame((s) => s.tools.cert ?? 0)
   const swType = useGame((s) => s.inventory.switch!.type)
   const pref = useGame((s) => s.order!.lubePref)
   const finishOptional = useGame((s) => s.finishOptional)
+  const busy = useGame((s) => !!s.lubeAnim)
   const sw = SWITCHES[swType]
+  const total = ctx.keys.length
+  const opened = build.opened ?? build.lubed
   return (
-    <HudCard className="flex flex-col gap-1.5">
-      <h4 className="text-base">🧴 Lube switch</h4>
-      <div
-        className={cn(
-          'text-xs font-bold',
-          pref === 'none' ? 'text-red' : pref === 'want' ? 'text-green' : 'text-muted',
-        )}
-      >
-        {PREF_TEXT[pref]}
-      </div>
+    <HudPanel
+      id="switchLube"
+      title="🧴 Lube switch"
+      footer={
+        <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
+          {build.lubed ? 'Xong, đi lắp switch →' : 'Bỏ qua lube →'}
+        </Button>
+      }
+    >
+      {/* thông tin switch lên đầu, các khung cảnh báo xếp liền nhau bên dưới */}
       <Muted>
         {sw.name} ({sw.feel}){sw.prelubed ? ' · đã lube sẵn từ nhà máy' : ' · chưa lube'}
       </Muted>
+      {/* khách dặn không lube: đưa vào khung cảnh báo cho khỏi bỏ sót */}
+      {pref === 'none' ? (
+        <Alert title={PREF_TEXT[pref]}>Lube vào sẽ bị trừ điểm, bấm "Bỏ qua lube" để đi tiếp</Alert>
+      ) : (
+        <div className={cn('text-xs font-bold', pref === 'want' ? 'text-green' : 'text-muted')}>
+          {PREF_TEXT[pref]}
+        </div>
+      )}
       <ToolWarn kinds={['opener', 'brush']} />
-      {!opener.none && <div className="text-xs">{`${opener.name}: ${opener.n} con / mẻ`}</div>}
-      <Muted>Lube switch:</Muted>
-      <LubePicker slot="switch" use={sw.feel} disabled={!!build.lubeType} />
-      <ProgressBar value={build.lubed / ctx.keys.length} className="mt-1" />
-      <div className="text-xs">
-        Đã lube {build.lubed}/{ctx.keys.length}
+      <HudSection
+        id="switchLube.open"
+        title={
+          <span className="flex items-center gap-2">
+            <StepDot state={opened >= total ? 'done' : 'cur'}>1</StepDot>
+            Mở switch {opened}/{total}
+          </span>
+        }
+      >
+        <div className="text-xs">Click switch trên đồ mở để tách vỏ, mỗi lần 1 con</div>
+        <ProgressBar value={opened / total} className="mt-1" />
+      </HudSection>
+      <HudSection
+        id="switchLube.switch"
+        title={
+          <span className="flex items-center gap-2">
+            <StepDot state={build.lubed >= total ? 'done' : opened > build.lubed ? 'cur' : 'todo'}>
+              2
+            </StepDot>
+            Lube switch {build.lubed}/{total}
+          </span>
+        }
+      >
+        {!opener.none && (
+          <div className="text-xs">{`Đã mở chờ lube: ${opened - build.lubed} · ${TOOLS.cert[certLv].n} con / mẻ (theo bậc thợ)`}</div>
+        )}
+        <LubePicker slot="switch" use={sw.feel} disabled={!!build.lubeType} />
+        <ProgressBar value={build.lubed / total} className="mt-1" />
+      </HudSection>
+      <HudSection
+        id="switchLube.spring"
+        title={
+          <span className="flex items-center gap-2">
+            <StepDot state={build.springLube ? 'done' : 'todo'}>3</StepDot>
+            Lube lò xo (hết tiếng ping)
+          </span>
+        }
+      >
+        <LubePicker slot="spring" use="spring" disabled={!!build.springLube} />
+        <div className="text-xs">
+          {build.springLube
+            ? `Lò xo đã lube ${SUPPLIES[build.springLube].name}`
+            : 'Click hộp lắc trên bàn: bỏ lò xo vào hộp với dầu rồi lắc đều'}
+        </div>
+      </HudSection>
+    </HudPanel>
+  )
+}
+
+/** tên ngắn trên nút đổi dụng cụ hàn */
+const SOLDER_SHORT: Record<number, string> = { 1: 'Bút hàn', 2: 'Trạm hàn' }
+
+/** Panel bước hàn: dụng cụ hàn đang có, chọn loại thiếc, tiến độ + số mối cháy */
+export function SolderPanel() {
+  const ctx = useCtx()
+  const build = useBuild()
+  const tools = useGame((s) => s.tools)
+  const supplies = useGame((s) => s.supplies)
+  const pick = useGame((s) => s.solderPick)
+  const setSolderPick = useGame((s) => s.setSolderPick)
+  const buyTool = useGame((s) => s.buyTool)
+  const solderOwned = useGame((s) => s.solderOwned)
+  const lastPurchase = useGame((s) => s.lastSolderPurchase)
+  const undoPurchase = useGame((s) => s.undoSolderPurchase)
+  const iron = TOOLS.solder[tools.solder]
+  const cleaner = TOOLS.tipCleaner[tools.tipCleaner]
+  const joints = Object.values(build.solder)
+  const burnt = joints.filter((j) => j !== true && j.burnt).length
+  const total = ctx.keys.length
+  const wear = useGame((s) => s.wear.desolder ?? 0)
+  const pump = TOOLS.desolder[tools.desolder ?? 0]
+  const good = joints.length - burnt
+  const { melt, burn } = solderWindow(tools.solder >= 2, pick)
+  // dụng cụ có độ bền: hiện số lần dùng còn lại (hết thì hỏng, phải mua lại)
+  const wearAll = useGame((s) => s.wear)
+  const tool = (t: { name: string; none?: boolean; life?: number }, kind?: ToolKind) => {
+    const left = t.life && kind ? t.life - (wearAll[kind] ?? 0) : null
+    return (
+      <div className={cn('text-xs', t.none ? 'text-red' : 'text-[#9fe6b6]')}>
+        {t.none ? '⚠️ ' : '✓ '}
+        {t.name}
+        {left !== null && !t.none && (
+          <span className={cn('ml-1', left <= 30 ? 'text-yellow' : 'text-muted')}>
+            · còn {left}/{t.life} lần
+          </span>
+        )}
       </div>
-      <Muted>Lube lò xo (hết tiếng ping):</Muted>
-      <LubePicker slot="spring" use="spring" disabled={!!build.springLube} />
+    )
+  }
+  return (
+    <HudPanel id="solder" title="🔥 Hàn switch">
+      <ProgressBar value={good / total} />
       <div className="text-xs">
-        {build.springLube
-          ? `✅ Lò xo đã lube ${SUPPLIES[build.springLube].name}`
-          : 'Click hộp lắc trên bàn: bỏ lò xo vào hộp với dầu rồi lắc đều'}
+        Đã hàn đạt {good}/{total}
+        {burnt > 0 && <span className="text-red"> · {burnt} mối cháy xém</span>}
       </div>
-      <Button tone="green" wide onClick={finishOptional}>
-        {build.lubed ? 'Xong, đi lắp switch →' : 'Bỏ qua lube →'}
-      </Button>
-    </HudCard>
+      {build.tipDirty && (
+        <div className="text-xs font-bold text-yellow">
+          Mũi hàn đen: bấm bùi nhùi trên bàn để lau rồi hàn tiếp
+        </div>
+      )}
+      <HudSection id="solder.tools" title="Dụng cụ">
+        {tool(iron, 'solder')}
+        {/* đổi qua lại bút hàn / trạm hàn đã mua; chưa mua thì mờ đi (mua ở Shopii) */}
+        <div className="flex flex-wrap gap-1">
+          {TOOLS.solder.map((item, level) => {
+            if (item.none) return null
+            const using = tools.solder === level
+            const owned = using || solderOwned[level] !== undefined
+            const left =
+              (item.life ?? 0) - (using ? (wearAll.solder ?? 0) : (solderOwned[level] ?? 0))
+            return (
+              <Button
+                key={level}
+                size="sm"
+                tone={using ? 'green' : 'default'}
+                disabled={!owned || using}
+                title={owned ? `Còn ${left}/${item.life} lần` : 'Chưa có — mua ở Shopii → Dụng cụ'}
+                onClick={() => buyTool('solder', level)}
+              >
+                {using ? '✓ ' : ''}
+                {SOLDER_SHORT[level]}
+              </Button>
+            )
+          })}
+        </div>
+        {lastPurchase && (
+          <Button size="sm" onClick={undoPurchase}>
+            Hoàn tác mua {TOOLS.solder[lastPurchase.level].name} · hoàn {fmt(lastPurchase.cost)}
+          </Button>
+        )}
+        {tool(cleaner, 'tipCleaner')}
+        {tool(pump)}
+        {!pump.none && <Muted>Bút hút thiếc: {Math.max(0, 1000 - wear)}/1000 lượt còn lại</Muted>}
+        {burnt > 0 && <Muted>Giữ chuột trên mối cháy để hút thiếc, lau mũi hàn rồi hàn lại.</Muted>}
+        {!iron.none && (
+          <Muted>
+            Mỗi phím: thiếc chảy sau {melt[0]}–{melt[1]}s, tới {burn}s là cháy chân
+          </Muted>
+        )}
+      </HudSection>
+      <HudSection id="solder.wire" title="Thiếc hàn">
+        <div className="flex flex-wrap gap-1">
+          {SOLDER_IDS.map((id) => (
+            <OptionChip key={id} active={pick === id} onClick={() => setSolderPick(id)}>
+              {SUPPLIES[id].name} ({supplies[id] ?? 0})
+            </OptionChip>
+          ))}
+        </div>
+        <Muted>{SUPPLIES[pick].desc}</Muted>
+        <Muted>
+          Mỗi phím dùng {JOINTS_PER_KEY} mối hàn · cần {(total - good) * JOINTS_PER_KEY} mối nữa
+        </Muted>
+      </HudSection>
+    </HudPanel>
   )
 }

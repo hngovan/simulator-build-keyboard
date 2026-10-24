@@ -8,6 +8,7 @@ import type { ToolKind } from '@/types'
 // Tiệm đồ nghề: viền xanh = đang dùng, rê chuột lên món chưa có để mua
 export function ToolShop() {
   const tools = useGame((s) => s.tools)
+  const owned = useGame((s) => s.solderOwned)
   const buyTool = useGame((s) => s.buyTool)
   return (
     <div>
@@ -18,7 +19,11 @@ export function ToolShop() {
             {levels.map((t, lv) => {
               if (t.none) return null
               const state: ArtCardState =
-                tools[kind] === lv ? 'owned' : tools[kind] > lv ? 'outdated' : 'buyable'
+                tools[kind] === lv
+                  ? 'owned'
+                  : kind !== 'solder' && tools[kind] > lv
+                    ? 'outdated'
+                    : 'buyable'
               return (
                 <ArtCard
                   key={lv}
@@ -26,7 +31,11 @@ export function ToolShop() {
                   title={t.name}
                   desc={t.desc}
                   state={state}
-                  action={`Mua ${fmt(t.price)}`}
+                  action={
+                    kind === 'solder' && owned[lv] !== undefined
+                      ? 'Dùng máy này'
+                      : `Mua ${fmt(t.price)}`
+                  }
                   onAction={() => buyTool(kind, lv)}
                 />
               )

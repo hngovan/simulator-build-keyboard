@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Button, OptionChip, SoundBars } from '@/components/ui'
 import { fmt } from '@/lib/format'
-import type { Product, ProductOption } from '@/types'
+import type { Product, ProductOption, ToolItem } from '@/types'
 import { ProductImage } from './ProductImage'
+import { useGame } from '@/store'
 
 interface Props {
   product: Product
@@ -13,9 +14,36 @@ interface Props {
 export function ProductCard({ product, onBuy }: Props) {
   const [sel, setSel] = useState(0)
   const opt = product.options[sel]
+  const tools = useGame((s) => s.tools)
+  const owned = useGame((s) => s.solderOwned)
+  const solderItem =
+    product.cat === 'tool' && (opt.item as ToolItem).kind === 'solder'
+      ? (opt.item as ToolItem)
+      : null
+  const equipped = !!solderItem && tools.solder === solderItem.level
+  const canEquip = !!solderItem && owned[solderItem.level] !== undefined
   return (
     <div className="flex flex-col gap-1.5 rounded-[14px] border-2 border-transparent bg-panel-2 p-2.5 hover:border-orange">
-      <ProductImage product={product} swatch={opt.swatch} className="h-[70px]" />
+      <ProductImage
+        product={product}
+        swatch={opt.swatch}
+        item={opt.item}
+        className="h-[110px]"
+        // chọn màu / loại ngay trong khung xem 3D (đồng bộ với lựa chọn trên thẻ)
+        picker={
+          product.options.length > 1 &&
+          product.options.map((o, i) => (
+            <OptionChip
+              key={o.label}
+              active={i === sel}
+              swatch={o.swatch}
+              onClick={() => setSel(i)}
+            >
+              {o.label}
+            </OptionChip>
+          ))
+        }
+      />
       <div className="flex items-center gap-1.5">
         <div className="min-w-0 flex-1 truncate font-extrabold" title={product.name}>
           {product.name}
@@ -53,8 +81,8 @@ export function ProductCard({ product, onBuy }: Props) {
       </div>
       <div className="mt-auto flex items-center justify-between">
         <span className="font-head text-lg font-extrabold text-[#ff8c5a]">{fmt(opt.price)}</span>
-        <Button tone="orange" size="sm" onClick={() => onBuy(product, opt)}>
-          Mua ngay
+        <Button tone="orange" size="sm" disabled={equipped} onClick={() => onBuy(product, opt)}>
+          {equipped ? 'Đang dùng' : canEquip ? 'Dùng máy này' : 'Mua ngay'}
         </Button>
       </div>
     </div>

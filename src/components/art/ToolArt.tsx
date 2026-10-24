@@ -7,6 +7,7 @@ const BG: Record<string, [string, string]> = {
   keycap: ['#d85c9a', '#7d2b5c'],
   screw: ['#3fa36b', '#1d5c3a'],
   solder: ['#e0782f', '#8a3a12'],
+  tipCleaner: ['#b8873a', '#5a3d12'],
   clipper: ['#8a5cd8', '#432a7d'],
   opener: ['#2fb3b3', '#145757'],
   brush: ['#c98a3a', '#6b3f12'],
@@ -71,7 +72,7 @@ function Badge({ text, x = 128, y = 8 }: { text: string; x?: number; y?: number 
         fontSize="11"
         fontWeight="800"
         fill="#3a2b00"
-        fontFamily="Baloo 2, sans-serif"
+        fontFamily="Baloo 2, Nunito, sans-serif"
       >
         {text}
       </text>
@@ -221,6 +222,7 @@ const ART: Record<string, Art[]> = {
     ),
   ],
   solder: [
+    null,
     () => (
       <>
         <g transform="rotate(-25 80 55)">
@@ -276,6 +278,25 @@ const ART: Record<string, Art[]> = {
     ),
   ],
 }
+
+// Bùi nhùi đồng trong cốc: cuộn sợi đồng xoắn
+ART.tipCleaner = [
+  null,
+  () => (
+    <>
+      <path d="M52 56 H108 L102 88 H58 Z" fill="#3a3f4a" />
+      {[0, 1, 2, 3, 4].map((i) => (
+        <path
+          key={i}
+          d={`M${56 + i * 4} 58 q12 -22 ${24 - i * 2} -4 q10 -18 ${20 - i * 3} 2`}
+          stroke="#e0a948"
+          strokeWidth="3"
+          fill="none"
+        />
+      ))}
+    </>
+  ),
+]
 
 // Kìm cắt: 2 cán cao su + lưỡi cắt
 ART.clipper = [
@@ -405,7 +426,7 @@ export function SupplyArt({ id, color }: { id: string; color: string }) {
           fontSize="16"
           fontWeight="800"
           fill="#c03b3b"
-          fontFamily="Baloo 2, sans-serif"
+          fontFamily="Baloo 2, Nunito, sans-serif"
         >
           URGO
         </text>
@@ -432,7 +453,7 @@ export function SupplyArt({ id, color }: { id: string; color: string }) {
           fontSize="13"
           fontWeight="800"
           fill="#1d3550"
-          fontFamily="Baloo 2, sans-serif"
+          fontFamily="Baloo 2, Nunito, sans-serif"
         >
           PERMATEX
         </text>
@@ -447,6 +468,9 @@ export function SupplyArt({ id, color }: { id: string; color: string }) {
       t3204: '3204',
       gpl105: 'GPL 105',
       bdz: 'XHT-BDZ',
+      solderCheap: 'Thiếc đểu',
+      solder6337: 'Sakura',
+      solderPro: 'Asahi',
     }
     const label = LABELS[id] ?? id
     body = (
@@ -470,7 +494,7 @@ export function SupplyArt({ id, color }: { id: string; color: string }) {
           fontSize="13"
           fontWeight="800"
           fill="#2a2f3a"
-          fontFamily="Baloo 2, sans-serif"
+          fontFamily="Baloo 2, Nunito, sans-serif"
         >
           {label}
         </text>

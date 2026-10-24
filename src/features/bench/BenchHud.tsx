@@ -1,14 +1,34 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useGame, useBuild, useCtx } from '@/store'
-import { NO_FLIP_STEPS, STEP_INFO, stepProgress } from '@/data/steps'
+import {
+  autoFlip,
+  NO_FLIP_STEPS,
+  OPTIONAL_STEPS,
+  SCREW_STEPS,
+  STEP_INFO,
+  stepProgress,
+} from '@/data/steps'
 import { TOOLS } from '@/data/parts'
-import { Button, HudCard } from '@/components/ui'
+import {
+  FlipVertical2,
+  Hand,
+  ListOrdered,
+  Monitor,
+  PackageCheck,
+  Rotate3d,
+  ScanEye,
+  Undo2,
+} from 'lucide-react'
+import { Alert, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
+import { cn } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
 import { StatusChips } from '@/components/game/StatusChips'
-import type { StepId, ToolKind } from '@/types'
+import type { ScrewStep, StepId, ToolKind } from '@/types'
 import { StepList } from './StepList'
-import { LubePanel, StabModPanel } from './ModPanels'
+import { LubePanel, SolderPanel, StabModPanel } from './ModPanels'
 import { SoundMeter } from './SoundMeter'
+import { BitPicker } from './BitPicker'
+import { OrderPicker } from './EmptyBenchHud'
 
 // Dụng cụ đang dùng ở mỗi bước (hiện ở thanh nhiệm vụ)
 const STEP_TOOL: Partial<Record<StepId, ToolKind>> = {
@@ -23,47 +43,135 @@ const STEP_TOOL: Partial<Record<StepId, ToolKind>> = {
   switchLube: 'opener',
 }
 
-function TopBar({ canFlip }: { canFlip: boolean }) {
-  const viewFlip = useGame((s) => s.viewFlip)
+/** Build đã xong hết các bước bắt buộc chưa (giao sớm thì hỏi lại) */
+function useBuildComplete() {
+  const ctx = useCtx()
+  const build = useBuild()
+  const clicks = useGame((s) => TOOLS.screw[s.tools.screw].clicks!)
+  return ctx.steps
+    .filter((st) => !OPTIONAL_STEPS.includes(st))
+    .every((st) => {
+      const [d, t] = stepProgress(st, build, ctx, clicks)
+      return d >= t
+    })
+}
+
+/** Hỏi lại trước khi giao bàn phím chưa build xong cho khách */
+function ConfirmDeliver({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[30] grid animate-fade-in place-items-center bg-black/55 p-4"
+      onPointerDown={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <HudCard className="flex w-[460px] max-w-full flex-col gap-3">
+        <h3 className="font-head text-xl font-extrabold text-yellow">
+          📮 Giao bàn phím chưa xong?
+        </h3>
+        <Alert title="Bàn phím vẫn chưa build xong">
+          Giao lúc này khách sẽ chấm điểm thấp và có thể ảnh hưởng tới uy tín của bạn. Bạn không
+          muốn làm tới cùng cho khách sao?
+        </Alert>
+        <div className="flex justify-end gap-2">
+          <Button tone="red" onClick={onConfirm}>
+            Vẫn giao
+          </Button>
+          <Button tone="green" onClick={onCancel}>
+            🛠 Làm tiếp
+          </Button>
+        </div>
+      </HudCard>
+    </div>
+  )
+}
+
+function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }) {
   const started = useBuild().stepIdx > 0
+  const complete = useBuildComplete()
+  const [confirming, setConfirming] = useState(false)
+  const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
   const canUndo = useGame((s) => s.history.length > 0 && !s.stabAnim)
-  const { goPC, toggleFlip, resetCam, deliver, undo } = useGame.getState()
-  // Ctrl+Z để hoàn tác
+  const camMode = useGame((s) => s.camMode)
+  const { zoomToPC, toggleFlip, resetCam, deliver, undo, setCamMode } = useGame.getState()
+  // Ctrl+Z để hoàn tác · H bật/tắt bàn tay (trừ bước test: phím H là phím đang test)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const s = useGame.getState()
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
         e.preventDefault()
-        useGame.getState().undo()
+        s.undo()
+      } else if (e.code === 'KeyH' && !e.ctrlKey && !e.metaKey && s.step() !== 'test') {
+        s.setCamMode(s.camMode === 'pan' ? 'orbit' : 'pan')
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   return (
-    <div className="pointer-events-none fixed inset-x-3 top-3 z-[5] flex items-center justify-between [&>*]:pointer-events-auto">
+    // z-[8]: tooltip icon nổi trên khung HUD 2 bên (z-[5]), dưới bảng hỏi / danh sách đơn
+    <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between [&>*]:pointer-events-auto">
       <div className="flex gap-2">
-        <Button tone="blue" onClick={goPC}>
-          🖥 Về máy tính
-        </Button>
-        <Button tone="yellow" onClick={toggleFlip} disabled={!canFlip}>
-          🔄 {viewFlip ? 'Lật lại mặt trên' : 'Lật xem đáy'}
-        </Button>
-        <Button
+        <IconButton
           tone="blue"
+          icon={<Monitor />}
+          label="Về máy tính"
+          hint="Đi tới màn hình trên bàn"
+          onClick={zoomToPC}
+        />
+        <IconButton
+          tone="yellow"
+          icon={<FlipVertical2 />}
+          label={isFlipped ? 'Lật lại mặt trên' : 'Lật xem đáy'}
+          onClick={toggleFlip}
+          disabled={!canFlip}
+        />
+        <IconButton
+          icon={<Undo2 />}
+          label="Hoàn tác"
+          hint="Ctrl + Z"
           onClick={undo}
           disabled={!canUndo}
-          title="Hoàn tác thao tác vừa làm (Ctrl+Z)"
-        >
-          ↶ Hoàn tác
-        </Button>
-        <Button onClick={resetCam} title="Đưa camera về góc nhìn mặc định">
-          🎥 Góc nhìn
-        </Button>
-        <Button tone="orange" onClick={deliver} disabled={!started}>
-          📮 Đóng gói & giao hàng
-        </Button>
+        />
+        <IconButton
+          icon={<ScanEye />}
+          label="Góc nhìn mặc định"
+          hint="Đưa camera về chỗ cũ"
+          onClick={resetCam}
+        />
+        <IconButton
+          tone={camMode === 'pan' ? 'green' : 'default'}
+          icon={camMode === 'pan' ? <Hand /> : <Rotate3d />}
+          label={camMode === 'pan' ? 'Đang kéo khung nhìn' : 'Đang xoay khung nhìn'}
+          hint="Phím H: đổi kéo / xoay"
+          onClick={() => setCamMode(camMode === 'pan' ? 'orbit' : 'pan')}
+        />
+        {/* danh sách đơn: xem tiến độ, đổi sang đơn khác (bản đang dở được cất lại nguyên trạng) */}
+        <IconButton
+          tone="blue"
+          icon={<ListOrdered />}
+          label="Danh sách đơn"
+          hint="Xem tiến độ, đổi đơn, làm tiếp"
+          onClick={() => useGame.setState({ benchPicker: true })}
+          disabled={busy}
+        />
+        <IconButton
+          tone="orange"
+          icon={<PackageCheck />}
+          label="Đóng gói đơn này"
+          hint="Chấm điểm, chờ gửi cho khách"
+          onClick={() => (complete ? deliver() : setConfirming(true))}
+          disabled={!started}
+        />
       </div>
       <StatusChips />
+      {confirming && (
+        <ConfirmDeliver
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => {
+            setConfirming(false)
+            deliver()
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -74,34 +182,80 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const s = useGame()
   const info = STEP_INFO[step]
   const [done, total] = stepProgress(step, build, ctx, TOOLS.screw[s.tools.screw].clicks!)
+  const finished = done >= total
+  const optional = step === 'stabMod' || step === 'switchLube'
+  const last = build.stepIdx >= ctx.steps.length - 1
+  const busy = !!s.stabAnim || !!s.lubeAnim
+  // đang đứng ở bước cũ (đã lùi về): đi tiếp theo các bước đã làm
+  const ahead = s.future.length > 1
   const toolKind = STEP_TOOL[step]
   const tool = toolKind && TOOLS[toolKind][s.tools[toolKind]]
+  const isFlipped = canFlip && (autoFlip(step, ctx) ? !s.viewFlip : s.viewFlip)
   const hint =
     step === 'switch' && !s.inventory.switch?.count
       ? '⚠️ Hết switch! Về máy tính mua thêm.'
-      : s.viewFlip && canFlip
+      : isFlipped
         ? 'Đang xem mặt đáy — bấm "Lật lại mặt trên" để thao tác.'
         : info.hint
+  // thu gọn: chỉ còn tiêu đề + tiến độ + nút bước sau (nhớ trạng thái như các panel HUD)
+  const [open, toggle] = useOpen('objective')
   return (
     <div className="fixed bottom-3 left-1/2 z-[5] flex max-w-[calc(100%-24px)] -translate-x-1/2 flex-col items-center gap-1">
-      <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border-[3px] border-yellow bg-[rgba(14,16,24,0.92)] px-4.5 py-2.5 shadow-[0_6px_0_#0006]">
-        <span className="font-head text-lg font-extrabold text-yellow">
-          {info.title}{' '}
-          {total > 1 && (
-            <b>
-              {done}/{total}
-            </b>
-          )}
-        </span>
-        <span>{hint}</span>
-        {tool && !tool.none && (
-          <span className="rounded-full bg-panel-2 px-2.5 py-0.5 text-xs font-extrabold">
-            🔧 {tool.name}
-          </span>
+      <div
+        className={cn(
+          'flex items-center rounded-2xl border-[3px] border-yellow bg-[rgba(14,16,24,0.92)] shadow-[0_6px_0_#0006]',
+          open ? 'flex-col gap-2 px-5 py-3' : 'gap-3 py-1.5 pr-1.5 pl-4',
         )}
+      >
+        <button
+          type="button"
+          onClick={toggle}
+          aria-expanded={open}
+          title={open ? 'Thu gọn hướng dẫn' : 'Mở hướng dẫn'}
+          className="flex items-center gap-2 font-head text-xl font-extrabold text-yellow transition-opacity hover:opacity-85"
+        >
+          <span>
+            {info.title}{' '}
+            {total > 1 && (
+              <b>
+                {done}/{total}
+              </b>
+            )}
+          </span>
+          <span className={cn('text-xs transition-transform', !open && '-rotate-90')}>▼</span>
+        </button>
+        {open && <span className="max-w-[640px] text-center text-base leading-snug">{hint}</span>}
+        {/* dụng cụ đang dùng + nút bước sau: cùng cỡ, đứng cạnh nhau (thu gọn thì chỉ còn nút) */}
+        <div className="flex flex-wrap items-center justify-center gap-2.5">
+          {open && tool && !tool.none && (
+            <span className="inline-flex h-9 min-w-[180px] items-center justify-center gap-1.5 rounded-[10px] bg-panel-2 px-4 font-head text-sm font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.35)]">
+              🔧 {tool.name}
+            </span>
+          )}
+          {/* mọi bước đều phải bấm mới sang bước sau; bước tuỳ chọn thì bỏ qua được */}
+          {/* bước mở hộp: click thùng là tự sang bước sau, không cần nút */}
+          {!last && step !== 'unbox' && (
+            <Button
+              tone={finished || ahead ? 'green' : 'blue'}
+              size="sm"
+              className="inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm"
+              onClick={s.nextStep}
+              disabled={busy || (!finished && !optional && !ahead)}
+              title={finished || optional || ahead ? undefined : 'Làm xong bước này trước'}
+            >
+              {finished || ahead
+                ? 'Bước tiếp theo →'
+                : optional
+                  ? 'Bỏ qua →'
+                  : `Còn ${total - done} nữa`}
+            </Button>
+          )}
+        </div>
       </div>
-      <span className="text-xs text-muted">
-        Chuột trái: thao tác / xoay · Chuột phải: kéo · Cuộn: zoom
+      <span className={cn('text-xs text-muted', !open && 'hidden')}>
+        {s.camMode === 'pan'
+          ? '✋ Chuột trái: kéo khung nhìn · Chuột phải: xoay 360° · Cuộn: zoom · H: đổi chế độ'
+          : 'Chuột trái: thao tác / xoay 360° · Chuột phải hoặc Shift + kéo: di chuyển · Cuộn: zoom · H: bàn tay'}
       </span>
     </div>
   )
@@ -112,35 +266,40 @@ export function BenchHud() {
   const ctx = useCtx()
   const build = useBuild()
   const order = useGame((s) => s.order!)
+  const viewFlip = useGame((s) => s.viewFlip)
   const step = ctx.steps[build.stepIdx]
   const canFlip = !NO_FLIP_STEPS.includes(step)
+  const isFlipped = canFlip && (autoFlip(step, ctx) ? !viewFlip : viewFlip)
   const side =
     step === 'stabMod' ? (
       <StabModPanel />
     ) : step === 'switchLube' ? (
       <LubePanel />
+    ) : step === 'solder' ? (
+      <SolderPanel />
     ) : step === 'test' ? (
       <SoundMeter />
     ) : null
 
   return (
     <>
-      <TopBar canFlip={canFlip} />
-      <div className="fixed top-16 left-3 z-[5] flex max-h-[calc(100vh-160px)] w-[280px] flex-col gap-2 overflow-auto max-md:w-[220px]">
-        <HudCard>
-          <h4 className="mb-2 text-base">
-            {order.avatar} Đơn của {order.customer}
-          </h4>
+      <TopBar canFlip={canFlip} isFlipped={isFlipped} />
+      {/* 2 cột HUD: mỗi thẻ bấm tiêu đề để thu gọn / mở, thân cuộn riêng */}
+      <div className="fixed top-16 left-3 z-[5] flex max-h-[calc(100vh-160px)] w-[300px] flex-col gap-2 text-sm max-md:w-[220px] [&_.text-base]:text-lg [&_.text-xs]:text-sm">
+        <HudPanel id="order" title={`Đơn của ${order.customer}`} className="shrink-0">
           <OrderSpec order={order} compact />
-        </HudCard>
+        </HudPanel>
         <StepList />
       </div>
       {side && (
-        <div className="fixed top-16 right-3 z-[5] max-h-[calc(100vh-160px)] w-[260px] overflow-auto max-md:hidden">
+        // cột phải: chữ 14px đồng bộ với cột trái (chữ nhỏ 12 → 14px, tiêu đề lớn hơn 1 bậc)
+        <div className="fixed top-16 right-3 z-[5] flex max-h-[calc(100vh-160px)] w-[310px] flex-col text-sm max-md:hidden [&_.text-base]:text-lg [&_.text-xs]:text-sm">
           {side}
         </div>
       )}
       <Objective step={step} canFlip={canFlip} />
+      {step in SCREW_STEPS && <BitPicker step={step as ScrewStep} />}
+      <OrderPicker />
     </>
   )
 }

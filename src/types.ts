@@ -1,7 +1,8 @@
 // Kiểu dữ liệu dùng chung cho toàn game
 
-export type LayoutId = '40' | '60' | 'hhkb' | 'truehhkb' | 'tkl' | 'full'
-export type FormFactor = '40' | '60' | 'tkl' | 'full'
+export type LayoutId =
+  '40' | '60' | 'hhkb' | 'truehhkb' | '65' | '75' | 'frl' | 'tkl' | 'full' | 'planck' | 'alice'
+export type FormFactor = '40' | '60' | '65' | '75' | 'frl' | 'tkl' | 'full' | 'planck' | 'alice'
 export type VariantKey = 'backspace' | 'bottom' | 'rshift' | 'space'
 export type Variant = Partial<Record<VariantKey, string>>
 
@@ -16,14 +17,22 @@ export interface Key {
   /** toạ độ tâm phím quanh gốc 0 (đơn vị u) */
   cx: number
   cz: number
+  /** góc xoay quanh trục đứng (rad, dương = ngược chiều kim đồng hồ nhìn từ trên), layout Alice */
+  rot: number
   /** phím ≥ 2u cần stab */
   stab: boolean
+  /** hàng tính cho keycap điêu khắc: 0 = hàng số / F … 3 = hàng Shift, 4 = hàng dưới cùng (đếm từ dưới lên) */
+  row: number
 }
 
 export interface LayoutGeometry {
   keys: Key[]
   width: number
   depth: number
+  /** tâm khung phím trong hệ gốc của layout (u); layout toạ độ thật (Alice) ≠ 0 → case CAD dời ngược lại */
+  origin: [number, number]
+  /** đường viền PCB thật [x, z] (u, quanh gốc), không có = hình chữ nhật / bao lồi theo phím */
+  outline?: [number, number][]
 }
 
 export interface SoundProfile {
@@ -39,10 +48,24 @@ export interface AudioSettings {
   effectsVolume: number
 }
 
+/** Đầu tua vít (tua vít thay đầu được) */
+export type ScrewBit = 'phillips' | 'hex' | 'torx' | 'flat'
+
 export type SwitchKind = 'Linear' | 'Tactile' | 'Clicky' | 'Silent'
 export type PartCategory = 'case' | 'pcb' | 'plate' | 'stab' | 'switch' | 'keycap'
-export type ShopCategory = PartCategory | 'supply' | 'tool'
-export type ToolKind = 'switch' | 'keycap' | 'screw' | 'solder' | 'clipper' | 'brush' | 'opener'
+export type ShopCategory = PartCategory | 'supply' | 'tool' | 'cert'
+export type ToolKind =
+  | 'switch'
+  | 'keycap'
+  | 'screw'
+  | 'solder'
+  | 'desolder'
+  | 'spoolHolder'
+  | 'tipCleaner'
+  | 'cert'
+  | 'clipper'
+  | 'brush'
+  | 'opener'
 export type ToolLevels = Record<ToolKind, number>
 
 // ---------- món đồ trong kho ----------
@@ -53,6 +76,8 @@ export interface CaseItem {
 export interface PcbItem {
   layout: LayoutId
   type: string
+  /** mạch cụ thể của Mechlovin (PCB_MODELS); không có = PCB tiêu chuẩn của shop */
+  model?: string
 }
 export interface PlateItem {
   layout: LayoutId
@@ -60,6 +85,10 @@ export interface PlateItem {
 }
 export interface StabItem {
   type: string
+  /** số stab ngắn (2u–2.75u) đang có; bản lưu cũ không có = 1 bộ tiêu chuẩn */
+  short?: number
+  /** số stab phím dài (6u / 6.25u / 7u, bộ kèm cả dây 6.25u + 7u) */
+  long?: number
 }
 export interface SwitchItem {
   type: string
@@ -122,25 +151,40 @@ export interface GroupPost {
 export type SoundWish = 'silent' | 'thock' | 'clack' | 'noisy'
 /** khách muốn lube switch / không được lube (giữ tiếng gốc) / sao cũng được */
 export type LubePref = 'want' | 'none' | 'any'
+/** Đồ khách gửi kèm đơn: món nào không có thì shop tự mua (khách gửi ít nhất 1 món) */
 export interface Kit {
   packaging: string
-  case: CaseItem
-  pcb: PcbItem
-  plate: PlateItem
+  case?: CaseItem
+  pcb?: PcbItem
+  plate?: PlateItem
   stab: StabItem | null
 }
 export interface Order {
+  /** mã đơn (nhiều đơn cùng lúc) */
+  id: string
+  /** số ngày khách cho để làm, tính từ lúc nhận */
+  days: number
+  /** ngày phải giao (đặt khi nhận đơn) */
+  dueDay?: number
+  /** đơn kit theo thiết kế bàn phím mở (Bakeneko 60, Planck...) */
+  featured?: string
   customer: string
   avatar: string
   layout: LayoutId
   variant: Variant
   wish: SoundWish
   keycapColor: string
+  /** bộ keycap khách muốn (quyết định profile cho cả bàn phím); bản lưu cũ không có */
+  keycapKit?: string
   type: 'kit' | 'full'
   kit: Kit | null
   caseColor: string | null
   mount: string | null
   lubePref: LubePref
+  /** loại switch khách đòi; không có = shop tự chọn (bản lưu cũ) */
+  switchKind?: SwitchKind
+  /** đơn mua từ A → Z: khách đòi đúng loại PCB (hàn / hotswap); không có = shop tự chọn */
+  pcbType?: 'hotswap' | 'solder'
   budget: number
   labor: number
   lines: string[]
@@ -180,6 +224,12 @@ export interface StabMods {
   wired: boolean
 }
 
+export interface SolderJoint {
+  wire: string
+  /** giữ mỏ hàn quá lâu: chân hàn cháy xém, mối hàn xấu */
+  burnt: boolean
+}
+
 export interface BuildState {
   stepIdx: number
   unboxed: boolean
@@ -187,7 +237,12 @@ export interface BuildState {
   stabs: Record<string, true>
   plate: boolean
   switches: Record<string, true>
-  solder: Record<string, true>
+  /** mối hàn từng phím: loại thiếc + đạt / cháy xém (bản lưu cũ: true = đạt, thiếc thường) */
+  solder: Record<string, SolderJoint | true>
+  /** Number of too-early attempts on each pin; the fourth burns the joint. */
+  solderFailures?: Record<string, number>
+  /** mũi hàn đen do vừa hàn cháy: phải lau vào bùi nhùi mới hàn tiếp được */
+  tipDirty?: boolean
   gaskets: Record<number, true>
   ring: boolean
   inCase: boolean
@@ -196,6 +251,8 @@ export interface BuildState {
   tested: Record<string, true>
   stabMods: StabMods
   stabModDone: boolean
+  /** số switch đã tách vỏ bằng đồ mở (bản lưu cũ không có: coi như = lubed) */
+  opened?: number
   lubed: number
   lubeType: string | null
   /** lube dùng cho lò xo (vd GPL 105) */
@@ -213,9 +270,13 @@ export interface ScrewPoint extends Point {
 }
 
 export interface BuildContext {
+  layout: LayoutId
+  variant: Variant
   keys: Key[]
   width: number
   depth: number
+  origin: [number, number]
+  outline?: [number, number][]
   caseDef: CaseDef
   stabKeys: Key[]
   /** kiểu lắp stab: clip / screw / plate */
@@ -241,6 +302,21 @@ export interface CaseDef {
   price: number
   colors: string[]
   desc: string
+  /** kim loại phần tạ / badge của case CAD (tô khác màu case cho dễ nhận ra), mặc định đồng thau */
+  weight?: 'brass' | 'steel' | 'copper' | 'gold'
+  /** đáy khác chất liệu / màu với nắp (vd nắp PC, đáy nhôm); case CAD cần node "bottom" */
+  bottom?: { material: string; color: string }
+  /** chỉ hợp các layout này (case cắt sẵn cho HHKB...); không có = mọi layout cùng cỡ */
+  layouts?: LayoutId[]
+  /** nắp case CAD riêng cho layout HHKB / hàng dưới WKL (vd Exodus60) */
+  modelFor?: { hhkb?: string; wkl?: string }
+  /**
+   * case CAD có mặt plate nghiêng (góc gõ làm sẵn, như Alice): board thả vào case thì nâng lên rise (u)
+   * và nghiêng tilt (rad, dương = mép sau cao)
+   */
+  seat?: { rise: number; tilt: number }
+  /** model case CAD thật (public/models/cases/<model>.glb, `bun run convert:cases`), thay case dựng bằng code */
+  model?: string
 }
 
 export interface ScoreCheck {
@@ -254,6 +330,8 @@ export interface DeliveryResult {
   stars: number
   reimburse: number
   labor: number
+  /** số ngày giao trễ hạn (trừ uy tín) */
+  late?: number
 }
 
 export interface Toast {

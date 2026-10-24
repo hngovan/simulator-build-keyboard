@@ -1,6 +1,7 @@
 import type { ThreeEvent } from '@react-three/fiber'
 import { useGame, useStep, currentSound } from '@/store'
 import { Y } from '@/data/steps'
+import { STABS } from '@/data/parts'
 import type { Key } from '@/types'
 import { playClick, playKey } from '@/sound'
 import { Drop } from '../common/anim'
@@ -9,17 +10,21 @@ import { SwitchMesh } from '../models/Switch'
 import { Keycap } from './Keycap'
 import { StabMesh } from './StabMesh'
 
-const HOLE = 14 / 19.05 // lỗ plate 14mm
-
 /** 1 vị trí phím: lỗ plate, stab, switch, keycap; xử lý click theo bước hiện tại */
+/** stab plate-mount: housing gài vào plate nên cao hơn PCB mount ~1.5mm (không chạm PCB) */
+const PLATE_STAB_Y = Y.pcbTop + 1.5 / 19.05
+
 export function KeySlot({ k }: { k: Key }) {
   const step = useStep()
   const hasStab = useGame((s) => !!s.build?.stabs[k.id])
+  const plateStab = useGame(
+    (s) => s.inventory.stab && STABS[s.inventory.stab.type]?.mount === 'plate',
+  )
   const hasSwitch = useGame((s) => !!s.build?.switches[k.id])
   const hasKeycap = useGame((s) => !!s.build?.keycaps[k.id])
-  const plate = useGame((s) => !!s.build?.plate)
   const swType = useGame((s) => s.inventory.switch?.type)
   const kcColor = useGame((s) => s.inventory.keycap?.color)
+  const kcKit = useGame((s) => s.inventory.keycap?.kit)
   const canAct =
     (step === 'stab' && k.stab && !hasStab) ||
     (step === 'switch' && !hasSwitch) ||
@@ -49,7 +54,7 @@ export function KeySlot({ k }: { k: Key }) {
   }
 
   return (
-    <group position={[k.cx, 0, k.cz]}>
+    <group position={[k.cx, 0, k.cz]} rotation-y={k.rot}>
       <mesh
         position-y={0.04}
         rotation-x={-Math.PI / 2}
@@ -69,14 +74,9 @@ export function KeySlot({ k }: { k: Key }) {
           depthWrite={false}
         />
       </mesh>
-      {plate && !hasSwitch && (
-        <mesh position-y={0.003} rotation-x={-Math.PI / 2}>
-          <planeGeometry args={[HOLE, HOLE]} />
-          <meshBasicMaterial color="#111" />
-        </mesh>
-      )}
       {hasStab && (
-        <Drop y={Y.pcbTop}>
+        // PCB mount: đế housing tì lên PCB · plate mount: ngàm gài vào plate, housing treo cách PCB 1 khoảng
+        <Drop y={plateStab ? PLATE_STAB_Y : Y.pcbTop}>
           <StabMesh k={k} />
         </Drop>
       )}
@@ -87,7 +87,7 @@ export function KeySlot({ k }: { k: Key }) {
       )}
       {hasKeycap && kcColor && (
         <Drop y={0.36}>
-          <Keycap k={k} color={kcColor} />
+          <Keycap k={k} color={kcColor} kit={kcKit} />
         </Drop>
       )}
     </group>

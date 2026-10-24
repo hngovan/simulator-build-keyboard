@@ -17,18 +17,48 @@ export interface SupplyDef {
   fit?: Partial<Record<LubeUse, number>>
   /** ghi chú khi dùng sai mục đích */
   warn?: Partial<Record<LubeUse, string>>
+  /**
+   * cuộn thiếc hàn: speed = xếp hạng (nhỏ = xịn), shine = độ bóng mối hàn 0..1,
+   * slow = giây chảy chậm thêm, burnChance = tỉ lệ ẩn cháy chân dù nhả đúng vùng xanh (không hiện cho người chơi)
+   */
+  solder?: { speed: number; shine: number; slow?: number; burnChance?: number }
 }
 
 export const SUPPLIES: Record<string, SupplyDef> = {
+  // mỗi cuộn thiếc dùng được 1000 mối hàn (mỗi phím 2 mối)
+  solderCheap: {
+    name: 'Thiếc đểu',
+    unit: 'mối hàn',
+    color: '#55595e',
+    packs: [[1000, 20]],
+    desc: 'Rẻ đi đôi với chất lượng: chảy chậm, mối hàn xỉn, có tỉ lệ nhỏ cháy chân dù nhả đúng vùng xanh',
+    solder: { speed: 1.5, shine: 0.2, slow: 0.5, burnChance: 0.15 },
+  },
+  solder6337: {
+    name: 'Thiếc Sakura 63/37',
+    unit: 'mối hàn',
+    color: '#62666b',
+    packs: [[1000, 90]],
+    desc: 'Thiếc xịn lõi nhựa thông: chảy đều, ăn chân tốt, mối hàn sáng',
+    solder: { speed: 0.85, shine: 0.85 },
+  },
+  solderPro: {
+    name: 'Thiếc Asahi 0.6mm',
+    unit: 'mối hàn',
+    color: '#70757a',
+    packs: [[1000, 160]],
+    desc: 'Thiếc xịn nhất: chảy cực nhanh, mối hàn bóng đẹp như hàn máy',
+    solder: { speed: 0.6, shine: 1 },
+  },
   urgo: {
     name: 'Băng keo cá nhân Urgo',
-    unit: 'stab',
+    unit: 'cái',
     color: '#e9c9a8',
     packs: [
-      [20, 25],
-      [100, 90],
+      [10, 25],
+      [50, 90],
     ],
-    desc: 'Band-aid mod: dán lên PCB chỗ chân stem stab Cherry chạm xuống, hết tiếng lạch cạch',
+    desc: 'Holee mod: 1 miếng cắt đôi dán được 2 stab, hết tiếng lạch cạch',
   },
   g0: {
     viscosity: 0.35,
@@ -116,7 +146,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     unit: 'stab',
     color: '#f2e6c9',
     packs: [[60, 110]],
-    desc: 'Mỡ rất đặc cho dây stab: ít chảy xuống PCB, dễ vệ sinh, chống rattle tốt nhất',
+    desc: 'Mỡ rất đặc cho wire stab: ít chảy xuống PCB, dễ vệ sinh, chống rattle tốt nhất',
     fit: { wire: 1, housing: 0.5, linear: 0.15, tactile: 0.15, clicky: 0.15 },
     warn: {
       linear: 'Quá đặc, switch bị trì, nảy chậm',
@@ -126,11 +156,11 @@ export const SUPPLIES: Record<string, SupplyDef> = {
   permatex: {
     viscosity: 0.85,
     opacity: 0.3,
-    name: 'Permatex Dielectric Grease',
+    name: 'Permatex',
     unit: 'stab',
     color: '#cfe0ee',
     packs: [[150, 90]],
-    desc: 'Mỡ dielectric chỉ dùng cho dây stab, rẻ và dùng lâu',
+    desc: 'Mỡ dielectric chỉ dùng cho wire stab, rẻ và dùng lâu',
     fit: { wire: 0.9, housing: 0.4, linear: 0.15, tactile: 0.15, clicky: 0.15 },
     warn: {
       linear: 'Permatex cho switch là bị trì',
@@ -142,6 +172,34 @@ export const SUPPLIES: Record<string, SupplyDef> = {
 
 /** Các vật tư dùng làm lube (có bảng độ hợp) */
 export const LUBE_IDS = Object.keys(SUPPLIES).filter((id) => SUPPLIES[id].fit)
+/** các loại thiếc hàn, xịn nhất trước */
+export const SOLDER_IDS = Object.keys(SUPPLIES)
+  .filter((id) => SUPPLIES[id].solder)
+  .sort((a, b) => SUPPLIES[a].solder!.speed - SUPPLIES[b].solder!.speed)
+/** mỗi phím 2 chân = 2 mối hàn */
+export const JOINTS_PER_KEY = 2
+
+/** Cửa sổ hàn (giây thật): bút hàn thiếc chảy sau 2–2,5s, 3s là cháy; trạm hàn 1–2s, 3s cháy */
+const SOLDER_WINDOW = {
+  pen: { melt: [2, 2.5], burn: 3 },
+  station: { melt: [1, 2], burn: 3 },
+} as const
+
+/** Khoảng thiếc chảy + mốc cháy theo dụng cụ; thiếc chảy chậm (thiếc đểu) cộng thêm vào cả 2 mốc */
+export function solderWindow(station: boolean, wire: string) {
+  const w = station ? SOLDER_WINDOW.station : SOLDER_WINDOW.pen
+  const slow = SUPPLIES[wire]?.solder?.slow ?? 0
+  return { melt: [w.melt[0] + slow, w.melt[1] + slow] as const, burn: w.burn + slow }
+}
+
+/**
+ * Thời gian hàn 1 phím (giây): ready = lúc thiếc chảy, nằm trong khoảng chảy theo seed 0..1 (cố định theo phím);
+ * nhả trong [ready, burn) là đạt; giữ tới burn là cháy xém chân
+ */
+export function solderTiming(station: boolean, wire: string, seed = 0.5) {
+  const { melt, burn } = solderWindow(station, wire)
+  return { ready: melt[0] + (melt[1] - melt[0]) * seed, burn }
+}
 
 /** Độ hợp + ghi chú của 1 loại lube cho 1 mục đích */
 export function lubeUseFit(lube: string, use: LubeUse): [number, string] {

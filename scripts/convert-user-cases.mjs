@@ -1,0 +1,283 @@
+// Chuyển bộ sưu tập case CAD của người dùng (assets/user-cases, chép từ "D:\IN 3D") sang GLB cho game.
+// Dùng: bun run convert:user-cases
+//
+// Các mảnh (nắp, đáy, tạ) của 1 case đã đặt sẵn ở toạ độ lắp ráp: Z hướng lên, mm, plate nằm phẳng.
+// Script ghép các mảnh, tìm mặt trước (mép đáy mỏng hơn), đo góc gõ từ độ dốc đáy rồi xoay cho đáy
+// nằm phẳng trên bàn. Kết quả: đáy ở y = 0, tâm ở gốc (x, z), mặt trước quay về +z.
+// In ra seat (độ cao + góc nghiêng của plate trong case) để chép vào CASES (src/data/parts.ts).
+//
+// ⚠️ File do người dùng sưu tầm, chưa rõ giấy phép: chỉ dùng cá nhân, không phát hành kèm game.
+import fs from 'node:fs'
+import path from 'node:path'
+import occtimportjs from 'occt-import-js'
+import { Document, NodeIO } from '@gltf-transform/core'
+
+const SRC = 'assets/user-cases'
+const OUT = 'public/models/cases'
+/** u = 19.05mm; đáy case trong game đặt ở Y.floorBot */
+const MM = 1 / 19.05
+const FLOOR_BOT = -0.9
+
+/** id → các mảnh [file, dời z (mm)] + cao độ mặt trên plate trong CAD (mm; Catto / Vintage: file plate trải 0 → 14.7) */
+const CASES = {
+  exodus60: {
+    parts: [['Exodus60 TOP.stl', -51.2], ['Exodus60 BOT.stl'], ['Exodus60 TẠ.stl']],
+    plateZ: 0,
+  },
+  'exodus60-wkl': {
+    parts: [['Exodus60 TOP WKL.stl'], ['Exodus60 BOT.stl'], ['Exodus60 TẠ.stl']],
+    plateZ: 0,
+  },
+  'exodus60-hhkb': {
+    parts: [['Exodus60 TOP hống hách kb.stl'], ['Exodus60 BOT.stl'], ['Exodus60 TẠ.stl']],
+    plateZ: 0,
+  },
+  exodus80: {
+    parts: [
+      ['Exodus80 TOP in 3D.stl'],
+      ['Exodus80 BOT in 3D.stl'],
+      ['Exodus80 TẠ TRONG in 3D.stl'],
+      ['Exodus80 TẠ NGOÀI in 3D.stl'],
+    ],
+    plateZ: 0,
+  },
+  repent75: {
+    parts: [['REPENT75 TOP in 3D.stl'], ['REPENT75 BOT in 3D.stl'], ['REPENT75 TẠ in 3D.stl']],
+    plateZ: 0,
+  },
+  // case TKL kiểu Realforce (thư mục REALFORCER1,2)
+  'rf-bruh': { parts: [['TOP RFBRUH.stl'], ['BOT RFBRUH.stl']], plateZ: 0 },
+  // CattoRF v4: tấm đáy mỏng + thân case; plate ước lượng dưới mép trên ~9mm
+  'catto-rf': { parts: [['CattoRF v4.step']], plateZ: 24 },
+  // Duality Horns (TKL): lấy thân / đáy / tạ / badge / accent, bỏ 4 tấm plate và đinh vít
+  'duality-horns': {
+    parts: [
+      ['duality_horns_v1_asm v11.step', 0, { names: ['SOLID', 'BOTTOM'] }],
+      [
+        'duality_horns_v1_asm v11.step',
+        0,
+        { names: ['WEIGHT', 'BADGE', 'ACCENT_V2'], weight: true },
+      ],
+    ],
+    plateZ: 0,
+  },
+  'catto-hhkb': {
+    parts: [['CattoHHKB TOP.step'], ['CattoHHKB BOT.step'], ['CattoHHKB TA.step']],
+    plateZ: 14.7,
+  },
+  'vintage60-hhkb': { parts: [['Vintage60 TOP fix 2.stl'], ['Vintage60 BOT.stl']], plateZ: 14.7 },
+  eclipse60: { parts: [['TOP egg.step'], ['BOT egg.step'], ['TA egg.step']], plateZ: -51.5 },
+  'head4-alu': {
+    parts: [['4HEAD TOP ALU.step'], ['4HEAD BOT ACRYLIC.step'], ['4HEAD TA BRASS.step']],
+    plateZ: 1.5,
+  },
+  'head4-acrylic': {
+    parts: [['4HEAD TOP ACRYLIC.step'], ['4HEAD BOT ACRYLIC.step'], ['4HEAD TA BRASS.step']],
+    plateZ: 1.5,
+  },
+  ta65: { parts: [['65TA in3D TOP.stl'], ['65TA in3D BOT.stl'], ['65TA in3D TA.stl']], plateZ: 0 },
+  // Blossom (doughnut923/Blossom, MIT — assets/community/blossom): 2 mảnh xếp sẵn để in. Nắp trên in úp mặt →
+  // lật 180° quanh trục x, dời về trên đáy. Mũi nhọn (mặt trước) của đáy ở y nhỏ.
+  // Đáy là hình nêm (mép trước cao 2.5mm, vách sau 14.5mm) → nắp nghiêng ~4.9° tựa lên mép sau (rot),
+  // không thì nắp nằm ngang hở 1 khe lớn phía trước. plate nghiêng theo nắp: seat.tilt ghi tay ở parts.ts
+  'alice-blossom': {
+    parts: [
+      ['../community/blossom/case/B_Case.stl'],
+      [
+        '../community/blossom/case/U_Case.stl',
+        27.1,
+        { flip: true, dy: -343.7, rot: { angle: 0.085, y0: 127.3, z0: 14.5 } },
+      ],
+    ],
+    plateZ: 10,
+    front: 'ymin',
+  },
+}
+
+const occt = await occtimportjs()
+
+/** 1 mảnh → mảng tam giác (pos, nor, idx) */
+function readPart(file, dz = 0, opt = {}) {
+  const buf = fs.readFileSync(path.join(SRC, file))
+  let pos
+  let nor
+  let idx = null
+  if (/\.stl$/i.test(file)) {
+    const p = []
+    const n = []
+    if (buf.slice(0, 5).toString() === 'solid' && buf.includes('facet')) {
+      const text = buf.toString()
+      for (const f of text.matchAll(/facet normal\s+(\S+)\s+(\S+)\s+(\S+)([\s\S]*?)endfacet/g)) {
+        const vs = [...f[4].matchAll(/vertex\s+(\S+)\s+(\S+)\s+(\S+)/g)]
+        for (const v of vs) {
+          p.push(+v[1], +v[2], +v[3])
+          n.push(+f[1], +f[2], +f[3])
+        }
+      }
+    } else {
+      const count = buf.readUInt32LE(80)
+      for (let i = 0; i < count; i++) {
+        const o = 84 + i * 50
+        const fn = [0, 1, 2].map((a) => buf.readFloatLE(o + a * 4))
+        for (let v = 0; v < 3; v++) {
+          for (let a = 0; a < 3; a++) p.push(buf.readFloatLE(o + 12 + v * 12 + a * 4))
+          n.push(...fn)
+        }
+      }
+    }
+    pos = p
+    nor = n
+  } else {
+    const r = occt.ReadStepFile(new Uint8Array(buf), null)
+    if (!r.success) throw new Error(`Không đọc được ${file}`)
+    pos = []
+    nor = []
+    idx = []
+    // file lắp ráp nhiều chi tiết: chỉ lấy chi tiết có tên trong opt.names
+    for (const m of r.meshes.filter((m) => !opt.names || opt.names.includes(m.name))) {
+      const base = pos.length / 3
+      for (const v of m.attributes.position.array) pos.push(v)
+      for (const v of m.attributes.normal.array) nor.push(v)
+      for (const i of m.index.array) idx.push(base + i)
+    }
+  }
+  // lật 180° quanh trục x (mảnh in úp mặt): y → −y, z → −z (giữ đúng chiều tam giác)
+  if (opt.flip)
+    for (let i = 0; i < pos.length; i += 3) {
+      pos[i + 1] = -pos[i + 1]
+      pos[i + 2] = -pos[i + 2]
+      nor[i + 1] = -nor[i + 1]
+      nor[i + 2] = -nor[i + 2]
+    }
+  for (let i = 0; i < pos.length; i += 3) {
+    pos[i + 1] += opt.dy ?? 0
+    pos[i + 2] += dz
+  }
+  // xoay quanh trục x qua (y0, z0): góc dương hạ mặt trước (y nhỏ) xuống
+  if (opt.rot) {
+    const { angle, y0, z0 } = opt.rot
+    const c = Math.cos(angle)
+    const sn = Math.sin(angle)
+    for (let i = 0; i < pos.length; i += 3) {
+      const y = pos[i + 1] - y0
+      const z = pos[i + 2] - z0
+      pos[i + 1] = y0 + y * c - z * sn
+      pos[i + 2] = z0 + z * c + y * sn
+      const ny = nor[i + 1]
+      const nz = nor[i + 2]
+      nor[i + 1] = ny * c - nz * sn
+      nor[i + 2] = nz * c + ny * sn
+    }
+  }
+  return { pos, nor, idx: idx ?? Array.from({ length: pos.length / 3 }, (_, i) => i) }
+}
+
+/** mảnh tạ (weight) — tách node riêng để game tô màu kim loại khác case: tên file có "TẠ" / "TA" rời */
+const isWeight = (file, opt = {}) =>
+  opt.weight ?? /(^|[\s/])(TẠ|TA)([\s.]|$)/.test(path.basename(file))
+
+/** mảnh đáy — node "bottom" riêng để game tô chất liệu khác nắp (vd nắp PC, đáy nhôm): tên file có "BOT" / "B_Case" */
+const isBottom = (file, opt = {}) =>
+  opt.bottom ?? /(^|[\s/_])(BOT|BOTTOM|B_Case)([\s._]|$)/i.test(path.basename(file))
+
+fs.mkdirSync(OUT, { recursive: true })
+for (const [id, def] of Object.entries(CASES)) {
+  const pos = []
+  const nor = []
+  const idx = []
+  const weightIdx = []
+  const bottomIdx = []
+  for (const [file, dz, opt] of def.parts) {
+    const p = readPart(file, dz, opt)
+    const base = pos.length / 3
+    // mảng lớn: thêm từng phần tử (spread quá nhiều đối số sẽ tràn stack)
+    for (const v of p.pos) pos.push(v)
+    for (const v of p.nor) nor.push(v)
+    const into = isWeight(file, opt) ? weightIdx : isBottom(file, opt) ? bottomIdx : idx
+    for (const i of p.idx) into.push(base + i)
+  }
+  const min = [Infinity, Infinity, Infinity]
+  const max = [-Infinity, -Infinity, -Infinity]
+  for (let i = 0; i < pos.length; i += 3)
+    for (let a = 0; a < 3; a++) {
+      min[a] = Math.min(min[a], pos[i + a])
+      max[a] = Math.max(max[a], pos[i + a])
+    }
+  const cx = (min[0] + max[0]) / 2
+  const cy = (min[1] + max[1]) / 2
+  // đáy thấp nhất ở dải 15mm sát mép y nhỏ / y lớn: mép đáy cao hơn (case mỏng hơn) là mặt trước
+  let lowA = Infinity
+  let lowB = Infinity
+  for (let i = 0; i < pos.length; i += 3) {
+    if (pos[i + 1] < min[1] + 15) lowA = Math.min(lowA, pos[i + 2])
+    if (pos[i + 1] > max[1] - 15) lowB = Math.min(lowB, pos[i + 2])
+  }
+  // case phẳng (2 mép đáy cao bằng nhau): các file trong bộ sưu tập đều để cổng USB ở y lớn → mặt trước ở y nhỏ
+  const flat = Math.abs(lowA - lowB) < 0.5
+  const frontAtMin = def.front ? def.front === 'ymin' : flat ? true : lowA > lowB
+  const span = max[1] - min[1] - 15
+  // góc gõ: đáy dốc lên về phía trước (plate phẳng trong CAD) → xoay cho đáy phẳng
+  const rise = Math.abs(lowA - lowB)
+  const tilt = rise > 1 ? Math.atan2(rise, span) : 0
+  // CAD (x, y, z-lên) → game (x, y-lên, z-trước), mặt trước về +z (xoay 180° quanh trục đứng nếu cần)
+  const s = frontAtMin ? -1 : 1
+  const c = Math.cos(tilt)
+  const sn = Math.sin(tilt)
+  // (x, y, z) → (−x·s, z, y·s): phép xoay thật (định thức +1). Bản cũ để gx = x·s là ảnh gương
+  // trái–phải (cụm mũi tên TKL nằm sai bên, mặt tam giác lật chiều)
+  const toGame = (x, y, z) => {
+    const gx = -(x - cx) * s
+    const gz = (y - cy) * s
+    // xoay quanh trục x: mặt trước (+z) hạ xuống đúng góc gõ
+    return [gx, z * c - gz * sn, z * sn + gz * c]
+  }
+  const P = new Float32Array(pos.length)
+  const N = new Float32Array(nor.length)
+  let low = Infinity
+  for (let i = 0; i < pos.length; i += 3) {
+    const g = toGame(pos[i], pos[i + 1], pos[i + 2])
+    P.set(g, i)
+    low = Math.min(low, g[1])
+    const nx = -nor[i] * s
+    const nz = nor[i + 1] * s
+    const ny = nor[i + 2]
+    N.set([nx, ny * c - nz * sn, ny * sn + nz * c], i)
+  }
+  for (let i = 1; i < P.length; i += 3) P[i] -= low
+  // tâm plate (tâm case, mặt trên plate) sau khi xoay → board nâng tới đó và nghiêng theo
+  const plate = toGame(cx, cy, def.plateZ)
+  const plateH = plate[1] - low
+
+  const doc = new Document()
+  const buffer = doc.createBuffer()
+  const posAcc = doc.createAccessor().setType('VEC3').setArray(P).setBuffer(buffer)
+  const norAcc = doc.createAccessor().setType('VEC3').setArray(N).setBuffer(buffer)
+  const scene = doc.createScene(id)
+  // node "case" (vỏ / nắp) + "bottom" (đáy, nếu tách được) + "weight" (tạ / badge, nếu có) dùng chung đỉnh
+  for (const [name, list] of [
+    ['case', idx],
+    ['bottom', bottomIdx],
+    ['weight', weightIdx],
+  ]) {
+    if (!list.length) continue
+    const prim = doc
+      .createPrimitive()
+      .setAttribute('POSITION', posAcc)
+      .setAttribute('NORMAL', norAcc)
+      .setIndices(
+        doc.createAccessor().setType('SCALAR').setArray(new Uint32Array(list)).setBuffer(buffer),
+      )
+    scene.addChild(doc.createNode(name).setMesh(doc.createMesh(name).addPrimitive(prim)))
+  }
+  const out = path.join(OUT, `${id}.glb`)
+  await new NodeIO().write(out, doc)
+  console.log(
+    `✔ ${id.padEnd(15)} ${(max[0] - min[0]).toFixed(0)} × ${(max[1] - min[1]).toFixed(0)}mm,`,
+    `góc gõ ${((tilt * 180) / Math.PI).toFixed(1)}°,`,
+    `seat: { rise: ${(FLOOR_BOT + plateH * MM).toFixed(3)}, tilt: ${tilt.toFixed(3)} },`,
+    weightIdx.length ? `tạ ${weightIdx.length / 3} tam giác,` : 'không tạ,',
+    bottomIdx.length ? 'tách đáy,' : '',
+    `${(fs.statSync(out).size / 1024).toFixed(0)} KB`,
+  )
+}
+process.exit(0)

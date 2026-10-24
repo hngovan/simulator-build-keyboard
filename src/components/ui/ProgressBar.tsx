@@ -4,7 +4,14 @@ const FILLS = {
   loud: 'bg-gradient-to-r from-green to-yellow',
   pitch: 'bg-gradient-to-r from-purple to-[#3dd6ff]',
   over: 'bg-red',
+  // 1 màu theo mức (tiến độ đơn)
+  red: 'bg-red',
+  yellow: 'bg-yellow',
+  green: 'bg-green',
 } as const
+
+/** Màu tiến độ: mới làm = đỏ, được 1 nửa = vàng, gần xong = xanh */
+export const progressTone = (v: number) => (v < 0.34 ? 'red' : v < 0.8 ? 'yellow' : 'green')
 
 interface Props {
   /** 0..1 */

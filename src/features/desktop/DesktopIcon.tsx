@@ -6,7 +6,7 @@ export function DesktopIcon({
   badge,
   onOpen,
 }: {
-  app: AppDef
+  app: Pick<AppDef, 'title' | 'icon' | 'color'>
   badge?: boolean
   onOpen: () => void
 }) {
@@ -16,10 +16,10 @@ export function DesktopIcon({
       onClick={onOpen}
     >
       <span
-        className="relative grid size-14 place-items-center rounded-2xl text-[28px] shadow-[0_4px_0_rgba(0,0,0,0.35),inset_0_2px_0_rgba(255,255,255,0.3)]"
+        className="relative grid size-14 place-items-center rounded-2xl shadow-[0_4px_0_rgba(0,0,0,0.35),inset_0_2px_0_rgba(255,255,255,0.3)]"
         style={{ background: app.color }}
       >
-        {app.icon}
+        <img src={app.icon} alt="" className="size-8 brightness-0 invert" />
         {badge && (
           <i className="absolute -top-1 -right-1 size-3.5 rounded-full border-2 border-white bg-red" />
         )}

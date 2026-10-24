@@ -1,6 +1,6 @@
 import { useGame } from '@/store'
 import { Window } from '@/components/ui'
-import { APPS, APP_IDS } from './apps'
+import { APPS, APP_IDS, BENCH_ICON } from './apps'
 import { DesktopIcon } from './DesktopIcon'
 import { Taskbar } from './Taskbar'
 
@@ -8,8 +8,9 @@ import { Taskbar } from './Taskbar'
 export function Desktop() {
   const windows = useGame((s) => s.windows)
   const minimized = useGame((s) => s.minimized)
-  const hasOffer = useGame((s) => !!s.offer)
-  const { openApp, minimizeApp, closeApp } = useGame.getState()
+  const hasOffer = useGame((s) => s.offers.length > 0)
+  const hasBuild = useGame((s) => !!s.build)
+  const { openApp, minimizeApp, closeApp, goBench } = useGame.getState()
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -30,6 +31,10 @@ export function Desktop() {
           />
         ))}
       </div>
+      {/* lối tắt bàn build đứng riêng ở góc phải trên cùng */}
+      <div className="absolute top-4 right-4 z-[2]">
+        <DesktopIcon app={BENCH_ICON} badge={hasBuild} onOpen={goBench} />
+      </div>
 
       {windows.map((id, z) => {
         const app = APPS[id]
@@ -37,7 +42,7 @@ export function Desktop() {
         return (
           <Window
             key={id}
-            title={`${app.icon} ${app.title}`}
+            title={app.title}
             color={app.color}
             width={app.width}
             zIndex={10 + z}
