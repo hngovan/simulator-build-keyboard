@@ -26,6 +26,24 @@ function hull(points: P[]): P[] {
   return [...lower.slice(0, -1), ...upper.slice(0, -1)]
 }
 
+/** Điểm có nằm trong đa giác không (ray casting) */
+export function pointInPolygon(
+  point: { x: number; y: number },
+  polygon: readonly { x: number; y: number }[],
+): boolean {
+  let inside = false
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[i]
+    const b = polygon[j]
+    if (
+      a.y > point.y !== b.y > point.y &&
+      point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x
+    )
+      inside = !inside
+  }
+  return inside
+}
+
 export interface BoardOutline {
   shapes: THREE.Shape[]
   /** shape chứa phím (để khoét lỗ plate đúng mảnh) */

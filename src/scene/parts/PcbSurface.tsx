@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react'
-import { CanvasTexture, DoubleSide, Path, ShapeUtils, SRGBColorSpace, Vector2 } from 'three'
+import { CanvasTexture, DoubleSide, Path, SRGBColorSpace, Vector2 } from 'three'
 import { Y } from '@/data/steps'
 import type { Key, Point } from '@/types'
-import { boardOutline, outlinePlane, outlineSlab } from './boardOutline'
+import { boardOutline, outlinePlane, outlineSlab, pointInPolygon } from './boardOutline'
 
 interface PcbSurfaceProps {
   width: number
@@ -21,8 +21,8 @@ export function makePcbTexture(
   width: number,
   depth: number,
   keys: Key[],
-  screwHoles: Point[],
   dark: boolean,
+  screwHoles: Point[] = [],
 ) {
   const canvas = document.createElement('canvas')
   canvas.width = Math.ceil(width * SCALE)
@@ -159,7 +159,7 @@ export function PcbSurface({
 }: PcbSurfaceProps) {
   const dark = type === 'hotswap'
   const texture = useMemo(
-    () => makePcbTexture(width, depth, keys, screwHoles, dark),
+    () => makePcbTexture(width, depth, keys, dark, screwHoles),
     [width, depth, keys, screwHoles, dark],
   )
   useEffect(() => () => texture.dispose(), [texture])
@@ -170,7 +170,7 @@ export function PcbSurface({
     for (const { x, z } of screwHoles) {
       const point = new Vector2(x, -z)
       const shape = shapes.find((candidate) =>
-        ShapeUtils.isPointInPolygon(point, candidate.getPoints()),
+        pointInPolygon(point, candidate.getPoints()),
       )
       if (!shape) continue
       const hole = new Path()
