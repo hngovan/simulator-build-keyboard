@@ -41,3 +41,28 @@
 - Lọ dầu `createOilBottle` / `isOil` trong `lubeJarModel.ts` (LubeStation + ảnh Shopii).
 - Switch Kailh Box (2026-10-25): Box Đỏ (linear), Box Nâu (tactile), Box Trắng + Box Jade (clicky thanh click) trong `SWITCHES`;
   model 3D dùng chung switch MX (chưa có model stem hộp riêng).
+- Phép lube switch (2026-10-25): mục Shopii mới "Sách phép" (`ShopCategory` `spell`); phép lưu như vật tư (`SUPPLIES.spellLube`,
+  `SupplyDef.spell = 10`, gói 200 lần / 800k, mua nhiều cộng dồn) để dùng lại `buySupply` / `useSupply` / Kho. Mỗi lần mở
+  (`openSwitch`) và mỗi mẻ lube (`lubeBatch`) = bậc thợ + 10 (`spellBonus`), dùng chung lượt, chỉ trừ 1 lượt khi số con vượt
+  bậc thợ. `openSwitch` giờ cũng mở theo bậc thợ (trước luôn 1 con). Ảnh Shopii / Kho: cuộn giấy da dựng bằng code
+  (`scene/models/scrollModel.ts`, `createScroll`). Câu hướng dẫn: "tách housing, stem và lò xo, mỗi lần N con" (ModPanels).
+- Tách 2 phép (2026-10-25, người dùng: "phép lube sw và phép mở sw bán riêng ko chung nhau"): `spellOpen` (Phép mở switch) cho
+  `openSwitch`, `spellLube` cho `lubeBatch`, mỗi loại 200 lần / 800k, lượt riêng; `spellBonus(supplies, id)`.
+  Mở nhiều con mỗi lần (bậc thợ / phép mở) thì bàn lube bày đúng số đồ mở, tối đa 10 (`openerSlots`: lưới 5 cột góc phải sau,
+  thu nhỏ 0.7, x 3.7…6.7, z −5.3 / −4.55), mỗi cái 1 switch nguyên (`OpenerSlot`); 1 con thì giữ 1 đồ mở ở `OPENER_AT`.
+- Phép lắp switch (2026-10-25): `spellAssem` (200 lần / 800k) cộng 10 switch mỗi lần lắp (`installRun`, chỉ kind switch,
+  cùng hàng phím như chứng chỉ thợ), trừ 1 lượt khi số con lắp vượt bậc thợ. Keycap không có phép.
+- Phép hàn switch (2026-10-25, "1 lần hàn được 10 con"): `spellSolder` (200 lần / 800k). `solderKey` hàn đạt (không cháy, kể cả
+  không dính `burnChance`) thì hàn luôn 9 phím chưa hàn kế tiếp theo thứ tự hàng → cột (vòng lại đầu), mỗi phím vẫn tốn 2 mối thiếc,
+  thiếu thiếc thì hàn ít hơn; trừ 1 lượt khi có phím kèm. Phím kèm luôn đạt, độ bền mỏ hàn chỉ trừ 1 lần.
+- Phép hàn cháy cả hàng (2026-10-25, "hàn cháy cũng sẽ cháy luôn 1 hàng 10 cái"): `solderKey` dùng phép cả khi cháy, 9 phím kèm
+  cùng trạng thái `burnt` với phím chính (thay quyết định cũ "phím kèm luôn đạt"); toast báo số phím cháy.
+- Phép rã hàn (2026-10-25): `spellDesolder` (200 lần / 800k). `desolderKey` hút phím cháy + 9 phím cháy kế tiếp (`spellSolderKeys`
+  với điều kiện "chưa cháy" = bỏ qua), trừ 1 lượt khi có phím kèm, bút hút trừ độ bền 1 lần. Rê chuột vào phím cháy thì viền sáng
+  các phím sẽ hút ké (`lightFrom`, SolderPad.tsx).
+- Phép lắp keycap (2026-10-25): `spellKeycap` (200 lần / 800k), `installRun` kind keycap cộng 10 vào bậc thợ (thợ lõ 1 / middle 5 /
+  senior 10 → 11 / 15 / 20 cùng hàng), trừ 1 lượt khi số cái lắp vượt bậc thợ (gộp chung nhánh với phép lắp switch).
+- Phép thay / cộng theo bậc thợ (2026-10-25, "thợ lõ mua sách phép thì mặc định là 10, không phải 1 + 10 = 11"):
+  `spellRun(certN, bonus)` trong supplies.ts — thợ lõ (n = 1) có phép = 10, middle / senior cộng dồn (15 / 20). Áp cho mở
+  (`openSwitch`), lube (`lubeBatch`), lắp switch / keycap (`installRun`), ModPanels + LubeStation (số đồ mở). Phép hàn / rã hàn
+  vẫn đúng 10 phím.

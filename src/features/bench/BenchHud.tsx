@@ -28,6 +28,7 @@ const STEP_TOOL: Partial<Record<StepId, ToolKind>> = {
   keycap: 'keycap',
   caseOpen: 'screw',
   stabScrew: 'screw',
+  topScrew: 'screw',
   trayScrew: 'screw',
   caseScrew: 'screw',
   solder: 'solder',
@@ -163,8 +164,11 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const hint =
     step === 'switch' && !s.inventory.switch?.count
       ? '⚠️ Hết switch! Về máy tính mua thêm.'
-      : isFlipped
-        ? 'Đang xem mặt đáy — bấm "Lật lại mặt trên" để thao tác.'
+      : // chỉ nhắc khi người chơi tự lật ra mặt kia (bước tự lật như hàn / vặn vít đáy thì mặt đáy là mặt thao tác)
+        canFlip && s.viewFlip
+        ? isFlipped
+          ? 'Đang xem mặt đáy — bấm "Lật lại mặt trên" để thao tác.'
+          : 'Đang xem mặt trên — bấm "Lật xem đáy" để thao tác.'
         : info.hint
   // thu gọn: chỉ còn tiêu đề + tiến độ + nút bước sau (nhớ trạng thái như các panel HUD)
   const [open, toggle] = useOpen('objective')

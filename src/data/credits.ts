@@ -145,12 +145,6 @@ export const CREDITS: CreditGroup[] = [
         url: 'https://sketchfab.com/3d-models/chest--box--wooden-26-mb-0a863f5790a44303b2d78d7d8b8b3646',
       },
       {
-        what: 'Cardboard Boxes (thùng carton bước mở hộp)',
-        author: 'JuanCarlos CR',
-        license: 'CC BY 4.0',
-        url: 'https://sketchfab.com/3d-models/cardboard-boxes-713484d8f2284528bbd28ad41e197b24',
-      },
-      {
         what: 'Old Tool Box (hộp đồ nghề trên bàn)',
         author: 'Марк (Mark-kon)',
         license: 'CC BY 4.0',
@@ -181,18 +175,6 @@ export const CREDITS: CreditGroup[] = [
         license: 'CC0',
         url: 'https://www.innerscene.com/tools/library/3d-parts/jar-candle-original-interior-decor-c8f3719e',
         note: 'Dùng làm hũ mỡ lube (bỏ bấc, thêm nắp ghi tên mỡ)',
-      },
-    ],
-  },
-  {
-    title: 'Bàn lube switch',
-    items: [
-      {
-        what: 'Mechanical Keyboard Switch Lube Station (module 35 switch)',
-        author: 'Fonz',
-        license: 'CC BY-SA',
-        url: 'https://www.printables.com/model/55397-mechanical-keyboard-switch-lube-station',
-        note: 'Đang dùng ở bàn lube switch',
       },
     ],
   },
@@ -233,18 +215,6 @@ export const CREDITS: CreditGroup[] = [
     ],
   },
   {
-    title: 'PCB bàn phím (ảnh sản phẩm Shopii)',
-    items: [
-      {
-        what: 'Common60, Hannah60, Jay60, Zed60, Hannah65, Kay65, Zed65, Infinity87 / 88, Adelais',
-        author: 'Mechlovin',
-        license: 'Chưa rõ',
-        url: 'https://github.com/mechlovin/PCB',
-        note: 'Repo không kèm giấy phép: chỉ dùng cá nhân, xin phép tác giả trước khi phát hành',
-      },
-    ],
-  },
-  {
     title: 'Đồ hàn (bước hàn switch)',
     items: [
       {
@@ -270,18 +240,6 @@ export const CREDITS: CreditGroup[] = [
         author: 'Logansryche',
         license: 'CC BY 4.0',
         url: 'https://sketchfab.com/3d-models/band-aid-box-3615be47e39c45fc953e89c5e48a4560',
-      },
-    ],
-  },
-  {
-    title: 'Switch',
-    items: [
-      {
-        what: 'Kailh Choc V2 red (bàn lube, switch linear)',
-        author: 'koktoh',
-        license: 'CC BY-NC-SA 4.0',
-        url: 'https://github.com/koktoh/keyswitch_model',
-        note: 'Chỉ dùng phi thương mại — gỡ hoặc xin phép trước khi bán game',
       },
     ],
   },

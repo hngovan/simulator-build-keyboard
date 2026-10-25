@@ -22,6 +22,8 @@ export interface SupplyDef {
    * slow = giây chảy chậm thêm, burnChance = tỉ lệ ẩn cháy chân dù nhả đúng vùng xanh (không hiện cho người chơi)
    */
   solder?: { speed: number; shine: number; slow?: number; burnChance?: number }
+  /** sách phép (mục Shopii "Sách phép"): số switch cộng thêm mỗi lần mở / mỗi mẻ lube, mỗi lần dùng trừ 1 */
+  spell?: number
 }
 
 export const SUPPLIES: Record<string, SupplyDef> = {
@@ -74,7 +76,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     fit: { linear: 1, tactile: 0.55, clicky: 0.4, housing: 0.75, wire: 0.3, spring: 0.6 },
     warn: {
       tactile: 'Lỡ tay quét dày là mất khấc, bết như phím màng',
-      clicky: 'Clicky lube vào bị bẹt tiếng click',
+      clicky: 'Clicky lube giảm tiếng ồn và tiếng sạn của switch đi',
     },
   },
   g00: {
@@ -86,7 +88,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     packs: [[120, 130]],
     desc: 'Loãng hơn 205g0: dùng được cho tactile nếu quét micro-layer',
     fit: { linear: 0.9, tactile: 0.85, clicky: 0.5, housing: 0.6, wire: 0.2, spring: 0.7 },
-    warn: { clicky: 'Clicky lube vào bị bẹt tiếng click' },
+    warn: { clicky: 'Clicky lube giảm tiếng ồn và tiếng sạn của switch đi' },
   },
   g2: {
     viscosity: 0.7,
@@ -168,6 +170,109 @@ export const SUPPLIES: Record<string, SupplyDef> = {
       housing: 'Permatex không hợp housing stab',
     },
   },
+  // sách phép bán riêng từng loại, mua nhiều cuộn thì số lần dùng cộng dồn (như vật tư)
+  spellOpen: {
+    name: 'Phép mở switch',
+    unit: 'lần',
+    color: '#e9dfb4',
+    packs: [[200, 800]],
+    desc: 'Mỗi lần mở 10 switch (10 đồ mở trên bàn); có chứng chỉ thợ thì cộng thêm 10. Dùng 200 lần',
+    spell: 10,
+  },
+  spellLube: {
+    name: 'Phép lube switch',
+    unit: 'lần',
+    color: '#e9dfb4',
+    packs: [[200, 800]],
+    desc: 'Mỗi mẻ lube 10 switch; có chứng chỉ thợ thì cộng thêm 10. Dùng 200 lần',
+    spell: 10,
+  },
+  spellAssem: {
+    name: 'Phép lắp switch',
+    unit: 'lần',
+    color: '#e9dfb4',
+    packs: [[200, 800]],
+    desc: 'Mỗi lần lắp 10 switch (cùng hàng phím); có chứng chỉ thợ thì cộng thêm 10. Dùng 200 lần',
+    spell: 10,
+  },
+  spellKeycap: {
+    name: 'Phép lắp keycap',
+    unit: 'lần',
+    color: '#e9dfb4',
+    packs: [[200, 800]],
+    desc: 'Mỗi lần lắp 10 keycap (cùng hàng phím); có chứng chỉ thợ thì cộng thêm 10. Dùng 200 lần',
+    spell: 10,
+  },
+  spellSolder: {
+    name: 'Phép hàn switch',
+    unit: 'lần',
+    color: '#e9dfb4',
+    packs: [[200, 800]],
+    desc: 'Mỗi lần hàn được 10 phím: phím đang hàn + 9 phím kế tiếp (vẫn tốn thiếc); hàn cháy thì cháy cả 10. Dùng 200 lần',
+    spell: 10,
+  },
+  spellDesolder: {
+    name: 'Phép rã hàn',
+    unit: 'lần',
+    color: '#e9dfb4',
+    packs: [[200, 800]],
+    desc: 'Mỗi lần hút thiếc cháy được 10 phím: phím đang rã + 9 phím cháy kế tiếp. Dùng 200 lần',
+    spell: 10,
+  },
+}
+
+/** Sách phép mở / lube / lắp / hàn / rã hàn switch, lắp keycap (bán riêng, lượt riêng) */
+export const SPELL_OPEN = 'spellOpen'
+export const SPELL_LUBE = 'spellLube'
+export const SPELL_ASSEM = 'spellAssem'
+export const SPELL_KEYCAP = 'spellKeycap'
+export const SPELL_SOLDER = 'spellSolder'
+export const SPELL_DESOLDER = 'spellDesolder'
+/** Số switch phép `id` cộng thêm mỗi lần dùng (0 = không có / hết lượt) */
+export const spellBonus = (supplies: Record<string, number>, id: string) =>
+  (supplies[id] ?? 0) > 0 ? SUPPLIES[id].spell! : 0
+/**
+ * Số con mỗi lần khi có phép: thợ lõ (1 con) thì phép thay hẳn thành 10, có chứng chỉ (middle 5 / senior 10)
+ * mới cộng dồn (15 / 20). bonus = 0 (không có phép) thì giữ nguyên bậc thợ
+ */
+export const spellRun = (certN: number, bonus: number) =>
+  certN > 1 ? certN + bonus : Math.max(certN, bonus)
+
+/**
+ * Lắp switch / keycap 1 lần: phím `id` + các phím chưa lắp liền sau trong cùng hàng (trái → phải), tối đa `n` phím.
+ * Dùng chung cho `installRun` và viền sáng khi rê chuột vào ô phím
+ */
+export function installTargets<K extends { id: string; x: number; y: number }>(
+  keys: K[],
+  done: (id: string) => boolean,
+  id: string,
+  n: number,
+) {
+  const k0 = keys.find((k) => k.id === id)
+  if (!k0 || done(id)) return []
+  return keys
+    .filter((k) => k.y === k0.y && k.x >= k0.x && !done(k.id))
+    .sort((a, b) => a.x - b.x)
+    .slice(0, n)
+    .map((k) => k.id)
+}
+
+/**
+ * Phép hàn: các phím chưa hàn kế tiếp phím `id` (thứ tự hàng → cột, hết thì vòng lại đầu) được hàn ké, tối đa `n` phím.
+ * Dùng chung cho `solderKey` và viền sáng khi rê chuột vào ô hàn
+ */
+export function spellSolderKeys<K extends { id: string; x: number; y: number }>(
+  keys: K[],
+  done: (id: string) => boolean,
+  id: string,
+  n: number,
+) {
+  if (n <= 0) return []
+  const sorted = [...keys].sort((a, b) => a.y - b.y || a.x - b.x)
+  const from = sorted.findIndex((k) => k.id === id)
+  return [...sorted.slice(from + 1), ...sorted.slice(0, from)]
+    .filter((k) => !done(k.id))
+    .slice(0, n)
 }
 
 /** Các vật tư dùng làm lube (có bảng độ hợp) */

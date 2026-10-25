@@ -15,7 +15,6 @@
     "preview": "vite preview",
     "convert:stab": "node scripts/convert-stab.mjs",
     "convert:switch": "node scripts/convert-switch.mjs",
-    "convert:choc": "node scripts/convert-choc.mjs",
     "convert:cases": "node scripts/convert-cases.mjs",
     "convert:user-cases": "node scripts/convert-user-cases.mjs",
     "convert:screws": "node scripts/convert-screws.mjs",
@@ -25,13 +24,10 @@
     "gen:plates-universal": "bun scripts/gen-universal-plates.ts",
     "convert:screwdriver-lite": "node scripts/convert-screwdriver-lite.mjs",
     "fetch:emotes": "node scripts/fetch-emotes.mjs",
-    "convert:pcbs": "node scripts/convert-pcbs.mjs",
     "convert:solder-tools": "node scripts/convert-solder-tools.mjs",
     "convert:hand-tools": "node scripts/convert-hand-tools.mjs",
-    "convert:lube-station": "node scripts/convert-lube-station.mjs",
     "fetch:room": "node scripts/fetch-room.mjs",
-    "convert:desolder-pump": "node scripts/convert-desolder-pump.mjs",
-    "convert:spool-holder": "node scripts/convert-spool-holder.mjs"
+    "convert:desolder-pump": "node scripts/convert-desolder-pump.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

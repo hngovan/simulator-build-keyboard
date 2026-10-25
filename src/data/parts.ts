@@ -350,7 +350,7 @@ export const MOUNTS: Record<string, SoundMod & { desc: string }> = {
     name: 'O-ring mount',
     dl: -0.1,
     dp: -0.05,
-    desc: 'Vòng silicon ôm quanh board + gasket mid đệm dưới, không vít',
+    desc: 'Vòng O-ring cuốn quanh viền, kẹp giữa PCB và plate, không vít (case 1 mảnh)',
   },
   og: {
     name: 'OG mount (screwless)',
@@ -906,10 +906,6 @@ export const PCB_TYPES: Record<string, Named> = {
   solder: { name: 'Hàn (solder)', price: 280, desc: 'Phải hàn từng switch' },
 }
 
-/**
- * PCB thật của Mechlovin (github.com/mechlovin/PCB), GLB chuyển từ STEP bằng `bun run convert:pcbs`
- * (public/models/pcbs/<id>.glb, chỉ dùng chụp ảnh Shopii). Mỗi layout có nhiều mạch để chọn
- */
 /** 4 loại switch khách có thể đòi (SwitchDef.kind) */
 export const SWITCH_KINDS: Record<SwitchKind, string> = {
   Linear: 'Linear',
@@ -919,108 +915,8 @@ export const SWITCH_KINDS: Record<SwitchKind, string> = {
 }
 export const switchKindOf = (type: string): SwitchKind => SWITCHES[type].kind
 
-/** Tên PCB: mạch Mechlovin cụ thể (có model) hoặc loại PCB tiêu chuẩn */
-export const pcbLabel = (p: { type: string; model?: string }) =>
-  p.model && PCB_MODELS[p.model]
-    ? `${PCB_MODELS[p.model].name} (${PCB_TYPES[p.type].name})`
-    : PCB_TYPES[p.type].name
-
-export const PCB_MODELS: Record<
-  string,
-  { name: string; layout: LayoutId; type: 'hotswap' | 'solder'; price: number; desc: string }
-> = {
-  common60: {
-    name: 'Mechlovin Common60',
-    layout: '60',
-    type: 'solder',
-    price: 300,
-    desc: 'Mạch 60% hàn phổ thông, hỗ trợ nhiều layout hàng dưới',
-  },
-  hannah60: {
-    name: 'Hannah60 (Duck Eagle)',
-    layout: '60',
-    type: 'solder',
-    price: 340,
-    desc: 'Mạch hàn cho case Duck Eagle, USB-C',
-  },
-  jay60: {
-    name: 'Jay60 Rev1',
-    layout: '60',
-    type: 'solder',
-    price: 320,
-    desc: 'Mạch hàn 60% gọn, hỗ trợ split backspace',
-  },
-  zed60: {
-    name: 'Zed60 Rev1',
-    layout: '60',
-    type: 'solder',
-    price: 360,
-    desc: 'Mạch hàn 60% đời mới, nhiều tuỳ chọn layout',
-  },
-  'zed60-hs': {
-    name: 'Zed60 HS',
-    layout: '60',
-    type: 'hotswap',
-    price: 520,
-    desc: 'Bản hotswap của Zed60: socket Kailh, không cần hàn',
-  },
-  hannah65: {
-    name: 'Hannah65 Rev1',
-    layout: '65',
-    type: 'solder',
-    price: 380,
-    desc: 'Mạch 65% hàn, cụm mũi tên tách rời',
-  },
-  kay65: {
-    name: 'Kay65 Rev1',
-    layout: '65',
-    type: 'solder',
-    price: 370,
-    desc: 'Mạch 65% hàn, hỗ trợ ISO / ANSI',
-  },
-  zed65: {
-    name: 'Zed65 Rev1',
-    layout: '65',
-    type: 'solder',
-    price: 400,
-    desc: 'Mạch 65% hàn, cổng USB phía trên',
-  },
-  infinity87: {
-    name: 'Infinity87',
-    layout: 'tkl',
-    type: 'solder',
-    price: 450,
-    desc: 'Mạch TKL hàn nổi tiếng, hỗ trợ cả WKL',
-  },
-  'infinity87-hs': {
-    name: 'Infinity87 3.1 HS',
-    layout: 'tkl',
-    type: 'hotswap',
-    price: 680,
-    desc: 'Infinity87 bản hotswap 3.1, socket Kailh',
-  },
-  infinity88: {
-    name: 'Infinity88',
-    layout: 'tkl',
-    type: 'solder',
-    price: 470,
-    desc: 'Mạch TKL hàn, layout F13 / 88 phím',
-  },
-  adelais: {
-    name: 'Adelais Rev4',
-    layout: 'alice',
-    type: 'solder',
-    price: 520,
-    desc: 'Mạch Alice hàn (Adelais), 2 nửa xoay',
-  },
-  'adelais-hs': {
-    name: 'Adelais Rev5 HS',
-    layout: 'alice',
-    type: 'hotswap',
-    price: 720,
-    desc: 'Adelais bản hotswap Rev5, khỏi hàn',
-  },
-}
+/** Tên PCB (loại tiêu chuẩn của shop) */
+export const pcbLabel = (p: { type: string }) => PCB_TYPES[p.type].name
 
 // Thông số Staebies / TX theo các review (Staebies screw-in, TX AP screw-in, cả hai khít, chân stem đã clip sẵn).
 // Knight v1/v2/v3: CHƯA có thông số đáng tin — đang tạm tính, chỉnh lại theo hàng thật
@@ -1034,7 +930,8 @@ export const STABS: Record<string, StabModel> = {
     tight: false,
     prelubed: false,
     housing: '#1c1c1c',
-    stem: '#f2f2f2',
+    // stab Cherry: slider đen như housing
+    stem: '#2b2b2e',
     desc: 'Stab cổ điển: phải clip chân, dán Urgo, lube housing/slider + wire mới êm',
   },
   cherryScrew: {
@@ -1046,7 +943,7 @@ export const STABS: Record<string, StabModel> = {
     tight: false,
     prelubed: false,
     housing: '#1c1c1c',
-    stem: '#f2f2f2',
+    stem: '#2b2b2e',
     desc: 'Như Cherry clip-in nhưng bắt vít, chắc hơn',
   },
   cherryPlate: {
@@ -1058,7 +955,7 @@ export const STABS: Record<string, StabModel> = {
     tight: false,
     prelubed: false,
     housing: '#1c1c1c',
-    stem: '#f2f2f2',
+    stem: '#2b2b2e',
     desc: 'Kẹp vào plate, không dán băng được',
   },
   staebies: {
@@ -1233,20 +1130,20 @@ export const TOOLS: Record<ToolKind, ToolDef[]> = {
   // lắp switch / keycap bằng tay; số phím mỗi lần theo bậc thợ (chứng chỉ thợ, `cert`)
   switch: [{ name: 'Tay không', n: 1, price: 0, desc: 'Lắp switch, số phím mỗi lần theo bậc thợ' }],
   keycap: [{ name: 'Tay không', n: 1, price: 0, desc: 'Lắp keycap, số phím mỗi lần theo bậc thợ' }],
-  // chứng chỉ thợ: n = số switch lắp / keycap lắp / switch mở để lube mỗi lần
+  // chứng chỉ thợ: n = số switch lắp / keycap lắp / switch mở / switch lube mỗi lần (cộng thêm phép lube)
   cert: [
     { name: 'Thợ lõ', n: 1, price: 0, desc: 'Mới vào nghề: lắp / mở từng switch, từng keycap một' },
     {
       name: 'Chứng chỉ thợ middle',
       n: 5,
       price: 5000,
-      desc: 'Lắp 5 switch, 5 keycap mỗi lần, mở 5 switch mỗi mẻ lube',
+      desc: 'Lắp 5 switch, 5 keycap mỗi lần, mở / lube 5 switch mỗi lần',
     },
     {
       name: 'Chứng chỉ thợ senior',
       n: 10,
       price: 10000,
-      desc: 'Lắp 10 switch, 10 keycap mỗi lần, mở 10 switch mỗi mẻ lube',
+      desc: 'Lắp 10 switch, 10 keycap mỗi lần, mở / lube 10 switch mỗi lần',
     },
   ],
   screw: [
@@ -1451,24 +1348,6 @@ export function buildCatalog(): Product[] {
         hint: p.desc,
       })),
     })
-    // mạch thật của Mechlovin cho layout này (ảnh chụp từ model 3D)
-    for (const [id, m] of Object.entries(PCB_MODELS).filter(([, m]) => m.layout === lay))
-      products.push({
-        id: `pcb-m-${id}`,
-        cat: 'pcb',
-        name: `PCB ${m.name}`,
-        desc: `${m.desc} · Mechlovin`,
-        layouts: [lay],
-        options: [
-          {
-            label: PCB_TYPES[m.type].name,
-            swatch: '#1d6b3a',
-            price: m.price,
-            item: { layout: lay, type: m.type, model: id },
-            hint: PCB_TYPES[m.type].desc,
-          },
-        ],
-      })
     products.push({
       id: `plate-${lay}`,
       cat: 'plate',
@@ -1531,8 +1410,9 @@ export function buildCatalog(): Product[] {
     products.push({
       id: `sw-${t}`,
       cat: 'switch',
-      // ghi loại switch (Linear / Tactile / Clicky / Silent) ngay trên tên cho dễ tìm theo yêu cầu khách
-      name: `Switch ${s.name} · ${SWITCH_KINDS[s.kind]}`,
+      name: s.name,
+      // loại switch (Linear / Tactile / Clicky / Silent) hiện thành nhãn góc ảnh cho dễ tìm theo yêu cầu khách
+      badge: SWITCH_KINDS[s.kind],
       desc: `${s.desc}${s.prelubed ? ' · Lube sẵn' : ''}`,
       sound: { loud: s.loud, pitch: s.pitch },
       options: [10, 70, 90, 110].map((n) => ({
@@ -1546,7 +1426,8 @@ export function buildCatalog(): Product[] {
   for (const [id, sp] of Object.entries(SUPPLIES)) {
     products.push({
       id: `sup-${id}`,
-      cat: 'supply',
+      // sách phép bán ở mục riêng
+      cat: sp.spell ? 'spell' : 'supply',
       name: sp.name,
       desc: sp.desc,
       supply: id,
@@ -1606,6 +1487,7 @@ export const SHOP_CATS: Record<ShopCategory, string> = {
   supply: 'Lube & vật tư',
   tool: 'Dụng cụ',
   cert: 'Chứng chỉ thợ',
+  spell: 'Sách phép',
 }
 
 export function itemName(cat: ShopCategory, item: unknown): string {
@@ -1615,15 +1497,14 @@ export function itemName(cat: ShopCategory, item: unknown): string {
       const it = item as CaseItem
       return `${CASES[it.id].name} (${CASE_COLORS[it.color].name})`
     }
-    case 'supply': {
+    case 'supply':
+    case 'spell': {
       const it = item as SupplyItem
       return `${SUPPLIES[it.id].name} (${it.n} ${SUPPLIES[it.id].unit})`
     }
     case 'pcb': {
       const it = item as PcbItem
-      return it.model && PCB_MODELS[it.model]
-        ? `PCB ${PCB_MODELS[it.model].name} (${PCB_TYPES[it.type].name})`
-        : `PCB ${LAYOUTS[it.layout].name} ${PCB_TYPES[it.type].name}`
+      return `PCB ${LAYOUTS[it.layout].name} ${PCB_TYPES[it.type].name}`
     }
     case 'plate': {
       const it = item as PlateItem

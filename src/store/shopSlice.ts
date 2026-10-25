@@ -411,7 +411,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       item = { ...sw, count: Math.max(1, Math.round(sw.count * (0.8 + Math.random() * 0.1))) }
     }
     const res =
-      cat === 'supply'
+      cat === 'supply' || cat === 'spell'
         ? s.buySupply((post.opt.item as SupplyItem).id, (post.opt.item as SupplyItem).n, cost, scam)
         : cat === 'tool' || cat === 'cert'
           ? s.buyTool(

@@ -2,13 +2,24 @@ import { useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
+import { create } from 'zustand'
 import { useGame } from '@/store'
-import { SUPPLIES, solderTiming } from '@/data/supplies'
+import {
+  JOINTS_PER_KEY,
+  SPELL_DESOLDER,
+  SPELL_SOLDER,
+  SUPPLIES,
+  solderTiming,
+  spellBonus,
+  spellSolderKeys,
+} from '@/data/supplies'
 import { Y } from '@/data/steps'
 import type { Key, SolderJoint } from '@/types'
 import { playSolder, playDesolder } from '@/sound'
 import { cn } from '@/lib/format'
 import { useHover } from '../common/useHover'
+import { HintArrow } from '../stations/StationKit'
+import { useSolderHint } from './solderHint'
 import { SolderingIron } from '../models/HandTools'
 import { DesolderPump } from '../models/DesolderPump'
 
@@ -19,6 +30,31 @@ const PINS: [number, number][] = [
 ]
 const DULL = new THREE.Color('#8f9398')
 const SHINY = new THREE.Color('#b9bdc2')
+
+/** Các ô sáng khi rê vào 1 ô hàn: ô đó + các phím phép hàn sẽ hàn ké (đủ thiếc mới tính) / phép rã hàn sẽ hút ké */
+const useSolderLit = create<{ lit: ReadonlySet<string> }>(() => ({ lit: new Set() }))
+function lightFrom(id: string | null) {
+  const s = useGame.getState()
+  if (!id || !s.ctx || !s.build) return useSolderLit.setState({ lit: new Set() })
+  const solder = s.build.solder
+  // rê vào phím cháy: sáng các phím cháy mà phép rã hàn sẽ hút ké
+  const burnt = (k: string) => jointOf(solder[k])?.burnt ?? false
+  if (burnt(id)) {
+    const more = spellSolderKeys(
+      s.ctx.keys,
+      (k) => !burnt(k),
+      id,
+      spellBonus(s.supplies, SPELL_DESOLDER) - 1,
+    )
+    return useSolderLit.setState({ lit: new Set([id, ...more.map((k) => k.id)]) })
+  }
+  const n = Math.min(
+    spellBonus(s.supplies, SPELL_SOLDER) - 1,
+    Math.floor(((s.supplies[s.solderPick] ?? 0) - JOINTS_PER_KEY) / JOINTS_PER_KEY),
+  )
+  const extra = spellSolderKeys(s.ctx.keys, (k) => !!solder[k], id, n)
+  useSolderLit.setState({ lit: new Set([id, ...extra.map((k) => k.id)]) })
+}
 
 /** số 0..1 cố định theo mã phím */
 const seedOf = (id: string) =>
@@ -106,6 +142,7 @@ export function SolderPad({ k }: { k: Key }) {
   const ironLv = useGame((s) => s.tools.solder)
   const wire = useGame((s) => s.solderPick)
   const dirty = useGame((s) => !!s.build?.tipDirty)
+  const hinted = useSolderHint() === k.id
   const { solderKey, failSolderKey, canSolder, canDesolder, desolderKey } = useGame.getState()
   const station = ironLv >= 2
   // lúc thiếc chảy khác nhau một chút giữa các phím (cố định theo phím)
@@ -119,6 +156,8 @@ export function SolderPad({ k }: { k: Key }) {
   const removeProgress = removing && holding ? Math.min(1, t / removeDuration) : 0
   const remaining = 1 - THREE.MathUtils.smoothstep(removeProgress, 0.65, 1)
   const { hover, bind } = useHover(!done || removing)
+  // phép hàn: rê vào ô khác mà ô này sẽ được hàn ké thì cũng sáng
+  const lit = useSolderLit((s) => s.lit.has(k.id)) && !done
 
   const stop = () => {
     active.current = false
@@ -154,6 +193,7 @@ export function SolderPad({ k }: { k: Key }) {
     if (removing) return
     if (held >= ready) solderKey(k.id, false)
     else failSolderKey(k.id)
+    lightFrom(null)
   }
 
   // thiếc chảy: bắt đầu ở 30% thời gian nung, đầy khi tới vạch đạt
@@ -186,9 +226,13 @@ export function SolderPad({ k }: { k: Key }) {
           }
         }}
         onPointerUp={release}
-        onPointerOver={bind.onPointerOver}
+        onPointerOver={(e) => {
+          bind.onPointerOver(e)
+          if (!done) lightFrom(k.id)
+        }}
         onPointerOut={() => {
           bind.onPointerOut()
+          lightFrom(null)
           release()
         }}
       >
@@ -196,10 +240,12 @@ export function SolderPad({ k }: { k: Key }) {
         <meshBasicMaterial
           color="#ffd84a"
           transparent
-          opacity={hover ? 0.2 : 0}
+          opacity={hover || lit ? 0.2 : 0}
           depthWrite={false}
         />
       </mesh>
+      {/* mũi tên vàng chỉ phím cần hàn / hút thiếc tiếp theo (ẩn khi đang giữ mỏ hàn) */}
+      {hinted && !holding && <HintArrow at={[0, 0.35, 0]} size={1.5} />}
       {PINS.map(([px, pz], index) => {
         const melt = THREE.MathUtils.smoothstep(
           progress,

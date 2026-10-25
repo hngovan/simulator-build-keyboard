@@ -40,3 +40,15 @@
   món chưa mua thì nút disabled.
 - Model: `iron-60w.glb` (cầm tay thì ẩn dây `Object_10/11`), `iron-station.glb`, `iron-pro.glb` (mỏ hàn trạm, mũi ở gốc),
   `sponge-stand.glb`. SolderKit: bút nằm ngang hàng sau, không chạm cuộn thiếc.
+
+### Phép hàn: rê chuột sáng đủ các ô sẽ hàn (2026-10-25)
+
+- Yêu cầu: sách phép hàn 1 lần được 10 con → rê vào ô hàn thì sáng lên đủ số ô sẽ được hàn.
+- `spellSolderKeys()` (supplies.ts): các phím chưa hàn kế tiếp (hàng → cột, vòng lại đầu), dùng chung cho `solderKey` và
+  `SolderPad`. Rê vào 1 ô: store nhỏ `useSolderLit` (SolderPad.tsx) giữ tập ô = ô đó + tối đa `spell − 1` phím ké (đủ thiếc
+  mới tính); các ô trong tập sáng vàng giống ô đang rê. Nhả chuột / rời ô thì tắt.
+- Đã chụp headless: rê SW37 → SW37 + các phím kế tiếp cùng sáng.
+- Mũi tên hướng dẫn bước hàn (2026-10-25, "thêm mũi tên trỏ vào như mod stab"): `useSolderHint` (`scene/parts/solderHint.ts`)
+  chọn 1 chỗ: phím cháy đầu tiên (nếu có bút hút thiếc) → bùi nhùi khi mũi hàn đen (`'clean'`) → phím chưa hàn đầu tiên
+  (hàng → cột). `SolderPad` vẽ `HintArrow` (size 1.5) trên phím đó, ẩn khi đang giữ mỏ hàn; `SolderKit` vẽ trên giá bùi nhùi.
+  `HintArrow` thêm `size` (mặc định 1, các bàn cũ không đổi).

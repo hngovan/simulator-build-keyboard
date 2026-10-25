@@ -7,7 +7,6 @@ import {
   PLATES,
   STABS,
   PCB_TYPES,
-  PCB_MODELS,
   pcbLabel,
   MOUNTS,
   KEYCAP_KITS,
@@ -98,13 +97,8 @@ let orderSeq = 0
 const DAILY_LAYOUTS: LayoutId[] = ['tkl', '60']
 
 /** Đợt đơn mỗi ngày: 5–7 đơn, luôn có ít nhất 1 TKL + 1 60%, còn lại ngẫu nhiên; xáo thứ tự */
-/** PCB khách gửi: hay gửi mạch Mechlovin bán ở Shopii (nếu layout có), không thì PCB tiêu chuẩn */
+/** PCB khách gửi: loại tiêu chuẩn ngẫu nhiên */
 function kitPcb(layout: LayoutId) {
-  const models = Object.entries(PCB_MODELS).filter(([, m]) => m.layout === layout)
-  if (models.length && Math.random() < 0.6) {
-    const [model, m] = pick(models)
-    return { layout, type: m.type, model }
-  }
   return { layout, type: pick(Object.keys(PCB_TYPES)) }
 }
 

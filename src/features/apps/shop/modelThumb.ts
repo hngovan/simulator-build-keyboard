@@ -10,12 +10,13 @@ import { getLayout } from '@/data/layouts'
 import { capGeometry, keycapShape } from '@/scene/models/keycapShape'
 import stabModel from '@/data/stabModel.json'
 import { SWITCH_GLB, switchMaterials } from '@/scene/models/Switch'
-import { STAB_GLB } from '@/scene/models/Stabilizer'
+import { HOUSING_GLB, STAB_GLB, WIRE_SEAT } from '@/scene/models/Stabilizer'
 import { Y } from '@/data/steps'
 import { boardOutline, outlinePlane, outlineSlab } from '@/scene/parts/boardOutline'
 import { makePcbTexture } from '@/scene/parts/PcbSurface'
 import { createSolderSpool, createSpoolHolder } from '@/scene/models/solderSpool'
 import { DIPLOMA_URL, createDiploma } from '@/scene/models/diplomaModel'
+import { createScroll } from '@/scene/models/scrollModel'
 
 // Ảnh sản phẩm Shopii chụp từ chính model 3D trong game: 1 renderer ẩn dùng chung, chụp lần lượt
 // rồi giữ ảnh theo loại (không mở canvas WebGL cho từng thẻ sản phẩm)
@@ -98,20 +99,9 @@ export async function buildScene(kind: ThumbKind, type: string) {
     const m = new THREE.Mesh(geo, mat)
     m.position.x = x
     group.add(m)
+    return m
   }
   if (kind === 'keycap') return keycapScene(type)
-  // PCB Mechlovin (khoá = id model, mm): nhìn chéo 3/4 từ phía trước;
-  // PCB tiêu chuẩn của shop (khoá "layout:type") dựng từ viền layout ở nhánh dưới
-  if (kind === 'pcb' && !type.includes(':')) {
-    const pcb = (await glbScene(`/models/pcbs/${type}.glb`)).clone(true)
-    // STEP/GLB của Mechlovin dùng mm; thu về cm để 3D viewer điều khiển cùng tỉ lệ với các món khác.
-    pcb.scale.setScalar(0.01)
-    // nghiêng chéo cho tấm mạch dài chiếm nhiều khung ảnh hơn
-    pcb.rotation.set(0.95, -0.55, 0)
-    // mm → cỡ ~7 đơn vị như các model khác (trình xem 3D giới hạn khoảng cách camera)
-    pcb.scale.setScalar(0.02)
-    return pcb
-  }
   // dầu: lọ nhỏ giọt giống trên bàn lube; mỡ: hũ
   if (kind === 'lubeJar')
     return isOil(type) ? createOilBottle(type) : createLubeJar(await glbScene(LUBE_JAR_URL), type)
@@ -157,6 +147,7 @@ export async function buildScene(kind: ThumbKind, type: string) {
     return group
   }
   if (kind === 'supply') {
+    if (SUPPLIES[type]?.spell) return createScroll(SUPPLIES[type].name)
     if (type === 'urgo') {
       // hộp băng cá nhân "Band Aid Box" (Logansryche, Sketchfab, CC BY 4.0): model lệch xa gốc, căn tâm về 0
       const box = (await glbScene('/models/supplies/band-aid-box.glb')).clone(true)
@@ -319,15 +310,28 @@ export async function buildScene(kind: ThumbKind, type: string) {
   } else {
     const n = await meshes(STAB_GLB)
     const st = STABS[type]
-    const housing = new THREE.MeshPhysicalMaterial({ color: st.housing, roughness: 0.45 })
+    // housing theo kiểu lắp như bàn build: clip-in / plate-mount có model riêng, screw-in dùng CAD gốc
+    const own =
+      st.mount === 'clip' || st.mount === 'plate' ? await meshes(HOUSING_GLB[st.mount]) : null
+    const housingGeo = (own ?? n).housing.geometry
+    // model Sketchfab có mặt lật chiều → vẽ 2 mặt
+    const housing = new THREE.MeshPhysicalMaterial({
+      color: st.housing,
+      roughness: 0.45,
+      side: THREE.DoubleSide,
+    })
     const stem = new THREE.MeshPhysicalMaterial({ color: st.stem, roughness: 0.45 })
     const wire = new THREE.MeshStandardMaterial({ color: '#cfd3d8', metalness: 1, roughness: 0.22 })
     const span = stabModel.spans['2.25u']
     for (const x of [-span, span]) {
-      add(n.housing.geometry, housing, x)
+      add(housingGeo, housing, x)
       add(n.stem.geometry, stem, x)
     }
-    add(n.wire225.geometry, wire)
+    const wireMesh = add(n.wire225.geometry, wire)
+    // dây nằm đúng rãnh giữ dây của housing (plate-mount thấp + gần slider hơn)
+    const [wy, wz] = WIRE_SEAT[st.mount] ?? [0, 0]
+    wireMesh.position.y += wy
+    wireMesh.position.z += wz
     group.rotation.set(0.6, -0.35, 0)
   }
   return group

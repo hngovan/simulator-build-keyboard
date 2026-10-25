@@ -190,3 +190,39 @@
   mobile bảng nổi giữa màn sát taskbar.
 - `Alert`: icon lucide `TriangleAlert` thay emoji ⚠️; banner cảnh báo Hội Phím Cơ dùng `Alert tone="yellow"` (tiêu đề + dòng giải thích).
 - Shopii: tên switch kèm loại ("Switch Cherry Xanh · Clicky") — người dùng không nhận ra có switch Clicky (chỉ 1 mẫu Cherry Xanh). (2026-10-25)
+- Bàn lube: bỏ khay switch in 3D (`SwitchLubeStation` + `switchLubeStationModel.ts`, module Fonz) theo yêu cầu người dùng; ghi công Fonz
+  ghi chú "đã bỏ". Script `convert-lube-station.mjs` + GLB giữ lại.
+- Shopii: tên switch chỉ còn tên (vd "Cherry Đen"), loại switch thành nhãn vàng góc dưới trái ảnh (`Product.badge`, ProductImage);
+  dãy chọn trong khung xem 3D chỉ hiện khi option có ≥ 2 màu (switch 10/70/90/110 con cùng màu thì không). opencode hết lượt
+  miễn phí nên tự làm.
+- Shopii ảnh stab dùng housing theo kiểu lắp như bàn build (`HOUSING_GLB` export từ Stabilizer.tsx: clip-in / plate-mount, screw-in
+  dùng CAD gốc), vẽ 2 mặt. Trước đó model stab mới chỉ gắn vào bàn build nên shop vẫn hiện housing cũ (2026-10-25).
+- Stab plate-mount (2026-10-25): `stab-plate.glb` thủng thành dưới vì thân dưới 2 housing nằm trong `Object_6` của file gốc
+  (script tưởng là dây) → `convert-stab-variants.mjs` gộp tam giác Object_6 trong bề ngang housing trái. Dây nằm ngoài rãnh giữ dây
+  của housing này → `WIRE_SEAT.plate = [−1.86, −2.28]` mm (Stabilizer.tsx, dùng ở bàn build + ảnh Shopii; trạm mod stab chưa dời).
+- Shopii: khung xem 3D hiện dãy chọn khi option khác màu **hoặc** khác loại (stab Cherry clip / screw / plate cùng màu trước không đổi được).
+- Thanh âm thanh thẻ Shopii (2026-10-25): `SoundBars` size sm không có âm khách muốn → thanh mảnh 7.5px (75% của 10px), mỗi thanh
+  1 màu riêng (Độ ồn cam, Cao độ xanh ngọc), bỏ chữ Êm / Ồn / Trầm / Giòn; chú thích `SoundLegend` ở góc trên lưới sản phẩm
+  (chỉ khi mục có thanh âm thanh). Bàn build + app Danh sách đơn (có vạch âm khách muốn) giữ kiểu cũ.
+- Mezzenger (2026-10-25): bấm ảnh đơn để xem 3D làm khung chat cuộn xuống cuối — effect cuộn phụ thuộc object hội thoại `t`
+  (dựng lại mỗi render). Đổi sang `threadKey = order.id:kind` (`ChatView`, Messenger.tsx).
+- Thanh tiến độ "Hàn switch" (2026-10-25): 1 màu xanh (`tone="green"`, như thanh mở / lube switch), bỏ dải chuyển xanh → vàng.
+
+### Cài đặt: tiền vô hạn khi dev (2026-10-25)
+
+- Yêu cầu: nút bật tiền vô hạn trong Cài đặt, chỉ có ở môi trường dev, bản deploy phải ẩn.
+- `features/apps/settings/devMoney.ts`: `setDevMoney(on)` — bật thì nhớ số tiền cũ, subscribe store bơm ví về 999.999.999 mỗi
+  khi tiêu; tắt thì trả lại số tiền cũ. Không lưu vào save (tải lại trang là tắt).
+- `SettingsApp`: panel "Dev" render trong `import.meta.env.DEV && ...` → `vite build` loại bỏ hẳn (đã build thử, không còn
+  chữ "Tiền vô hạn" trong bundle).
+- Toast (2026-10-25, "message thông báo ko gạch đầu dòng, cho xuống dòng"): `Toasts.tsx` tách chữ tại " — " / "\n" thành từng
+  dòng (`lines`), viết hoa chữ đầu dòng sau — áp cho mọi thông báo, không sửa từng câu trong store.
+
+### Bộ lọc Shopii: case / switch / dụng cụ (2026-10-25)
+
+- Yêu cầu: Shopii mục Case, Switch, Dụng cụ có bộ lọc giống Kho.
+- `features/apps/shop/shopFilters.ts`: case theo form factor (`CASES[id].ff`, nhãn 40% / 60% / … / TKL / FRL / Full / Alice / Planck),
+  switch theo loại (`badge` Linear / Tactile / Clicky / Silent), dụng cụ theo nhóm Hàn / Lắp ráp / Mod & lube (`p.tool.kind`); chỉ hiện
+  nhóm có sản phẩm, chip "Tất cả" đầu tiên.
+- `Shopii.tsx`: hàng `OptionChip` (tên + số sản phẩm khớp, tính sau bộ lọc layout / đồ đã có) trên lưới; bộ lọc gắn với mục,
+  đổi mục thì về "Tất cả". Định giao opencode nhưng opencode hết lượt miễn phí trong ngày → tự làm.

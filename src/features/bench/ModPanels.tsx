@@ -8,6 +8,10 @@ import {
   SUPPLIES,
   lubeUseFit,
   solderWindow,
+  spellBonus,
+  spellRun,
+  SPELL_LUBE,
+  SPELL_OPEN,
   type LubeUse,
 } from '@/data/supplies'
 import { stabModRules } from '@/data/mods'
@@ -197,6 +201,13 @@ export function LubePanel() {
   const build = useBuild()
   const opener = useGame((s) => TOOLS.opener[s.tools.opener])
   const certLv = useGame((s) => s.tools.cert ?? 0)
+  // phép mở / phép lube switch (bán riêng, lượt riêng): thợ lõ thành 10 con, có chứng chỉ thì cộng 10 (`spellRun`)
+  const openLeft = useGame((s) => s.supplies[SPELL_OPEN] ?? 0)
+  const lubeLeft = useGame((s) => s.supplies[SPELL_LUBE] ?? 0)
+  const openSpell = useGame((s) => spellBonus(s.supplies, SPELL_OPEN))
+  const lubeSpell = useGame((s) => spellBonus(s.supplies, SPELL_LUBE))
+  const perOpen = spellRun(TOOLS.cert[certLv].n!, openSpell)
+  const perLube = spellRun(TOOLS.cert[certLv].n!, lubeSpell)
   const swType = useGame((s) => s.inventory.switch!.type)
   const pref = useGame((s) => s.order!.lubePref)
   const finishOptional = useGame((s) => s.finishOptional)
@@ -236,8 +247,11 @@ export function LubePanel() {
           </span>
         }
       >
-        <div className="text-xs">Click switch trên đồ mở để tách vỏ, mỗi lần 1 con</div>
-        <ProgressBar value={opened / total} className="mt-1" />
+        <div className="text-xs">{`Click switch trên đồ mở để tách housing, stem và lò xo, mỗi lần ${perOpen} con`}</div>
+        {openLeft > 0 && (
+          <div className="text-xs text-green">{`📜 Phép mở switch: ${perOpen} con / lần, còn ${openLeft} lần`}</div>
+        )}
+        <ProgressBar value={opened / total} tone="green" className="mt-1" />
       </HudSection>
       <HudSection
         id="switchLube.switch"
@@ -251,10 +265,13 @@ export function LubePanel() {
         }
       >
         {!opener.none && (
-          <div className="text-xs">{`Đã mở chờ lube: ${opened - build.lubed} · ${TOOLS.cert[certLv].n} con / mẻ (theo bậc thợ)`}</div>
+          <div className="text-xs">{`Đã mở chờ lube: ${opened - build.lubed} · ${perLube} con / mẻ (theo bậc thợ${lubeSpell ? ' + phép' : ''})`}</div>
+        )}
+        {lubeLeft > 0 && (
+          <div className="text-xs text-green">{`📜 Phép lube switch: ${perLube} con / mẻ, còn ${lubeLeft} lần`}</div>
         )}
         <LubePicker slot="switch" use={sw.feel} disabled={!!build.lubeType} />
-        <ProgressBar value={build.lubed / total} className="mt-1" />
+        <ProgressBar value={build.lubed / total} tone="green" className="mt-1" />
       </HudSection>
       <HudSection
         id="switchLube.spring"
@@ -269,7 +286,9 @@ export function LubePanel() {
         <div className="text-xs">
           {build.springLube
             ? `Lò xo đã lube ${SUPPLIES[build.springLube].name}`
-            : 'Click hộp lắc trên bàn: bỏ lò xo vào hộp với dầu rồi lắc đều'}
+            : opened < total
+              ? `Mỗi switch mở ra bỏ 1 lò xo vào hộp (${opened}/${total}), mở hết mới lube được`
+              : 'Click hộp lắc trên bàn: nhỏ dầu vào hộp lò xo rồi lắc đều'}
         </div>
       </HudSection>
     </HudPanel>
@@ -318,7 +337,7 @@ export function SolderPanel() {
   }
   return (
     <HudPanel id="solder" title="🔥 Hàn switch">
-      <ProgressBar value={good / total} />
+      <ProgressBar value={good / total} tone="green" />
       <div className="text-xs">
         Đã hàn đạt {good}/{total}
         {burnt > 0 && <span className="text-red"> · {burnt} mối cháy xém</span>}

@@ -1,7 +1,9 @@
 import type { ThreeEvent } from '@react-three/fiber'
+import { create } from 'zustand'
 import { useGame, useStep, currentSound } from '@/store'
 import { Y } from '@/data/steps'
-import { STABS } from '@/data/parts'
+import { STABS, TOOLS } from '@/data/parts'
+import { SPELL_ASSEM, SPELL_KEYCAP, installTargets, spellBonus, spellRun } from '@/data/supplies'
 import type { Key } from '@/types'
 import { playClick, playKey } from '@/sound'
 import { Drop } from '../common/anim'
@@ -13,6 +15,22 @@ import { StabMesh } from './StabMesh'
 /** 1 vị trí phím: lỗ plate, stab, switch, keycap; xử lý click theo bước hiện tại */
 /** stab plate-mount: housing gài vào plate nên cao hơn PCB mount ~1.5mm (không chạm PCB) */
 const PLATE_STAB_Y = Y.pcbTop + 1.5 / 19.05
+
+/** Ô sáng khi rê vào 1 ô ở bước lắp switch / keycap: cả dãy phím sẽ lắp 1 lần (bậc thợ + sách phép) */
+const useRunLit = create<{ lit: ReadonlySet<string> }>(() => ({ lit: new Set() }))
+function lightRun(id: string | null) {
+  const s = useGame.getState()
+  const step = s.build && s.ctx?.steps[s.build.stepIdx]
+  if (!id || !s.build || !s.ctx || (step !== 'switch' && step !== 'keycap'))
+    return useRunLit.setState({ lit: new Set() })
+  const field = step === 'switch' ? 'switches' : 'keycaps'
+  const spell = step === 'switch' ? SPELL_ASSEM : SPELL_KEYCAP
+  let n = spellRun(TOOLS.cert[s.tools.cert ?? 0].n!, spellBonus(s.supplies, spell))
+  // lắp switch: không quá số switch còn trong kho
+  if (step === 'switch') n = Math.min(n, s.inventory.switch?.count ?? 0)
+  const build = s.build
+  useRunLit.setState({ lit: new Set(installTargets(s.ctx.keys, (k) => !!build[field][k], id, n)) })
+}
 
 export function KeySlot({ k }: { k: Key }) {
   const step = useStep()
@@ -31,6 +49,7 @@ export function KeySlot({ k }: { k: Key }) {
     (step === 'keycap' && hasSwitch && !hasKeycap) ||
     (step === 'test' && hasKeycap)
   const { hover, bind } = useHover(canAct)
+  const lit = useRunLit((s) => s.lit.has(k.id)) && canAct
 
   const onDown = (e: ThreeEvent<PointerEvent>) => {
     const s = useGame.getState()
@@ -42,7 +61,10 @@ export function KeySlot({ k }: { k: Key }) {
     if (!canAct) return
     e.stopPropagation()
     if (step === 'stab') s.installStab(k.id)
-    else if (step === 'switch' || step === 'keycap') s.installRun(step, k.id)
+    else if (step === 'switch' || step === 'keycap') {
+      s.installRun(step, k.id)
+      lightRun(null)
+    }
     playClick()
   }
   const onUp = () => {
@@ -60,9 +82,13 @@ export function KeySlot({ k }: { k: Key }) {
         rotation-x={-Math.PI / 2}
         onPointerDown={onDown}
         onPointerUp={onUp}
-        onPointerOver={bind.onPointerOver}
+        onPointerOver={(e) => {
+          bind.onPointerOver(e)
+          if (canAct) lightRun(k.id)
+        }}
         onPointerOut={() => {
           bind.onPointerOut()
+          lightRun(null)
           onUp()
         }}
       >
@@ -70,7 +96,7 @@ export function KeySlot({ k }: { k: Key }) {
         <meshBasicMaterial
           color="#5cf"
           transparent
-          opacity={hover ? 0.4 : step === 'stab' && canAct ? 0.18 : 0}
+          opacity={hover || lit ? 0.4 : step === 'stab' && canAct ? 0.18 : 0}
           depthWrite={false}
         />
       </mesh>

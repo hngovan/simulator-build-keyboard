@@ -31,7 +31,10 @@ export function ProductCard({ product, onBuy }: Props) {
         className="h-[110px]"
         // chọn màu / loại ngay trong khung xem 3D (đồng bộ với lựa chọn trên thẻ)
         picker={
-          product.options.length > 1 &&
+          // khác màu hoặc khác loại (vd stab Cherry clip-in / screw-in / plate-mount cùng màu); chỉ khác số lượng thì không hiện
+          new Set(
+            product.options.map((o) => `${o.swatch}|${(o.item as { type?: string }).type ?? ''}`),
+          ).size > 1 &&
           product.options.map((o, i) => (
             <OptionChip
               key={o.label}

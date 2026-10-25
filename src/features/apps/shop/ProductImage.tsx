@@ -41,7 +41,7 @@ export function ProductImage({
   picker?: ReactNode
 }) {
   const frame = cn(
-    'flex h-[110px] items-center justify-center overflow-hidden rounded-[10px] bg-black/15',
+    'relative flex h-[110px] items-center justify-center overflow-hidden rounded-[10px] bg-black/15',
     className,
   )
   const kind: ThumbKind | null =
@@ -53,7 +53,7 @@ export function ProductImage({
       ? product.cat
       : product.cat === 'tool' || product.cat === 'cert'
         ? 'tool'
-        : product.cat === 'supply' && product.supply
+        : (product.cat === 'supply' || product.cat === 'spell') && product.supply
           ? SUPPLIES[product.supply]?.fit
             ? 'lubeJar'
             : 'supply'
@@ -67,12 +67,12 @@ export function ProductImage({
     product.cat === 'keycap'
       ? cap && `${cap.kit}:${cap.color}`
       : product.cat === 'pcb'
-        ? pcb && (pcb.model ?? `${pcb.layout}:${pcb.type}`)
+        ? pcb && `${pcb.layout}:${pcb.type}`
         : product.cat === 'plate'
           ? plate && `${plate.layout}:${plate.material}`
           : product.cat === 'tool' || product.cat === 'cert'
             ? tool && `${tool.kind}:${tool.level}`
-            : product.cat === 'supply'
+            : product.cat === 'supply' || product.cat === 'spell'
               ? product.supply
               : (item as SwitchItem | StabItem | undefined)?.type
   const thumb = useModelThumb(kind, type)
@@ -81,6 +81,12 @@ export function ProductImage({
   const caseThumb = useCaseThumb(caseItem?.id, caseItem?.color)
   const [viewing, setViewing] = useState(false)
   const profile = product.cat === 'keycap' ? KEYCAP_KITS[cap?.kit ?? 'base']?.profile : null
+  // nhãn góc dưới trái (loại switch...), cùng kiểu nhãn profile keycap
+  const badge = product.badge && (
+    <span className="absolute bottom-1 left-1 rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]">
+      {product.badge}
+    </span>
+  )
 
   if (product.cat === 'keycap')
     return (
@@ -148,6 +154,7 @@ export function ProductImage({
       <ImageZoom title={product.name} kind={kind} type={type} picker={picker}>
         <div className={frame}>
           <img src={thumb} alt={product.name} className="h-full w-full object-contain" />
+          {badge}
         </div>
       </ImageZoom>
     )
@@ -172,6 +179,7 @@ export function ProductImage({
       <ImageZoom title={product.name} kind={kind} type={type} picker={picker}>
         <div className={frame}>
           <PartArt category={product.cat} color={swatch} />
+          {badge}
         </div>
       </ImageZoom>
     )

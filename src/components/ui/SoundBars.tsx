@@ -11,6 +11,25 @@ interface Props {
 
 const pct = (v: number) => `${Math.min(1, Math.max(0, v)) * 100}%`
 
+/** màu riêng mỗi thanh khi không có âm khách muốn (thẻ Shopii), chú thích bằng `SoundLegend` */
+const PLAIN = { loud: 'bg-orange', pitch: 'bg-[#3dd6ff]' } as const
+
+/** Chú thích 2 thanh âm thanh (đặt ở góc trên danh sách sản phẩm) */
+export function SoundLegend({ className }: { className?: string }) {
+  return (
+    <div className={cn('flex items-center gap-3 text-xs font-bold text-muted', className)}>
+      <span className="flex items-center gap-1.5">
+        <span className={cn('h-2 w-4 rounded-full', PLAIN.loud)} />
+        Độ ồn (êm → ồn)
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className={cn('h-2 w-4 rounded-full', PLAIN.pitch)} />
+        Cao độ (trầm → giòn)
+      </span>
+    </div>
+  )
+}
+
 /** 1 màu theo độ lệch so với âm khách muốn: sát = xanh, hơi lệch = vàng, lệch xa = đỏ */
 const fillOf = (value: number, target?: number) => {
   if (target === undefined) return 'bg-blue'
@@ -26,6 +45,7 @@ function Meter({
   value,
   target,
   size,
+  plain,
 }: {
   title: string
   left: string
@@ -33,6 +53,8 @@ function Meter({
   value: number
   target?: number
   size: 'sm' | 'md'
+  /** không có âm khách muốn: thanh mảnh 1 màu riêng, không chữ hai đầu */
+  plain?: string
 }) {
   const md = size === 'md'
   return (
@@ -40,11 +62,16 @@ function Meter({
       {md && (
         <div className="text-[11px] font-extrabold tracking-wide text-muted uppercase">{title}</div>
       )}
-      <div className={cn('relative rounded-full bg-black/30', md ? 'h-3' : 'h-2.5')}>
+      <div
+        className={cn(
+          'relative rounded-full bg-black/30',
+          md ? 'h-3' : plain ? 'h-[7.5px]' : 'h-2.5',
+        )}
+      >
         <div
           className={cn(
             'h-full rounded-full transition-[width] duration-300',
-            fillOf(value, target),
+            plain ?? fillOf(value, target),
           )}
           style={{ width: pct(value) }}
         />
@@ -55,19 +82,30 @@ function Meter({
           />
         )}
       </div>
-      <div className={cn('flex justify-between text-muted', md ? 'text-xs' : 'text-[10px]')}>
-        <span>{left}</span>
-        <span>{right}</span>
-      </div>
+      {!plain && (
+        <div className={cn('flex justify-between text-muted', md ? 'text-xs' : 'text-[10px]')}>
+          <span>{left}</span>
+          <span>{right}</span>
+        </div>
+      )}
     </div>
   )
 }
 
 /** 2 thanh mô tả âm thanh: êm ↔ ồn, trầm ↔ giòn */
 export function SoundBars({ loud, pitch, target, size = 'sm' }: Props) {
+  const plain = !target && size === 'sm'
   return (
     <div className={cn('my-1 flex flex-col', size === 'md' ? 'gap-2' : 'gap-1')}>
-      <Meter title="Độ ồn" left="Êm" right="Ồn" value={loud} target={target?.[0]} size={size} />
+      <Meter
+        title="Độ ồn"
+        left="Êm"
+        right="Ồn"
+        value={loud}
+        target={target?.[0]}
+        size={size}
+        plain={plain ? PLAIN.loud : undefined}
+      />
       <Meter
         title="Cao độ"
         left="Trầm"
@@ -75,6 +113,7 @@ export function SoundBars({ loud, pitch, target, size = 'sm' }: Props) {
         value={pitch}
         target={target?.[1]}
         size={size}
+        plain={plain ? PLAIN.pitch : undefined}
       />
     </div>
   )

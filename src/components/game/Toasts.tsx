@@ -3,6 +3,10 @@ import { cn } from '@/lib/format'
 
 const KIND = { info: 'bg-panel-2', good: 'bg-[#1f7a43]', bad: 'bg-[#a8322f]' } as const
 
+/** Tách thông báo thành từng dòng tại dấu gạch " — " / xuống dòng, viết hoa chữ đầu dòng sau */
+const lines = (text: string) =>
+  text.split(/\s+—\s+|\n/).map((l, i) => (i ? l.charAt(0).toUpperCase() + l.slice(1) : l))
+
 /** Thông báo nổi ở giữa phía trên màn hình */
 export function Toasts() {
   const toasts = useGame((s) => s.toasts)
@@ -16,7 +20,9 @@ export function Toasts() {
             KIND[t.kind],
           )}
         >
-          {t.text}
+          {lines(t.text).map((l, i) => (
+            <div key={i}>{l}</div>
+          ))}
         </div>
       ))}
     </div>

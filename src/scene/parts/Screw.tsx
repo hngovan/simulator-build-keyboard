@@ -33,6 +33,7 @@ const HEAD_H: Record<ScrewStyle, number> = { countersunk: 0, socket: 2, button: 
 const SCREW_STYLES: Record<ScrewStep, ScrewStyle> = {
   caseOpen: 'countersunk',
   stabScrew: 'button',
+  topScrew: 'button',
   trayScrew: 'socket',
   caseScrew: 'socket',
 }

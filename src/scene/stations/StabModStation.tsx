@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, type MutableRefObject, type ReactNode } from 'react'
-import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { useEffect, useMemo, useRef, type MutableRefObject } from 'react'
+import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGame, useBuild, useCtx, type StabModKind } from '@/store'
 import { STABS, TOOLS } from '@/data/parts'
@@ -7,7 +7,6 @@ import { SUPPLIES } from '@/data/supplies'
 import { stabModRules } from '@/data/mods'
 import { stabUnits, type StabSet } from '@/data/steps'
 import { playBrush, playClick } from '@/sound'
-import { useHover } from '../common/useHover'
 import { MM } from '../models/Switch'
 import { CAD, StabHousingCad, StabStemCad, StabWireCad } from '../models/Stabilizer'
 import {
@@ -25,7 +24,17 @@ import {
   type Stroke,
 } from '../models/ModTools'
 import { LubeJar } from '../models/LubeJar'
-import { Label, MissingSlot, StationTable, alongPass, ease, passPhase, seg } from './StationKit'
+import {
+  Clickable,
+  HintArrow,
+  Label,
+  MissingSlot,
+  StationTable,
+  alongPass,
+  ease,
+  passPhase,
+  seg,
+} from './StationKit'
 
 // ---------- bố cục bàn mod (đơn vị u của bàn, gốc ở giữa bàn) ----------
 const B = 2 // phóng to stab để dễ nhìn
@@ -46,7 +55,11 @@ const PAD_AWAY = v(-7.3, TABLE + 0.03, -1.6) // phần gạc bỏ đi: để c�
 // mũi kéo cách đinh tán 0.68, mũi kìm cách chốt 0.65
 const TIP_Z = -3.75
 const SCISSORS_IDLE = v(-7.5, TABLE + 0.04, TIP_Z + 0.68)
-const CLIPPER_IDLE = v(-2.7, TABLE + 0.09, TIP_Z + 0.65)
+// nằm dọc giữa băng Urgo và cột slider đầu tiên, mũi chĩa lên (−z)
+const CLIPPER_IDLE = v(-2.95, TABLE + 0.09, TIP_Z + 0.45)
+/** góc kìm lúc nằm chờ / lúc kẹp chân (đều mũi −z: nằm dọc, đưa từ phía trước vào) */
+const CLIPPER_ROT_IDLE = Math.PI / 2
+const CLIPPER_ROT_CUT = Math.PI / 2
 /** lưới bày stab: tâm hàng đầu, bước hàng, tâm các cột stab ngắn, tâm stab dài */
 const ROW0 = -3.3
 // wire của mỗi bộ nằm trước housing (hz + 2, dài ~1.2): bước hàng đủ xa để không đè housing hàng sau
@@ -202,45 +215,6 @@ function buildPasses(layout: SetLayout[]): Passes {
     })),
   )
   return { housing, wire }
-}
-
-/** Vùng click được: đổi con trỏ */
-function Clickable({
-  active,
-  onAct,
-  children,
-}: {
-  active: boolean
-  onAct: () => void
-  children: ReactNode
-}) {
-  const { bind } = useHover(active)
-  return (
-    <group
-      {...bind}
-      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
-        if (!active) return
-        e.stopPropagation()
-        onAct()
-      }}
-    >
-      {children}
-    </group>
-  )
-}
-
-/** Mũi tên vàng nhấp nhô chỉ thao tác tiếp theo */
-function HintArrow({ at }: { at: [number, number, number] }) {
-  const ref = useRef<THREE.Mesh>(null)
-  useFrame(({ clock }) => {
-    if (ref.current) ref.current.position.y = at[1] + 0.15 + Math.sin(clock.elapsedTime * 4) * 0.08
-  })
-  return (
-    <mesh ref={ref} position={at} rotation-x={Math.PI}>
-      <coneGeometry args={[0.12, 0.3, 12]} />
-      <meshBasicMaterial color="#ffcc2e" />
-    </mesh>
-  )
 }
 
 type Progress = Record<string, MutableRefObject<number>>
@@ -430,7 +404,7 @@ function AnimatedClipper({ layout }: { layout: SetLayout[] }) {
     const p = animProgress('clip')
     if (p === null) {
       g.position.copy(CLIPPER_IDLE)
-      g.rotation.set(0, Math.PI / 2, 0)
+      g.rotation.set(0, CLIPPER_ROT_IDLE, 0)
       setJaw(g.children[0], 1, 0.22, 0.16)
       if (pieces.current) pieces.current.visible = false
       return
@@ -438,10 +412,11 @@ function AnimatedClipper({ layout }: { layout: SetLayout[] }) {
     const [j, q] = slotOf(p, total)
     // tâm 2 chân (y = -0.75mm của slider còn chân); kìm chĩa mũi về -z
     const foot = layout[j >> 1].standFeet[j & 1].clone().add(v(0, -0.75 * U, 0.65))
+    const go = ease(seg(q, 0, 0.4)) * (1 - ease(seg(q, 0.6, 1)))
     g.position
       .lerpVectors(CLIPPER_IDLE, foot, ease(seg(q, 0, 0.4)))
       .lerp(CLIPPER_IDLE, ease(seg(q, 0.6, 1)))
-    g.rotation.set(0, Math.PI / 2, 0)
+    g.rotation.set(0, CLIPPER_ROT_IDLE + (CLIPPER_ROT_CUT - CLIPPER_ROT_IDLE) * go, 0)
     setJaw(
       g.children[0],
       q < 0.4 ? 1 : q < 0.5 ? 1 - seg(q, 0.4, 0.5) : seg(q, 0.5, 0.6),

@@ -209,14 +209,15 @@ function CaseModel({
   )
 }
 
-/** Case 1 hoặc 2 mảnh, nhiều chất liệu; vít ở đáy hoặc trên (mica) */
-export function Case() {
+/** Case 1 hoặc 2 mảnh, nhiều chất liệu; vít ở đáy hoặc trên (mica).
+ * topOnly: chỉ vẽ case trên (top mount: úp + bắt vít plate trước khi thả vào case dưới) */
+export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const ctx = useCtx()
   const color = useGame((s) => s.inventory.case!.color)
   const step = useStep()
   const stepIdx = useStepIdx()
-  const closed = useBuild().closed
-  const { dropInCase, closeCase } = useGame.getState()
+  const { closed, inCase } = useBuild()
+  const { dropInCase, closeCase, placeTopCase } = useGame.getState()
   const topRef = useRef<THREE.Group>(null)
   const { caseDef, screwSide } = ctx
   const order = useGame((s) => s.order)
@@ -228,10 +229,15 @@ export function Case() {
   const W = ctx.width + 2 * (CASE_MARGIN + CASE_WALL)
   const D = ctx.depth + 2 * (CASE_MARGIN + CASE_WALL)
   const at = (name: StepId) => ctx.steps.indexOf(name)
-  const showTop = two && (step === 'caseOpen' || stepIdx >= at('caseClose'))
-  const topY = step === 'caseClose' && !closed ? 2.6 : 0
+  const topMount = at('topCase') >= 0
+  const showTop =
+    two &&
+    (step === 'caseOpen' || stepIdx >= at('caseClose') || (topMount && stepIdx >= at('topCase')))
+  const placing = (step === 'caseClose' || step === 'topCase') && !closed
+  // case trên chờ đậy / úp lơ lửng; top mount: case trên đã bắt vít vào plate nên nhấc lên cùng board khi thả vào case
+  const topY = placing || (topMount && step === 'caseIn' && !inCase) ? 2.6 : 0
   const bottom = useHover(step === 'caseIn')
-  const top = useHover(step === 'caseClose' && !closed)
+  const top = useHover(placing)
   useFrame((_, dt) => lerpTo(topRef, 'y', topY, dt, 6))
 
   const mat = (hover: boolean) => (
@@ -266,61 +272,65 @@ export function Case() {
 
   return (
     <group>
-      <group onPointerDown={onClick('caseIn', dropInCase)} {...bottom.bind}>
-        {model ? (
-          <CaseModel
-            model={model}
-            origin={ctx.origin}
-            weight={caseDef.weight}
-            bottomMat={lower && bottomMat(bottom.hover, true)}
-          >
-            {/* STL in 3D hay có mặt lật chiều → vẽ 2 mặt cho khỏi trong suốt */}
-            <CaseMaterial
-              material={caseDef.material}
-              color={color}
-              hover={bottom.hover}
-              doubleSide
-            />
-          </CaseModel>
-        ) : mica ? (
-          <Layers W={W} D={D} y0={Y.floorBot} y1={wallTop} mat={mat(bottom.hover)} floor />
-        ) : (
-          <>
-            <CaseBox
-              w={W}
-              h={Y.floorTop - Y.floorBot}
-              d={D}
-              radius={0.12}
-              position={[0, (Y.floorTop + Y.floorBot) / 2, 0]}
-              mat={bottomMat(bottom.hover)}
-              wood={wood && !lower}
-            />
-            <Walls
-              W={W}
-              D={D}
-              y0={Y.floorBot}
-              y1={wallTop}
-              mat={bottomMat(bottom.hover)}
-              wood={wood && !lower}
-            />
-          </>
-        )}
-        <RubberFeet W={W} D={D} />
-        {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên */}
-        <Blockers
-          keys={ctx.keys}
-          width={ctx.width}
-          depth={ctx.depth}
-          mat={mat(bottom.hover)}
-          wood={wood}
-          top={model ? BLOCKER_TOP : Y.caseTop}
-        />
-      </group>
+      {!topOnly && (
+        <group onPointerDown={onClick('caseIn', dropInCase)} {...bottom.bind}>
+          {model ? (
+            <CaseModel
+              model={model}
+              origin={ctx.origin}
+              weight={caseDef.weight}
+              bottomMat={lower && bottomMat(bottom.hover, true)}
+            >
+              {/* STL in 3D hay có mặt lật chiều → vẽ 2 mặt cho khỏi trong suốt */}
+              <CaseMaterial
+                material={caseDef.material}
+                color={color}
+                hover={bottom.hover}
+                doubleSide
+              />
+            </CaseModel>
+          ) : mica ? (
+            <Layers W={W} D={D} y0={Y.floorBot} y1={wallTop} mat={mat(bottom.hover)} floor />
+          ) : (
+            <>
+              <CaseBox
+                w={W}
+                h={Y.floorTop - Y.floorBot}
+                d={D}
+                radius={0.12}
+                position={[0, (Y.floorTop + Y.floorBot) / 2, 0]}
+                mat={bottomMat(bottom.hover)}
+                wood={wood && !lower}
+              />
+              <Walls
+                W={W}
+                D={D}
+                y0={Y.floorBot}
+                y1={wallTop}
+                mat={bottomMat(bottom.hover)}
+                wood={wood && !lower}
+              />
+            </>
+          )}
+          <RubberFeet W={W} D={D} />
+          {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên */}
+          <Blockers
+            keys={ctx.keys}
+            width={ctx.width}
+            depth={ctx.depth}
+            mat={mat(bottom.hover)}
+            wood={wood}
+            top={model ? BLOCKER_TOP : Y.caseTop}
+          />
+        </group>
+      )}
       {showTop && (
         <group
           ref={topRef}
           position-y={topY}
-          onPointerDown={onClick('caseClose', closeCase)}
+          onPointerDown={
+            topMount ? onClick('topCase', placeTopCase) : onClick('caseClose', closeCase)
+          }
           {...top.bind}
         >
           {mica ? (
@@ -328,6 +338,8 @@ export function Case() {
           ) : (
             <Walls W={W} D={D} y0={Y.split} y1={Y.caseTop} mat={mat(top.hover)} wood={wood} />
           )}
+          {/* top mount: vít plate bắt vào mép dưới vách case trên, đi cùng case trên */}
+          {topMount && stepIdx >= at('topScrew') && <ScrewSet step="topScrew" y={Y.split} flip />}
         </group>
       )}
       {step === 'caseOpen' && <ScrewSet step="caseOpen" y={screwY} flip={screwSide === 'bottom'} />}

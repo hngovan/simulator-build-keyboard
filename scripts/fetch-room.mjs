@@ -15,8 +15,6 @@ const MODELS = [
   'wooden_table_02',
   'potted_plant_04',
   'Shelf_01',
-  // tua vít thường trong khay; vít điện cầm tay được dựng bằng model trong game
-  'screwdriver',
   'painted_wooden_chair_01',
   'hanging_picture_frame_01',
   'wall_clock',

@@ -1,10 +1,10 @@
-// Bản nhẹ của tua vít tay Poly Haven (public/models/room/screwdriver.glb, CC0): giữ nguyên khối (~3.4k tam giác),
+// Bản nhẹ của tua vít tay Poly Haven (assets/community/props-polyhaven/screwdriver.glb, CC0): giữ nguyên khối (~3.4k tam giác),
 // bỏ 3 texture 1024px (~1.45MB) — màu nền nướng vào màu đỉnh, tách 2 vật liệu thép / nhựa theo map metalness.
 // Dùng: bun run convert:screwdriver-lite
 import { Document, NodeIO } from '@gltf-transform/core'
 import jpeg from 'jpeg-js'
 
-const SRC = 'public/models/room/screwdriver.glb'
+const SRC = 'assets/community/props-polyhaven/screwdriver.glb'
 const OUT = 'public/models/room/screwdriver-lite.glb'
 
 const io = new NodeIO()

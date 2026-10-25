@@ -1,8 +1,10 @@
 import * as THREE from 'three'
+import { RoundedBox } from '@react-three/drei'
 import { useGame, useCtx, useStep } from '@/store'
 import { Y } from '@/data/steps'
 import { playClick } from '@/sound'
 import { useHover } from '../common/useHover'
+import { HintArrow } from '../stations/StationKit'
 
 const socketGeo = new THREE.BoxGeometry(0.5, 0.09, 0.28)
 const socketMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.6 })
@@ -70,43 +72,58 @@ export function Gaskets() {
   const step = useStep()
   const placed = useGame((s) => s.build?.gaskets ?? {})
   const placeGasket = useGame((s) => s.placeGasket)
-  return ctx.gaskets.map((g, i) => (
-    <Gasket
-      key={i}
-      x={g.x}
-      z={g.z}
-      placed={!!placed[i]}
-      active={step === 'gasket'}
-      onPlace={() => {
-        placeGasket(i)
-        playClick(1200)
-      }}
-    />
-  ))
+  // mũi tên vàng chỉ miếng gasket chưa dán đầu tiên (như bàn mod stab)
+  const next = step === 'gasket' ? ctx.gaskets.find((_, i) => !placed[i]) : undefined
+  return (
+    <>
+      {ctx.gaskets.map((g, i) => (
+        <Gasket
+          key={i}
+          x={g.x}
+          z={g.z}
+          placed={!!placed[i]}
+          active={step === 'gasket'}
+          onPlace={() => {
+            placeGasket(i)
+            playClick(1200)
+          }}
+        />
+      ))}
+      {next && <HintArrow at={[next.x, 0.1, next.z]} size={1.6} />}
+    </>
+  )
 }
 
-/** Vòng silicon ôm quanh board (O-ring / OG mount). ghost = bản xem trước chưa lắp */
-export function SiliconeRing({ ghost }: { ghost: boolean }) {
+/** Vòng silicon quanh board. O-ring mount: cuốn quanh viền, kẹp trong khe giữa PCB và plate (lòi ra ngoài 1 chút).
+ * OG mount: ôm cả mép PCB + plate. ghost = bản xem trước chưa lắp */
+export function SiliconeRing({ ghost, between }: { ghost: boolean; between: boolean }) {
   const ctx = useCtx()
-  const W = ctx.width + 0.2
-  const D = ctx.depth + 0.2
+  // O-ring: cao bằng khe PCB–plate, tâm ngay mép board
+  const t = 0.12
+  const h = between ? Y.plateBot - Y.pcbTop - 0.01 : 0.3
+  const W = ctx.width + (between ? 0.04 : 0.2)
+  const D = ctx.depth + (between ? 0.04 : 0.2)
   const sides: [number, number, number, number][] = [
-    [0, -D / 2, W, 0.12],
-    [0, D / 2, W, 0.12],
-    [-W / 2, 0, 0.12, D],
-    [W / 2, 0, 0.12, D],
+    [0, -D / 2, W + t, t],
+    [0, D / 2, W + t, t],
+    [-W / 2, 0, t, D],
+    [W / 2, 0, t, D],
   ]
   return (
-    <group position-y={-0.17}>
+    <group position-y={between ? (Y.pcbTop + Y.plateBot) / 2 : -0.17}>
       {sides.map(([x, z, w, d], i) => (
-        <mesh key={i} position={[x, 0, z]}>
-          <boxGeometry args={[w, 0.3, d]} />
+        <RoundedBox
+          key={i}
+          args={[w, h, d]}
+          radius={Math.min(h, t) / 2 - 0.001}
+          position={[x, 0, z]}
+        >
           {ghost ? (
             <meshBasicMaterial color="#ffd84a" transparent opacity={0.35} />
           ) : (
-            <meshStandardMaterial color="#55575f" roughness={0.9} transparent opacity={0.9} />
+            <meshStandardMaterial color="#3d3f46" roughness={0.85} />
           )}
-        </mesh>
+        </RoundedBox>
       ))}
     </group>
   )

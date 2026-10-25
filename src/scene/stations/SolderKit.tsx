@@ -8,7 +8,8 @@ import { useGame, useCtx } from '@/store'
 import { TOOLS } from '@/data/parts'
 import { JOINTS_PER_KEY, SUPPLIES } from '@/data/supplies'
 import { Y } from '@/data/steps'
-import { MissingSlot, Part } from './StationKit'
+import { HintArrow, MissingSlot, Part } from './StationKit'
+import { useSolderHint } from '../parts/solderHint'
 import { DesolderPump } from '../models/DesolderPump'
 import { createSolderSpool } from '../models/solderSpool'
 
@@ -82,6 +83,7 @@ export function SolderKit() {
   const cleaner = useGame((s) => !TOOLS.tipCleaner[s.tools.tipCleaner].none)
   const dirty = useGame((s) => !!s.build?.tipDirty)
   const cleanTip = useGame((s) => s.cleanTip)
+  const hint = useSolderHint()
   const hasPump = useGame((s) => !TOOLS.desolder[s.tools.desolder ?? 0].none)
   const hasHolder = useGame((s) => (s.tools.spoolHolder ?? 0) > 0)
   const station = useModel(STATION)
@@ -188,6 +190,8 @@ export function SolderKit() {
               <meshBasicMaterial color="#ffcc2e" transparent opacity={0.9} />
             </mesh>
           )}
+          {/* mũi tên vàng: mũi hàn đen thì chỉ vào bùi nhùi để lau */}
+          {hint === 'clean' && !cleaning && <HintArrow at={[0, 2.2, 0]} size={3} />}
         </Part>
       ) : (
         <MissingSlot

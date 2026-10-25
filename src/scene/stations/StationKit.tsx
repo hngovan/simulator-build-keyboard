@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react'
-import type * as THREE from 'three'
+import { useRef, type ReactNode } from 'react'
+import * as THREE from 'three'
 import { Line } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
-import type { GroupProps } from '@react-three/fiber'
+import { useFrame, type GroupProps, type ThreeEvent } from '@react-three/fiber'
 import { useHover } from '../common/useHover'
+import { useHoverOutline } from '../common/hoverOutline'
 import { CuttingMat } from '../common/CuttingMat'
 
 /** Chữ nằm trên mặt bàn */
@@ -155,4 +156,51 @@ export function alongPass(points: THREE.Vector3[], q: number) {
   const f = t * (points.length - 1)
   const i = Math.min(points.length - 2, Math.floor(f))
   return points[i].clone().lerp(points[i + 1], f - i)
+}
+
+/** Vùng click được: đổi con trỏ + viền vàng quanh vật khi rê chuột (như màn hình PC) */
+export function Clickable({
+  active,
+  onAct,
+  outline = true,
+  children,
+}: {
+  active: boolean
+  /** nhận sự kiện để biết bấm trúng chi tiết nào (vd. instance switch trong lưới) */
+  onAct: (e: ThreeEvent<PointerEvent>) => void
+  /** false: con tự vẽ viền (vd. lưới switch chỉ viền con đang rê) */
+  outline?: boolean
+  children: ReactNode
+}) {
+  const ref = useRef<THREE.Group>(null)
+  const { hover, bind } = useHover(active)
+  useHoverOutline(ref, hover && outline)
+  return (
+    <group
+      ref={ref}
+      {...bind}
+      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+        if (!active) return
+        e.stopPropagation()
+        onAct(e)
+      }}
+    >
+      {children}
+    </group>
+  )
+}
+
+/** Mũi tên vàng nhấp nhô chỉ thao tác tiếp theo */
+export function HintArrow({ at, size = 1 }: { at: [number, number, number]; size?: number }) {
+  const ref = useRef<THREE.Mesh>(null)
+  useFrame(({ clock }) => {
+    if (ref.current)
+      ref.current.position.y = at[1] + (0.15 + Math.sin(clock.elapsedTime * 4) * 0.08) * size
+  })
+  return (
+    <mesh ref={ref} position={at} rotation-x={Math.PI} scale={size}>
+      <coneGeometry args={[0.12, 0.3, 12]} />
+      <meshBasicMaterial color="#ffcc2e" />
+    </mesh>
+  )
 }

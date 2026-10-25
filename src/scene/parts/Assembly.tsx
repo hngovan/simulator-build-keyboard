@@ -15,6 +15,7 @@ export function Assembly() {
   const viewFlip = useGame((s) => s.viewFlip)
   const ref = useRef<THREE.Group>(null)
   const showCase = step === 'caseOpen' || stepIdx >= ctx.steps.indexOf('caseIn')
+  const topEarly = ctx.steps.includes('topCase') && stepIdx >= ctx.steps.indexOf('topCase')
   // Auto-flipped work steps must still let the player flip back to inspect the top.
   const flipped = NO_FLIP_STEPS.includes(step) ? false : autoFlip(step, ctx) ? !viewFlip : viewFlip
   useFrame((_, dt) => {
@@ -25,7 +26,12 @@ export function Assembly() {
   })
   return (
     <group ref={ref}>
-      {showCase && <Case />}
+      {showCase ? (
+        <Case />
+      ) : (
+        // top mount: case trên úp lên plate (bắt vít) trước khi có case dưới
+        topEarly && <Case topOnly />
+      )}
       {step !== 'caseOpen' && <Board />}
     </group>
   )

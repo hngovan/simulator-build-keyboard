@@ -3,7 +3,9 @@ import { forwardRef, useMemo, useRef, type MutableRefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { RoundedBox, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { SUPPLIES } from '@/data/supplies'
+import stabModel from '@/data/stabModel.json'
 
 // Dụng cụ mod stab (đơn vị: u của bàn mod). Gốc toạ độ = đầu làm việc của dụng cụ
 
@@ -98,7 +100,8 @@ export function setScissors(tool: THREE.Object3D | null, open: number) {
 export function setJaw(tool: THREE.Object3D | null, open: number, base = 0.22, range = 0.16) {
   tool?.children
     .slice(0, 2)
-    .forEach((side, s) => (side.rotation.y = (s === 0 ? -1 : 1) * (base + open * range)))
+    // càng 0 lật trục z (scale.z = −1, xem clipperModel) nên góc mở ngược dấu càng 1; sai dấu thì 2 lưỡi bắt chéo
+    .forEach((side, s) => (side.rotation.y = (s === 0 ? 1 : -1) * (base + open * range)))
 }
 
 // ---------- băng Urgo ----------
@@ -160,21 +163,27 @@ export function lubeLook(lube: string): LubeLook {
   return { color: sp.color, opacity: sp.opacity ?? 0.5, thick: 0.12 + visc * 0.55 }
 }
 
-function GreaseMaterial({ lube }: { lube: string }) {
-  const look = lubeLook(lube)
-  return (
-    <meshPhysicalMaterial
-      color={look.color}
-      transparent
-      opacity={0.25 + look.opacity * 0.75}
-      transmission={1 - look.opacity}
-      thickness={0.4}
-      ior={1.4}
-      roughness={0.06}
-      clearcoat={1}
-      depthWrite={look.opacity > 0.6}
-    />
-  )
+const greaseMats = new Map<string, THREE.MeshPhysicalMaterial>()
+/** Vật liệu lớp mỡ dùng chung theo loại */
+export function greaseMaterial(lube: string) {
+  if (!greaseMats.has(lube)) {
+    const look = lubeLook(lube)
+    greaseMats.set(
+      lube,
+      new THREE.MeshPhysicalMaterial({
+        color: look.color,
+        transparent: true,
+        opacity: 0.25 + look.opacity * 0.75,
+        transmission: 1 - look.opacity,
+        thickness: 0.4,
+        ior: 1.4,
+        roughness: 0.06,
+        clearcoat: 1,
+        depthWrite: look.opacity > 0.6,
+      }),
+    )
+  }
+  return greaseMats.get(lube)!
 }
 
 type V3 = [number, number, number]
@@ -266,17 +275,7 @@ export function GreaseStroke({
   const ref = useRef<THREE.Mesh>(null)
   const { thick } = lubeLook(lube)
   const geometry = useMemo(() => greaseFilmGeometry(stroke, thick), [stroke, thick])
-  const frame = useMemo(() => {
-    const a = new THREE.Vector3(...stroke.a)
-    const b = new THREE.Vector3(...stroke.b)
-    const len = a.distanceTo(b)
-    const y = b.clone().sub(a).normalize()
-    const z = new THREE.Vector3(...stroke.n)
-    z.sub(y.clone().multiplyScalar(z.dot(y))).normalize()
-    const x = new THREE.Vector3().crossVectors(y, z)
-    const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z))
-    return { a, len, q }
-  }, [stroke])
+  const frame = useMemo(() => strokeFrame(stroke), [stroke])
   useFrame(() => {
     const m = ref.current
     if (!m) return
@@ -287,10 +286,32 @@ export function GreaseStroke({
     m.scale.set(1, frame.len, 1)
     geometry.setDrawRange(0, Math.ceil(56 * p) * 16 * 6)
   })
-  return (
-    <mesh ref={ref} geometry={geometry}>
-      <GreaseMaterial lube={lube} />
-    </mesh>
+  return <mesh ref={ref} geometry={geometry} material={greaseMaterial(lube)} />
+}
+
+/** Khung đặt 1 đường phết: gốc a, trục y dọc đường, z theo pháp tuyến mặt */
+function strokeFrame(stroke: Stroke) {
+  const a = new THREE.Vector3(...stroke.a)
+  const b = new THREE.Vector3(...stroke.b)
+  const len = a.distanceTo(b)
+  const y = b.clone().sub(a).normalize()
+  const z = new THREE.Vector3(...stroke.n)
+  z.sub(y.clone().multiplyScalar(z.dot(y))).normalize()
+  const x = new THREE.Vector3().crossVectors(y, z)
+  const q = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z))
+  return { a, len, q }
+}
+
+/** Nhiều đường mỡ đã phết xong gộp 1 khối (toạ độ chi tiết), để vẽ InstancedMesh cho cả lưới switch */
+export function greaseGeometry(lube: string, strokes: Stroke[]) {
+  const { thick } = lubeLook(lube)
+  return mergeGeometries(
+    strokes.map((s) => {
+      const { a, len, q } = strokeFrame(s)
+      return greaseFilmGeometry(s, thick).applyMatrix4(
+        new THREE.Matrix4().compose(a, q, new THREE.Vector3(1, len, 1)),
+      )
+    }),
   )
 }
 
@@ -315,9 +336,17 @@ export const WIRE_PATH = {
 export const hookCenterX = (side: -1 | 1, spanMm: number) =>
   WIRE_PATH.offsetX + side * (spanMm + 0.1)
 
-/** Đường phết mỡ 1 bên: đoạn móc → góc uốn → 1 đoạn thanh ngang */
+/** dây dài (6.25u / 7u) dùng dây CAD 6.25u kéo giãn theo trục x (StabWireCad) → dây dày lên theo hệ số này */
+export const wireScaleX = (spanMm: number) =>
+  spanMm / (spanMm > 30 ? stabModel.spans['6.25u'] : stabModel.spans['2.25u'])
+
+/**
+ * Đường phết mỡ 1 bên: đoạn móc → góc uốn → thanh ngang. Dây ngắn chỉ phết 1 đoạn qua góc uốn;
+ * dây dài phết hết thanh ngang (mỗi bên tới giữa, chồng nhẹ)
+ */
 export function wireGreaseCurve(side: -1 | 1, spanMm: number) {
-  const { y, barZ, bendR, greaseFromZ, barLen } = WIRE_PATH
+  const { y, barZ, bendR, greaseFromZ } = WIRE_PATH
+  const barLen = spanMm > 30 ? spanMm - bendR + 0.5 : WIRE_PATH.barLen
   const hx = hookCenterX(side, spanMm)
   const v = (x: number, z: number) => new THREE.Vector3(x, y, z)
   const path = new THREE.CurvePath<THREE.Vector3>()
@@ -333,7 +362,13 @@ const TUBE_SEG = 64
 const TUBE_RAD = 16
 
 /** Uneven coating follows the wire curve; localized blobs sweep around its circumference. */
-function irregularWireGeometry(curve: THREE.Curve<THREE.Vector3>, layer: number, seed: number) {
+function irregularWireGeometry(
+  curve: THREE.Curve<THREE.Vector3>,
+  layer: number,
+  seed: number,
+  /** bán kính lõi dây (dây kéo giãn thì dày hơn, mỡ phải bọc ngoài cả vòng) */
+  core = WIRE_PATH.r,
+) {
   const vertices: number[] = []
   const frames = curve.computeFrenetFrames(TUBE_SEG, false)
   const phase = seed * 0.113
@@ -355,7 +390,7 @@ function irregularWireGeometry(curve: THREE.Curve<THREE.Vector3>, layer: number,
       const angle = (j / TUBE_RAD) * Math.PI * 2
       const irregularity = Math.sin(t * Math.PI * 9 + angle * 2 + phase) * 0.1
       const coat = Math.max(0.08, 0.48 + wave + irregularity + deposits)
-      const radius = WIRE_PATH.r + layer * coat
+      const radius = core + layer * coat
       const normal = frames.normals[i]
       const binormal = frames.binormals[i]
       const point = center
@@ -386,11 +421,13 @@ export function WireGrease({
   const ref = useRef<THREE.Group>(null)
   const { thick } = lubeLook(lube)
   const layer = 0.03 + thick * 0.22
-  const rad = WIRE_PATH.r + layer * 0.48
+  // lõi dây + 0.05mm cho mỡ bọc kín cả vòng (trước mỡ mỏng hơn dây kéo giãn → lộ nửa dây)
+  const core = WIRE_PATH.r * Math.max(1, wireScaleX(spanMm)) + 0.05
+  const rad = core + layer * 0.48
   const curve = useMemo(() => wireGreaseCurve(side, spanMm), [side, spanMm])
   const geom = useMemo(
-    () => irregularWireGeometry(curve, layer, Math.round(spanMm * 17 + side * 29)),
-    [curve, layer, side, spanMm],
+    () => irregularWireGeometry(curve, layer, Math.round(spanMm * 17 + side * 29), core),
+    [curve, layer, side, spanMm, core],
   )
   useFrame(() => {
     const p = Math.min(1, progress?.current ?? 1)
@@ -399,16 +436,14 @@ export function WireGrease({
   })
   return (
     <group ref={ref}>
-      <mesh geometry={geom}>
-        <GreaseMaterial lube={lube} />
-      </mesh>
+      <mesh geometry={geom} material={greaseMaterial(lube)} />
       {/* nắp mỡ bịt kín đầu móc (ống hở đầu sẽ lộ lõi dây) */}
       <mesh
         position={[hookCenterX(side, spanMm), WIRE_PATH.y, WIRE_PATH.greaseFromZ]}
         scale={[1, 1, 0.55]}
+        material={greaseMaterial(lube)}
       >
         <sphereGeometry args={[rad, TUBE_RAD, 10]} />
-        <GreaseMaterial lube={lube} />
       </mesh>
     </group>
   )

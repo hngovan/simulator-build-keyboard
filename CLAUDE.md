@@ -25,8 +25,6 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 - `bun run dev` — dev server
 - `bun run build` — `tsc` + `vite build`
 - `bun run typecheck` / `bun run lint` / `bun run format:check` — chạy cả ba trước khi coi là xong
-- `bun run convert:pcbs`: PCB Mechlovin (`assets/community/mechlovin-pcb`, chưa rõ giấy phép) → GLB nhẹ trong
-  `public/models/pcbs/` (gộp màu + gom đỉnh 0.7mm) cho ảnh Shopii; danh sách mạch ở `PCB_MODELS` (parts.ts).
 - `bun run convert:solder-tools`: bút hàn 60W (GLB), trạm hàn (OBJ), giá bùi nhùi (3MF) trong
   `assets/community/solder-tools/` → `public/models/solder/` (tách `iron-pro.glb` = mỏ hàn trạm, mũi ở gốc).
 - `bun run convert:hand-tools`: tua vít điện (GLB Sketchfab, CC BY 4.0) + đồ mở switch MX (STL, chưa rõ giấy phép) trong
@@ -112,6 +110,9 @@ vào `window.__r3f` để debug trong console.
   Thiếc đểu có `burnChance` (cháy dù nhả đúng vùng xanh). Bàn mod stab bày đúng số stab của layout (`stabUnits`).
   Đầu vít đang lắp (`screwBit`) lưu trong Profile.
   PCB khoét 2 lỗ chân housing mỗi bên stab (`stabHoles` trong steps.ts, khớp chốt model CAD); vít screw-in bắt vào lỗ nhỏ.
+  Top mount (case 2 mảnh): `topCase` (úp case trên lên plate) → `topScrew` (lật board, vặn vít từ dưới vào vách case trên) →
+  `caseIn` (case trên nhấc theo board) → `caseScrew`, không có `caseClose`. O-ring mount (case 1 mảnh): vòng `ring` kẹp giữa PCB
+  và plate, gá trước bước plate, không gasket.
   Stab plate-mount: gài vào plate (lắp sau bước plate, cao hơn PCB), cần plate cứng (`PlateDef.flex` = PC / POM / PP
   không dùng được, `plateStabClash`).
   Đơn full có `pcbType` thì kho phải đúng loại PCB. Save có `rev` để nâng cấp bản cũ (`loadSave`).
@@ -128,8 +129,14 @@ vào `window.__r3f` để debug trong console.
   Nút "Danh sách đơn" (bàn build) = `OrderPicker` có % tiến độ (`buildPercent`), chỉ đơn đã nhận (nhận đơn chỉ ở Mezzenger).
 - Chứng chỉ thợ (`TOOLS.cert`, mục Shopii "Chứng chỉ thợ"): thợ lõ / middle / senior = số phím mỗi lần lắp switch / keycap
   (`installRun`) và số switch mỗi mẻ lube; khung treo tường `createDiploma` (`scene/models/diplomaModel.ts`).
-- Lube switch: phải mở từng switch bằng đồ mở trước (`openSwitch`, đếm `build.opened`, 1 click = 1 switch), `lubeBatch`
-  chỉ lube switch đã mở. Bàn build có màn hình (`scene/models/Computer.tsx`): bấm vào thì về desktop.
+- Lube switch: phải mở switch bằng đồ mở trước (`openSwitch`, đếm `build.opened`, mỗi click = bậc thợ), `lubeBatch(idx)`
+  chỉ lube switch đã mở, bấm con nào lube mẻ bắt đầu từ con đó (`build.lubedIds`, `lubedIds()` trong mods.ts); mỗi switch mở
+  ra bỏ 1 lò xo vào hộp, mở hết mới lắc lube lò xo được. Vật bấm được ở bàn lube / mod stab viền vàng khi rê (`Clickable` +
+  `useHoverOutline`), mũi tên vàng chỉ việc tiếp theo (`HintArrow`, StationKit). Sách phép (mục Shopii "Sách phép" = vật tư có `SupplyDef.spell`), bán riêng; mở / lube / lắp: thợ lõ có phép = 10 con, có chứng chỉ thì cộng 10 (`spellRun`): `spellOpen` (mở,
+  bàn bày tới 10 đồ mở `openerSlots`) `spellLube` (+10 con mỗi mẻ lube) và `spellAssem`
+  (+10 switch mỗi lần lắp, `installRun`), `spellKeycap` (+10 keycap mỗi lần lắp), `spellSolder` (1 lần hàn = 10 phím, cháy thì cháy cả 10, `solderKey`),
+  `spellDesolder` (1 lần hút = 10 phím cháy, `desolderKey`), mỗi loại 200 lần, `spellBonus(supplies, id)`,
+  chỉ trừ lượt khi vượt bậc thợ. Bàn build có màn hình (`scene/models/Computer.tsx`): bấm vào thì về desktop.
 - `nextDay()` (sau khi giao): ngày + 1, đợt đơn mới (số đơn + hệ số tiền công theo bậc uy tín, `data/reputation.ts`),
   job trễ quá 3 ngày thì khách huỷ (−3 uy tín). Chứng chỉ thợ cộng thu nhập cơ bản vào ví mỗi lần nhận đơn (`CERT_BONUS`).
 - Case có `model` dùng GLB CAD thật ở `public/models/cases/`: Bakeneko 60, Planck

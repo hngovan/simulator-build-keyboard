@@ -2,7 +2,7 @@ import { useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
 import { useGLTF, useTexture } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import * as THREE from 'three'
-import { Y } from '@/data/steps'
+import { SCREW_STEPS, Y } from '@/data/steps'
 import { KEYCAP_COLORS, TOOLS } from '@/data/parts'
 import type { Key } from '@/types'
 import { useGame } from '@/store'
@@ -12,7 +12,6 @@ import { ElectricScrewdriver } from './models/HandTools'
 import { Monitor, PcTower } from './models/Computer'
 import { MONITOR_AT, MONITOR_ROT } from './models/computerLayout'
 import { DisplayKeyboard } from './models/ShelfDisplay'
-import { Clipper } from './models/ModTools'
 
 // Phòng làm việc quanh bàn build. Model + texture từ Poly Haven (CC0), tải bằng `bun run fetch:room`;
 // hộp đồ nghề từ Sketchfab (CC BY 4.0, xem Cài đặt → Ghi công)
@@ -338,7 +337,7 @@ function ShelfToolBox(props: JSX.IntrinsicElements['group']) {
   )
 }
 
-/** Tua vít (điện nếu đã mua, không thì tay) + kìm cắt (nếu đã mua) nằm thẳng trên mặt bàn */
+/** Tua vít (điện nếu đã mua, không thì tay) nằm thẳng trên mặt bàn, chỉ ở bước vặn / tháo vít */
 function DeskTools(props: JSX.IntrinsicElements['group']) {
   const screwdriver = useGLTF(MODELS.screwdriver).scene
   // mặt tì vô hình ngang mặt bàn cho RestOn bắn tia xuống
@@ -351,7 +350,12 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
     [screwdriver],
   )
   const electric = useGame((s) => s.tools.screw > 0)
-  const hasClipper = useGame((s) => !TOOLS.clipper[s.tools.clipper].none)
+  // tua vít chỉ bày ở bước vặn / tháo vít; kìm cắt chỉ dùng ở bàn mod stab (có kìm riêng) nên không bày trên bàn
+  const screwStep = useGame((s) => {
+    const step = s.build && s.ctx?.steps[s.build.stepIdx]
+    return !!step && step in SCREW_STEPS
+  })
+  if (!screwStep) return null
   return (
     <group {...props}>
       <group scale={M}>
@@ -372,14 +376,6 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
             <primitive object={screwdriver} rotation={[0, 0, Math.PI / 2]} />
           )}
         </RestOn>
-        {hasClipper && (
-          <RestOn surface={floor} at={[0.08, 0]}>
-            {/* kìm nhỏ lại 1 nửa (cũ 0.075) cho khỏi chiếm chỗ cạnh bàn hàn */}
-            <group scale={0.0375}>
-              <Clipper />
-            </group>
-          </RestOn>
-        )}
       </group>
     </group>
   )

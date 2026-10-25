@@ -53,7 +53,7 @@ export type ScrewBit = 'phillips' | 'hex' | 'torx' | 'flat'
 
 export type SwitchKind = 'Linear' | 'Tactile' | 'Clicky' | 'Silent'
 export type PartCategory = 'case' | 'pcb' | 'plate' | 'stab' | 'switch' | 'keycap'
-export type ShopCategory = PartCategory | 'supply' | 'tool' | 'cert'
+export type ShopCategory = PartCategory | 'supply' | 'tool' | 'cert' | 'spell'
 export type ToolKind =
   | 'switch'
   | 'keycap'
@@ -78,8 +78,6 @@ export interface CaseItem {
 export interface PcbItem {
   layout: LayoutId
   type: string
-  /** mạch cụ thể của Mechlovin (PCB_MODELS); không có = PCB tiêu chuẩn của shop */
-  model?: string
   /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
   flaw?: string
 }
@@ -144,6 +142,8 @@ export interface Product {
   sound?: { loud: number; pitch: number }
   supply?: string
   tool?: ToolItem
+  /** nhãn nhỏ góc dưới trái ảnh sản phẩm (vd loại switch Linear / Tactile) */
+  badge?: string
   options: ProductOption[]
 }
 export interface GroupPost {
@@ -232,13 +232,16 @@ export type StepId =
   | 'solder'
   | 'gasket'
   | 'ring'
+  /** top mount: úp case trên lên plate rồi vặn vít plate vào case trên */
+  | 'topCase'
+  | 'topScrew'
   | 'caseIn'
   | 'trayScrew'
   | 'caseClose'
   | 'caseScrew'
   | 'keycap'
   | 'test'
-export type ScrewStep = 'caseOpen' | 'stabScrew' | 'trayScrew' | 'caseScrew'
+export type ScrewStep = 'caseOpen' | 'stabScrew' | 'topScrew' | 'trayScrew' | 'caseScrew'
 
 export interface StabMods {
   clip: boolean
@@ -283,6 +286,8 @@ export interface BuildState {
   /** số switch đã tách vỏ bằng đồ mở (bản lưu cũ không có: coi như = lubed) */
   opened?: number
   lubed: number
+  /** thứ tự (trong lưới switch đã mở) các con đã lube, bấm con nào lube con đó (bản lưu cũ: coi như `lubed` con đầu) */
+  lubedIds?: number[]
   lubeType: string | null
   /** lube dùng cho lò xo (vd GPL 105) */
   springLube: string | null

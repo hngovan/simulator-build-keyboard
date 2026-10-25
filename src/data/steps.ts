@@ -28,22 +28,39 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   stab: { title: 'Lắp stab', hint: 'Click vào vị trí các phím dài (≥ 2u) để lắp stab' },
   switchLube: {
     title: 'Lube switch (tuỳ chọn)',
-    hint: 'Click switch trên đồ mở để tách vỏ (mỗi lần 1 con), rồi click switch đã mở để lube 1 mẻ',
+    hint: 'Click switch trên đồ mở để tách housing, stem và lò xo, rồi click switch đã mở để lube 1 mẻ',
   },
   stabScrew: { title: 'Vặn vít stab', hint: 'Stab screw-in: vặn chặt 2 vít cho mỗi stab' },
   plate: { title: 'Đặt plate lên PCB', hint: 'Click vào board để đặt plate xuống' },
-  switch: { title: 'Lắp switch', hint: 'Click vào lỗ trên plate để cắm switch' },
+  switch: {
+    title: 'Lắp switch',
+    hint: 'Click vào lỗ trên plate để cắm switch (số con mỗi lần theo bậc thợ + phép lắp switch)',
+  },
   solder: {
     title: 'Hàn switch',
     hint: 'Board đã lật. Giữ chuột lên từng chân, nhả trong vùng xanh; giữ quá lâu hoặc hụt quá 3 lần sẽ làm cháy chân và đen mũi hàn.',
   },
   gasket: { title: 'Dán gasket', hint: 'Click các vị trí quanh plate để dán miếng đệm silicon' },
-  ring: { title: 'Lắp vòng silicon', hint: 'Click vào board để bọc vòng silicon quanh' },
+  ring: {
+    title: 'Lắp vòng silicon',
+    hint: 'Click vào PCB để cuốn vòng O-ring quanh viền, plate sẽ đặt đè lên vòng',
+  },
+  topCase: {
+    title: 'Úp case trên',
+    hint: 'Top mount: click case trên để úp xuống plate (plate bắt vít vào case trên)',
+  },
+  topScrew: {
+    title: 'Bắt vít plate vào case trên',
+    hint: 'Board đã lật: vặn các vít từ dưới lên, giữ plate vào case trên',
+  },
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
   trayScrew: { title: 'Bắt vít tray mount', hint: 'Vặn các vít giữ PCB vào standoff đáy case' },
   caseClose: { title: 'Đậy case trên', hint: 'Click vào case trên để đậy lại' },
   caseScrew: { title: 'Vặn vít đóng case', hint: 'Vặn các vít để khoá 2 mảnh case' },
-  keycap: { title: 'Lắp keycap', hint: 'Click vào switch để cắm keycap' },
+  keycap: {
+    title: 'Lắp keycap',
+    hint: 'Click vào switch để cắm keycap (số cái mỗi lần theo bậc thợ + phép lắp keycap)',
+  },
   test: {
     title: 'Test phím',
     hint: 'Gõ bàn phím thật hoặc click phím 3D. Phím đã test có chấm xanh; phím không có trên bàn phím của bạn (Fn, macro...) thì click',
@@ -53,6 +70,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
 export const SCREW_STEPS: Record<ScrewStep, 'remove' | 'tighten'> = {
   caseOpen: 'remove',
   stabScrew: 'tighten',
+  topScrew: 'tighten',
   trayScrew: 'tighten',
   caseScrew: 'tighten',
 }
@@ -60,6 +78,7 @@ export const SCREW_STEPS: Record<ScrewStep, 'remove' | 'tighten'> = {
 export const SCREW_BITS: Record<ScrewStep, ScrewBit> = {
   caseOpen: 'hex',
   stabScrew: 'phillips',
+  topScrew: 'phillips',
   trayScrew: 'torx',
   caseScrew: 'hex',
 }
@@ -105,15 +124,20 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     steps.push('stabMod', 'stab')
     if (stabType === 'screw') steps.push('stabScrew')
   }
+  // O-ring mount (case 1 mảnh): vòng silicon gá vào khe giữa PCB và plate → gá trước khi đặt plate
+  if (mount === 'oring') steps.push('ring')
   steps.push('plate')
   if (stabKeys.length && stabType === 'plate') steps.push('stabMod', 'stab')
   steps.push('switchLube', 'switch')
   if (inv.pcb!.type === 'solder') steps.push('solder')
-  if (['gasket', 'oring', 'og'].includes(mount)) steps.push('gasket')
-  if (['oring', 'og'].includes(mount)) steps.push('ring')
+  if (['gasket', 'og'].includes(mount)) steps.push('gasket')
+  if (mount === 'og') steps.push('ring')
+  // top mount (case 2 mảnh): plate bắt vít vào case trên trước, rồi cả cụm thả vào case dưới (khỏi bước đậy case)
+  const topMount = mount === 'top' && caseDef.pieces === 2
+  if (topMount) steps.push('topCase', 'topScrew')
   steps.push('caseIn')
   if (mount === 'tray') steps.push('trayScrew')
-  if (caseDef.pieces === 2) steps.push('caseClose', 'caseScrew')
+  if (caseDef.pieces === 2) steps.push(...(topMount ? [] : (['caseClose'] as const)), 'caseScrew')
   steps.push('keycap', 'test')
 
   // Vít case: mica xếp lớp bắt từ trên xuyên qua viền, case nhôm/PC 2 mảnh bắt từ đáy
@@ -149,11 +173,14 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     list.map((p, i) => ({ ...p, id: `${prefix}-${i}` }))
   const screws: Record<ScrewStep, ScrewPoint[]> = {
     caseOpen: name('open', caseScrews),
-    caseScrew: name(
-      'close',
-      mount === 'top'
-        ? [...caseScrews, ...caseScrews.map((p) => ({ x: p.x * 0.5 + 0.25, z: p.z }))]
-        : caseScrews,
+    caseScrew: name('close', caseScrews),
+    // top mount: vít xuyên tai plate bắt vào mép dưới vách case trên, vặn từ dưới lên
+    topScrew: name(
+      'top',
+      caseScrews.map((p) => ({
+        x: p.x,
+        z: Math.sign(p.z) * (depth / 2 + CASE_MARGIN + CASE_WALL / 2),
+      })),
     ),
     trayScrew: name('tray', trayScrews),
     stabScrew: name('stab', stabScrews),
@@ -294,6 +321,7 @@ export function stepProgress(
       return [b.unboxed ? 1 : 0, 1]
     case 'caseOpen':
     case 'stabScrew':
+    case 'topScrew':
     case 'trayScrew':
     case 'caseScrew': {
       const list = ctx.screws[step]
@@ -324,6 +352,7 @@ export function stepProgress(
     case 'caseIn':
       return [b.inCase ? 1 : 0, 1]
     case 'caseClose':
+    case 'topCase':
       return [b.closed ? 1 : 0, 1]
     case 'keycap':
       return [count(b.keycaps), ctx.keys.length]
@@ -334,10 +363,17 @@ export function stepProgress(
 }
 
 // Các bước không cho lật bàn phím (đang ở bàn mod / chưa có bàn phím hoàn chỉnh)
-export const NO_FLIP_STEPS: StepId[] = ['unbox', 'stabMod', 'switchLube', 'caseIn', 'caseClose']
+export const NO_FLIP_STEPS: StepId[] = [
+  'unbox',
+  'stabMod',
+  'switchLube',
+  'caseIn',
+  'caseClose',
+  'topCase',
+]
 
 // Các bước tự lật bàn phím để thao tác ở mặt đáy
 export function autoFlip(step: StepId, ctx: BuildContext) {
-  if (step === 'solder' || step === 'stabScrew') return true
+  if (step === 'solder' || step === 'stabScrew' || step === 'topScrew') return true
   return (step === 'caseOpen' || step === 'caseScrew') && ctx.screwSide === 'bottom'
 }

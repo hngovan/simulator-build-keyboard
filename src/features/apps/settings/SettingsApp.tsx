@@ -1,6 +1,7 @@
 import { Volume2, VolumeX } from 'lucide-react'
 import { useGame } from '@/store'
 import { Button, Heading, Muted, Panel, Slider, Toggle } from '@/components/ui'
+import { setDevMoney, useDevMoney } from './devMoney'
 
 function VolumeRow({
   label,
@@ -23,6 +24,21 @@ function VolumeRow({
         title={`Chỉnh âm lượng: ${label}`}
       />
     </label>
+  )
+}
+
+/** Công cụ thử nghiệm, chỉ hiện khi chạy `bun run dev` */
+function DevPanel() {
+  const rich = useDevMoney((s) => s.on)
+  return (
+    <Panel>
+      <Heading note="chỉ có khi dev">Dev</Heading>
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-panel-2 px-3 py-2.5">
+        <span className="font-bold">Tiền vô hạn</span>
+        <Toggle checked={rich} onChange={setDevMoney} label="Tiền vô hạn" />
+      </div>
+      <Muted>Bật thì ví luôn đầy, tắt thì trả lại số tiền trước khi bật.</Muted>
+    </Panel>
   )
 }
 
@@ -64,6 +80,8 @@ export function SettingsApp() {
           public/audio/bgm.mp3.
         </Muted>
       </Panel>
+
+      {import.meta.env.DEV && <DevPanel />}
 
       <Panel>
         <Heading>Phiên đăng nhập</Heading>

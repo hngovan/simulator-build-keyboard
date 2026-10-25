@@ -229,3 +229,107 @@
   Đo lại bằng ảnh chụp thẳng từ trên (ortho, keycap bán trong suốt đè lên lỗ case — script `pw/ortho.mjs` ở scratchpad):
   `seat: { rise 0.34, tilt 0.114, dz 0.76, dx −0.08 }`. Thêm `seat.dx` (dời trái / phải), Board.tsx + orderThumb đều dùng.
 - Cách căn case CAD lần sau: chụp ortho từ trên để căn dx / dz, chụp ngang để căn tilt / rise (đo mặt khung, bỏ gờ / bezel).
+
+### Housing stab theo kiểu lắp (2026-10-25)
+
+- Trước mọi stab dùng chung housing CAD screw-in. Giờ `StabHousingCad` chọn housing theo `STABS[model].mount`: screw = CAD cũ
+  (`stab.glb`), clip = housing Cherry clip-in (chân gài xuyên PCB, không vít), plate = housing kẹp plate (không xuyên PCB). Slider +
+  dây vẫn CAD. `scripts/convert-stab-variants.mjs` (nguồn `assets/community/stab-variants/`: cherry_mx_stabilizer.glb, keyboard_plate_mounted_stabilizer.glb
+  — Sketchfab, người dùng cung cấp, chưa rõ giấy phép) → `public/models/stab-clip.glb` / `stab-plate.glb` (node `housing`, mm, gốc tâm
+  slider, y 0 = mặt PCB, dây phía +z). Clip: housing trái của mesh có rig `Object_19`, 1 đơn vị ≈ 0.8mm. Plate: `Object_5`,
+  4.306mm / đơn vị (2 housing cách 23.876mm), hạ 1.5mm cho đáy chạm PCB (gốc plate-mount ở PCB + 1.5mm, KeySlot).
+- Bước vặn vít stab + vòng đồng lỗ vít PCB vốn chỉ có với screw-in (steps.ts) — không đổi. Lỗ PCB giữ chung (PCB thật có sẵn).
+- HHKB Professional JP keycap Hi-Pro bày trên bàn (2026-10-25): trước thùng CPU, xoay π + 0.12 (model gốc quay mặt sau về +z),
+  tỉ lệ 294mm / 5.5 đơn vị. `scripts/convert-hhkb-desk.mjs` (nguồn `assets/community/hhkb-desk/`, 1.5 triệu tam giác / 50MB) giảm lưới
+  meshoptimizer 6% (sai số 0.05) → `public/models/room/hhkb-jp.glb` 102k tam giác / 4.7MB. Vệt trắng trên keycap là texture gốc (sờn).
+- Bàn mod stab (2026-10-25): kìm cắt nằm dọc (mũi −z) giữa băng Urgo và cột slider đầu tiên (`CLIPPER_IDLE` x −2.95, z TIP_Z + 0.45).
+  `setJaw` (ModTools) sai dấu góc mở càng 0 (càng này `scale.z = −1`) → 2 lưỡi bắt chéo, cán khép; đã đảo dấu. Bản trước: mũi chĩa +x
+  về phía slider (`CLIPPER_ROT_IDLE` 0; trước mũi chĩa −z, nằm đè cột slider); lúc kẹp chân xoay dần về `CLIPPER_ROT_CUT` π/2.
+  Tua vít + kìm nằm trên bàn (`DeskTools`, Room) ẩn ở bước `stabMod` (bàn mod có kìm riêng, tua vít không dùng).
+- HHKB Pro JP thử bày trên bàn rồi bỏ theo yêu cầu (đã xoá GLB + script).
+- Đồ trên bàn (2026-10-25): tua vít nằm trên bàn (`DeskTools`, Room) chỉ hiện ở bước vặn / tháo vít (`SCREW_STEPS`); kìm cắt trên
+  bàn bỏ hẳn (chỉ bàn mod stab dùng kìm, đã có kìm riêng).
+- Bàn lube: dời theo phác thảo người dùng — khay lò xo `TRAY_AT` (−5.9, −2.6) góc sau trái, hộp lắc `BOX_AT` (−0.9, −2.6) giữa
+  hàng sau (hộp ngắn còn nửa: `BOX.w` 7.5 → 3.75u), hũ mỡ `JAR_AT` (6.1, −1.4) + lọ dầu `BOTTLE_AT` (6.1, 0.6) cột phải cạnh đồ mở switch; hàng trước để chi tiết switch.
+- Stab Cherry (clip-in / screw-in / plate-mount): slider màu đen `#2b2b2e` (trước trắng).
+- Mỡ dây stab dài (6.25u / 7u): dây CAD 6.25u kéo giãn theo x (`wireScaleX`) nên dày hơn lớp mỡ → lộ nửa dây. Lõi ống mỡ =
+  `r × max(1, wireScaleX) + 0.05mm`; dây dài phết hết thanh ngang (`wireGreaseCurve`: mỗi bên tới giữa, chồng 0.5mm), dây ngắn giữ 2mm.
+- Bàn lube (2026-10-25): bỏ model switch low profile Kailh Choc V2 red (koktoh, CC BY-NC-SA) cho switch linear theo yêu cầu người dùng;
+  mọi loại switch dùng model MX CAD. Đã xoá `choc-red.glb`, `scripts/convert-choc.mjs` + lệnh `convert:choc`, nguồn
+  `assets/community/switches-koktoh/`, ghi công (credits.ts + CREDITS.md).
+
+### Dọn model không dùng (2026-10-25)
+
+- Rà mọi file trong `public/` đối chiếu với `src/` + `index.html`: xoá `room/desk_lamp_arm_01`, `room/diploma_frame`, `room/cardboard_boxes`,
+  `lube/cosmetic-cream-jar`, 5 module khay lube Fonz (`switch-module`, `stems-module`, `accent-left/right-side`, `connector`) + script
+  `convert:lube-station` + nguồn `assets/community/keyboard-lube-station-fonz/`, `solder/spool-holder` (giá thiếc dựng bằng code) + script
+  `convert:spool-holder`; gỡ ghi công thùng carton / Fonz. Texture, âm thanh, font, icon, avatar đều còn dùng.
+- `room/screwdriver.glb` (1.5MB) chỉ là nguồn của `screwdriver-lite.glb` → chuyển sang `assets/community/props-polyhaven/`
+  (`convert-screwdriver-lite.mjs` đọc từ đó; `fetch:room` không tải nữa).
+- PCB Mechlovin đã gỡ trước đó (giay-phep.md).
+- Bàn lube (2026-10-25, theo phác thảo 2): bộ chi tiết switch đang lube (housing trên / stem / housing dưới / lò xo) dời từ mép
+  trước lên giữa bàn (`WORK_Z` −0.2), cọ nằm bên phải bộ chi tiết (`BRUSH_IDLE` 3.4). Hàng trước (`OPENED_AREA` x −6.2…5.8, z 1.4…6)
+  bày đủ số switch đã mở (`OpenedSwitches`: InstancedMesh housing dưới + đầu stem, con đã lube stem bóng; lưới tự tính cột theo
+  tổng số switch, chật thì thu nhỏ).
+  Mỗi ô: housing dưới + stem đầy đủ (đầu CAD + thân `bodyGeo`, trước chỉ đầu stem nên trông lơ lửng) + housing trên lùi 17mm phía sau.
+- Bàn lube (2026-10-25, bản 3): bỏ bộ chi tiết đang lube ở giữa bàn; bấm vào lưới switch đã mở để lube 1 mẻ, cọ quét quanh switch
+  kế tiếp trong lưới (`NEXT` do `OpenedSwitches` cập nhật, `passes()`). Đồ nghề dồn lên mép sau: khay (−5.6, −5), hộp lắc (−1.2, −4.7),
+  đồ mở (4.4, −4.9), cọ (2.4, −3.3), lò xo cạnh hộp, hũ mỡ (6.5, −4) + lọ dầu (6.5, −2.3) góc phải sau; lưới `OPENED_AREA` z −2.1…6
+  vừa đơn full size (104 switch, đã chụp kiểm tra).
+- Bàn lube (2026-10-25, bản 4, theo ảnh khoanh đỏ): hũ mỡ (1.9, −4.6) + lọ dầu (3, −4.3) dời từ góc phải sang hàng sau giữa hộp lắc
+  và đồ mở (`JAR_AT`, `BOTTLE_AT`); cọ dịch phải sang (3.6, −3.3) (`BRUSH_IDLE`) — góc phải trống, đồ nghề gom một cụm.
+
+### Bàn lube: lò xo theo switch đã mở, stem nổi + mỡ, viền vàng, mũi tên (2026-10-25)
+
+- Yêu cầu: lò xo ban đầu chưa có, mở bao nhiêu switch thì bấy nhiêu lò xo vào hộp; thanh tiến độ 1 màu; stem nổi để lube cả
+  stem lẫn housing và thấy mỡ sau khi lube; đổi câu cảnh báo clicky; vật tương tác được viền vàng như màn hình PC (lưới switch:
+  chỉ con đang rê); mũi tên vàng hướng dẫn như bàn mod stab; bấm switch nào lube switch đó (trước đây luôn đi từ trái sang phải).
+- Hộp lò xo (`SpringShaker`): nắp mở sẵn, `InstancedMesh` đếm `count = opened` (`springSpot`, hàng 8 con), lò xo bay từ đồ mở
+  vào hộp sau mỗi lần mở (bay đủ `lubeAnim.batch` con). Lube: nhỏ dầu → đóng nắp → lắc → mở nắp, lò xo bóng. Bỏ lò xo lẻ
+  trên bàn và lò xo trong khay. `lubeSprings` chặn khi chưa mở hết switch.
+- Lưới switch (`OpenedSwitches`): stem nổi `RAISE` = 9mm trên housing dưới; con đã lube có lớp mỡ tĩnh (`greaseGeometry` gộp
+  4 nét → InstancedMesh, ModTools); đang lube có `LiveGrease` (GreaseStroke dài dần theo cọ). `greaseMaterial()` dùng chung
+  thay `GreaseMaterial` JSX.
+- Lube theo con được bấm: `lubeBatch(idx)` lấy con được bấm + các con chưa lube kế tiếp (vòng lại đầu lưới), lưu
+  `build.lubedIds` (bản lưu cũ: `lubedIds()` coi như `lubed` con đầu); instance → switch qua `userData.ids`.
+- Viền hover: `scene/common/hoverOutline.ts` (vỏ ngược shader, dày theo khoảng cách camera, hỗ trợ InstancedMesh);
+  `Clickable` + `HintArrow` chuyển vào StationKit dùng chung bàn lube + mod stab; lưới switch tự viền 1 con (`outline={false}`).
+- Panel: thanh mở / lube switch `tone="green"`; câu clicky của 205g0 / 205g00 = "Clicky lube giảm tiếng ồn và tiếng sạn của switch đi".
+- Đã chụp headless kiểm tra: hộp 0 → 5 → 61 lò xo, bấm switch 25 lube đúng 25–29, viền vàng 1 con, mỡ trong hốc housing.
+- (2026-10-25, bổ sung) Rê vào 1 switch thì viền vàng **cả mẻ** sẽ bôi nếu bấm (bậc thợ + sách phép, giới hạn bởi số con
+  chờ lube và mỡ còn lại): `lubePicks()` trong mods.ts dùng chung cho `lubeBatch` và `OpenedSwitches` (prop `batch`).
+  Đã chụp: thợ middle + phép = 15 con, rê con số 3 → viền 3–17, bấm → lube đúng 3–17.
+
+### Mũi tên hướng dẫn bước dán gasket / gá O-ring (2026-10-25)
+
+- Yêu cầu: bước gasket, vòng silicon chưa có mũi tên vàng như bàn mod stab.
+- `Gaskets` (BoardDetails.tsx) chỉ miếng chưa dán đầu tiên; `Board` chỉ cạnh trước vòng silicon chờ gá. Dùng chung `HintArrow`
+  (StationKit, thêm prop `size`, bàn build dùng 1.6 vì camera xa hơn). Đã chụp kiểm tra Tofu60 Redux mount O-ring.
+
+### O-ring mount: vòng kẹp giữa PCB và plate (2026-10-25)
+
+- Yêu cầu: O-ring mount = vòng O-ring cuốn quanh, kẹp giữa PCB và plate, dùng cho case 1 mảnh.
+- `buildContext`: mount `oring` gá vòng (`ring`) **trước** bước plate, bỏ bước gasket; OG giữ gasket → ring sau switch.
+  Case có O-ring (Tofu60 Redux, Catto HHKB, Bakeneko 60) đều 1 mảnh.
+- `SiliconeRing({ between })` (BoardDetails.tsx): O-ring cao bằng khe PCB–plate, tâm ở mép board, bo tròn (RoundedBox);
+  OG vẫn ôm cả mép. Gợi ý bước + `MOUNTS.oring.desc` + OVERVIEW cập nhật. Đã chụp góc nghiêng: vòng nằm giữa PCB và plate.
+- Bản lưu cũ đang build dở mount O-ring sẽ lệch thứ tự bước (danh sách bước đổi).
+
+### Lắp switch / keycap: sáng cả dãy sẽ lắp (2026-10-25)
+
+- Yêu cầu: có sách phép lắp keycap thì rê vào phải sáng đủ số ô (như hàn).
+- `installTargets()` (supplies.ts) dùng chung cho `installRun` và `KeySlot`: rê vào ô → store nhỏ `useRunLit` giữ dãy phím
+  (bậc thợ + phép qua `spellRun`, switch giới hạn số còn trong kho), các ô trong dãy sáng như ô đang rê. Áp dụng cả switch lẫn keycap.
+  Đã chụp: rê giữa hàng → sáng 8 ô tới cuối hàng, bấm lắp đúng 8 keycap.
+
+### Top mount: bắt vít plate vào case trên (2026-10-25)
+
+- Yêu cầu: top mount phải bắt vít lên top case. Người dùng chọn cách "úp case trên rồi vặn vít".
+- Bước mới `topCase` + `topScrew` (types.ts, steps.ts): case 2 mảnh mount `top` → sau switch / hàn: úp case trên (`placeTopCase`,
+  dùng chung cờ `closed`) → board tự lật, vặn vít đầu chữ thập từ dưới vào mép dưới vách case trên (`ctx.screws.topScrew`, cùng
+  x với vít case, z giữa vách) → `caseIn` (case trên nhấc 2.6 cùng board) → `caseScrew`; bỏ `caseClose`. Bỏ trò nhân đôi vít
+  `caseScrew` cũ cho top mount.
+- `Case({ topOnly })`: trước `caseIn` chỉ vẽ case trên (Assembly `topEarly`), vít `topScrew` vẽ trong group case trên.
+- Sửa kèm (BenchHud): câu "Đang xem mặt đáy — bấm Lật lại…" trước đây che gợi ý của mọi bước tự lật (hàn, vặn vít đáy); giờ chỉ
+  hiện khi người chơi tự lật ra mặt kia (`viewFlip`).
+- Đã chụp Gasket60 mount top: thứ tự bước, case trên + 6 vít khi lật, case trên nhấc theo board ở bước thả vào case.

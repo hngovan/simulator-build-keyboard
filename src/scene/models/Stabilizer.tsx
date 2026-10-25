@@ -8,6 +8,20 @@ import { WireCoating } from './ModTools'
 // Model stab lấy từ file CAD (scripts/convert-stab.mjs). Đơn vị mm, gốc = mặt trên PCB
 export const STAB_GLB = '/models/stab.glb'
 useGLTF.preload(STAB_GLB)
+/** housing riêng theo kiểu lắp (scripts/convert-stab-variants.mjs, cùng hệ mm với stab.glb); screw-in dùng CAD gốc */
+export const HOUSING_GLB = {
+  clip: '/models/stab-clip.glb',
+  plate: '/models/stab-plate.glb',
+} as const
+Object.values(HOUSING_GLB).forEach((url) => useGLTF.preload(url))
+
+/**
+ * Dời dây (mm, [y, z]) cho khớp rãnh giữ dây của housing riêng: plate-mount (model Sketchfab) có rãnh thấp hơn
+ * ~1.9mm và gần slider hơn ~2.3mm so với dây CAD screw-in (đo bằng ảnh nhìn ngang housing + dây)
+ */
+export const WIRE_SEAT: Partial<Record<'clip' | 'screw' | 'plate', [number, number]>> = {
+  plate: [-1.86, -2.28],
+}
 
 /** Kích thước đọc từ model CAD (mm) */
 export const CAD = {
@@ -42,8 +56,18 @@ const lubedMat = (on: boolean) =>
 /** Housing (hệ mm, gốc = tâm slider) */
 export function StabHousingCad({ model, lubed = false }: { model: string; lubed?: boolean }) {
   const { housing } = useStabParts()
+  // clip-in: chân gài xuyên PCB, không vít; plate-mount: kẹp vào plate, không xuyên PCB
+  const clip = useGLTF(HOUSING_GLB.clip) as unknown as { nodes: Record<string, THREE.Mesh> }
+  const plate = useGLTF(HOUSING_GLB.plate) as unknown as { nodes: Record<string, THREE.Mesh> }
+  const mount = STABS[model]?.mount
+  const geometry =
+    mount === 'clip'
+      ? clip.nodes.housing.geometry
+      : mount === 'plate'
+        ? plate.nodes.housing.geometry
+        : housing
   return (
-    <mesh geometry={housing} castShadow receiveShadow>
+    <mesh geometry={geometry} castShadow receiveShadow>
       <meshPhysicalMaterial color={STABS[model].housing} {...lubedMat(lubed)} />
     </mesh>
   )
@@ -132,8 +156,10 @@ export function Stabilizer({ model, span, lubed, holee, wireLube }: StabProps) {
           <StabStemCad model={model} lubed={lubed} holee={holee} />
         </group>
       ))}
-      <StabWireCad spanMm={spanMm} />
-      {wireLube && <WireCoating lube={wireLube} spanMm={spanMm} />}
+      <group position={[0, ...(WIRE_SEAT[STABS[model]?.mount] ?? [0, 0])]}>
+        <StabWireCad spanMm={spanMm} />
+        {wireLube && <WireCoating lube={wireLube} spanMm={spanMm} />}
+      </group>
     </group>
   )
 }

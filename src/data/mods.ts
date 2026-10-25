@@ -181,3 +181,19 @@ export function stabAnimDuration(kind: StabModKind, lube?: string, sets = 1) {
   }
   return 1
 }
+
+/** Các switch đã lube (thứ tự trong lưới switch đã mở); bản lưu cũ chỉ có số đếm → coi như `lubed` con đầu */
+export const lubedIds = (b: { lubed: number; lubedIds?: number[] }) =>
+  b.lubedIds ?? Array.from({ length: b.lubed }, (_, i) => i)
+
+/** Mẻ lube khi bấm switch `idx`: con đó + các con chưa lube kế tiếp (hết lưới thì vòng lại đầu), tối đa `batch` con */
+export function lubePicks(lubed: number[], opened: number, idx: number | undefined, batch: number) {
+  const done = new Set(lubed)
+  const start = idx !== undefined && idx < opened && !done.has(idx) ? idx : 0
+  const picked: number[] = []
+  for (let k = 0; k < opened && picked.length < batch; k++) {
+    const i = (start + k) % opened
+    if (!done.has(i)) picked.push(i)
+  }
+  return picked
+}

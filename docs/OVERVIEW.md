@@ -84,11 +84,11 @@ src/
 Các script convert trong `scripts/*.mjs` đọc model nguồn (CAD / STL / OBJ / 3MF / GLB) trong
 `assets/` và ghi GLB vào `public/models/`. Chạy bằng Bun theo script trong `package.json`:
 
-- Case / PCB / plate / keycap / vít: `convert:cases`, `convert:user-cases`, `convert:pcbs`,
+- Case / PCB / plate / keycap / vít: `convert:cases`, `convert:user-cases`,
   `convert:plates`, `convert:keycaps`, `convert:screws`.
-- Switch / stab: `convert:switch`, `convert:choc`, `convert:stab`.
+- Switch / stab: `convert:switch`, `convert:stab`.
 - Dụng cụ và bàn phụ: `convert:solder-tools`, `convert:hand-tools`, `convert:desolder-pump`,
-  `convert:spool-holder`, `convert:spring-containers`, `convert:lube-station`.
+  `convert:spring-containers`.
 - Phòng làm việc: `fetch:room`.
 - Script sinh dữ liệu / dò model: `alice-layout.mjs`, `probe-*.mjs`, `inspect-step.mjs`.
 
@@ -106,7 +106,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/com
    Mezzenger. Icon **Bàn build** đưa sang cảnh 3D (`screen = 'bench'`).
 3. **Mezzenger**: hội thoại đơn mới, đơn chờ gửi và đơn đã gửi. Có thể xem chi tiết yêu cầu, nhận
    đơn, từ chối, gửi hàng, xem điểm chấm và bấm **Kết thúc ngày**.
-4. **Shopii**: mua case, PCB, plate, stab, switch, keycap, vật tư, dụng cụ và chứng chỉ thợ.
+4. **Shopii**: mua case, PCB, plate, stab, switch, keycap, vật tư, dụng cụ, chứng chỉ thợ và sách phép.
 5. **Kho**: xem linh kiện của đơn đang làm, dụng cụ (kèm độ bền còn lại) và vật tư; kéo thả đổi chỗ.
 6. **Danh sách đơn** (app `order`, trước đây là "Chi tiết đơn"): yêu cầu khách, đối chiếu linh kiện,
    chọn mount, dự đoán âm thanh, ngân sách; nhận đơn / đổi đơn / ra bàn build.
@@ -146,11 +146,13 @@ tự thường gặp; `stabScrew` nằm trước `plate` với stab screw-in, c�
 | `switchLube` | Mở từng switch rồi lube theo mẻ; có thể lube lò xo                     | Tuỳ chọn                     |
 | `switch`     | Click lỗ trên plate để cắm switch                                      | Luôn có                      |
 | `solder`     | Giữ chuột trên chân, nhả trong vùng xanh; tránh giữ quá lâu            | PCB hàn (không phải hotswap) |
-| `gasket`     | Click các vị trí quanh plate để dán gasket                             | Mount gasket / O-ring / OG   |
-| `ring`       | Click board để bọc vòng silicon                                        | Mount O-ring / OG            |
+| `gasket`     | Click các vị trí quanh plate để dán gasket                             | Mount gasket / OG            |
+| `ring`       | Click PCB cuốn vòng O-ring (trước plate, kẹp giữa PCB và plate)        | Mount O-ring / OG            |
 | `caseIn`     | Click case để thả board vào                                            | Luôn có                      |
+| `topCase`    | Úp case trên xuống plate                                               | Top mount (case 2 mảnh)      |
+| `topScrew`   | Board tự lật, vặn vít từ dưới giữ plate vào case trên                  | Top mount (case 2 mảnh)      |
 | `trayScrew`  | Vặn vít giữ PCB vào standoff đáy case                                  | Mount tray                   |
-| `caseClose`  | Click nắp case để đậy lại                                              | Case 2 mảnh                  |
+| `caseClose`  | Click nắp case để đậy lại                                              | Case 2 mảnh (trừ top mount)  |
 | `caseScrew`  | Vặn vít khoá 2 mảnh case                                               | Case 2 mảnh                  |
 | `keycap`     | Click switch để cắm keycap                                             | Luôn có                      |
 | `test`       | Gõ bàn phím thật hoặc click phím 3D; phím đã test có chấm xanh         | Luôn có, tính điểm riêng     |
@@ -221,8 +223,9 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 
 - Mua case xong, chọn **kiểu mount** trong app Danh sách đơn trước khi bắt đầu build. Nếu khách gửi
   case thì khách đã dặn mount; làm đúng mount được 10 điểm.
-- Mount quyết định các bước phụ: `gasket` (gasket / O-ring / OG), `ring` (O-ring / OG), `trayScrew`
-  (tray). Mount cũng ảnh hưởng âm thanh và điểm khớp tiếng.
+- Mount quyết định các bước phụ: `gasket` (gasket / OG), `ring` (O-ring: trước bước plate, case 1 mảnh; OG: sau gasket), `trayScrew`
+  (tray), `topCase` + `topScrew` (top mount: plate bắt vít vào case trên rồi cả cụm thả vào case dưới, không có `caseClose`).
+  Mount cũng ảnh hưởng âm thanh và điểm khớp tiếng.
 - Khi kho đã đủ và tương thích, bấm **Ra bàn build** (hoặc icon Bàn build) để vào cảnh 3D. Làm theo
   HUD: click đúng bộ phận, kéo chuột xoay / di chuyển, cuộn để zoom.
 
@@ -231,8 +234,9 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 - **Hàn**: cần mỏ hàn (bút 60W hoặc trạm) và thiếc. Giữ chuột trên chân, nhả khi vùng xanh hiện;
   giữ quá lâu, hụt quá 3 lần hoặc thiếc đểu (15% ẩn) sẽ làm cháy chân và đen mũi hàn. Mũi đen phải
   lau vào bùi nhùi mới hàn tiếp; có thể dùng bút rã hàn hút thiếc cháy rồi hàn lại.
-- **Lube switch**: phải mở từng switch bằng đồ mở trước, rồi lube theo mẻ. Số switch mỗi mẻ phụ
-  thuộc chứng chỉ thợ và số switch đã mở. Khách dặn **không lube** thì đừng lube; lube lò xo là tuỳ
+- **Lube switch**: phải mở switch bằng đồ mở trước (tách housing, stem, lò xo), rồi lube theo mẻ. Số switch
+  mỗi lần mở / mỗi mẻ = bậc chứng chỉ thợ; có phép thì thợ lõ thành 10, middle / senior cộng thêm 10 (15 / 20) (Shopii → Sách phép, bán riêng: **Phép mở switch**
+  cho bước mở, **Phép lube switch** cho bước lube, **Phép lắp switch** / **Phép lắp keycap** cho bước lắp switch / keycap, **Phép hàn switch** (1 lần hàn = 10 phím, cháy thì cháy cả 10), **Phép rã hàn** (1 lần hút = 10 phím cháy); mỗi cuộn 200 lần, mua thêm thì cộng dồn). Khách dặn **không lube** thì đừng lube; lube lò xo là tuỳ
   chọn, giúp giảm tiếng ping.
 - **Mod stab**: làm theo mũi tên vàng — clip chân stem (cần kìm cắt) → Holee mod bằng Urgo → phết
   mỡ housing + slider → lắp slider → phết mỡ wire → lắp wire. Mẫu stab đời mới có thể đã clip sẵn

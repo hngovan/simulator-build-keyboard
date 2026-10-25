@@ -1,8 +1,28 @@
 import type { StateCreator } from 'zustand'
 import { SCREW_STEPS, STEP_INFO, stabUnits, stepProgress } from '@/data/steps'
 import { SWITCHES, TOOLS } from '@/data/parts'
-import { JOINTS_PER_KEY, lubeUseFit } from '@/data/supplies'
-import { stabAnimDuration, stabModRules, type StabAnim, type StabModKind } from '@/data/mods'
+import {
+  JOINTS_PER_KEY,
+  SPELL_ASSEM,
+  SPELL_LUBE,
+  SPELL_OPEN,
+  SPELL_DESOLDER,
+  SPELL_KEYCAP,
+  installTargets,
+  SPELL_SOLDER,
+  spellSolderKeys,
+  lubeUseFit,
+  spellBonus,
+  spellRun,
+} from '@/data/supplies'
+import {
+  lubePicks,
+  lubedIds,
+  stabAnimDuration,
+  stabModRules,
+  type StabAnim,
+  type StabModKind,
+} from '@/data/mods'
 import { SUPPLIES } from '@/data/supplies'
 import type { BuildContext, BuildState, ScrewBit, ScrewStep, StepId, ToolKind } from '@/types'
 import { scoreDelivery } from './scoring'
@@ -55,9 +75,9 @@ export interface BuildSlice {
   installStab: (id: string) => void
   placePlate: () => void
   modStab: (kind: StabModKind) => boolean
-  /** tách vỏ 1 switch bằng đồ mở (mỗi switch 1 lần) */
+  /** tách switch bằng đồ mở: mỗi lần bậc thợ + phép mở con */
   openSwitch: () => boolean
-  lubeBatch: () => number
+  lubeBatch: (idx?: number) => number
   lubeSprings: () => boolean
   finishOptional: () => void
   installRun: (kind: 'switch' | 'keycap', id: string) => number
@@ -76,6 +96,8 @@ export interface BuildSlice {
   wrapRing: () => void
   dropInCase: () => void
   closeCase: () => void
+  /** top mount: úp case trên lên plate */
+  placeTopCase: () => void
   press: (id: string, down: boolean) => boolean
   deliver: () => void
 }
@@ -124,11 +146,13 @@ export interface HistoryEntry {
 const HISTORY_MAX = 300
 
 export interface LubeAnim {
-  /** open = đang tách vỏ 1 switch trên đồ mở */
+  /** open = đang tách switch trên đồ mở */
   kind: 'switch' | 'spring' | 'open'
   lube: string
   /** số switch trong mẻ (kind = switch) */
   batch: number
+  /** switch được bấm (cọ quét con này), kind = switch */
+  idx?: number
   at: number
   dur: number
 }
@@ -306,6 +330,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     wrapRing: once('ring', { ring: true }),
     dropInCase: once('caseIn', { inCase: true }),
     closeCase: once('caseClose', { closed: true }),
+    placeTopCase: once('topCase', { closed: true }),
 
     turnScrew: (id) => {
       const s = get()
@@ -394,26 +419,32 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       }, dur * 1000)
       return true
     },
-    // Mở switch: đặt 1 switch lên đồ mở, ấn tách housing trên ra (60 switch = 60 lần)
+    // Mở switch: đặt switch lên đồ mở, tách housing, stem và lò xo; số con mỗi lần = bậc thợ + phép mở switch
     openSwitch: () => {
       const s = at('switchLube')
       if (!s || s.lubeAnim) return false
       if (TOOLS.opener[s.tools.opener].none)
         return (s.toast('Cần đồ mở switch — mua ở Tiệm Đồ Nghề hoặc Shopii', 'bad'), false)
       const opened = s.build.opened ?? s.build.lubed
-      if (opened >= s.ctx.keys.length) return false
+      const left = s.ctx.keys.length - opened
+      if (left <= 0) return false
       commit(snapshot())
+      const certN = TOOLS.cert[s.tools.cert ?? 0].n!
+      // phép chỉ tốn lượt khi thật sự mở nhiều hơn bậc thợ
+      const spell = left > certN ? spellBonus(s.supplies, SPELL_OPEN) : 0
+      if (spell) s.useSupply(SPELL_OPEN, 1)
+      const n = Math.min(left, spellRun(certN, spell))
       const dur = 0.7
-      set({ lubeAnim: { kind: 'open', lube: '', batch: 1, at: performance.now(), dur } })
+      set({ lubeAnim: { kind: 'open', lube: '', batch: n, at: performance.now(), dur } })
       setTimeout(() => {
         const cur = get()
         set({ lubeAnim: null })
-        if (cur.build) cur.patchBuild({ opened: (cur.build.opened ?? cur.build.lubed) + 1 })
+        if (cur.build) cur.patchBuild({ opened: (cur.build.opened ?? cur.build.lubed) + n })
       }, dur * 1000)
       return true
     },
     // Lube 1 mẻ switch đã mở: số lượng mỗi mẻ theo bậc thợ, cần cọ
-    lubeBatch: () => {
+    lubeBatch: (idx) => {
       const s = at('switchLube')
       if (!s || s.lubeAnim) return 0
       const snap = snapshot()
@@ -431,14 +462,20 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       // chỉ lube được switch đã tách vỏ
       const left = (s.build.opened ?? s.build.lubed) - s.build.lubed
       if (left <= 0) return (s.toast('Mở switch bằng đồ mở trước rồi mới lube', 'bad'), 0)
+      // mỗi mẻ = bậc thợ, có phép lube thì thợ lõ thành 10 / có chứng chỉ thì cộng 10
+      const certN = TOOLS.cert[s.tools.cert ?? 0].n!
       const batch = Math.min(
         opener.n!,
-        TOOLS.cert[s.tools.cert ?? 0].n!,
+        spellRun(certN, spellBonus(s.supplies, SPELL_LUBE)),
         left,
         s.supplies[type] ?? 0,
       )
       if (batch <= 0) return (s.useSupply(type, 1), 0)
+      // mẻ = con được bấm + các con chưa lube kế tiếp nó (hết hàng thì vòng lại đầu lưới)
+      const picked = lubePicks(lubedIds(s.build), s.build.opened ?? s.build.lubed, idx, batch)
       if (!s.useSupply(type, batch)) return 0
+      // phép chỉ tốn lượt khi mẻ lớn hơn bậc thợ
+      if (batch > certN) s.useSupply(SPELL_LUBE, 1)
       s.wearTool('brush')
       if (!s.build.lubed) {
         if (fit < 0.8) s.toast(`⚠️ ${note}`, 'bad')
@@ -448,11 +485,15 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       }
       commit(snap)
       const dur = 2.2 + (SUPPLIES[type].viscosity ?? 0.5) * 1.4
-      set({ lubeAnim: { kind: 'switch', lube: type, batch, at: performance.now(), dur } })
+      set({
+        lubeAnim: { kind: 'switch', lube: type, batch, idx: picked[0], at: performance.now(), dur },
+      })
       setTimeout(() => {
         const cur = get()
         set({ lubeAnim: null })
-        if (cur.build) cur.patchBuild({ lubed: cur.build.lubed + batch, lubeType: type })
+        if (!cur.build) return
+        const ids = [...lubedIds(cur.build), ...picked]
+        cur.patchBuild({ lubed: ids.length, lubedIds: ids, lubeType: type })
       }, dur * 1000)
       return batch
     },
@@ -460,6 +501,9 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     lubeSprings: () => {
       const s = at('switchLube')
       if (!s || s.build.springLube || s.lubeAnim) return false
+      // lò xo lấy ra từ switch đã mở: mở hết mới đủ cả bộ trong hộp
+      if ((s.build.opened ?? s.build.lubed) < s.ctx.keys.length)
+        return (s.toast('Mở hết switch để lấy đủ lò xo vào hộp rồi mới lube', 'bad'), false)
       const snap = snapshot()
       if (TOOLS.brush[s.tools.brush].none)
         return (s.toast('Cần cọ lube — mua ở Tiệm Đồ Nghề hoặc Shopii', 'bad'), false)
@@ -489,14 +533,11 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!s) return 0
       const snap = snapshot()
       const field = kind === 'switch' ? 'switches' : 'keycaps'
-      // số phím mỗi lần theo bậc thợ (chứng chỉ)
-      const n = TOOLS.cert[s.tools.cert ?? 0].n!
-      const k0 = s.ctx.keys.find((k) => k.id === id)
-      if (!k0) return 0
-      const row = s.ctx.keys
-        .filter((k) => k.y === k0.y && k.x >= k0.x && !s.build[field][k.id])
-        .sort((a, b) => a.x - b.x)
-      let targets = row.slice(0, n).map((k) => k.id)
+      // số phím mỗi lần theo bậc thợ (chứng chỉ) + phép lắp switch / phép lắp keycap
+      const certN = TOOLS.cert[s.tools.cert ?? 0].n!
+      const spell = kind === 'switch' ? SPELL_ASSEM : SPELL_KEYCAP
+      const n = spellRun(certN, spellBonus(s.supplies, spell))
+      let targets = installTargets(s.ctx.keys, (k) => !!s.build[field][k], id, n)
       if (!targets.includes(id)) return 0
       if (kind === 'switch') {
         const inv = s.inventory.switch!
@@ -508,6 +549,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         })
       }
       if (kind === 'keycap') commit(snap)
+      // phép chỉ tốn lượt khi lắp nhiều hơn bậc thợ
+      if (targets.length > certN) s.useSupply(spell, 1)
       const next = { ...s.build[field] }
       targets.forEach((t) => (next[t] = true))
       s.patchBuild({ [field]: next })
@@ -561,12 +604,24 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       commit(snapshot())
       const solder = { ...s.build.solder }
       delete solder[id]
+      // phép rã hàn: 1 lần hút = 10 phím (phím này + 9 phím cháy kế tiếp, thứ tự hàng → cột)
+      const bonus = spellBonus(s.supplies, SPELL_DESOLDER)
+      const isBurnt = (k: string) => {
+        const j = s.build.solder[k]
+        return !!j && j !== true && j.burnt
+      }
+      const extra = bonus ? spellSolderKeys(s.ctx.keys, (k) => !isBurnt(k), id, bonus - 1) : []
+      extra.forEach((k) => delete solder[k.id])
+      if (extra.length) s.useSupply(SPELL_DESOLDER, 1)
       s.patchBuild({ solder })
       s.wearTool('desolder')
+      const what = extra.length
+        ? `Đã hút sạch thiếc cháy ${extra.length + 1} phím`
+        : 'Đã hút sạch thiếc cháy'
       s.toast(
         s.build.tipDirty
-          ? 'Đã hút sạch thiếc cháy. Lau mũi hàn bằng bùi nhùi rồi hàn lại.'
-          : 'Đã hút sạch thiếc cháy, có thể hàn lại.',
+          ? `${what}. Lau mũi hàn bằng bùi nhùi rồi hàn lại.`
+          : `${what}, có thể hàn lại.`,
         'good',
       )
       return true
@@ -600,19 +655,39 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const luck = !burnt && Math.random() < (SUPPLIES[s.solderPick].solder?.burnChance ?? 0)
       if (luck) burnt = true
       commit(snap)
+      const solder = { ...s.build.solder, [id]: { wire: s.solderPick, burnt } }
+      // phép hàn switch: 1 lần hàn = 10 phím (phím này + 9 phím chưa hàn kế tiếp, thứ tự hàng → cột),
+      // mỗi phím vẫn tốn 2 mối thiếc; hàn cháy thì cháy luôn cả 10
+      const bonus = spellBonus(s.supplies, SPELL_SOLDER)
+      let extraN = 0
+      if (bonus) {
+        const extra = spellSolderKeys(
+          s.ctx.keys,
+          (k) => !!solder[k],
+          id,
+          Math.min(bonus - 1, Math.floor((get().supplies[s.solderPick] ?? 0) / JOINTS_PER_KEY)),
+        )
+        if (extra.length) {
+          s.useSupply(s.solderPick, extra.length * JOINTS_PER_KEY)
+          s.useSupply(SPELL_SOLDER, 1)
+          extra.forEach((k) => (solder[k.id] = { wire: s.solderPick, burnt }))
+          extraN = extra.length
+        }
+      }
       get().patchBuild({
-        solder: { ...s.build.solder, [id]: { wire: s.solderPick, burnt } },
+        solder,
         solderFailures: { ...s.build.solderFailures, [id]: 0 },
         ...(burnt ? { tipDirty: true } : {}),
       })
       s.wearTool('solder')
       if (burnt)
         s.toast(
-          cause === 'retries'
-            ? '🔥 Hụt quá 3 lần: chân hàn bị cháy, mũi hàn đen — hút thiếc cháy, lau vào bùi nhùi rồi hàn lại'
-            : luck
-              ? '🔥 Thiếc đểu: chân hàn bị cháy dù nhả đúng lúc, mũi hàn đen — hút thiếc cháy, lau vào bùi nhùi rồi hàn lại'
-              : '🔥 Giữ mỏ hàn quá lâu: chân hàn cháy xém, mũi hàn đen — hút thiếc cháy, lau vào bùi nhùi rồi hàn lại',
+          (extraN ? `🔥 Phép hàn: cháy luôn ${extraN + 1} phím\n` : '') +
+            (cause === 'retries'
+              ? '🔥 Hụt quá 3 lần: chân hàn bị cháy, mũi hàn đen — hút thiếc cháy, lau vào bùi nhùi rồi hàn lại'
+              : luck
+                ? '🔥 Thiếc đểu: chân hàn bị cháy dù nhả đúng lúc, mũi hàn đen — hút thiếc cháy, lau vào bùi nhùi rồi hàn lại'
+                : '🔥 Giữ mỏ hàn quá lâu: chân hàn cháy xém, mũi hàn đen — hút thiếc cháy, lau vào bùi nhùi rồi hàn lại'),
           'bad',
         )
     },

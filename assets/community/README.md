@@ -17,15 +17,10 @@ Năm bộ thiết kế trong bảng đều dùng giấy phép MIT, bản sao n�
 - `blossom-arisu/` có case hai mảnh STL, plate DXF, PCB STEP/KiCad và metadata layout Arisu. Bộ này theo giấy phép MIT; [nguồn và phạm vi sử dụng](blossom-arisu/SOURCE.md). Layout Arisu khác Alice đang có trong game nên chưa gắn trực tiếp vào scene.
 - `keyboard-plate-files-4xgk3/` chứa ZIP đầy đủ bộ sưu tập plate từ GitHub và chín file Alice/60%/TKL tách sẵn. Plate 60% mặc định lấy cutout từ DXF; plate Alice dùng mesh GLB chuyển từ STEP. Chạy `bun run convert:plates` để tạo lại runtime assets. [Nguồn, commit và danh sách file](keyboard-plate-files-4xgk3/SOURCE.md).
 
-## PCB Mechlovin
-
-`mechlovin-pcb/` chứa snapshot đầy đủ của repo Mechlovin PCB, gồm nhiều thiết kế bàn phím và file CAD STEP/DXF/DWG cùng dữ liệu dự án. Repo được tải tại commit `e8286ea4001d43cc65fc17088f7380bb26262d0b`; xem [nguồn và thống kê định dạng](mechlovin-pcb/SOURCE.md). Các model CAD cần chuyển sang mesh và căn chỉnh trước khi dùng trong game.
-
 ## Cọ và lọ lube
 
 - `brushes-polypizza/` có model cọ tròn đầu nhỏ **Round Brush** của Zsky (CC BY 4.0), đang dùng ở bàn lube và bàn mod stab; hai mẫu **Paint Brush Large** và **Fluffy Brush** của reyshapes (CC0) được giữ làm tham khảo. [Nguồn và ghi chú](brushes-polypizza/SOURCE.md).
 - `lube-jars-innerscene/` có hũ GLB của Innerscene, giấy phép **CC0**. [Nguồn và cách dùng hiện tại](lube-jars-innerscene/SOURCE.md). Game đã có hũ lube dựng bằng code với tên dầu được hiển thị trên nắp.
-- `keyboard-lube-station-fonz/` có STL station lube 35 switch, stem holder và phụ kiện từ Fonz; module switch đang được nạp ở bàn lube. Chạy `bun run convert:lube-station` để dựng lại GLB. [Nguồn và danh sách file](keyboard-lube-station-fonz/SOURCE.md).
 
 ## Dây stabilizer
 

@@ -82,7 +82,8 @@ export function switchMaterials(type: string): SwitchMats {
 }
 
 const { body, legs } = SWITCH_CAD
-const bodyGeo = new THREE.BoxGeometry(
+/** thân trượt của stem (mm), dùng chung cho switch đã mở bày ở bàn lube */
+export const bodyGeo = new THREE.BoxGeometry(
   body.halfX * 2,
   body.top - body.bottom,
   body.halfZ * 2,

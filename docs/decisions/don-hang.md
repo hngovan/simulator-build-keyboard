@@ -70,7 +70,8 @@
 
 ### Kit
 
-- PCB khách gửi: 60% là mạch Mechlovin bán ở Shopii nếu layout có (`kitPcb`, `PcbItem.model`), còn lại PCB tiêu chuẩn.
+- PCB khách gửi: PCB tiêu chuẩn ngẫu nhiên hàn / hotswap (`kitPcb`). Mạch Mechlovin đã gỡ (2026-10-25); bản lưu cũ có
+  `PcbItem.model` không còn được đọc.
   Tên hiển thị qua `pcbLabel` (parts.ts). Plate khách gửi vẫn random trong cả 8 chất liệu `PLATES`.
 
 ### Tiền khởi đầu (2026-10-25)

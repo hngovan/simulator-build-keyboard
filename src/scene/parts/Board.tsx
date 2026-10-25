@@ -16,6 +16,7 @@ import { PcbSurface } from './PcbSurface'
 import { boardOutline } from './boardOutline'
 import { ScrewSet } from './Screw'
 import { SolderPad } from './SolderPad'
+import { HintArrow } from '../stations/StationKit'
 import { plate60Cutouts } from '@/data/generated/plate60'
 import { plateUniversal } from '@/data/generated/plateUniversal'
 
@@ -274,9 +275,11 @@ export function Board() {
       <Gaskets />
       {(b.ring || step === 'ring') && (
         <group onPointerDown={onBoard}>
-          <SiliconeRing ghost={!b.ring} />
+          <SiliconeRing ghost={!b.ring} between={ctx.mount === 'oring'} />
         </group>
       )}
+      {/* mũi tên vàng chỉ vòng silicon chờ gá (cạnh trước) */}
+      {step === 'ring' && !b.ring && <HintArrow at={[0, 0.1, ctx.depth / 2 + 0.1]} size={1.6} />}
     </group>
   )
 }

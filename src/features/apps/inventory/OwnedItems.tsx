@@ -132,9 +132,7 @@ function useParts(): Owned[] {
           : cat === 'pcb'
             ? {
                 kind: 'pcb',
-                type:
-                  (item as PcbItem).model ??
-                  `${(item as PcbItem).layout}:${(item as PcbItem).type}`,
+                type: `${(item as PcbItem).layout}:${(item as PcbItem).type}`,
               }
             : cat === 'plate'
               ? {
@@ -187,7 +185,7 @@ function useOwned(): Owned[] {
     list.push({
       id: `supply:${id}`,
       name: sp.name,
-      group: 'Lube & vật tư',
+      group: sp.spell ? 'Sách phép' : 'Lube & vật tư',
       art: <SupplyArt id={id} color={sp.color} />,
       thumb: { kind: sp.fit ? 'lubeJar' : 'supply', type: id },
       left: n,

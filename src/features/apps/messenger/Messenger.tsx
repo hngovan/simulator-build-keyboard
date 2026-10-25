@@ -188,9 +188,12 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
   const [askedAddr, setAskedAddr] = useState(false)
   const [score, setScore] = useState(false)
   const body = useRef<HTMLDivElement>(null)
+  // cuộn xuống tin mới nhất khi đổi hội thoại / trạng thái đơn / có tin gửi; không theo object `t`
+  // (dựng lại mỗi lần render, bấm xem ảnh đơn cũng làm khung chat bị cuộn)
+  const threadKey = `${t.order.id}:${t.kind}`
   useEffect(() => {
     body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' })
-  }, [sent, askedAddr, score, t])
+  }, [sent, askedAddr, score, threadKey])
   const packed = t.kind === 'packed' ? t.packed : null
   const { pickup, address } = delivery(order)
   const accepted = t.kind === 'accepted' || !!packed
