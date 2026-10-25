@@ -5,6 +5,22 @@ Mô phỏng quy trình build bàn phím cơ: nhận đơn, mua linh kiện, lắ
 
 Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho game nằm tại [assets/community](assets/community/README.md), kèm nguồn và giấy phép.
 
+## Tài liệu
+
+- [Tổng quan source và luồng game](docs/OVERVIEW.md)
+- [Nhật ký quyết định](docs/decisions/README.md)
+
+## Cách chơi
+
+- Nhận đơn trong **Mezzenger**, đọc kỹ layout, loại switch, keycap, âm thanh, mount, ngân sách và hạn giao.
+- Mua linh kiện đúng yêu cầu ở **Shopii**; món khách gửi trong kit thì không cần mua. **Hội Phím Cơ VN** bán đồ pass rẻ hơn nhưng có khoảng 20% rủi ro bị bùng tiền.
+- Chọn mount trước khi build, rồi ra **bàn build 3D** và làm theo danh sách bước trên HUD.
+- Hàn đúng vùng xanh và đừng giữ quá lâu; lau mũi hàn khi bị cháy. Lube switch thì mở vỏ trước; mod stab theo đúng mẫu; chọn đúng đầu vít.
+- Test bằng bàn phím thật hoặc click phím 3D; càng nhiều phím được test càng cao điểm.
+- Bấm **Đóng gói đơn này** để chấm điểm, sau đó gửi khách trong Mezzenger (hoặc để **Kết thúc ngày** gửi nốt).
+- Tiền nhận gồm tiền hoàn linh kiện + tiền công theo điểm; lố ngân sách bị trừ điểm và không được hoàn phần lố.
+- Giữ đơn trong hạn để tránh mất uy tín; đơn chờ trễ quá 3 ngày sẽ bị khách huỷ. Dụng cụ có độ bền và chứng chỉ thợ giúp lắp / lube nhanh hơn.
+
 ## Yêu cầu
 
 - [Bun](https://bun.sh/) 1.4.3 trở lên

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/format'
 
 const TONES = {
@@ -27,7 +28,10 @@ export function Alert({
         className,
       )}
     >
-      <div className="alert-title font-extrabold">⚠️ {title}</div>
+      <div className="alert-title flex items-start gap-1.5 font-extrabold">
+        <TriangleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} />
+        <span>{title}</span>
+      </div>
       {children}
     </div>
   )

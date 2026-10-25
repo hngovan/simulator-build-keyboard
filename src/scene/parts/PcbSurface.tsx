@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { CanvasTexture, DoubleSide, Path, SRGBColorSpace, Vector2 } from 'three'
-import { Y } from '@/data/steps'
+import { Y, stabHoles } from '@/data/steps'
 import type { Key, Point } from '@/types'
 import { boardOutline, outlinePlane, outlineSlab, pointInPolygon } from './boardOutline'
 
@@ -166,22 +166,37 @@ export function PcbSurface({
   // thân + 2 mặt PCB theo đường viền layout (Alice: 2 nửa xoay), texture phủ khung width × depth
   const { body, face } = useMemo(() => {
     const { shapes } = boardOutline(keys, width, depth, 0, outline)
-    // Khoét các lỗ vít stab qua cả mặt trên, thân PCB và mặt dưới.
-    for (const { x, z } of screwHoles) {
-      const point = new Vector2(x, -z)
-      const shape = shapes.find((candidate) =>
-        pointInPolygon(point, candidate.getPoints()),
-      )
-      if (!shape) continue
-      const hole = new Path()
-      hole.absarc(x, -z, 0.085, 0, Math.PI * 2, false)
-      shape.holes.push(hole)
+    // Khoét 2 lỗ chân housing mỗi bên stab qua cả thân PCB và 2 mặt (lỗ nhỏ cũng là lỗ vít screw-in).
+    // Lỗ phải nằm trọn trong viền PCB (không thì vỡ tam giác): lỗ sát mép (hàng dưới cùng) lùi dần về
+    // phía lỗ còn lại của cùng housing tối đa 1.5mm, vẫn không lọt thì bỏ.
+    for (const k of keys.filter((key) => key.stab)) {
+      const holes = stabHoles(k)
+      for (const [i, { x, z, r }] of holes.entries()) {
+        const pair = holes[i ^ 1]
+        const len = Math.hypot(pair.x - x, pair.z - z)
+        for (let step = 0; step <= 6; step++) {
+          const shift = (step * 0.25) / 19.05
+          const hx = x + ((pair.x - x) / len) * shift
+          const hz = -(z + ((pair.z - z) / len) * shift)
+          const shape = shapes.find((candidate) => {
+            const points = candidate.getPoints()
+            return Array.from({ length: 8 }, (_, i) => (i * Math.PI) / 4).every((a) =>
+              pointInPolygon(new Vector2(hx + Math.cos(a) * r, hz + Math.sin(a) * r), points),
+            )
+          })
+          if (!shape) continue
+          const hole = new Path()
+          hole.absarc(hx, hz, r, 0, Math.PI * 2, false)
+          shape.holes.push(hole)
+          break
+        }
+      }
     }
     return {
       body: outlineSlab(shapes, Y.pcbBot, Y.pcbTop),
       face: outlinePlane(shapes, width, depth),
     }
-  }, [keys, width, depth, outline, screwHoles])
+  }, [keys, width, depth, outline])
 
   return (
     <group>

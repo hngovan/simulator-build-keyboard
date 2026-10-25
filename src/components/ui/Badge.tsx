@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/format'
+import { BUTTON_TONES } from './buttonTones'
 
 const TONES = {
   default: 'bg-panel-2',
@@ -10,6 +11,8 @@ const TONES = {
   money: 'bg-[#2f6d3f]',
   rep: 'bg-[#7a5a12]',
   day: 'bg-[#2a4a7a]',
+  // tên thợ: tím sáng cho dễ đọc trên nền tối
+  name: 'bg-[#5b45c9]',
 } as const
 
 // Nhãn nhỏ: nền nhạt cùng màu + viền mảnh, chữ đậm màu (đỡ thô hơn khối màu đặc)
@@ -27,21 +30,28 @@ const BADGE_TONES = {
 
 export type BadgeTone = keyof typeof BADGE_TONES
 
-/** Nhãn bo tròn nhỏ */
+/** Nhãn bo tròn nhỏ; `solid`: khối màu đặc + bóng đổ giống Button (không bấm được) */
 export function Badge({
   tone = 'default',
+  solid,
   children,
   className,
 }: {
   tone?: BadgeTone
+  solid?: boolean
   children: ReactNode
   className?: string
 }) {
   return (
     <span
       className={cn(
-        'ml-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-extrabold whitespace-nowrap ring-1 ring-inset',
-        BADGE_TONES[tone],
+        'ml-1.5 inline-flex items-center gap-1 font-extrabold whitespace-nowrap',
+        solid
+          ? 'rounded-lg px-2.5 py-0.5 font-head text-xs shadow-[0_3px_0_rgba(0,0,0,0.35),inset_0_2px_0_rgba(255,255,255,0.25)]'
+          : 'rounded-full px-2 py-0.5 text-[11px] ring-1 ring-inset',
+        solid
+          ? BUTTON_TONES[tone in BUTTON_TONES ? (tone as keyof typeof BUTTON_TONES) : 'default']
+          : BADGE_TONES[tone],
         className,
       )}
     >
@@ -61,7 +71,7 @@ export function Chip({
   return (
     <span
       className={cn(
-        'rounded-full px-3 py-1 font-head font-extrabold whitespace-nowrap shadow-[inset_0_-3px_0_#0004]',
+        'inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-head font-extrabold whitespace-nowrap shadow-[inset_0_-3px_0_#0004]',
         TONES[tone],
       )}
     >

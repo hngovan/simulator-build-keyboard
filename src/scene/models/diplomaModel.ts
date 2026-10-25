@@ -4,8 +4,8 @@ import * as THREE from 'three'
 // mét, đáy ở y = 0, mặt trước +z, khổ dọc 18.9 × 24.6cm. Tấm giấy trắng sẵn có ("Unprinted frame insert")
 // được ẩn đi, thay bằng tấm chứng chỉ vẽ canvas đặt đúng chỗ (dưới lớp kính)
 export const DIPLOMA_URL = '/models/room/picture-frame.glb'
-/** lòng khung (m): rộng, cao, tâm y, mặt giấy z (ngay trước tấm giấy gốc, sau lớp kính) */
-const PAPER = { w: 0.166, h: 0.222, y: 0.123, z: -0.0045 }
+/** lòng khung (m): rộng, cao, tâm y, mặt giấy z (áp sát sau lớp kính ở z 0.009, không bị lõm sâu) */
+const PAPER = { w: 0.166, h: 0.222, y: 0.123, z: 0.0085 }
 
 /** Tấm giấy chứng chỉ khổ dọc vẽ bằng canvas: tên xưởng + bậc thợ */
 function paperTexture(rank: string) {

@@ -4,6 +4,7 @@ import { SUPPLIES } from '@/data/supplies'
 import { PartArt } from '@/components/art/PartArt'
 import { SupplyArt, ToolArt } from '@/components/art/ToolArt'
 import { cn } from '@/lib/format'
+import { CloseButton, ViewHint } from '@/components/ui'
 import type {
   CaseItem,
   KeycapItem,
@@ -91,17 +92,24 @@ export function ProductImage({
             <PartArt category="keycap" color={swatch} />
           )}
           {/* nhãn nổi trên ảnh: profile (vàng) + cỡ bộ Full / Base (xanh) */}
-          <span className="absolute bottom-1 left-1 rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]">
+          <span
+            className="absolute bottom-1 left-1 rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]"
+            title={profile ? `Profile keycap: ${profile.toUpperCase()}` : 'Profile keycap'}
+          >
             {profile?.toUpperCase()}
           </span>
-          <span className="absolute right-1 bottom-1 rounded-md border-2 border-black/40 bg-blue px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-[0_2px_0_#0006]">
+          <span
+            className="absolute right-1 bottom-1 rounded-md border-2 border-black/40 bg-blue px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-[0_2px_0_#0006]"
+            title={`Bộ keycap ${keycapKitSize(KEYCAP_KITS[cap?.kit ?? 'base']?.name ?? '')}`}
+          >
             {keycapKitSize(KEYCAP_KITS[cap?.kit ?? 'base']?.name ?? '')}
           </span>
         </div>
       </ImageZoom>
     )
 
-  if (caseThumb && caseItem)
+  // đang mở khung xem thì giữ nhánh này cả khi đổi màu (ảnh màu mới chưa chụp xong), không thì khung bị đóng rồi mở lại
+  if (caseItem && (caseThumb || viewing))
     return (
       <>
         {/* bấm ảnh case để xem bàn phím 3D như xem đơn */}
@@ -114,14 +122,16 @@ export function ProductImage({
             'group relative w-full shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-shadow duration-200 hover:shadow-[0_6px_18px_rgba(0,0,0,0.55)]',
           )}
         >
-          <img
-            src={caseThumb}
-            alt={product.name}
-            className="h-full w-full object-contain transition-transform group-hover:scale-105"
-          />
-          <span className="absolute right-1 bottom-1 rounded-full bg-black/60 px-1.5 text-[10px] opacity-0 group-hover:opacity-100">
-            🔍 Xem 3D
-          </span>
+          {caseThumb ? (
+            <img
+              src={caseThumb}
+              alt={product.name}
+              className="h-full w-full object-contain transition-transform group-hover:scale-105"
+            />
+          ) : (
+            <span className="animate-bob text-2xl">⌨️</span>
+          )}
+          <ViewHint />
         </button>
         {viewing && (
           <CaseViewer
@@ -211,9 +221,7 @@ function ImageZoom({
         className="group relative block w-full cursor-zoom-in text-left"
       >
         {children}
-        <span className="pointer-events-none absolute right-1 bottom-1 grid size-6 place-items-center rounded-full bg-black/65 text-sm text-white opacity-0 transition-opacity group-hover:opacity-100">
-          ⌕
-        </span>
+        <ViewHint />
       </button>
       {open && kind && type ? (
         <ShopProductViewer
@@ -236,15 +244,11 @@ function ImageZoom({
             onClick={(event) => event.stopPropagation()}
             className="relative flex max-h-[92vh] w-[min(92vw,900px)] flex-col items-center gap-3 rounded-2xl border border-white/15 bg-[#151922] p-5 shadow-2xl"
           >
-            <button
-              type="button"
+            <CloseButton
               aria-label="Đóng ảnh"
-              title="Đóng"
+              className="absolute top-2 right-2"
               onClick={() => setOpen(false)}
-              className="absolute top-2 right-2 grid size-9 place-items-center rounded-full bg-black/55 text-xl text-white hover:bg-white/15"
-            >
-              ✕
-            </button>
+            />
             <h2 className="max-w-[80%] truncate pr-4 text-center font-bold text-white">{title}</h2>
             <div className="flex h-[min(72vh,620px)] w-full items-center justify-center [&>div]:!h-full [&>div]:!w-full [&>div]:!max-w-full [&>div>img]:!h-full [&>div>img]:!w-full [&>div>img]:!object-contain [&>div>svg]:!h-full [&>div>svg]:!w-auto">
               {children}

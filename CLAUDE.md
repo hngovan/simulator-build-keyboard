@@ -3,7 +3,13 @@
 Ghi chú cho Claude Code khi làm việc với repo này.
 
 **Đọc `docs/decisions/` trước khi làm**: nhật ký những gì đã làm + quyết định theo từng mảng (hàn, đơn hàng,
-dụng cụ, UI, cảnh 3D, giấy phép, quy trình). Làm xong thì ghi thêm vào đúng file.
+dụng cụ, UI, cảnh 3D, giấy phép, quy trình). **Mỗi task làm xong phải ghi lại** (ngày, yêu cầu, đã làm gì, file / hàm chính,
+lý do) vào đúng file để lần sau khỏi làm lại / làm ngược.
+Tổng quan source + luồng game + cách chơi: `docs/OVERVIEW.md` (sửa luồng chơi thì cập nhật cả file này + README).
+
+**Việc nhỏ, độc lập** (tài liệu, CSS, sửa 1 file...) giao cho opencode qua Orca:
+`orca agent launch --agent opencode --prompt "<brief>" --json`, đọc kết quả `orca terminal read --terminal <handle> --json`.
+Brief phải nói rõ file được sửa (tránh đè việc đang làm), chạy format / lint, không commit (xem `docs/decisions/quy-trinh.md`).
 
 ## Tổng quan
 
@@ -25,6 +31,11 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
   `assets/community/solder-tools/` → `public/models/solder/` (tách `iron-pro.glb` = mỏ hàn trạm, mũi ở gốc).
 - `bun run convert:hand-tools`: tua vít điện (GLB Sketchfab, CC BY 4.0) + đồ mở switch MX (STL, chưa rõ giấy phép) trong
   `assets/community/hand-tools/` → `public/models/tools/` (tua vít: node `bit` quay + `body`, mũi ở gốc, trục +y).
+- `bun run fetch:emotes`: emote ếch Pepe (FrankerFaceZ, chỉ dùng cá nhân) → `public/emotes/`, emoji trong chat Mezzenger thay bằng emote (`messenger/emotes.tsx`).
+- `bun run convert:screwdriver-lite`: tua vít tay Poly Haven → `public/models/room/screwdriver-lite.glb` (bỏ texture, màu đỉnh, 90KB).
+- `bun run gen:plates-universal`: plate universal 60 / 75 / TKL / full bằng lõi ai03 Plate Generator (kbplate.ai03.com,
+  AGPL — clone ngoài repo, đặt `YAKB_DIR`): layout game gộp mọi variant → KLE + DXF trong `assets/plates/universal/`
+  → `src/data/generated/plateUniversal.ts` (Board.tsx dùng, trừ 60 chuẩn giữ plate CAD typ60).
 - `bun run convert:switch` / `bun run convert:stab` — chuyển CAD STEP trong `assets/cad/` thành
   GLB trong `public/models/` (stab còn sinh `src/data/stabModel.json`). `scripts/probe-*.mjs`,
   `inspect-step.mjs` là script dò/kiểm tra model.
@@ -39,6 +50,7 @@ vào `window.__r3f` để debug trong console.
 - Import qua alias `@/` → `src/`.
 - Comment / text UI viết tiếng Việt, ngắn gọn, giống code xung quanh.
 - ESLint flat config: TS + react-hooks + react-refresh.
+- Tooltip: chỉ cần ghi `title="..."` (1 dòng ngắn), `GlobalTooltip` tự vẽ kiểu game; không dùng dòng phụ trong tooltip.
 
 ## Kiến trúc
 
@@ -71,7 +83,7 @@ vào `window.__r3f` để debug trong console.
     `OrderPicker` (EmptyBenchHud.tsx) dùng cả ở bàn trống lẫn nút "Đổi đơn" khi đang build;
     giao hàng khi build chưa xong thì hỏi lại (`ConfirmDeliver` trong BenchHud).
     App "Kho" (`apps/inventory/InventoryApp`): chỉ đồ đang có (linh kiện đơn đang làm, dụng cụ, vật tư),
-    ô kéo thả đổi chỗ + ảnh model 3D như Shopii + số lần còn dùng (`OwnedItems`).
+    lưới ô kiểu túi đồ game (kéo thả vào ô bất kỳ) + ảnh model 3D như Shopii + số lần còn dùng (`OwnedItems`).
     App "Chi tiết đơn" (`apps/inventory/OrderApp`): yêu cầu khách + đối chiếu linh kiện (✓ `StepDot`), mount, âm thanh.
     `EmptyBenchHud`: bàn trống (chưa có build) + bảng chọn đơn → `buildOrder(id)`. `title/`: màn hình tiêu đề.
 - `src/scene/` — cảnh R3F: `Bench.tsx` (Canvas, camera, chọn trạm theo bước), `parts/` (Assembly,
@@ -99,6 +111,7 @@ vào `window.__r3f` để debug trong console.
   thiếc đểu +0,5s (`slow`) và `burnChance` ẩn 15%. Bút / trạm đã mua đổi qua lại được (`solderOwned`).
   Thiếc đểu có `burnChance` (cháy dù nhả đúng vùng xanh). Bàn mod stab bày đúng số stab của layout (`stabUnits`).
   Đầu vít đang lắp (`screwBit`) lưu trong Profile.
+  PCB khoét 2 lỗ chân housing mỗi bên stab (`stabHoles` trong steps.ts, khớp chốt model CAD); vít screw-in bắt vào lỗ nhỏ.
   Stab plate-mount: gài vào plate (lắp sau bước plate, cao hơn PCB), cần plate cứng (`PlateDef.flex` = PC / POM / PP
   không dùng được, `plateStabClash`).
   Đơn full có `pcbType` thì kho phải đúng loại PCB. Save có `rev` để nâng cấp bản cũ (`loadSave`).
@@ -107,13 +120,18 @@ vào `window.__r3f` để debug trong console.
   món không gửi thì đơn có thể ghi `pcbType` / `caseColor`.
 - Nhiều đơn mỗi ngày: `deliver()` chấm điểm rồi đẩy vào `packed` (Session) và trả bàn trống; gửi từng đơn ở Mezzenger
   (`shipOrder`, cộng tiền / uy tín ngay, `PackedOrder.shipped`), "Kết thúc ngày" (`nextDay()`) gửi nốt đơn chưa gửi.
-  Mezzenger là app chat (hội thoại đơn mới / chờ gửi / đã gửi + câu trả lời nhanh); đơn đã nhận xem ở app Chi tiết đơn.
-  Nút "Danh sách đơn" (bàn build) = `OrderPicker` có % tiến độ (`buildPercent`).
+  Mezzenger là app chat (hội thoại đơn mới / đã nhận / chờ gửi / từ chối, chỉ mất khi gửi hàng; câu trả lời nhanh = tin gửi khách).
+  Từ chối quá `DECLINE_FREE` đơn / ngày thì −1 uy tín; khách để lại đánh giá (`data/reviews.ts`, `Profile.reviews`) → thông báo
+  góc phải trên (`ReviewPops`) + app "Đánh giá".
+  Tin khách tô đậm / màu chữ cần chú ý (`messenger/highlight.tsx`); "Nhận đơn" gửi tin "Ok shop nhận đơn này nhé";
+  đơn xong: khách tự qua lấy hoặc shop xin địa chỉ rồi gửi (`delivery()` theo id đơn).
+  Nút "Danh sách đơn" (bàn build) = `OrderPicker` có % tiến độ (`buildPercent`), chỉ đơn đã nhận (nhận đơn chỉ ở Mezzenger).
 - Chứng chỉ thợ (`TOOLS.cert`, mục Shopii "Chứng chỉ thợ"): thợ lõ / middle / senior = số phím mỗi lần lắp switch / keycap
   (`installRun`) và số switch mỗi mẻ lube; khung treo tường `createDiploma` (`scene/models/diplomaModel.ts`).
 - Lube switch: phải mở từng switch bằng đồ mở trước (`openSwitch`, đếm `build.opened`, 1 click = 1 switch), `lubeBatch`
   chỉ lube switch đã mở. Bàn build có màn hình (`scene/models/Computer.tsx`): bấm vào thì về desktop.
-- `nextDay()` (sau khi giao): ngày + 1, đợt đơn mới, job trễ quá 3 ngày thì khách huỷ (−3 uy tín).
+- `nextDay()` (sau khi giao): ngày + 1, đợt đơn mới (số đơn + hệ số tiền công theo bậc uy tín, `data/reputation.ts`),
+  job trễ quá 3 ngày thì khách huỷ (−3 uy tín). Chứng chỉ thợ cộng thu nhập cơ bản vào ví mỗi lần nhận đơn (`CERT_BONUS`).
 - Case có `model` dùng GLB CAD thật ở `public/models/cases/`: Bakeneko 60, Planck
   (`bun run convert:cases`, MIT), Alice = Blossom (doughnut923/Blossom, MIT; layout + viền PCB sinh từ PCB KiCad bằng `node scripts/alice-layout.mjs` → `src/data/aliceKeys.ts`) và bộ sưu tập cá nhân trong `assets/user-cases/` (Exodus60/80, Repent75,
   Catto HHKB...; `bun run convert:user-cases`, chưa rõ giấy phép; cả 2 script convert case đã sửa lật gương: phím mũi tên ở trước phải, USB ở sau). `seat` = độ cao + góc nghiêng plate
@@ -122,4 +140,6 @@ vào `window.__r3f` để debug trong console.
   PCB / plate theo đường viền `boardOutline` (layout xoay: đa giác lồi mỗi nửa). Chỗ trống hàng dưới
   (HHKB, WKL) có khối chặn liền case (`blockerGaps`).
 - Ảnh đơn / case Shopii / cửa sổ xem 3D dùng chung `buildKeyboardModel` (`features/apps/messenger/orderThumb.ts`).
+- Hội Phím Cơ: bài pass viết bằng thuật ngữ chợ phím che tình trạng thật (`data/market.ts`); inbox người bán (xin hình, check var,
+  xin bớt, lowball...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
 - Nhạc nền: file `public/audio/bgm.mp3` nếu có, không thì loop tổng hợp (`src/sound.ts`).

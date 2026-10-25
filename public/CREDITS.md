@@ -70,3 +70,7 @@ Model switch MX (`models/switch.glb`) và stabilizer (`models/stab.glb`) chuyể
 ## Customer avatars
 
 - 10 locally stored DiceBear Notionists Neutral SVG avatars, generated with unique seeds; style artwork by DiceBear, CC0 1.0. [Style license details](https://www.dicebear.com/licenses/).
+
+## Chat emotes
+
+- Pepe-style frog emotes (FeelsOkayMan, Prayge, peepoMad, Sadge, peepoHappy, peepoRun, peepoLove, FeelsGoodMan, peepoSad, pepeLaugh, monkaS) from [FrankerFaceZ](https://www.frankerfacez.com/), uploaded by FFZ users; fan art of Pepe the Frog by Matt Furie. License unknown — personal use only. Sources: [`emotes/SOURCE.md`](emotes/SOURCE.md).

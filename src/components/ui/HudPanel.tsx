@@ -5,6 +5,9 @@ const OPEN_KEY = 'sbk-ui-open:'
 
 /** Trạng thái mở / thu gọn nhớ theo id (tiện ích riêng máy; localStorage lỗi thì bỏ qua) */
 export function useOpen(id: string, initial = true) {
+  // điện thoại: panel HUD mặc định thu gọn (chưa từng bấm) cho đỡ che cảnh 3D
+  if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches)
+    initial = false
   const [open, setOpen] = useState(() => {
     try {
       const v = localStorage.getItem(OPEN_KEY + id)
@@ -96,6 +99,7 @@ export function HudSection({
       <button
         onClick={toggle}
         aria-expanded={open}
+        title={open ? 'Thu gọn mục này' : 'Mở mục này'}
         className="sticky top-0 z-[1] -mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 border-t border-line bg-panel px-3 py-1.5 text-left text-xs font-extrabold tracking-wide text-muted uppercase transition-colors hover:text-ink"
       >
         <span className="min-w-0 flex-1">{title}</span>

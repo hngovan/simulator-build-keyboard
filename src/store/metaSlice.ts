@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand'
 import { randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
 import type { InventoryCheck } from '@/data/parts'
-import type { AudioSettings, Order, ShopCategory, Toast } from '@/types'
+import type { AudioSettings, Order, ShopCategory, Toast, Review } from '@/types'
 import { START, loadSave, writeSave, type Profile, type SaveData } from './persistence'
 import { emptyInventory } from './shopSlice'
 import { compactHistory } from './buildSlice'
@@ -10,7 +10,8 @@ import type { GameState } from '.'
 import { applyAudioSettings, stopBgm } from '@/sound'
 
 export type Screen = 'title' | 'pc' | 'bench'
-export type AppId = 'messenger' | 'shopii' | 'group' | 'inventory' | 'order' | 'settings'
+export type AppId =
+  'messenger' | 'shopii' | 'group' | 'inventory' | 'order' | 'reviews' | 'settings'
 
 // Trạng thái chung: màn hình, cửa sổ, thông báo, tiến trình lưu
 export interface MetaSlice extends Profile {
@@ -22,6 +23,11 @@ export interface MetaSlice extends Profile {
   /** cửa sổ đang thu nhỏ xuống taskbar */
   minimized: AppId[]
   toasts: Toast[]
+  /** đánh giá khách vừa để lại, hiện nổi ở góc phải trên (không lưu) */
+  reviewPops: Review[]
+  /** lưu đánh giá + hiện thông báo; cộng / trừ uy tín do nơi gọi tự tính */
+  addReviews: (reviews: Review[]) => void
+  dismissReview: (id: string) => void
   /** người chơi tự lật bàn phím xem đáy */
   viewFlip: boolean
   /** tăng lên để đưa camera về góc mặc định */
@@ -56,13 +62,17 @@ export interface MetaSlice extends Profile {
 }
 
 let toastId = 0
+/** số đánh giá giữ lại trong bản lưu */
+const REVIEW_KEEP = 100
+/** thông báo đánh giá tự ẩn sau (ms) */
+const REVIEW_POP_MS = 6000
 
 const infoOf = (s: SaveData | null) =>
   s?.name ? { name: s.name, day: s.day, money: s.money } : null
 
 /** Ảnh chụp toàn bộ tiến trình để lưu */
 export function snapshot(s: GameState): SaveData {
-  const { name, money, rep, day, done, tools, supplies, audio, screwBit, rev, wear } = s
+  const { name, money, rep, day, done, tools, supplies, audio, screwBit, rev, wear, reviews } = s
   const { offers, jobs, order, inventory, provided, spent, posts, mount, result, build, packed } = s
   const { supplyUsed } = s
   return {
@@ -78,6 +88,7 @@ export function snapshot(s: GameState): SaveData {
     screwBit,
     rev,
     wear,
+    reviews,
     session: {
       offers,
       jobs: jobs.map((j) => ({
@@ -95,6 +106,7 @@ export function snapshot(s: GameState): SaveData {
       build,
       history: compactHistory(s.history),
       supplyUsed,
+      rejected: s.rejected,
     },
   }
 }
@@ -106,6 +118,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   windows: [],
   minimized: [],
   toasts: [],
+  reviewPops: [],
   viewFlip: false,
   camKey: 0,
   pcZoom: false,
@@ -119,9 +132,20 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     set((s) => ({ toasts: [...s.toasts, { id, text, kind }].slice(-4) }))
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3500)
   },
+  addReviews: (reviews) => {
+    if (!reviews.length) return
+    set((s) => ({
+      reviews: [...s.reviews, ...reviews].slice(-REVIEW_KEEP),
+      reviewPops: [...s.reviewPops, ...reviews].slice(-3),
+    }))
+    for (const r of reviews) setTimeout(() => get().dismissReview(r.id), REVIEW_POP_MS)
+  },
+  dismissReview: (id) => set((s) => ({ reviewPops: s.reviewPops.filter((r) => r.id !== id) })),
   newGame: (name) => {
     set({
       ...START,
+      reviewPops: [],
+      rejected: [],
       name: name.trim() || 'Thợ phím',
       lastSolderPurchase: null,
       screen: 'pc',
@@ -165,6 +189,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       history: session?.history ?? [],
       future: [],
       supplyUsed: session?.supplyUsed ?? {},
+      rejected: session?.rejected ?? [],
+      reviews: profile.reviews ?? [],
       screen: 'pc',
       windows: ['messenger'],
       minimized: [],

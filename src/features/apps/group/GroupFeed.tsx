@@ -1,11 +1,11 @@
 import { useGame } from '@/store'
+import { Alert } from '@/components/ui'
 import { PostCard } from './PostCard'
 
-// Group Facebook pass đồ: rẻ hơn nhưng có thể bị bùng
+// Group Facebook pass đồ: rẻ hơn nhưng caption "thuật ngữ chợ" giấu lỗi, có seller bùng; inbox để dò hỏi / trả giá
 export function GroupFeed() {
   const posts = useGame((s) => s.posts)
   const order = useGame((s) => s.order)
-  const buyPost = useGame((s) => s.buyPost)
   if (!order)
     return (
       <div className="p-8 text-center text-muted">
@@ -14,11 +14,11 @@ export function GroupFeed() {
     )
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="rounded-[10px] border-2 border-yellow bg-[#5a3d0a] px-3 py-2 font-bold">
-        ⚠️ Hàng pass rẻ hơn 20–40% nhưng có khoảng 20% khả năng gặp seller bùng tiền!
-      </div>
+      <Alert tone="yellow" title="Hàng pass rẻ hơn 20–40% nhưng mô tả toàn thuật ngữ chợ">
+        Xin hình, check var trước khi chuyển khoản kẻo dính flaw hoặc gặp seller bùng!
+      </Alert>
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} onBuy={() => buyPost(post)} />
+        <PostCard key={post.id} post={post} />
       ))}
     </div>
   )

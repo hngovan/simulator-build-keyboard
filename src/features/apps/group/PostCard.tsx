@@ -1,20 +1,24 @@
-import { Avatar, Button, Muted } from '@/components/ui'
+import { useState } from 'react'
+import { MessageCircle } from 'lucide-react'
+import { Avatar, Badge, Button, Muted } from '@/components/ui'
 import { itemName } from '@/data/parts'
 import { fmt } from '@/lib/format'
 import type { GroupPost } from '@/types'
 import { ProductImage } from '../shop/ProductImage'
+import { InboxChat } from './InboxChat'
 
-/** Bài đăng pass đồ trong group */
-export function PostCard({ post, onBuy }: { post: GroupPost; onBuy: () => void }) {
+/** Bài đăng pass đồ trong group: caption thuật ngữ chợ, inbox người bán để hỏi / trả giá / chốt */
+export function PostCard({ post }: { post: GroupPost }) {
+  const [inbox, setInbox] = useState(false)
+  const deal = post.deal
+  const [desc, ...tags] = post.caption.split(' · ')
   return (
     <div className="rounded-[14px] bg-panel-2 p-3">
       <div className="flex items-center gap-2.5">
         <Avatar small>{post.seller[0]}</Avatar>
-        <div>
+        <div className="min-w-0">
           <b>{post.seller}</b>
-          <div>
-            <Muted>{post.caption}</Muted>
-          </div>
+          <div className="text-sm">“{desc}”</div>
         </div>
       </div>
       <div className="mt-2.5 flex items-center gap-3">
@@ -26,22 +30,56 @@ export function PostCard({ post, onBuy }: { post: GroupPost; onBuy: () => void }
             className="h-24"
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="font-extrabold">{itemName(post.product.cat, post.opt.item)}</div>
           <div>
             <s className="text-muted">{fmt(post.opt.price)}</s>{' '}
             <span className="font-head text-lg font-extrabold text-[#ff8c5a]">
-              {fmt(post.price)}
+              {fmt(deal?.price ?? post.price)}
             </span>
+          </div>
+          <div className="mt-0.5 flex flex-wrap gap-1">
+            {tags.map((t) => (
+              <Badge
+                key={t}
+                solid
+                tone={
+                  t === 'Fs'
+                    ? 'green'
+                    : t === 'Price no offer'
+                      ? 'red'
+                      : t.startsWith('Nhanh gọn')
+                        ? 'blue'
+                        : 'yellow'
+                }
+                className="ml-0"
+              >
+                {t}
+              </Badge>
+            ))}
           </div>
           <Muted>
             👍 {post.likes} · 💬 {Math.floor(post.likes / 3)} bình luận
           </Muted>
         </div>
       </div>
-      <Button tone="blue" wide disabled={post.sold} onClick={onBuy}>
-        {post.sold ? 'Đã chốt' : '💬 Inbox chốt đơn'}
+      <Button
+        tone={deal?.blocked ? 'red' : 'blue'}
+        wide
+        disabled={post.sold || deal?.blocked}
+        className="flex items-center justify-center gap-2 [&_svg]:size-4"
+        onClick={() => setInbox(true)}
+      >
+        <MessageCircle />
+        {post.sold
+          ? 'Đã chốt'
+          : deal?.blocked
+            ? 'Bị chặn'
+            : deal?.log.length
+              ? 'Inbox tiếp'
+              : 'Inbox'}
       </Button>
+      {inbox && <InboxChat post={post} onClose={() => setInbox(false)} />}
     </div>
   )
 }

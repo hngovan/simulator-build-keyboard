@@ -55,41 +55,54 @@ export function Taskbar() {
     }
   }
   return (
-    <div className="absolute inset-x-0 bottom-0 z-[100] grid h-[58px] grid-cols-[1fr_auto_1fr] items-center gap-2 border-t-2 border-black/50 bg-[rgba(14,16,24,0.92)] px-2.5 backdrop-blur-md">
-      <span className="justify-self-start rounded-xl bg-yellow px-3.5 py-2 font-head text-base font-extrabold text-[#3a2b00] shadow-[0_3px_0_#0006]">
+    // mobile: 2 hàng (chip trạng thái trên, icon app cuộn ngang dưới), cao theo --taskbar-h
+    <div className="absolute inset-x-0 bottom-0 z-[100] grid h-(--taskbar-h) grid-cols-[1fr_auto_1fr] items-center gap-2 border-t-2 border-black/50 bg-[rgba(14,16,24,0.92)] px-2.5 backdrop-blur-md max-md:flex max-md:flex-col max-md:justify-center max-md:gap-1.5 max-md:px-2">
+      <span className="justify-self-start rounded-xl bg-yellow px-3.5 py-2 font-head text-base font-extrabold text-[#3a2b00] shadow-[0_3px_0_#0006] max-md:hidden">
         ⌨ KeebOS
       </span>
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex items-center justify-center gap-2 max-md:order-2 max-md:w-full max-md:justify-start max-md:overflow-x-auto max-md:pb-0.5 max-md:[scrollbar-width:none]">
         {order.map((id) => (
-          <button
-            key={id}
-            title={`${APPS[id].title} (kéo để đổi chỗ)`}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.effectAllowed = 'move'
-              setDragging(id)
-            }}
-            onDragOver={(e) => {
-              e.preventDefault()
-              moveTo(id)
-            }}
-            onDrop={(e) => e.preventDefault()}
-            onDragEnd={save}
-            className={cn(
-              'relative grid size-[42px] cursor-grab place-items-center rounded-xl bg-panel-2 transition-[transform,background-color] duration-150 hover:-translate-y-0.5 hover:bg-[#34405a] active:cursor-grabbing',
-              windows.includes(id) &&
-                'after:absolute after:inset-x-3.5 after:bottom-[3px] after:h-[3px] after:rounded after:bg-yellow',
-              dragging === id && 'opacity-40',
+          // rê chuột hiện tooltip tên app phía trên icon (cùng kiểu tooltip thanh menu bàn build)
+          <span key={id} className="group/tip relative inline-flex">
+            <button
+              aria-label={APPS[id].title}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'move'
+                setDragging(id)
+              }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                moveTo(id)
+              }}
+              onDrop={(e) => e.preventDefault()}
+              onDragEnd={save}
+              className={cn(
+                'relative grid size-[42px] shrink-0 cursor-grab place-items-center rounded-xl bg-panel-2 transition-[transform,background-color] duration-150 hover:-translate-y-0.5 hover:bg-[#34405a] active:cursor-grabbing',
+                windows.includes(id) &&
+                  'after:absolute after:inset-x-3.5 after:bottom-[3px] after:h-[3px] after:rounded after:bg-yellow',
+                dragging === id && 'opacity-40',
+              )}
+              onClick={() => openApp(id)}
+            >
+              <img src={APPS[id].icon} alt="" className="size-6 brightness-0 invert" />
+            </button>
+            {!dragging && (
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2.5 -translate-x-1/2 -translate-y-1 rounded-lg border border-white/10 bg-[#0e1018]/95 px-2.5 py-1.5 text-[13px] font-extrabold whitespace-nowrap text-white opacity-0 shadow-[0_6px_16px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-150 group-hover/tip:translate-y-0 group-hover/tip:opacity-100"
+              >
+                {APPS[id].title}
+              </span>
             )}
-            onClick={() => openApp(id)}
-          >
-            <img src={APPS[id].icon} alt="" className="size-6 brightness-0 invert" />
-          </button>
+          </span>
         ))}
       </div>
-      <div className="flex items-center gap-2.5 justify-self-end">
-        <StatusChips />
-        <Clock />
+      <div className="flex items-center gap-2.5 justify-self-end max-md:order-1 max-md:justify-center max-md:self-stretch">
+        <StatusChips tipSide="top" />
+        <span className="max-md:hidden">
+          <Clock />
+        </span>
       </div>
     </div>
   )

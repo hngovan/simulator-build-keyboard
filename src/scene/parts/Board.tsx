@@ -17,6 +17,7 @@ import { boardOutline } from './boardOutline'
 import { ScrewSet } from './Screw'
 import { SolderPad } from './SolderPad'
 import { plate60Cutouts } from '@/data/generated/plate60'
+import { plateUniversal } from '@/data/generated/plateUniversal'
 
 /** lỗ cắt switch MX trên plate: 14 × 14mm */
 const CUTOUT = 14 * MM
@@ -33,6 +34,8 @@ function plateGeometry(
   keys: Key[],
   outline?: [number, number][],
   cadCutouts?: [number, number][][],
+  /** lỗ cắt plate universal (ai03 Plate Generator): [x, z] theo u quanh tâm layout */
+  universal?: [number, number][][],
 ) {
   // viền plate theo layout (Alice: 2 nửa xoay), nhỏ hơn PCB 0.01u mỗi cạnh
   const { shapes, shapeOf } = boardOutline(keys, width, depth, 0.01, outline)
@@ -72,7 +75,13 @@ function plateGeometry(
       hole.closePath()
       shapes[0].holes.push(hole)
     }
-  } else
+  } else if (universal)
+    for (const loop of universal) {
+      const hole = new THREE.Path(loop.map(([x, z]) => new THREE.Vector2(x, -z)))
+      hole.closePath()
+      shapes[0].holes.push(hole)
+    }
+  else
     for (const k of keys) {
       // lỗ khoét vào đúng mảnh plate chứa phím
       shape = shapeOf(k)
@@ -177,6 +186,8 @@ export function Board() {
   const seat = b.inCase ? ctx.caseDef.seat : undefined
   useFrame((_, dt) => {
     lerpTo(ref, 'y', lifted ? 2.6 : (seat?.rise ?? 0), dt, 6)
+    lerpTo(ref, 'z', seat?.dz ?? 0, dt, 6)
+    lerpTo(ref, 'x', seat?.dx ?? 0, dt, 6)
     const r = ref.current?.rotation
     if (r) r.x += ((seat?.tilt ?? 0) - r.x) * Math.min(1, dt * 6)
   })
@@ -205,6 +216,8 @@ export function Board() {
         ctx.keys,
         ctx.outline,
         standard60CAD ? plate60Cutouts : undefined,
+        // 60 / 75 / TKL / full: plate universal có lỗ cho mọi variant
+        standard60CAD || ctx.outline ? undefined : plateUniversal[ctx.layout],
       ),
     [ctx, standard60CAD],
   )

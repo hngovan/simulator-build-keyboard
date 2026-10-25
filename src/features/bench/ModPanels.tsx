@@ -344,7 +344,7 @@ export function SolderPanel() {
                 size="sm"
                 tone={using ? 'green' : 'default'}
                 disabled={!owned || using}
-                title={owned ? `Còn ${left}/${item.life} lần` : 'Chưa có — mua ở Shopii → Dụng cụ'}
+                title={owned ? `Còn ${left}/${item.life} lần` : 'Chưa có'}
                 onClick={() => buyTool('solder', level)}
               >
                 {using ? '✓ ' : ''}

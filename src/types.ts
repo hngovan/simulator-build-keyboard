@@ -72,16 +72,22 @@ export type ToolLevels = Record<ToolKind, number>
 export interface CaseItem {
   id: string
   color: string
+  /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
+  flaw?: string
 }
 export interface PcbItem {
   layout: LayoutId
   type: string
   /** mạch cụ thể của Mechlovin (PCB_MODELS); không có = PCB tiêu chuẩn của shop */
   model?: string
+  /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
+  flaw?: string
 }
 export interface PlateItem {
   layout: LayoutId
   material: string
+  /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
+  flaw?: string
 }
 export interface StabItem {
   type: string
@@ -89,6 +95,8 @@ export interface StabItem {
   short?: number
   /** số stab phím dài (6u / 6.25u / 7u, bộ kèm cả dây 6.25u + 7u) */
   long?: number
+  /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
+  flaw?: string
 }
 export interface SwitchItem {
   type: string
@@ -97,6 +105,8 @@ export interface SwitchItem {
 export interface KeycapItem {
   kit: string
   color: string
+  /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
+  flaw?: string
 }
 export interface SupplyItem {
   id: string
@@ -145,6 +155,25 @@ export interface GroupPost {
   price: number
   likes: number
   sold: boolean
+  /** sự thật ẩn (bản lưu cũ không có): tình trạng thật, người bán liêm không, có bùng không */
+  cond?: import('./data/market').Cond
+  honest?: boolean
+  scammer?: boolean
+  /** kiểu giá: price no offer / lowball thoải mái / bình thường; fs = freeship */
+  tag?: import('./data/market').PriceTag
+  fs?: boolean
+  /** người bán ghi "nhanh gọn cho người câm điếc": hỏi han nhiều dễ bị block */
+  mute?: boolean
+  /** inbox với người bán: giá đang thương lượng, phí ship, log chat, hành động đã dùng */
+  deal?: {
+    price: number
+    ship: number
+    log: import('./data/market').ChatLine[]
+    used: import('./data/market').InboxAction[]
+    blocked?: boolean
+    revealed?: boolean
+    varChecked?: boolean
+  }
 }
 
 // ---------- đơn hàng ----------
@@ -314,7 +343,8 @@ export interface CaseDef {
    * case CAD có mặt plate nghiêng (góc gõ làm sẵn, như Alice): board thả vào case thì nâng lên rise (u)
    * và nghiêng tilt (rad, dương = mép sau cao)
    */
-  seat?: { rise: number; tilt: number }
+  /** dz: dời board ra trước (+) / sau (−) theo u khi case CAD không đối xứng trước / sau (căn theo khung bao bị lệch) */
+  seat?: { rise: number; tilt: number; dz?: number; dx?: number }
   /** model case CAD thật (public/models/cases/<model>.glb, `bun run convert:cases`), thay case dựng bằng code */
   model?: string
 }
@@ -338,4 +368,19 @@ export interface Toast {
   id: number
   text: string
   kind: 'info' | 'good' | 'bad'
+}
+
+/** 1 đánh giá khách để lại cho shop (app "Đánh giá" + thông báo góc phải trên) */
+export interface Review {
+  id: string
+  day: number
+  customer: string
+  avatar: string
+  /** 1–5 sao */
+  stars: number
+  text: string
+  /** ship: nhận hàng · decline: bị từ chối đơn · cancel: huỷ vì trễ hạn quá lâu */
+  kind: 'ship' | 'decline' | 'cancel'
+  /** uy tín cộng / trừ theo đánh giá này */
+  rep: number
 }

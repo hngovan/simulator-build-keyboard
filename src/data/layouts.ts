@@ -186,48 +186,73 @@ const rows65 = (): RowSpec[] =>
     .map((r) => ({ ...r, y: r.y - 1 }))
 
 /** 75% gọn (kiểu KBD75 / Q1): hàng F sát hàng số, cột điều hướng bên phải, mũi tên lọt dưới Shift */
-const rows75 = (): RowSpec[] =>
-  stack([
-    [
+/**
+ * 75% kiểu Repent75 (đo từ model case: lòng 16u): hàng F tách nhóm Esc | F1–F4 | F5–F8 | F9–F12 | Del (khe 0.5u)
+ * và cách hàng số 0.25u (thanh ngang của case); hàng dưới 12.5u phím + khe 0.5u + cụm mũi tên
+ */
+const rows75 = (): RowSpec[] => [
+  {
+    x: 0,
+    y: 0,
+    items: [
       ['Esc', 1, 'Escape'],
-      ...Array.from({ length: 12 }, (_, i) => F(i + 1)),
-      ['PrtSc', 1, 'PrintScreen'],
-      ['Pause', 1, 'Pause'],
+      0.5,
+      F(1),
+      F(2),
+      F(3),
+      F(4),
+      0.5,
+      F(5),
+      F(6),
+      F(7),
+      F(8),
+      0.5,
+      F(9),
+      F(10),
+      F(11),
+      F(12),
+      0.5,
       ['Del', 1, 'Delete'],
     ],
-    [...chars('`1234567890-='), ['Backspace', 2, 'Backspace'], ['Home', 1, 'Home']],
+  },
+  ...stack(
     [
-      ['Tab', 1.5, 'Tab'],
-      ...chars('qwertyuiop[]'),
-      ['\\', 1.5, 'Backslash'],
-      ['PgUp', 1, 'PageUp'],
+      [...chars('`1234567890-='), ['Backspace', 2, 'Backspace'], ['Home', 1, 'Home']],
+      [
+        ['Tab', 1.5, 'Tab'],
+        ...chars('qwertyuiop[]'),
+        ['\\', 1.5, 'Backslash'],
+        ['PgUp', 1, 'PageUp'],
+      ],
+      [
+        ['Caps', 1.75, 'CapsLock'],
+        ...chars("asdfghjkl;'"),
+        ['Enter', 2.25, 'Enter'],
+        ['PgDn', 1, 'PageDown'],
+      ],
+      [
+        ['Shift', 2.25, 'ShiftLeft'],
+        ...chars('zxcvbnm,./'),
+        ['Shift', 1.75, 'ShiftRight'],
+        ['↑', 1, 'ArrowUp'],
+        ['End', 1, 'End'],
+      ],
+      [
+        ['Ctrl', 1.25, 'ControlLeft'],
+        ['Win', 1.25, 'MetaLeft'],
+        ['Alt', 1.25, 'AltLeft'],
+        ['', 6.25, 'Space'],
+        ['Alt', 1.25, 'AltRight'],
+        ['Ctrl', 1.25, 'ControlRight'],
+        0.5,
+        ['←', 1, 'ArrowLeft'],
+        ['↓', 1, 'ArrowDown'],
+        ['→', 1, 'ArrowRight'],
+      ],
     ],
-    [
-      ['Caps', 1.75, 'CapsLock'],
-      ...chars("asdfghjkl;'"),
-      ['Enter', 2.25, 'Enter'],
-      ['PgDn', 1, 'PageDown'],
-    ],
-    [
-      ['Shift', 2.25, 'ShiftLeft'],
-      ...chars('zxcvbnm,./'),
-      ['Shift', 1.75, 'ShiftRight'],
-      ['↑', 1, 'ArrowUp'],
-      ['End', 1, 'End'],
-    ],
-    [
-      ['Ctrl', 1.25, 'ControlLeft'],
-      ['Win', 1.25, 'MetaLeft'],
-      ['Alt', 1.25, 'AltLeft'],
-      ['', 6.25, 'Space'],
-      ['Alt', 1, 'AltRight'],
-      ['Fn', 1],
-      ['Ctrl', 1, 'ControlRight'],
-      ['←', 1, 'ArrowLeft'],
-      ['↓', 1, 'ArrowDown'],
-      ['→', 1, 'ArrowRight'],
-    ],
-  ])
+    1.25,
+  ),
+]
 
 const numpad: RowSpec[] = [
   {
@@ -517,7 +542,8 @@ export function blockerGaps(keys: Key[], width: number, depth: number, edge: num
   if (!row.length) return []
   const back = row[0].cz - 0.5
   const front = depth / 2 + edge
-  const out: { x: number; z: number; w: number; d: number }[] = []
+  /** top: mặt trên riêng (u), không có thì theo mép case */
+  const out: { x: number; z: number; w: number; d: number; top?: number }[] = []
   let at = 0
   for (const k of [...row, { x: width, w: 0 }]) {
     if (k.x - at >= 0.75) {
@@ -526,6 +552,33 @@ export function blockerGaps(keys: Key[], width: number, depth: number, edge: num
       out.push({ x: (x0 + x1) / 2, z: (back + front) / 2, w: x1 - x0, d: front - back })
     }
     at = Math.max(at, k.x + k.w)
+  }
+  // TKL / full: khoảng trống giữa cụm Ins–PgDn và cụm mũi tên (mặt case thật che kín, không lộ plate)
+  const up = keys.find((k) => k.code === 'ArrowUp')
+  if (up) {
+    const above = keys.filter(
+      (k) => k.cz < up.cz && Math.abs(k.cx - up.cx) <= 1.01 && k.cz > up.cz - 3,
+    )
+    const top = above.length ? Math.max(...above.map((k) => k.cz + k.h / 2)) : up.cz - 0.5
+    const [x0, x1] = [up.cx - 1.5, up.cx + 1.5]
+    // chỉ lấp chỗ thật sự trống (75% / 65% mũi tên sát Shift thì không có khoảng trống)
+    const free = (l: number, r: number, t: number, b: number) =>
+      !keys.some(
+        (k) =>
+          k.cx - k.w / 2 < r - 0.01 &&
+          k.cx + k.w / 2 > l + 0.01 &&
+          k.cz - k.h / 2 < b - 0.01 &&
+          k.cz + k.h / 2 > t + 0.01,
+      )
+    const rect = (l: number, r: number, t: number, b: number) =>
+      r - l > 0.01 &&
+      b - t > 0.01 &&
+      free(l, r, t, b) &&
+      // thấp hơn mặt keycap (keycap đứng từ 0.36u) để không nhô lên giữa cụm phím
+      out.push({ x: (l + r) / 2, z: (t + b) / 2, w: r - l, d: b - t, top: 0.3 })
+    rect(x0, x1, top, up.cz - 0.5)
+    rect(x0, up.cx - 0.5, up.cz - 0.5, up.cz + 0.5)
+    rect(up.cx + 0.5, x1, up.cz - 0.5, up.cz + 0.5)
   }
   return out
 }

@@ -29,7 +29,11 @@ export function ArtCard({ art, title, desc, state, action, onAction }: Props) {
       )}
       onClick={buyable ? onAction : undefined}
       title={
-        state === 'owned' ? 'Đang dùng' : state === 'outdated' ? 'Đã có bản tốt hơn' : undefined
+        state === 'owned'
+          ? 'Đang dùng'
+          : state === 'outdated'
+            ? 'Đã có bản tốt hơn'
+            : (action ?? 'Bấm để mua')
       }
     >
       <div className="relative w-full group-active:translate-y-0.5">

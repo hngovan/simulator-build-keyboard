@@ -50,6 +50,8 @@ const SAVED_KEYS = [
   'audio',
   'screwBit',
   'wear',
+  'reviews',
+  'rejected',
   'offers',
   'jobs',
   'order',

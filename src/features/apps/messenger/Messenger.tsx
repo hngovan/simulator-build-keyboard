@@ -1,27 +1,33 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Moon } from 'lucide-react'
+import {
+  Ban,
+  CalendarDays,
+  ChevronLeft,
+  ChartColumn,
+  Check,
+  EyeOff,
+  Handshake,
+  Keyboard,
+  MapPin,
+  Moon,
+  Truck,
+  X,
+} from 'lucide-react'
 import { useGame } from '@/store'
 import { LAYOUTS } from '@/data/layouts'
 import { CASES } from '@/data/parts'
-import { Badge, Button, Muted, type BadgeTone } from '@/components/ui'
+import { DECLINE_FREE } from '@/data/reviews'
+import { Badge, Button, Muted, ViewHint, type BadgeTone, type ButtonTone } from '@/components/ui'
 import { CustomerAvatar } from '@/components/game/CustomerAvatar'
-import { OrderSpec } from '@/components/game/OrderSpec'
-import { cn, fmt } from '@/lib/format'
+import { cn } from '@/lib/format'
 import type { Order } from '@/types'
 import type { PackedOrder } from '@/store/persistence'
 import { ChatBubble } from './ChatBubble'
+import { withEmotes } from './emotes'
+import { Highlight } from './highlight'
 import { ResultCard } from './ResultCard'
 import { orderLook, useOrderThumb } from './orderThumb'
 import { OrderViewer } from './OrderViewer'
-
-const reaction = (stars: number, late?: number) =>
-  late
-    ? `Phím ok nhưng trễ ${late} ngày shop ơi, lần sau nhanh hơn nhé 😤`
-    : stars >= 4
-      ? 'Phím xịn quá shop ơi, cảm ơn nhiều!'
-      : stars >= 3
-        ? 'Cũng ổn, nhưng chưa hoàn hảo lắm.'
-        : 'Không giống mình dặn lắm shop ạ 😕'
 
 /** Ảnh bàn phím ghép sẵn theo đơn; bấm để mở xem 3D chi tiết (chờ chụp xong thì hiện ô trống) */
 function OrderImage({ order, className }: { order: Order; className?: string }) {
@@ -47,40 +53,56 @@ function OrderImage({ order, className }: { order: Order; className?: string }) 
         ) : (
           <span className="animate-bob text-2xl">⌨️</span>
         )}
-        <span className="absolute right-1 bottom-1 rounded-full bg-black/60 px-1.5 text-[10px] opacity-0 group-hover:opacity-100">
-          🔍 Xem 3D
-        </span>
+        <ViewHint />
       </button>
       {open && <OrderViewer order={order} onClose={() => setOpen(false)} />}
     </>
   )
 }
 
-/** Hạn giao so với hôm nay */
-function DueBadge({ order }: { order: Order }) {
-  const day = useGame((s) => s.day)
-  const left = (order.dueDay ?? day + order.days) - day
-  if (order.dueDay === undefined) return <Badge tone="blue">⏳ {order.days} ngày</Badge>
-  return left > 0 ? (
-    <Badge tone={left === 1 ? 'yellow' : 'green'}>⏳ còn {left} ngày</Badge>
-  ) : left === 0 ? (
-    <Badge tone="yellow">⏰ hạn hôm nay</Badge>
-  ) : (
-    <Badge tone="red">⚠️ trễ {-left} ngày</Badge>
-  )
+const ADDRESSES = [
+  '12 Nguyễn Trãi, Q.1, TP.HCM',
+  '45 Lê Lợi, Hải Châu, Đà Nẵng',
+  '88 Cầu Giấy, Hà Nội',
+  '7 Trần Phú, Nha Trang',
+  '203 Võ Văn Tần, Q.3, TP.HCM',
+  '16 Hùng Vương, Huế',
+]
+
+/** Cách nhận hàng cố định theo đơn: khách tự qua shop lấy (1/3) hoặc gửi về địa chỉ */
+function delivery(order: Order) {
+  const h = Math.abs([...order.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7))
+  return { pickup: h % 3 === 0, address: ADDRESSES[h % ADDRESSES.length] }
 }
 
-/** 1 hội thoại: đơn mới (offer) hoặc đơn đã đóng gói (chờ gửi / đã gửi) */
+/**
+ * 1 hội thoại: đơn mới · đã nhận (đang làm / chờ làm) · đã đóng gói chờ gửi · đã từ chối.
+ * Hội thoại chỉ mất khi gửi hàng cho khách (đơn từ chối: mất khi sang ngày mới)
+ */
 type Thread =
-  { kind: 'offer'; order: Order } | { kind: 'packed'; order: Order; packed: PackedOrder }
+  | { kind: 'offer'; order: Order }
+  | { kind: 'accepted'; order: Order; active: boolean }
+  | { kind: 'packed'; order: Order; packed: PackedOrder }
+  | { kind: 'rejected'; order: Order; angry: boolean }
 
 const STATUS: Record<string, [string, BadgeTone]> = {
   offer: ['Đơn mới', 'yellow'],
-  ready: ['Chờ gửi', 'orange'],
-  sent: ['Đã gửi', 'green'],
+  active: ['Đang làm', 'green'],
+  accepted: ['Đã nhận', 'blue'],
+  packed: ['Chờ gửi', 'orange'],
+  rejected: ['Từ chối', 'red'],
 }
-const statusOf = (t: Thread) =>
-  t.kind === 'offer' ? STATUS.offer : t.packed.shipped ? STATUS.sent : STATUS.ready
+const statusOf = (t: Thread) => STATUS[t.kind === 'accepted' && t.active ? 'active' : t.kind]
+
+// tin nhắn qua lại của từng hành động (shop gửi → khách đáp)
+const MSG = {
+  accept: 'Ok shop nhận đơn này nhé 👌',
+  accepted: (o: Order) => `Tuyệt, cảm ơn shop! Hẹn ngày ${o.dueDay ?? '?'} nhé 🙏`,
+  decline: 'Xin lỗi bạn, đợt này shop kín lịch rồi, không nhận được 🙏',
+  declined: (angry: boolean) =>
+    angry ? 'Shop gì chảnh vậy, nhắn mãi không nhận 😒' : 'Tiếc quá, hẹn shop dịp khác nhé',
+  done: 'Bàn phím của bạn xong rồi nè 📦',
+}
 
 /** Dòng hội thoại ở cột trái: avatar, tên, tin cuối, trạng thái */
 function ThreadRow({ t, active, onPick }: { t: Thread; active: boolean; onPick: () => void }) {
@@ -88,9 +110,11 @@ function ThreadRow({ t, active, onPick }: { t: Thread; active: boolean; onPick: 
   const last =
     t.kind === 'offer'
       ? t.order.lines[t.order.lines.length - 1]
-      : t.packed.shipped
-        ? reaction(t.packed.result.stars, t.packed.result.late)
-        : 'Bàn phím của bạn xong rồi nè 📦'
+      : t.kind === 'accepted'
+        ? MSG.accepted(t.order)
+        : t.kind === 'packed'
+          ? MSG.done
+          : MSG.declined(t.angry)
   return (
     <button
       type="button"
@@ -98,66 +122,97 @@ function ThreadRow({ t, active, onPick }: { t: Thread; active: boolean; onPick: 
       className={cn(
         'flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors',
         active ? 'bg-purple/35' : 'hover:bg-white/5',
+        t.kind === 'rejected' && 'opacity-60',
       )}
     >
       <CustomerAvatar avatar={t.order.avatar} customer={t.order.customer} className="size-10" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-1">
           <b className="truncate text-sm">{t.order.customer}</b>
-          <Badge tone={tone} className="ml-0 shrink-0">
+          <Badge solid tone={tone} className="ml-0 shrink-0">
             {label}
           </Badge>
         </div>
-        <div className="truncate text-xs text-muted">{last}</div>
+        <div className="truncate text-xs text-muted">{withEmotes(last, 'h-[1.4em]')}</div>
       </div>
     </button>
   )
 }
 
-/** Câu trả lời nhanh (lựa chọn đối thoại) dưới khung chat */
+/** Câu trả lời nhanh dưới khung chat: nút game có icon (cùng kiểu nút "Kết thúc ngày") */
 function Reply({
   tone = 'default',
+  icon,
   onClick,
   children,
 }: {
-  tone?: 'default' | 'green' | 'red' | 'orange'
+  tone?: ButtonTone
+  icon: ReactNode
   onClick: () => void
   children: ReactNode
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'cursor-pointer rounded-full border px-3.5 py-1.5 text-sm font-extrabold transition-[transform,background-color] hover:-translate-y-0.5',
-        tone === 'green' && 'border-green/60 bg-green/15 text-green hover:bg-green/25',
-        tone === 'red' && 'border-red/60 bg-red/10 text-red hover:bg-red/20',
-        tone === 'orange' && 'border-orange/60 bg-orange/15 text-orange hover:bg-orange/25',
-        tone === 'default' && 'border-white/20 bg-white/5 hover:bg-white/10',
-      )}
-    >
+    <Button tone={tone} className="flex items-center gap-2 [&_svg]:size-4" onClick={onClick}>
+      {icon}
       {children}
-    </button>
+    </Button>
   )
 }
 
+/** 3 chấm nhấp nhô: tin đang gửi */
+function Typing() {
+  return (
+    <span className="flex h-5 items-center gap-1" aria-label="Đang gửi">
+      {[0, 150, 300].map((d) => (
+        <span
+          key={d}
+          className="size-2 animate-bounce rounded-full bg-white/85"
+          style={{ animationDelay: `${d}ms` }}
+        />
+      ))}
+    </span>
+  )
+}
+
+/** để người chơi thấy tin nhắn rồi mới đổi trạng thái đơn (ms) */
+const REPLY_DELAY = 800
+
 /** Khung chat của 1 hội thoại */
-function ChatView({ t }: { t: Thread }) {
-  const { acceptOrder, declineOrder, shipOrder } = useGame.getState()
+/** `onReply`: giữ hội thoại này đang mở sau khi đơn đổi trạng thái (không nhảy sang hội thoại khác) */
+function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBack: () => void }) {
+  const { acceptOrder, declineOrder, shipOrder, goBench } = useGame.getState()
   const order = t.order
   const { caseId } = orderLook(order)
-  // tin nhắn qua lại trong phiên (không lưu): hỏi chi tiết, xem điểm
-  const [asked, setAsked] = useState(false)
+  // tin vừa gửi trong phiên (không lưu): nhận / từ chối / gửi hàng; xin địa chỉ, xem điểm
+  const [sent, setSent] = useState<'accept' | 'decline' | 'ship' | null>(null)
+  const [askedAddr, setAskedAddr] = useState(false)
   const [score, setScore] = useState(false)
   const body = useRef<HTMLDivElement>(null)
   useEffect(() => {
     body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' })
-  }, [asked, score, t])
+  }, [sent, askedAddr, score, t])
   const packed = t.kind === 'packed' ? t.packed : null
+  const { pickup, address } = delivery(order)
+  const accepted = t.kind === 'accepted' || !!packed
+  // hiện tin vừa gửi rồi mới đổi trạng thái đơn
+  const act = (kind: NonNullable<typeof sent>, run: () => void) => {
+    onReply()
+    setSent(kind)
+    setTimeout(run, REPLY_DELAY)
+  }
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* đầu hội thoại */}
-      <div className="flex items-center gap-2.5 border-b border-white/10 px-3 py-2">
+      <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-white/10 px-3 text-[13px]">
+        {/* cửa sổ hẹp (mobile): 1 cột, nút quay lại danh sách hội thoại */}
+        <button
+          type="button"
+          aria-label="Quay lại danh sách hội thoại"
+          onClick={onBack}
+          className="-ml-1 grid size-8 shrink-0 place-items-center rounded-lg hover:bg-white/10 @xl:hidden"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
         <CustomerAvatar avatar={order.avatar} customer={order.customer} className="size-10" />
         <div className="min-w-0 flex-1">
           <b className="block truncate">{order.customer}</b>
@@ -165,12 +220,6 @@ function ChatView({ t }: { t: Thread }) {
             {order.type === 'kit' ? 'Gửi kit' : 'Shop lo hết'} · {LAYOUTS[order.layout].name}
             {order.featured && ` · ${CASES[caseId].name}`}
           </Muted>
-        </div>
-        <div className="flex flex-wrap justify-end gap-1">
-          {!packed && <DueBadge order={order} />}
-          <Badge tone="green">Công {fmt(order.labor)}</Badge>
-          <Badge>Budget {fmt(order.budget)}</Badge>
-          {order.featured && <Badge tone="rep">✨ Thiết kế mở</Badge>}
         </div>
       </div>
 
@@ -181,102 +230,156 @@ function ChatView({ t }: { t: Thread }) {
         </ChatBubble>
         {order.lines.map((l, i) => (
           <ChatBubble key={i} from="in">
-            {l}
+            <Highlight text={l} order={order} />
           </ChatBubble>
         ))}
-        {asked && (
-          <>
-            <ChatBubble from="out">Bạn gửi shop chi tiết yêu cầu nhé?</ChatBubble>
-            <ChatBubble from="in" wide>
-              <OrderSpec order={order} compact />
-            </ChatBubble>
-          </>
-        )}
+        {accepted && <ChatBubble from="out">{MSG.accept}</ChatBubble>}
+        {accepted && <ChatBubble from="in">{MSG.accepted(order)}</ChatBubble>}
+        {t.kind === 'rejected' && <ChatBubble from="out">{MSG.decline}</ChatBubble>}
+        {t.kind === 'rejected' && <ChatBubble from="in">{MSG.declined(t.angry)}</ChatBubble>}
         {packed && (
           <>
-            <ChatBubble from="out">Ok bạn, shop nhận đơn nhé! 👌</ChatBubble>
             <ChatBubble from="out">
-              Bàn phím của bạn xong rồi nè 📦 ({'★'.repeat(packed.result.stars)})
+              {MSG.done} ({'★'.repeat(packed.result.stars)})
             </ChatBubble>
-            {packed.shipped && (
-              <>
-                <ChatBubble from="out">Shop gửi hàng rồi, bạn check giúp shop nhé 🚚</ChatBubble>
-                <ChatBubble from="in">
-                  {reaction(packed.result.stars, packed.result.late)}
-                </ChatBubble>
-                <Muted className="self-center">
-                  +{fmt(packed.result.reimburse + packed.result.labor)} đã vào ví
-                </Muted>
-              </>
+            {pickup ? (
+              <ChatBubble from="in">Ui nhanh vậy! Mình tự qua shop lấy nhé 🛵</ChatBubble>
+            ) : (
+              askedAddr && (
+                <>
+                  <ChatBubble from="out">Bạn cho shop xin địa chỉ giao hàng nhé?</ChatBubble>
+                  <ChatBubble from="in">
+                    Gửi giúp mình về <b className="text-yellow">{address}</b> nha shop 🙏
+                  </ChatBubble>
+                </>
+              )
             )}
             {score && <ResultCard result={packed.result} />}
           </>
         )}
+        {/* vừa bấm trả lời: bong bóng "…" đang gửi, xong thì hiện tin thật */}
+        {sent && (
+          <ChatBubble from="out">
+            <Typing />
+          </ChatBubble>
+        )}
       </div>
 
-      {/* lựa chọn trả lời */}
-      <div className="flex flex-wrap gap-1.5 border-t border-white/10 px-3 py-2.5">
-        {!packed && (
+      {/* lựa chọn trả lời: mỗi nút = 1 tin nhắn gửi khách (đáy luôn có, cao bằng đáy cột trái) */}
+      <div className="flex h-16 shrink-0 items-center justify-end gap-2 border-t border-white/10 px-3">
+        {sent ? null : t.kind === 'rejected' ? (
+          // đã từ chối: nút mờ ở góc phải, không bấm được (hết nhắn tiếp)
+          <Button disabled className="flex items-center gap-2 [&_svg]:size-4">
+            <Ban />
+            Bạn đã từ chối đơn này
+          </Button>
+        ) : (
           <>
-            {!asked && (
-              <Reply onClick={() => setAsked(true)}>💬 Cho shop xem chi tiết yêu cầu</Reply>
+            {t.kind === 'offer' && (
+              <>
+                <Reply
+                  tone="green"
+                  icon={<Check />}
+                  onClick={() => act('accept', () => acceptOrder(order.id))}
+                >
+                  Nhận đơn
+                </Reply>
+                <Reply
+                  tone="red"
+                  icon={<X />}
+                  onClick={() => act('decline', () => declineOrder(order.id))}
+                >
+                  Xin lỗi, shop không nhận được
+                </Reply>
+              </>
             )}
-            <Reply tone="green" onClick={() => acceptOrder(order.id)}>
-              Nhận đơn
-            </Reply>
-            <Reply tone="red" onClick={() => declineOrder(order.id)}>
-              Xin lỗi, shop không nhận được
-            </Reply>
+            {t.kind === 'accepted' && (
+              <Reply tone="blue" icon={<Keyboard />} onClick={goBench}>
+                Ra bàn build
+              </Reply>
+            )}
+            {packed && !pickup && !askedAddr && (
+              <Reply icon={<MapPin />} onClick={() => setAskedAddr(true)}>
+                Xin địa chỉ giao hàng
+              </Reply>
+            )}
+            {packed && (pickup || askedAddr) && (
+              <Reply
+                tone="orange"
+                icon={pickup ? <Handshake /> : <Truck />}
+                onClick={() => act('ship', () => shipOrder(order.id))}
+              >
+                {pickup ? 'Giao tận tay khách' : 'Gửi hàng cho khách'}
+              </Reply>
+            )}
+            {packed && (
+              <Reply icon={score ? <EyeOff /> : <ChartColumn />} onClick={() => setScore(!score)}>
+                {score ? 'Ẩn điểm' : 'Xem điểm chấm'}
+              </Reply>
+            )}
           </>
-        )}
-        {packed && !packed.shipped && (
-          <Reply tone="orange" onClick={() => shipOrder(order.id)}>
-            🚚 Gửi hàng cho khách
-          </Reply>
-        )}
-        {packed && (
-          <Reply onClick={() => setScore(!score)}>{score ? 'Ẩn điểm' : '📊 Xem điểm chấm'}</Reply>
         )}
       </div>
     </div>
   )
 }
 
-// Tin nhắn: đơn mới trong ngày + đơn đã đóng gói (gửi từng đơn cho khách). Đơn đã nhận xem ở app "Danh sách đơn"
+// Tin nhắn: mỗi đơn 1 hội thoại (đơn mới, đã nhận, chờ gửi, đã từ chối); gửi hàng xong thì hội thoại mất
 export function Messenger() {
   const offers = useGame((s) => s.offers)
   const packed = useGame((s) => s.packed)
+  const order = useGame((s) => s.order)
+  const jobs = useGame((s) => s.jobs)
+  const rejected = useGame((s) => s.rejected)
   const day = useGame((s) => s.day)
   const nextDay = useGame((s) => s.nextDay)
+  const unsent = packed.filter((p) => !p.shipped)
+  const isPacked = (o: Order) => unsent.some((p) => p.order.id === o.id)
   const threads: Thread[] = [
-    ...packed
-      .filter((p) => !p.shipped)
-      .map((p) => ({ kind: 'packed' as const, order: p.order, packed: p })),
+    ...unsent.map((p) => ({ kind: 'packed' as const, order: p.order, packed: p })),
     ...offers.map((o) => ({ kind: 'offer' as const, order: o })),
-    ...packed
-      .filter((p) => p.shipped)
-      .map((p) => ({ kind: 'packed' as const, order: p.order, packed: p })),
+    ...(order && !isPacked(order) ? [{ kind: 'accepted' as const, order, active: true }] : []),
+    ...jobs.map((j) => ({ kind: 'accepted' as const, order: j.order, active: false })),
+    ...rejected.map((o, i) => ({ kind: 'rejected' as const, order: o, angry: i >= DECLINE_FREE })),
   ]
   const [pick, setPick] = useState<string | null>(null)
-  // hội thoại đang mở (vừa nhận / từ chối thì nhảy sang hội thoại đầu tiên)
+  // cửa sổ hẹp: chỉ hiện 1 cột — danh sách hoặc khung chat
+  const [chatOpen, setChatOpen] = useState(false)
+  // hội thoại đang mở (vừa gửi hàng thì nhảy sang hội thoại đầu tiên)
   const current = threads.find((t) => t.order.id === pick) ?? threads[0]
-  const unsent = packed.filter((p) => !p.shipped).length
 
   return (
-    <div className="flex h-[min(620px,72vh)] overflow-hidden rounded-xl bg-black/15">
+    <div className="flex h-[min(620px,72vh)] overflow-hidden rounded-xl border border-white/10 bg-black/15 group-data-fill/win:h-full">
       {/* danh sách hội thoại */}
-      <div className="flex w-[260px] shrink-0 flex-col border-r border-white/10">
-        <div className="flex items-center justify-between px-3 py-2">
-          <b>📅 Ngày {day}</b>
-          <Muted>{offers.length} đơn mới</Muted>
+      <div
+        className={cn(
+          'flex w-[260px] shrink-0 flex-col border-r border-white/10 @max-xl:w-full @max-xl:border-r-0',
+          chatOpen && '@max-xl:hidden',
+        )}
+      >
+        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-3">
+          <b className="flex items-center gap-1.5">
+            <CalendarDays className="size-4 text-yellow" />
+            Ngày {day}
+          </b>
+          {offers.length ? (
+            <Badge solid tone="yellow" className="ml-0">
+              {offers.length} đơn mới
+            </Badge>
+          ) : (
+            <Muted>Hết đơn mới</Muted>
+          )}
         </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1.5">
+        <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-1.5">
           {threads.map((t) => (
             <ThreadRow
               key={t.order.id}
               t={t}
               active={t === current}
-              onPick={() => setPick(t.order.id)}
+              onPick={() => {
+                setPick(t.order.id)
+                setChatOpen(true)
+              }}
             />
           ))}
           {!threads.length && (
@@ -285,25 +388,29 @@ export function Messenger() {
             </Muted>
           )}
         </div>
-        <div className="border-t border-white/10 p-2">
+        <div className="flex h-16 shrink-0 items-center border-t border-white/10 px-3">
           <Button
             tone="green"
             className="flex w-full items-center justify-center gap-2"
             onClick={nextDay}
           >
             <Moon className="size-4" />
-            Kết thúc ngày{unsent ? ` · gửi ${unsent} đơn` : ''}
+            Kết thúc ngày{unsent.length ? ` · gửi ${unsent.length} đơn` : ''}
           </Button>
         </div>
       </div>
-      {current ? (
-        <ChatView
-          key={current.order.id + (current.kind === 'packed' && current.packed.shipped ? 's' : '')}
-          t={current}
-        />
-      ) : (
-        <div className="grid flex-1 place-items-center text-muted">Chọn 1 hội thoại</div>
-      )}
+      <div className={cn('flex min-w-0 flex-1', !chatOpen && '@max-xl:hidden')}>
+        {current ? (
+          <ChatView
+            key={current.order.id + current.kind}
+            t={current}
+            onReply={() => setPick(current.order.id)}
+            onBack={() => setChatOpen(false)}
+          />
+        ) : (
+          <div className="grid flex-1 place-items-center text-muted">Chọn 1 hội thoại</div>
+        )}
+      </div>
     </div>
   )
 }

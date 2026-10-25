@@ -102,15 +102,17 @@ function simplify(mesh, targetTriangles) {
 
 /**
  * Xoay quanh trục đứng (rad) cho đúng chiều game: người gõ ở +z, mép sau (-z) của hàng trên (R1, R2)
- * cao hơn mép trước, hàng dưới (R4) ngược lại. Đo độ cao mép trên 4 cạnh của từng file gốc:
- * Cherry / OEM bị ngược 180°, SA R1 / R2 dốc theo trục x (mỗi file một chiều), OPK hàng 3 ngược 180°
+ * cao hơn mép trước, hàng dưới (R4) ngược lại. SA R1 / R2 dốc theo trục x (mỗi file một chiều), OPK hàng 3 ngược 180°.
+ * Cherry / OEM: giữ nguyên chiều file gốc (thành đứng ở sau, thành vát ở trước như bảng profile R1–R4),
+ * nhưng file đánh số hàng ngược (r4-1u = R1 … r1-1u = R4) → đổi tên khi ghi ra (vòng lặp cuối file).
+ * Bản cũ xoay 180° cho đúng độ dốc mặt trên nên thành đứng / vát bị ngược
  */
 const YAW = {
   'sa-r1': Math.PI / 2,
   'sa-r2': -Math.PI / 2,
   opk: Math.PI,
 }
-const yawOf = (name) => YAW[name] ?? (/^(cherry|oem)-r/.test(name) ? Math.PI : 0)
+const yawOf = (name) => YAW[name] ?? 0
 
 async function convert(name, parts, up = 'y') {
   const bounds = [
@@ -190,8 +192,9 @@ async function convert(name, parts, up = 'y') {
 }
 
 for (const row of [1, 2, 3, 4]) {
-  await convert(`cherry-r${row}`, fromStl(`cherry/r${row}-1u.stl`))
-  await convert(`oem-r${row}`, await fromStep(`oem/extracted/r${row}-1u.step`))
+  // file r1-1u là hàng dưới cùng (R4) … r4-1u là hàng số (R1)
+  await convert(`cherry-r${5 - row}`, fromStl(`cherry/r${row}-1u.stl`))
+  await convert(`oem-r${5 - row}`, await fromStep(`oem/extracted/r${row}-1u.step`))
 }
 for (const row of [1, 2, 3]) await convert(`sa-r${row}`, fromStl(`sa/r${row}.stl`), 'z')
 await convert('dsa', fromStl('dsa/1u.stl'))

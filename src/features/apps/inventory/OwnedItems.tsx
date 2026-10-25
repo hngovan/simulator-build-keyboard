@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { Droplet, Keyboard, LayoutGrid, Wrench, type LucideIcon } from 'lucide-react'
 import { useGame } from '@/store'
 import { CATS, TOOLS, TOOL_KINDS, itemName } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
@@ -6,6 +7,8 @@ import { SupplyArt, ToolArt } from '@/components/art/ToolArt'
 import { PartArt } from '@/components/art/PartArt'
 import { useModelThumb, type ThumbKind } from '@/features/apps/shop/modelThumb'
 import { useCaseThumb } from '@/features/apps/messenger/orderThumb'
+import { CaseViewer } from '@/features/apps/messenger/OrderViewer'
+import { ShopProductViewer } from '@/features/apps/shop/ShopProductViewer'
 import type {
   CaseItem,
   KeycapItem,
@@ -15,11 +18,63 @@ import type {
   StabItem,
   SwitchItem,
 } from '@/types'
-import { Heading, Muted, Panel } from '@/components/ui'
+import { Heading, Muted, OptionChip, Panel, Tooltip, ViewHint } from '@/components/ui'
 import { cn } from '@/lib/format'
 import type { ToolKind } from '@/types'
 
-const ORDER_KEY = 'sbk-ui-inventory-order'
+// cùng key với bản cũ (mảng id theo thứ tự) → đọc ra thành vị trí ô
+const SLOTS_KEY = 'sbk-ui-inventory-order'
+/** số cột lưới + số ô tối thiểu */
+const COLS = 4
+const MIN_SLOTS = 12
+/** số ô luôn là bội của 12 để lưới 4 / 6 cột (cửa sổ rộng) đều kín hàng */
+const SLOT_STEP = 12
+
+/** bộ lọc kho: theo tiền tố id món (part / tool / supply) */
+type Filter = 'all' | 'part' | 'tool' | 'supply'
+const FILTERS: { id: Filter; icon: LucideIcon; label: string }[] = [
+  { id: 'all', icon: LayoutGrid, label: 'Tất cả' },
+  { id: 'part', icon: Keyboard, label: 'Linh kiện đơn đang làm' },
+  { id: 'tool', icon: Wrench, label: 'Dụng cụ' },
+  { id: 'supply', icon: Droplet, label: 'Lube & vật tư' },
+]
+const remainText = (it: Owned) =>
+  it.left === undefined
+    ? null
+    : it.total
+      ? `Còn ${it.left}/${it.total} lần`
+      : it.id === 'part:switch'
+        ? `Còn ${it.left} con`
+        : `Còn ${it.left} lượt`
+
+/** Khung xem 3D của 1 món trong kho (như Shopii), chân khung ghi nhóm + số lần còn dùng */
+function ItemViewer({ it, onClose }: { it: Owned; onClose: () => void }) {
+  const footer = (
+    <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+      {it.using && <b className="text-green">Đang dùng</b>}
+      {remainText(it) && <b className="text-yellow">{remainText(it)}</b>}
+    </div>
+  )
+  if (it.thumb && 'caseId' in it.thumb)
+    return (
+      <CaseViewer
+        caseId={it.thumb.caseId}
+        color={it.thumb.color}
+        onClose={onClose}
+        footer={footer}
+      />
+    )
+  if (!it.thumb) return null
+  return (
+    <ShopProductViewer
+      kind={it.thumb.kind}
+      type={it.thumb.type}
+      title={it.name}
+      onClose={onClose}
+      footer={footer}
+    />
+  )
+}
 
 interface Owned {
   id: string
@@ -37,10 +92,11 @@ interface Owned {
   using?: boolean
 }
 
-/** Thứ tự ô người chơi tự xếp (tiện ích riêng máy); món mới mua nối vào cuối */
-function loadOrder(): string[] {
+/** Vị trí ô người chơi tự xếp (tiện ích riêng máy): phần tử i = id món ở ô i, null = ô trống */
+function loadSlots(): (string | null)[] {
   try {
-    return JSON.parse(localStorage.getItem(ORDER_KEY) ?? '[]') as string[]
+    const v = JSON.parse(localStorage.getItem(SLOTS_KEY) ?? '[]')
+    return Array.isArray(v) ? v : []
   } catch {
     return []
   }
@@ -54,7 +110,7 @@ function Thumb({ it }: { it: Owned }) {
   const caseShot = useCaseThumb(box?.caseId, box?.color)
   const src = shot ?? caseShot
   return (
-    <div className="pointer-events-none flex h-[80px] items-center justify-center overflow-hidden rounded-lg bg-black/15">
+    <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black/15">
       {src ? <img src={src} alt={it.name} className="h-full w-full object-contain" /> : it.art}
     </div>
   )
@@ -141,85 +197,165 @@ function useOwned(): Owned[] {
 }
 
 /**
- * Ô vật phẩm đã mua trong Kho: kéo thả để đổi chỗ (thứ tự nhớ trên máy),
- * mỗi ô hiện số lần còn dùng được (độ bền dụng cụ / số lượt vật tư)
+ * Kho kiểu túi đồ trong game: lưới ô cố định (ô trống cũng hiện khung lõm), kéo món đồ thả vào ô bất kỳ,
+ * thả lên ô đã có đồ thì 2 món đổi chỗ; vị trí ô nhớ trên máy, món mới mua vào ô trống đầu tiên.
+ * Mỗi ô hiện số lần còn dùng được (độ bền dụng cụ / số lượt vật tư)
  */
 export function OwnedItems() {
   const owned = useOwned()
-  const [order, setOrder] = useState(loadOrder)
+  const [saved, setSaved] = useState(loadSlots)
   const [dragging, setDragging] = useState<string | null>(null)
-  const rank = (id: string) => {
-    const i = order.indexOf(id)
-    return i < 0 ? Infinity : i
+  const [hover, setHover] = useState<number | null>(null)
+  const [filter, setFilter] = useState<Filter>('all')
+  const [viewing, setViewing] = useState<Owned | null>(null)
+  const byId = new Map(owned.map((it) => [it.id, it]))
+  // xếp đồ vào ô: giữ ô đã lưu, món mới vào ô trống đầu tiên
+  const slots: (string | null)[] = saved.map((id) => (id && byId.has(id) ? id : null))
+  for (const it of owned) {
+    if (slots.includes(it.id)) continue
+    const free = slots.indexOf(null)
+    if (free < 0) slots.push(it.id)
+    else slots[free] = it.id
   }
-  const items = [...owned].sort((a, b) => rank(a.id) - rank(b.id))
-  const ids = items.map((i) => i.id)
-  // kéo qua ô khác thì đổi chỗ ngay để thấy trước vị trí mới
-  const moveTo = (target: string) => {
-    if (!dragging || dragging === target) return
-    const next = ids.filter((id) => id !== dragging)
-    next.splice(ids.indexOf(target), 0, dragging)
-    setOrder(next)
-  }
-  const save = () => {
-    setDragging(null)
-    try {
-      localStorage.setItem(ORDER_KEY, JSON.stringify(ids))
-    } catch {
-      // không lưu được thì lần sau về thứ tự mặc định
+  // đủ ít nhất MIN_SLOTS ô, luôn dư 1 hàng trống ở cuối để kéo đồ xuống
+  const last = slots.reduce((a, id, i) => (id ? i : a), -1)
+  const count = Math.max(
+    MIN_SLOTS,
+    Math.ceil(((Math.ceil((last + 1) / COLS) + 1) * COLS) / SLOT_STEP) * SLOT_STEP,
+  )
+  while (slots.length < count) slots.push(null)
+  slots.length = count
+  // đang lọc: chỉ hiện món khớp (giữ thứ tự ô), không kéo thả
+  const shown = filter === 'all' ? slots : slots.filter((id) => id?.startsWith(`${filter}:`))
+
+  const drop = (target: number) => {
+    const from = dragging ? slots.indexOf(dragging) : -1
+    if (from >= 0 && from !== target) {
+      const next = [...slots]
+      ;[next[from], next[target]] = [next[target], next[from]]
+      setSaved(next)
+      try {
+        localStorage.setItem(SLOTS_KEY, JSON.stringify(next))
+      } catch {
+        // không lưu được thì lần sau về chỗ mặc định
+      }
     }
+    setDragging(null)
+    setHover(null)
   }
 
   return (
     <Panel>
-      <Heading note="· kéo thả để đổi chỗ">Đồ trong kho</Heading>
-      {items.length ? (
-        <div className="grid [grid-template-columns:repeat(auto-fill,minmax(130px,1fr))] gap-2">
-          {items.map((it) => {
-            const low = it.total ? it.left! <= it.total * 0.1 : false
+      <div className="flex items-center justify-between gap-2">
+        <Heading>Đồ trong kho</Heading>
+        {/* bộ lọc icon + số món: nút khối như OptionChip, đang chọn viền + icon vàng */}
+        <div className="mb-2 flex gap-1.5">
+          {FILTERS.map(({ id, icon: Icon, label }) => {
+            const n =
+              id === 'all' ? owned.length : owned.filter((o) => o.id.startsWith(`${id}:`)).length
             return (
-              <div
-                key={it.id}
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.effectAllowed = 'move'
-                  setDragging(it.id)
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  moveTo(it.id)
-                }}
-                onDrop={(e) => e.preventDefault()}
-                onDragEnd={save}
-                title={`${it.group} · kéo để đổi chỗ`}
-                className={cn(
-                  'flex cursor-grab flex-col gap-1 rounded-xl border-2 bg-panel p-1.5 transition-transform active:cursor-grabbing',
-                  it.using ? 'border-green' : 'border-line hover:border-white/30',
-                  dragging === it.id && 'opacity-40',
-                )}
-              >
-                <Thumb it={it} />
-                <div className="text-xs leading-tight font-bold">{it.name}</div>
-                <div className="flex items-center justify-between gap-1 text-[11px]">
-                  <span className="text-muted">{it.group}</span>
-                  {it.using && <span className="font-bold text-green">Đang dùng</span>}
-                </div>
-                {it.left !== undefined && (
-                  <div className={cn('text-xs font-extrabold', low ? 'text-yellow' : 'text-ink')}>
-                    {it.total
-                      ? `Còn ${it.left}/${it.total} lần`
-                      : it.id === 'part:switch'
-                        ? `Còn ${it.left} con`
-                        : `Còn ${it.left} lượt`}
-                  </div>
-                )}
-              </div>
+              <Tooltip key={id} label={label}>
+                <OptionChip
+                  type="button"
+                  aria-label={label}
+                  aria-pressed={filter === id}
+                  active={filter === id}
+                  onClick={() => setFilter(id)}
+                  className="h-8 cursor-pointer items-center! gap-1.5 leading-none"
+                >
+                  {/* icon + số món hiện luôn cạnh bộ lọc */}
+                  <Icon className="size-4" />
+                  <span className="flex h-4 items-center text-[13px] leading-none font-extrabold tabular-nums">
+                    {n}
+                  </span>
+                </OptionChip>
+              </Tooltip>
             )
           })}
         </div>
-      ) : (
-        <Muted>Kho đang trống. Mua linh kiện, dụng cụ, vật tư ở Shopii.</Muted>
+      </div>
+      {!owned.length && (
+        <Muted className="mb-2 block">
+          Kho đang trống. Mua linh kiện, dụng cụ, vật tư ở Shopii.
+        </Muted>
       )}
+      <div className="grid grid-cols-4 gap-2 rounded-xl bg-black/20 p-2 @3xl:grid-cols-6 @3xl:gap-3">
+        {filter !== 'all' && !shown.length && (
+          <Muted className="col-span-4 px-2 py-6 text-center">
+            Không có món nào trong mục này.
+          </Muted>
+        )}
+        {shown.map((id, i) => {
+          const it = id ? byId.get(id) : undefined
+          const low = it?.total ? it.left! <= it.total * 0.1 : false
+          return (
+            // ô lưới: khung lõm tối; đang kéo qua thì viền vàng
+            <div
+              key={i}
+              onDragOver={(e) => {
+                e.preventDefault()
+                if (hover !== i) setHover(i)
+              }}
+              onDragLeave={() => hover === i && setHover(null)}
+              onDrop={(e) => {
+                e.preventDefault()
+                drop(i)
+              }}
+              className={cn(
+                'aspect-square rounded-lg border-2 shadow-[inset_0_3px_0_rgba(0,0,0,0.35)] transition-colors',
+                hover === i && dragging
+                  ? 'border-yellow bg-yellow/10'
+                  : 'border-black/40 bg-black/25',
+              )}
+            >
+              {it && (
+                <Tooltip label={it.name} side="top" hidden={!!dragging} className="flex size-full">
+                  <div
+                    draggable={filter === 'all'}
+                    onClick={() => setViewing(it)}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move'
+                      setDragging(it.id)
+                    }}
+                    onDragEnd={() => {
+                      setDragging(null)
+                      setHover(null)
+                    }}
+                    className={cn(
+                      'group relative flex h-full w-full cursor-pointer flex-col gap-1 overflow-hidden rounded-md border-2 bg-panel p-1.5 active:cursor-grabbing',
+                      it.using ? 'border-green' : 'border-line hover:border-white/30',
+                      dragging === it.id && 'opacity-40',
+                    )}
+                  >
+                    <Thumb it={it} />
+                    <ViewHint className="top-2 right-2 bottom-auto" />
+                    <div className="truncate text-xs leading-tight font-bold">{it.name}</div>
+                    {/* số lần / lượt còn lại: badge tròn góc ảnh (đang dùng = viền xanh) */}
+                    {it.left !== undefined && (
+                      <span
+                        aria-label={remainText(it) ?? undefined}
+                        className={cn(
+                          'pointer-events-none absolute top-2 left-2 grid h-6 min-w-6 place-items-center rounded-full border-2 border-black/40 px-1.5 text-[11px] font-extrabold shadow-[0_2px_0_rgba(0,0,0,0.35)]',
+                          !it.total
+                            ? 'bg-blue text-white'
+                            : low
+                              ? 'bg-red text-white'
+                              : it.left! <= it.total * 0.5
+                                ? 'bg-yellow text-[#3a2b00]'
+                                : 'bg-green text-[#0d2a17]',
+                        )}
+                      >
+                        {it.left}
+                      </span>
+                    )}
+                  </div>
+                </Tooltip>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      {viewing && <ItemViewer it={viewing} onClose={() => setViewing(null)} />}
     </Panel>
   )
 }

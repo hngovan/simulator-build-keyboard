@@ -144,10 +144,10 @@ function Blockers({
     <CaseBox
       key={i}
       w={b.w}
-      h={h}
+      h={b.top !== undefined ? b.top - Y.plateBot : h}
       d={b.d}
       radius={0}
-      position={[b.x, Y.plateBot + h / 2, b.z]}
+      position={[b.x, Y.plateBot + (b.top !== undefined ? b.top - Y.plateBot : h) / 2, b.z]}
       mat={mat}
       wood={wood}
     />

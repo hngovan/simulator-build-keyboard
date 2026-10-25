@@ -38,8 +38,9 @@ function useSpin(
   })
 }
 
-// Tua vít tay: model Poly Haven (CC0, `bun run fetch:room`), hệ mét, cán ở dưới (y -0.08) → mũi ở trên (y 0.135)
-const SCREWDRIVER_GLB = '/models/room/screwdriver.glb'
+// Tua vít tay: model Poly Haven (CC0, `bun run fetch:room`), dùng bản nhẹ không texture (`bun run convert:screwdriver-lite`)
+// hệ mét, cán ở dưới (y -0.08) → mũi ở trên (y 0.135)
+const SCREWDRIVER_GLB = '/models/room/screwdriver-lite.glb'
 const SCREWDRIVER_TIP_Y = 0.135
 /** thu về dài ~1.6u cho dễ nhìn cạnh con vít (thật dài 21cm) */
 const SCREWDRIVER_SCALE = 1.6 / 0.215

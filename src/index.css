@@ -62,7 +62,49 @@
   button {
     @apply cursor-pointer;
   }
+  /* chiều cao taskbar màn máy tính: cửa sổ phóng to / mobile chừa chỗ (mobile 2 hàng) */
+  :root {
+    --taskbar-h: 58px;
+  }
+  @media (max-width: 767px) {
+    :root {
+      --taskbar-h: 100px;
+    }
+  }
+
   button:disabled {
     @apply cursor-not-allowed;
+  }
+
+  /* Thanh cuộn mảnh, hợp nền tối. Chỉ áp cho Firefox: đặt scrollbar-color ở trình duyệt
+     hỗ trợ ::-webkit-scrollbar sẽ làm Chrome bỏ qua phần style bên dưới. */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    }
+    *:hover {
+      scrollbar-color: rgba(255, 204, 46, 0.45) transparent;
+    }
+  }
+
+  /* Chromium / Safari */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 204, 46, 0.45);
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
   }
 }

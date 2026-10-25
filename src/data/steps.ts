@@ -138,24 +138,12 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     { x: width * 0.3, z: gapZ(rowYs.length - 1) },
   ]
 
-  const stabScrews = stabKeys.flatMap((k) => {
-    const s = stabSpan(k)
-    const local: [number, number][] =
-      k.h >= 2
-        ? [
-            [0.3, -s],
-            [0.3, s],
-          ]
-        : [
-            [-s, -0.32],
-            [s, -0.32],
-          ]
-    // phím xoay (Alice): xoay độ lệch theo phím
-    return local.map(([dx, dz]) => ({
-      x: k.cx + dx * Math.cos(k.rot) + dz * Math.sin(k.rot),
-      z: k.cz - dx * Math.sin(k.rot) + dz * Math.cos(k.rot),
-    }))
-  })
+  // vít screw-in bắt vào lỗ nhỏ của stab
+  const stabScrews = stabKeys.flatMap((k) =>
+    stabHoles(k)
+      .filter((h) => !h.big)
+      .map(({ x, z }) => ({ x, z })),
+  )
 
   const name = (prefix: string, list: Point[]): ScrewPoint[] =>
     list.map((p, i) => ({ ...p, id: `${prefix}-${i}` }))
@@ -204,6 +192,28 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
 export const stabSpan = (k: Key) => {
   const len = Math.max(k.w, k.h)
   return len >= 6 ? (len - 1) / 2 : 0.62
+}
+
+/** lỗ stab Cherry trên PCB (u, mỗi bên 2 lỗ): lỗ nhỏ 3.05mm ở -6.985mm, lỗ lớn 3.97mm ở +8.255mm */
+const STAB_HOLE = { small: { dz: -6.985, r: 1.6 }, big: { dz: 8.255, r: 2 } }
+
+/** 2 lỗ chân housing mỗi bên stab, đúng chỗ chốt của model CAD (phím dọc xoay 90°, phím xoay Alice theo `rot`) */
+export function stabHoles(k: Key) {
+  const s = stabSpan(k)
+  const vertical = k.h >= 2
+  return [-s, s].flatMap((side) =>
+    (['small', 'big'] as const).map((kind) => {
+      const dz = STAB_HOLE[kind].dz / 19.05
+      // housing xoay π/2 quanh y: (x, z) → (z, -x)
+      const [dx, dzz] = vertical ? [dz, -side] : [side, dz]
+      return {
+        x: k.cx + dx * Math.cos(k.rot) + dzz * Math.sin(k.rot),
+        z: k.cz - dx * Math.sin(k.rot) + dzz * Math.cos(k.rot),
+        r: STAB_HOLE[kind].r / 19.05,
+        big: kind === 'big',
+      }
+    }),
+  )
 }
 
 /** Nhóm stab theo loại dây: phím 2u–2.75u dùng chung dây 2.25u, mỗi cỡ phím dài (6u / 6.25u / 7u) 1 nhóm */

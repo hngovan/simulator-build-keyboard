@@ -150,17 +150,19 @@ export function CaseMaterial({
         />
       )
     case 'pc':
+      // PC mờ (frosted): trong mờ, thấy lờ mờ PCB / switch bên trong (bản cũ transmission 0.75, opacity 0.95 → gần như đục)
       return (
         <meshPhysicalMaterial
           color={hex}
           emissive={emissive}
           side={side}
-          transmission={0.75}
-          roughness={0.55}
-          thickness={0.6}
+          transmission={0.9}
+          roughness={0.35}
+          thickness={0.5}
           ior={1.58}
           transparent
-          opacity={0.95}
+          opacity={0.6}
+          depthWrite={false}
         />
       )
     case 'acrylic':

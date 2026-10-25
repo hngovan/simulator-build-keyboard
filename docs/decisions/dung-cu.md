@@ -39,3 +39,5 @@
 ### Khác
 
 - Lọ dầu `createOilBottle` / `isOil` trong `lubeJarModel.ts` (LubeStation + ảnh Shopii).
+- Switch Kailh Box (2026-10-25): Box Đỏ (linear), Box Nâu (tactile), Box Trắng + Box Jade (clicky thanh click) trong `SWITCHES`;
+  model 3D dùng chung switch MX (chưa có model stem hộp riêng).

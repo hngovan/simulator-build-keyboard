@@ -59,6 +59,13 @@ declare global {
   }
 }
 
+/** tốc độ kéo khung nhìn; dưới PAN_REF (u, khoảng cách camera → tâm nhìn, ~góc nhìn mặc định) thì bù cho khỏi chậm */
+const PAN_SPEED = 2.5
+const PAN_REF = 22
+
+/** mỗi nấc cuộn zoom vào: tâm nhìn tiến về điểm con trỏ chỉ bao nhiêu phần */
+const ZOOM_TO_POINT = 0.12
+
 /** Đặt camera theo độ rộng bàn phím; bấm "Góc nhìn" để đưa về mặc định */
 function CameraRig() {
   const ctx = useCtx()
@@ -95,20 +102,49 @@ function CameraRig() {
     return () => dom.removeEventListener('wheel', onWheel)
   }, [dom, controls, camera])
 
-  // Kéo tự do khắp phòng; chỉ giữ tâm nhìn trong 4 bức tường (và ngang mặt bàn) cho khỏi lạc ra ngoài
-  useFrame(() => {
+  // Cuộn zoom vào: dời tâm nhìn (cùng camera) dần về chỗ con trỏ chỉ trúng (sàn, chân bàn, kệ...).
+  // OrbitControls.zoomToCursor với screenSpacePanning = false giữ tâm nhìn trên mặt phẳng ngang, không xuống sàn được
+  useEffect(() => {
+    if (!controls) return
+    const ray = new THREE.Raycaster()
+    const ndc = new THREE.Vector2()
+    const onZoom = (e: WheelEvent) => {
+      if (e.deltaY >= 0 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+      const r = dom.getBoundingClientRect()
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
+      ray.setFromCamera(ndc, camera)
+      const hit = ray.intersectObjects(scene.children, true).find((h) => h.object.visible)
+      if (!hit) return
+      const d = hit.point.clone().sub(controls.target).multiplyScalar(ZOOM_TO_POINT)
+      controls.target.add(d)
+      camera.position.add(d)
+    }
+    dom.addEventListener('wheel', onZoom, { passive: true })
+    return () => dom.removeEventListener('wheel', onZoom)
+  }, [dom, controls, camera, scene])
+
+  // Kéo tự do khắp phòng; giữ tâm nhìn trong 4 bức tường, cao từ sát sàn tới tầm kệ (zoom theo con trỏ xuống sàn được)
+  useFrame((state) => {
     // đang bay vào màn hình máy tính: tâm nhìn lên cao ngang màn hình, không kẹp
     if (!controls || useGame.getState().pcZoom) return
+    // OrbitControls kéo theo tỉ lệ khoảng cách camera → zoom sát thì kéo rất chậm.
+    // Bù lại: gần hơn PAN_REF thì tăng panSpeed, rê chuột bao xa thì bàn trôi đi gần bằng lúc nhìn bình thường
+    // gán qua state của useFrame (không sửa thẳng giá trị lấy từ hook)
+    const live = state.controls as OrbitControlsImpl
+    const dist = state.camera.position.distanceTo(live.target)
+    live.panSpeed = PAN_SPEED * Math.max(1, PAN_REF / Math.max(dist, 0.5))
     const t = controls.target
-    const { minX, maxX, minZ, maxZ } = ROOM_BOUNDS
+    const { minX, maxX, minY, maxY, minZ, maxZ, floorY } = ROOM_BOUNDS
     const d = new THREE.Vector3(
       THREE.MathUtils.clamp(t.x, minX, maxX) - t.x,
-      -t.y,
+      THREE.MathUtils.clamp(t.y, minY, maxY) - t.y,
       THREE.MathUtils.clamp(t.z, minZ, maxZ) - t.z,
     )
-    if (!d.lengthSq()) return
-    t.add(d)
-    camera.position.add(d)
+    if (d.lengthSq()) {
+      t.add(d)
+      camera.position.add(d)
+    }
+    if (state.camera.position.y < floorY) state.camera.position.y = floorY
   })
   return null
 }
@@ -150,9 +186,13 @@ function Controls() {
     <OrbitControls
       makeDefault
       screenSpacePanning={false}
-      minDistance={4}
+      // lại gần sát keycap (1u = 19mm) nhưng vẫn dừng trên mặt bàn / bàn phím
+      minDistance={1.8}
       // zoom ra xa được gấp đôi (thấy cả kệ, phòng)
       maxDistance={160}
+      // kéo nhanh hơn; zoom sát thì CameraRig tăng thêm (OrbitControls kéo theo khoảng cách camera)
+      panSpeed={PAN_SPEED}
+      zoomSpeed={1.3}
       mouseButtons={{
         LEFT: pan ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
         MIDDLE: THREE.MOUSE.DOLLY,

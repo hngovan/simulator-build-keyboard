@@ -6,6 +6,7 @@ import { GroupFeed } from '@/features/apps/group/GroupFeed'
 import { InventoryApp } from '@/features/apps/inventory/InventoryApp'
 import { OrderApp } from '@/features/apps/inventory/OrderApp'
 import { SettingsApp } from '@/features/apps/settings/SettingsApp'
+import { ReviewsApp } from '@/features/apps/reviews/ReviewsApp'
 
 export interface AppDef {
   title: string
@@ -51,6 +52,13 @@ export const APPS: Record<AppId, AppDef> = {
     color: '#d9822b',
     width: 680,
     Component: OrderApp,
+  },
+  reviews: {
+    title: 'Đánh giá',
+    icon: '/icons/apps/star.svg',
+    color: '#d9a441',
+    width: 520,
+    Component: ReviewsApp,
   },
   settings: {
     title: 'Cài đặt',

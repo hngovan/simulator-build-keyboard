@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Environment, OrbitControls } from '@react-three/drei'
 import { ENV_HDR } from '@/scene/common/envMap'
 import type * as THREE from 'three'
-import { LAYOUTS } from '@/data/layouts'
+import { LAYOUTS, getLayout } from '@/data/layouts'
 import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS } from '@/data/parts'
 import { ModelViewerFrame } from '@/components/ui'
 import type { Order } from '@/types'
@@ -19,7 +19,8 @@ function KeyboardModel({ spec, caseOnly }: { spec: KeyboardSpec; caseOnly?: bool
       alive = false
     }
   }, [spec, caseOnly])
-  return obj?.spec === spec ? <primitive object={obj.model} /> : null
+  // đổi màu: giữ model cũ tới khi model mới dựng xong (không chớp trống)
+  return obj ? <primitive object={obj.model} /> : null
 }
 
 /**
@@ -40,6 +41,7 @@ export function KeyboardViewer({
   caseOnly?: boolean
   footer?: ReactNode
 }) {
+  const viewW = Math.max(15, getLayout(spec.layout, spec.variant).width)
   return (
     <ModelViewerFrame
       title={title}
@@ -58,7 +60,8 @@ export function KeyboardViewer({
       onClose={onClose}
       footer={footer}
     >
-      <Canvas shadows camera={{ position: [0, 10.5, 15], fov: 40 }}>
+      {/* camera lùi theo bề rộng layout (60% = 15u → [0, 10.5, 15]) để TKL / full không bị cắt 2 bên */}
+      <Canvas shadows camera={{ position: [0, 0.7 * viewW, viewW], fov: 40 }}>
         {/* sáng như studio chụp sản phẩm: môi trường phòng + đèn chính + đèn hắt từ dưới (xem đáy case không tối) */}
         <Environment files={ENV_HDR} />
         <hemisphereLight args={['#ffffff', '#8a90a0', 0.9]} />

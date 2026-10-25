@@ -2,11 +2,14 @@ import { useEffect } from 'react'
 import { useGame } from '@/store'
 import { useKeyboardTest } from '@/hooks/useKeyboardTest'
 import { Toasts } from '@/components/game/Toasts'
+import { GlobalTooltip } from '@/components/ui/GlobalTooltip'
+import { ReviewPops } from '@/features/apps/reviews/ReviewPops'
 import { TitleScreen } from '@/features/title/TitleScreen'
 import { Desktop } from '@/features/desktop/Desktop'
 import { BenchHud } from '@/features/bench/BenchHud'
 import { BenchLoader } from '@/features/bench/BenchLoader'
 import { EmptyBenchHud } from '@/features/bench/EmptyBenchHud'
+import { ShelfViewer } from '@/features/bench/ShelfViewer'
 import { Bench } from '@/scene/Bench'
 import { applyAudioSettings, startBgm, stopBgm } from '@/sound'
 
@@ -31,10 +34,13 @@ export default function App() {
         <>
           <Bench />
           {!zooming && (hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
+          <ShelfViewer />
           <BenchLoader />
         </>
       )}
       <Toasts />
+      <GlobalTooltip />
+      <ReviewPops />
     </>
   )
 }

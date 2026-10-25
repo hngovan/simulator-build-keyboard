@@ -9,6 +9,7 @@ import type {
   Order,
   PartCategory,
   ToolLevels,
+  Review,
 } from '@/types'
 import type { HistoryEntry } from './buildSlice'
 
@@ -32,6 +33,8 @@ export interface Profile {
   rev: number
   /** số lần đã dùng dụng cụ có độ bền (mỏ hàn, bùi nhùi); đủ ToolDef.life thì hỏng */
   wear: Partial<Record<ToolKind, number>>
+  /** đánh giá khách để lại (mới nhất ở cuối, giữ tối đa REVIEW_KEEP) */
+  reviews: Review[]
 }
 
 // Đơn đang làm dở (lưu lại để thoát game vào lại vẫn tiếp tục được)
@@ -71,6 +74,8 @@ export interface Session {
   /** lịch sử hoàn tác (đã rút gọn) + vật tư đã dùng, để tải lại trang vẫn quay lại được */
   history?: HistoryEntry[]
   supplyUsed?: Record<string, number>
+  /** đơn đã từ chối hôm nay (vẫn hiện hội thoại ở Mezzenger; quá DECLINE_FREE đơn thì trừ uy tín) */
+  rejected?: Order[]
 }
 
 /** 1 đơn đã đóng gói: kết quả chấm sẵn, tiền / uy tín cộng khi gửi cho khách (hoặc kết thúc ngày) */
@@ -95,8 +100,10 @@ const SAVE_REV = 3
 
 export const START: Profile = {
   name: '',
-  // đủ mua thêm dụng cụ / vật tư mod ngay từ đầu, không chỉ vừa đủ linh kiện cho 1 đơn
-  money: 6000,
+  // = đơn ngày 1 đắt nhất (ngân sách linh kiện tối đa 6.100k, ứng trước, giao xong mới hoàn)
+  //   + dụng cụ bắt buộc 605k (bút hàn 90, bùi nhùi 35, bút rã hàn 150, kìm cắt 120, cọ lube 60, đồ mở switch 150)
+  //   + vật tư 235k (thiếc Sakura 90, Krytox 205g0 120, Urgo 25) = 6.940k, dư ~8% phòng mua hớ / bị lừa
+  money: 7500,
   rep: 0,
   day: 1,
   done: 0,
@@ -119,6 +126,7 @@ export const START: Profile = {
   rev: SAVE_REV,
   wear: {},
   solderOwned: {},
+  reviews: [],
 }
 
 export function loadSave(): SaveData | null {

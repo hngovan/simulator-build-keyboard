@@ -1,6 +1,26 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { buildKeyboardModel, caseSpec } from '@/features/apps/messenger/orderThumb'
+import type { ThreeEvent } from '@react-three/fiber'
+import {
+  buildKeyboardModel,
+  caseSpec,
+  type KeyboardSpec,
+} from '@/features/apps/messenger/orderThumb'
+import { CASES } from '@/data/parts'
+import { useHover } from '../common/useHover'
+import { useShelfView } from './shelfView'
+
+/**
+ * Viền hover chỉ ở mặt trước (như viền màn hình máy tính): khung chữ nhật vàng phẳng ôm mép trên của case,
+ * nghiêng theo mặt case (`seat.tilt`), dày FRAME_W mét; không vẽ quanh đáy / cạnh sau / chân đỡ
+ */
+const FRAME_W = 0.004
+const FRAME = new THREE.MeshBasicMaterial({
+  color: '#ffd84a',
+  toneMapped: false,
+  side: THREE.DoubleSide,
+})
+import type { Key, Variant } from '@/types'
 
 // Kệ chưng bàn phím trên kệ sách: chân đỡ hình chữ A có móc trước (in 3D, nhựa xám đen) + bàn phím dựng nghiêng.
 // Đơn vị: mét (Room nhân M); mặt trước của chân đỡ quay ra +z (phía người chơi)
@@ -61,6 +81,8 @@ export function DisplayKeyboard({
   keycapKit,
   keycapColor,
   accent,
+  variant,
+  capOf,
   ...props
 }: {
   caseId: string
@@ -68,11 +90,35 @@ export function DisplayKeyboard({
   keycapKit: string
   keycapColor: string
   accent: string
+  /** biến thể layout (vd hàng dưới WKL space 7u) */
+  variant?: Variant
+  /** phối màu riêng từng phím (hex) */
+  capOf?: (k: Key) => string | undefined
 } & JSX.IntrinsicElements['group']) {
-  const [model, setModel] = useState<{ obj: THREE.Object3D; width: number } | null>(null)
+  const [model, setModel] = useState<{
+    obj: THREE.Object3D
+    width: number
+    shell: THREE.Group
+    spec: KeyboardSpec
+  } | null>(null)
+  const { hover, bind } = useHover(true)
+  const openView = useShelfView((s) => s.open)
+  const [down, setDown] = useState<[number, number] | null>(null)
+  // viền hover: mesh nằm trong model đã dựng, bật / tắt qua ref
+  const shellRef = useRef<THREE.Group | null>(null)
+  useEffect(() => {
+    if (shellRef.current) shellRef.current.visible = hover
+  }, [hover, model])
   useEffect(() => {
     let alive = true
-    const spec = { ...caseSpec(caseId, color), keycapKit, keycapColor, accent }
+    const spec = {
+      ...caseSpec(caseId, color),
+      ...(variant && { variant }),
+      keycapKit,
+      keycapColor,
+      accent,
+      capOf,
+    }
     buildKeyboardModel(spec, false).then((obj) => {
       if (!alive) return
       // model tính theo u (1u = 19.05mm) → mét; dựng nghiêng theo mặt tựa, mép dưới đặt vào móc
@@ -85,6 +131,36 @@ export function DisplayKeyboard({
       // khung bao lúc nằm phẳng: góc trước dưới của đáy case (y nhỏ nhất, z lớn nhất)
       kb.updateMatrixWorld(true)
       const flat = new THREE.Box3().setFromObject(kb)
+      // viền hover: khung phẳng quanh mép trên vỏ case (mesh con trực tiếp của model), không ôm keycap / đáy
+      const box = new THREE.Box3()
+      for (const c of obj.children) if ((c as THREE.Mesh).isMesh) box.expandByObject(c)
+      const shell = new THREE.Group()
+      shell.visible = false
+      if (!box.isEmpty()) {
+        const tilt = CASES[caseId]?.seat?.tilt ?? 0
+        const w = box.max.x - box.min.x
+        const d = (box.max.z - box.min.z) / Math.cos(tilt)
+        const rect = (hw: number, hd: number) =>
+          [
+            [-hw, -hd],
+            [hw, -hd],
+            [hw, hd],
+            [-hw, hd],
+          ].map(([x, y]) => new THREE.Vector2(x, y))
+        const shape = new THREE.Shape(rect(w / 2 + FRAME_W, d / 2 + FRAME_W))
+        shape.holes.push(new THREE.Path(rect(w / 2, d / 2).reverse()))
+        const frame = new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2), FRAME)
+        // mép sau cao nhất (box.max.y), case nêm thì mép trước thấp dần theo tilt
+        frame.rotation.x = tilt
+        frame.position.set(
+          (box.min.x + box.max.x) / 2,
+          box.max.y + 0.0006 - (d / 2) * Math.sin(tilt),
+          (box.min.z + box.max.z) / 2,
+        )
+        frame.raycast = () => {}
+        shell.add(frame)
+      }
+      kb.add(shell)
       // nghiêng đúng góc mặt tựa: mặt phím ngửa ra trước + lên trên, mép sau nâng lên
       kb.rotation.x = LEAN
       // đặt góc trước dưới của đáy vào móc → mặt đáy song song, nằm ngay trước mặt tựa (không xuyên chân đỡ).
@@ -92,19 +168,33 @@ export function DisplayKeyboard({
       const corner = new THREE.Vector3(0, flat.min.y, flat.max.z).applyEuler(kb.rotation)
       kb.position.set(-(flat.min.x + flat.max.x) / 2, SEAT[1] - corner.y, -SEAT[0] - corner.z)
       const width = flat.max.x - flat.min.x
-      setModel({ obj: kb, width })
+      shellRef.current = shell
+      setModel({ obj: kb, width, shell, spec })
     })
     return () => {
       alive = false
     }
-  }, [caseId, color, keycapKit, keycapColor, accent])
+  }, [caseId, color, keycapKit, keycapColor, accent, variant, capOf])
   // 2 chân đỡ ở 1/4 bề rộng bàn phím tính từ 2 mép
   const sx = (model?.width ?? 0.3) * 0.28
   return (
     <group {...props}>
       <KeyboardStand position-x={-sx} />
       <KeyboardStand position-x={sx} />
-      {model && <primitive object={model.obj} />}
+      {model && (
+        // rê chuột: viền vàng; bấm (không phải kéo xoay camera) thì mở khung xem 3D
+        <group
+          {...bind}
+          onPointerDown={(e: ThreeEvent<PointerEvent>) => setDown([e.clientX, e.clientY])}
+          onClick={(e: ThreeEvent<MouseEvent>) => {
+            if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return
+            e.stopPropagation()
+            openView(model.spec)
+          }}
+        >
+          <primitive object={model.obj} />
+        </group>
+      )}
     </group>
   )
 }

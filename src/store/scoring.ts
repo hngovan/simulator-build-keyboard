@@ -134,7 +134,16 @@ export function scoreDelivery({
       got: Math.max(0, 10 - (over / order.budget) * 40),
     },
   ]
-  const score = Math.round(checks.reduce((a, c) => a + c.got, 0))
+  const flaws = (['case', 'pcb', 'plate', 'stab', 'keycap'] as const)
+    .map((c) => (inventory[c] as { flaw?: string } | null)?.flaw)
+    .filter(Boolean)
+  if (flaws.length)
+    checks.push({
+      label: `Linh kiện pass có lỗi: ${flaws.join(', ')}`,
+      pts: 0,
+      got: -8 * flaws.length,
+    })
+  const score = Math.max(0, Math.round(checks.reduce((a, c) => a + c.got, 0)))
   const stars = score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1
   return {
     checks,

@@ -56,6 +56,7 @@ export function BitPicker({ step }: { step: ScrewStep }) {
               key={b}
               type="button"
               onClick={() => setScrewBit(b)}
+              title={b === bit ? `Đang lắp đầu ${BIT_LABELS[b]}` : `Lắp đầu vít ${BIT_LABELS[b]}`}
               className={cn(
                 'flex w-[72px] flex-col items-center gap-0.5 rounded-xl border-2 px-1.5 py-1 text-xs font-bold',
                 b === bit

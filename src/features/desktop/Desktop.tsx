@@ -21,7 +21,7 @@ export function Desktop() {
         </div>
       </div>
 
-      <div className="absolute top-4 left-4 z-[2] flex flex-col gap-3 max-md:flex-row max-md:flex-wrap">
+      <div className="absolute top-4 left-4 z-[2] flex flex-col gap-3 max-md:right-4 max-md:grid max-md:grid-cols-4 max-md:justify-items-center max-md:gap-y-4">
         {APP_IDS.map((id) => (
           <DesktopIcon
             key={id}
@@ -30,9 +30,13 @@ export function Desktop() {
             onOpen={() => openApp(id)}
           />
         ))}
+        {/* mobile: bàn build nằm chung lưới icon (máy tính thì đứng riêng góc phải) */}
+        <span className="md:hidden">
+          <DesktopIcon app={BENCH_ICON} badge={hasBuild} onOpen={goBench} />
+        </span>
       </div>
       {/* lối tắt bàn build đứng riêng ở góc phải trên cùng */}
-      <div className="absolute top-4 right-4 z-[2]">
+      <div className="absolute top-4 right-4 z-[2] max-md:hidden">
         <DesktopIcon app={BENCH_ICON} badge={hasBuild} onOpen={goBench} />
       </div>
 

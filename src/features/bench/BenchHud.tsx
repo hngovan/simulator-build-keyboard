@@ -9,16 +9,7 @@ import {
   stepProgress,
 } from '@/data/steps'
 import { TOOLS } from '@/data/parts'
-import {
-  FlipVertical2,
-  Hand,
-  ListOrdered,
-  Monitor,
-  PackageCheck,
-  Rotate3d,
-  ScanEye,
-  Undo2,
-} from 'lucide-react'
+import { FlipVertical2, ListOrdered, Monitor, PackageCheck, Undo2 } from 'lucide-react'
 import { Alert, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
@@ -28,6 +19,7 @@ import { StepList } from './StepList'
 import { LubePanel, SolderPanel, StabModPanel } from './ModPanels'
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
+import { CamModeButton, ResetCamButton } from './CamModeButton'
 import { OrderPicker } from './EmptyBenchHud'
 
 // Dụng cụ đang dùng ở mỗi bước (hiện ở thanh nhiệm vụ)
@@ -90,17 +82,14 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
   const [confirming, setConfirming] = useState(false)
   const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
   const canUndo = useGame((s) => s.history.length > 0 && !s.stabAnim)
-  const camMode = useGame((s) => s.camMode)
-  const { zoomToPC, toggleFlip, resetCam, deliver, undo, setCamMode } = useGame.getState()
-  // Ctrl+Z để hoàn tác · H bật/tắt bàn tay (trừ bước test: phím H là phím đang test)
+  const { zoomToPC, toggleFlip, deliver, undo } = useGame.getState()
+  // Ctrl+Z để hoàn tác (phím H đổi kéo / xoay nằm trong CamModeButton)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = useGame.getState()
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') {
         e.preventDefault()
         s.undo()
-      } else if (e.code === 'KeyH' && !e.ctrlKey && !e.metaKey && s.step() !== 'test') {
-        s.setCamMode(s.camMode === 'pan' ? 'orbit' : 'pan')
       }
     }
     window.addEventListener('keydown', onKey)
@@ -108,15 +97,9 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
   }, [])
   return (
     // z-[8]: tooltip icon nổi trên khung HUD 2 bên (z-[5]), dưới bảng hỏi / danh sách đơn
-    <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between [&>*]:pointer-events-auto">
+    <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
       <div className="flex gap-2">
-        <IconButton
-          tone="blue"
-          icon={<Monitor />}
-          label="Về máy tính"
-          hint="Đi tới màn hình trên bàn"
-          onClick={zoomToPC}
-        />
+        <IconButton tone="blue" icon={<Monitor />} label="Về máy tính" onClick={zoomToPC} />
         <IconButton
           tone="yellow"
           icon={<FlipVertical2 />}
@@ -126,30 +109,17 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
         />
         <IconButton
           icon={<Undo2 />}
-          label="Hoàn tác"
-          hint="Ctrl + Z"
+          label="Hoàn tác (Ctrl + Z)"
           onClick={undo}
           disabled={!canUndo}
         />
-        <IconButton
-          icon={<ScanEye />}
-          label="Góc nhìn mặc định"
-          hint="Đưa camera về chỗ cũ"
-          onClick={resetCam}
-        />
-        <IconButton
-          tone={camMode === 'pan' ? 'green' : 'default'}
-          icon={camMode === 'pan' ? <Hand /> : <Rotate3d />}
-          label={camMode === 'pan' ? 'Đang kéo khung nhìn' : 'Đang xoay khung nhìn'}
-          hint="Phím H: đổi kéo / xoay"
-          onClick={() => setCamMode(camMode === 'pan' ? 'orbit' : 'pan')}
-        />
+        <ResetCamButton />
+        <CamModeButton />
         {/* danh sách đơn: xem tiến độ, đổi sang đơn khác (bản đang dở được cất lại nguyên trạng) */}
         <IconButton
           tone="blue"
           icon={<ListOrdered />}
           label="Danh sách đơn"
-          hint="Xem tiến độ, đổi đơn, làm tiếp"
           onClick={() => useGame.setState({ benchPicker: true })}
           disabled={busy}
         />
@@ -157,7 +127,6 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
           tone="orange"
           icon={<PackageCheck />}
           label="Đóng gói đơn này"
-          hint="Chấm điểm, chờ gửi cho khách"
           onClick={() => (complete ? deliver() : setConfirming(true))}
           disabled={!started}
         />
@@ -285,7 +254,7 @@ export function BenchHud() {
     <>
       <TopBar canFlip={canFlip} isFlipped={isFlipped} />
       {/* 2 cột HUD: mỗi thẻ bấm tiêu đề để thu gọn / mở, thân cuộn riêng */}
-      <div className="fixed top-16 left-3 z-[5] flex max-h-[calc(100vh-160px)] w-[300px] flex-col gap-2 text-sm max-md:w-[220px] [&_.text-base]:text-lg [&_.text-xs]:text-sm">
+      <div className="fixed top-16 left-3 z-[5] flex max-h-[calc(100vh-160px)] w-[300px] flex-col gap-2 text-sm max-md:top-[116px] max-md:max-h-[calc(100dvh-300px)] max-md:w-[min(240px,calc(100vw-24px))] max-md:text-[13px] [&_.text-base]:text-lg [&_.text-xs]:text-sm">
         <HudPanel id="order" title={`Đơn của ${order.customer}`} className="shrink-0">
           <OrderSpec order={order} compact />
         </HudPanel>

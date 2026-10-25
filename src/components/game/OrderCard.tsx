@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Clock } from 'lucide-react'
 import { useGame } from '@/store'
 import { CATS, TOOLS, checkInventory } from '@/data/parts'
 import { buildContext, buildPercent } from '@/data/steps'
@@ -10,18 +10,37 @@ import type { Order } from '@/types'
 import type { JobSession } from '@/store/persistence'
 import { CustomerAvatar } from './CustomerAvatar'
 
-/** 1 đơn trong danh sách đơn: đang làm / đã nhận / đơn mới */
+/** 1 đơn trong danh sách đơn: đang làm / đã nhận (đơn mới chỉ nhận ở Mezzenger, không hiện ở đây) */
 export interface OrderEntry {
   order: Order
-  kind: 'active' | 'job' | 'offer'
-  /** kho đồ + build của đơn (đơn mới: chưa có) */
+  kind: 'active' | 'job'
+  /** kho đồ + build của đơn */
   session?: Pick<JobSession, 'inventory' | 'build' | 'mount' | 'provided' | 'spent'>
 }
 
-const KIND_TEXT = { active: 'Đang làm', job: 'Đã nhận', offer: 'Đơn mới' } as const
-const KIND_TONE = { active: 'green', job: 'blue', offer: 'yellow' } as const
+const KIND_TEXT = { active: 'Đang làm', job: 'Đã nhận' } as const
+const KIND_TONE = { active: 'green', job: 'blue' } as const
 
-/** Danh sách đơn dùng chung (bàn build + app Danh sách đơn): đơn đang làm → đơn đã nhận (gấp trước) → đơn mới */
+/** Badge thời gian: đơn mới = số ngày làm; đã nhận = còn bao nhiêu ngày tới hạn / trễ */
+function TimeBadge({ order, day }: { order: Order; day: number }) {
+  const left = order.dueDay === undefined ? null : order.dueDay - day
+  const [text, tone] =
+    left === null
+      ? [`${order.days} ngày`, 'blue' as const]
+      : left < 0
+        ? [`trễ ${-left} ngày`, 'red' as const]
+        : left === 0
+          ? ['hạn hôm nay', 'yellow' as const]
+          : [`còn ${left} ngày`, left === 1 ? ('yellow' as const) : ('green' as const)]
+  return (
+    <Badge solid tone={tone} className="ml-0">
+      <Clock className="size-3" strokeWidth={3} />
+      {text}
+    </Badge>
+  )
+}
+
+/** Danh sách đơn dùng chung (bàn build + app Danh sách đơn): đơn đang làm → đơn đã nhận (gấp trước) */
 export function useOrderEntries(): OrderEntry[] {
   const s = useGame()
   return [
@@ -29,7 +48,6 @@ export function useOrderEntries(): OrderEntry[] {
     ...[...s.jobs]
       .sort((a, b) => (a.order.dueDay ?? 0) - (b.order.dueDay ?? 0))
       .map((j) => ({ order: j.order, kind: 'job' as const, session: j.session })),
-    ...s.offers.map((o) => ({ order: o, kind: 'offer' as const })),
   ]
 }
 
@@ -80,6 +98,7 @@ export function OrderCard({
         role="button"
         tabIndex={0}
         aria-expanded={open}
+        title={open ? 'Thu gọn chi tiết đơn' : 'Xem chi tiết đơn'}
         className="flex cursor-pointer items-center gap-3"
         onClick={() => setOpen(!open)}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpen(!open)}
@@ -88,15 +107,31 @@ export function OrderCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1 font-extrabold">
             {order.customer}
-            <Badge tone={KIND_TONE[kind]}>{KIND_TEXT[kind]}</Badge>
-            {order.type === 'kit' && <Badge className="ml-0">Kit khách gửi</Badge>}
+            <Badge solid tone={KIND_TONE[kind]}>
+              {KIND_TEXT[kind]}
+            </Badge>
+            <TimeBadge order={order} day={day} />
+            {order.type === 'kit' && (
+              <Badge solid tone="orange" className="ml-0">
+                Kit khách gửi
+              </Badge>
+            )}
           </div>
-          <div className="text-xs text-muted">
-            {LAYOUTS[order.layout].name} · tiền công {fmt(order.labor)} ·{' '}
-            {order.dueDay !== undefined ? (
-              <span className={late ? 'text-red' : ''}>hạn ngày {order.dueDay}</span>
-            ) : (
-              `làm trong ${order.days} ngày`
+          {/* nhãn mờ + giá trị đậm cho dễ quét mắt */}
+          <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted">
+            <span>
+              Layout <b className="text-ink">{LAYOUTS[order.layout].name}</b>
+            </span>
+            <span>
+              Công <b className="text-green">{fmt(order.labor)}</b>
+            </span>
+            <span>
+              Budget <b className="text-ink">{fmt(order.budget)}</b>
+            </span>
+            {order.dueDay !== undefined && (
+              <span>
+                Hạn <b className={late ? 'text-red' : 'text-ink'}>ngày {order.dueDay}</b>
+              </span>
             )}
           </div>
           <div className="text-xs">
@@ -106,13 +141,15 @@ export function OrderCard({
                   <StepDot state="done">✓</StepDot> Đã build xong
                 </span>
               ) : (
-                <span className="text-muted">Đã build {Math.round(pct * 100)}%</span>
+                <span className="text-muted">
+                  Đã build <b className="text-ink">{Math.round(pct * 100)}%</b>
+                </span>
               )
             ) : missing && !missing.length ? (
-              <span className="text-green">Đủ linh kiện, vào build ngay</span>
+              <b className="text-green">Đủ linh kiện, vào build ngay</b>
             ) : missing ? (
-              <span className="text-yellow">
-                Thiếu: {missing.map((m) => CATS[m.cat]).join(', ')}
+              <span className="text-muted">
+                Thiếu: <b className="text-yellow">{missing.map((m) => CATS[m.cat]).join(', ')}</b>
               </span>
             ) : (
               <span className="text-muted">Nhận đơn rồi mua linh kiện còn thiếu</span>

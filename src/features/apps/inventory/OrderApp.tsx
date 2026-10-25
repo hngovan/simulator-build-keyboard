@@ -124,7 +124,7 @@ function OrderDetail({ c }: { c: OrderEntry }) {
             {fmt(spent)} / {fmt(order.budget)}
           </b>
         </div>
-        <ProgressBar value={spent / order.budget} tone={over ? 'over' : 'loud'} />
+        <ProgressBar value={spent / order.budget} tone={over ? 'red' : 'green'} />
       </Panel>
       {active && !ready && !build && (
         <Muted className="mt-2">Mua đủ linh kiện còn thiếu rồi ra bàn build</Muted>
@@ -139,8 +139,11 @@ export function OrderApp() {
   const s = useGame()
   if (!list.length)
     return (
-      <div className="p-8 text-center text-sm text-muted">
-        Chưa có đơn nào. Mở tin nhắn để nhận đơn.
+      <div className="flex flex-col items-center gap-3 p-8 text-center text-sm text-muted">
+        Chưa nhận đơn nào. Vào Mezzenger đọc tin khách rồi bấm "Nhận đơn".
+        <Button tone="blue" size="sm" onClick={() => s.openApp('messenger')}>
+          Mở Mezzenger
+        </Button>
       </div>
     )
   const ready = !!s.order && checkInventory(s.inventory, s.order, 0).every((x) => x.ok)
@@ -158,13 +161,9 @@ export function OrderApp() {
               <Button tone="green" size="sm" disabled={!ready && !s.build} onClick={s.startBuild}>
                 {s.build ? 'Làm tiếp' : ready ? 'Ra bàn build' : 'Chưa đủ đồ'}
               </Button>
-            ) : c.kind === 'job' ? (
+            ) : (
               <Button tone="blue" size="sm" onClick={() => s.switchJob(c.order.id)}>
                 Đổi sang làm
-              </Button>
-            ) : (
-              <Button tone="yellow" size="sm" onClick={() => s.acceptOrder(c.order.id)}>
-                Nhận đơn
               </Button>
             )
           }

@@ -11,11 +11,13 @@ import { MissingSlot } from './stations/StationKit'
 export function EmptyBench() {
   const camera = useThree((s) => s.camera)
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
+  // bấm "Góc nhìn mặc định" (camKey tăng) thì đưa camera về nhìn cả bàn
+  const camKey = useGame((s) => s.camKey)
   useEffect(() => {
     camera.position.set(0, 19, 17)
     controls?.target.set(0, 0, 0)
     controls?.update()
-  }, [camera, controls])
+  }, [camera, controls, camKey])
   const at = useMemo(() => new THREE.Vector3(0, 0, 0), [])
   return (
     <>

@@ -1,10 +1,12 @@
-import { Monitor } from 'lucide-react'
+import { ClipboardList, Monitor, ShoppingBag, UsersRound, X } from 'lucide-react'
 import { useGame } from '@/store'
 import { CATS } from '@/data/parts'
-import { Button, HudCard, IconButton, Muted } from '@/components/ui'
+import { Button, IconButton, Muted, TitleBar, TitleButton } from '@/components/ui'
+import { APPS } from '@/features/desktop/apps'
 import { OrderSpec } from '@/components/game/OrderSpec'
 import { OrderCard, useOrderEntries, type OrderEntry } from '@/components/game/OrderCard'
 import { StatusChips } from '@/components/game/StatusChips'
+import { CamModeButton, ResetCamButton } from './CamModeButton'
 
 /**
  * Danh sách đơn (mở khi bấm ô vàng trên bàn trống, hoặc nút "Danh sách đơn" khi đang build):
@@ -31,75 +33,100 @@ export function OrderPicker() {
       className="fixed inset-0 z-[20] grid animate-fade-in place-items-center bg-black/50 p-4"
       onPointerDown={(e) => e.target === e.currentTarget && close()}
     >
-      <HudCard className="flex max-h-[80vh] w-[680px] max-w-full flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <h3 className="font-head text-xl font-extrabold">📋 Danh sách đơn</h3>
-          <Button size="sm" onClick={close}>
-            ✕
-          </Button>
-        </div>
-        {short ? (
-          <>
-            <div>
-              Đơn của <b>{short.order.customer}</b> còn thiếu linh kiện, mua đủ rồi quay lại bàn
-              build:
-            </div>
-            <ul className="flex flex-col gap-1">
-              {short.missing.map((m) => (
-                <li key={m.cat} className="rounded-lg bg-panel-2 px-3 py-1.5 text-sm">
-                  <b>{CATS[m.cat]}</b>: <span className="text-yellow">{m.msg}</span>
-                </li>
+      {/* giống cửa sổ app Danh sách đơn ở máy tính, chỉ có nút đóng */}
+      <div className="flex max-h-[80vh] w-[680px] max-w-full flex-col overflow-hidden rounded-2xl border-[3px] border-black/40 bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]">
+        <TitleBar title={APPS.order.title} color={APPS.order.color}>
+          <TitleButton close aria-label="Đóng danh sách đơn" title="Đóng" onClick={close}>
+            <X />
+          </TitleButton>
+        </TitleBar>
+        <div className="flex min-h-0 flex-col gap-2 p-3.5">
+          {short ? (
+            <>
+              <div>
+                Đơn của <b>{short.order.customer}</b> còn thiếu linh kiện, mua đủ rồi quay lại bàn
+                build:
+              </div>
+              <ul className="flex flex-col gap-1">
+                {short.missing.map((m) => (
+                  <li key={m.cat} className="rounded-lg bg-panel-2 px-3 py-1.5 text-sm">
+                    <b>{CATS[m.cat]}</b>: <span className="text-yellow">{m.msg}</span>
+                  </li>
+                ))}
+              </ul>
+              {/* chọn đơn khác bên trái, các chỗ mua đồ là nút icon (rê chuột hiện tooltip) bên phải */}
+              <div className="flex items-center justify-between gap-2">
+                <Button onClick={() => setShort(null)}>← Chọn đơn khác</Button>
+                <div className="flex gap-2">
+                  <IconButton
+                    tone="orange"
+                    icon={<ShoppingBag />}
+                    label="Mua ở Shopii"
+                    onClick={() => s.openShop(short.missing[0].cat)}
+                  />
+                  <IconButton
+                    tone="blue"
+                    icon={<UsersRound />}
+                    label="Tìm ở Hội Phím Cơ"
+                    onClick={() => {
+                      s.goPC()
+                      s.openApp('group')
+                    }}
+                  />
+                  <IconButton
+                    icon={<ClipboardList />}
+                    label="Xem chi tiết đơn"
+                    onClick={() => {
+                      s.goPC()
+                      s.openApp('order')
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          ) : list.length ? (
+            <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
+              {list.map((c) => (
+                <OrderCard
+                  key={c.order.id}
+                  c={c}
+                  detail={<OrderSpec order={c.order} compact />}
+                  action={
+                    // đơn đang làm chưa vào build: kiểm tra kho như đơn khác (thiếu thì hiện danh sách mua)
+                    c.kind === 'active' ? (
+                      <Button
+                        tone="green"
+                        size="sm"
+                        onClick={() => (c.session?.build ? close() : pick(c))}
+                      >
+                        Tiếp tục làm
+                      </Button>
+                    ) : (
+                      <Button tone="blue" size="sm" onClick={() => pick(c)}>
+                        {c.session?.build ? 'Đổi sang làm tiếp' : 'Đổi sang build'}
+                      </Button>
+                    )
+                  }
+                />
               ))}
-            </ul>
-            <div className="flex flex-wrap gap-2">
-              <Button tone="orange" onClick={() => s.openShop(short.missing[0].cat)}>
-                🛒 Mua ở Shopii
-              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <Muted>Chưa nhận đơn nào. Vào Mezzenger đọc tin khách rồi bấm "Nhận đơn".</Muted>
               <Button
                 tone="blue"
+                size="sm"
                 onClick={() => {
                   s.goPC()
-                  s.openApp('order')
+                  s.openApp('messenger')
                 }}
               >
-                📋 Xem chi tiết đơn
+                Mở Mezzenger
               </Button>
-              <Button onClick={() => setShort(null)}>← Chọn đơn khác</Button>
             </div>
-          </>
-        ) : list.length ? (
-          <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
-            {list.map((c) => (
-              <OrderCard
-                key={c.order.id}
-                c={c}
-                detail={<OrderSpec order={c.order} compact />}
-                action={
-                  c.kind === 'active' ? (
-                    <Button tone="green" size="sm" onClick={close}>
-                      Tiếp tục làm
-                    </Button>
-                  ) : (
-                    <Button
-                      tone={c.kind === 'offer' ? 'yellow' : 'blue'}
-                      size="sm"
-                      onClick={() => pick(c)}
-                    >
-                      {c.kind === 'offer'
-                        ? 'Nhận & build'
-                        : c.session?.build
-                          ? 'Đổi sang làm tiếp'
-                          : 'Đổi sang build'}
-                    </Button>
-                  )
-                }
-              />
-            ))}
-          </div>
-        ) : (
-          <Muted>Chưa có đơn nào. Hôm nay hết đơn mới, kết thúc ngày để nhận thêm.</Muted>
-        )}
-      </HudCard>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -110,13 +137,11 @@ export function EmptyBenchHud() {
   return (
     <>
       <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between [&>*]:pointer-events-auto">
-        <IconButton
-          tone="blue"
-          icon={<Monitor />}
-          label="Về máy tính"
-          hint="Đi tới màn hình trên bàn"
-          onClick={s.zoomToPC}
-        />
+        <div className="flex gap-2">
+          <IconButton tone="blue" icon={<Monitor />} label="Về máy tính" onClick={s.zoomToPC} />
+          <ResetCamButton />
+          <CamModeButton />
+        </div>
         <StatusChips />
       </div>
       {!s.benchPicker && (

@@ -26,6 +26,16 @@ import type {
 } from '@/types'
 import type { GameState } from '.'
 import { newBuild } from './buildSlice'
+import {
+  DECLINE_FREE,
+  DECLINE_REP,
+  cancelReview,
+  declineReview,
+  shipRep,
+  shipReview,
+} from '@/data/reviews'
+import { certBonus } from '@/data/reputation'
+import { FLAW_TEXT, negotiate, type InboxAction } from '@/data/market'
 import type { Job, JobSession, PackedOrder } from './persistence'
 
 export type BuyResult = 'ok' | 'scam' | 'fail'
@@ -63,6 +73,8 @@ export interface ShopSlice {
   lubePick: LubePick
   acceptOrder: (id: string) => void
   declineOrder: (id: string) => void
+  /** đơn đã từ chối hôm nay (hội thoại vẫn còn ở Mezzenger tới hết ngày) */
+  rejected: Order[]
   /** chuyển sang làm 1 đơn đã nhận (đơn đang làm dở được cất lại nguyên trạng) */
   switchJob: (id: string) => void
   /** đơn đã đóng gói hôm nay, chờ kết thúc ngày mới gửi cho khách */
@@ -72,6 +84,8 @@ export interface ShopSlice {
   nextDay: () => void
   buy: (cat: PartCategory, item: PartItem, price: number, scamRate?: number) => BuyResult
   buyPost: (post: GroupPost) => BuyResult
+  /** inbox người bán 1 hành động (xin hình, check var, xin bớt, lowball...) */
+  inboxPost: (id: string, action: InboxAction) => void
   buySupply: (id: string, n: number, price: number, scamRate?: number) => BuyResult
   buyTool: (kind: ToolKind, level: number, price?: number, scamRate?: number) => BuyResult
   useSupply: (id: string, n: number) => boolean
@@ -185,6 +199,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   mount: null,
   result: null,
   packed: [],
+  rejected: [],
   lubePick: { switch: 'g0', housing: 'g2', wire: 'bdz', spring: 'gpl105' },
   solderPick: 'solder6337',
 
@@ -195,6 +210,12 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (!offer) return
     const order = { ...offer, dueDay: s.day + offer.days }
     const offers = s.offers.filter((o) => o.id !== id)
+    // chứng chỉ thợ: thu nhập cơ bản cộng ngay vào ví mỗi lần nhận đơn
+    const bonus = certBonus(s.tools.cert ?? 0)
+    if (bonus) {
+      set({ money: s.money + bonus })
+      s.toast(`+${bonus}k thu nhập cơ bản (${TOOLS.cert[s.tools.cert].name})`, 'good')
+    }
     // chưa làm đơn nào thì làm luôn đơn này, không thì xếp vào danh sách chờ
     // (vừa giao xong thì cũng xếp chờ: phải bấm kết thúc ngày để sang ngày mới)
     if (!s.order) {
@@ -206,7 +227,20 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       s.toast(`Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}`, 'good')
     }
   },
-  declineOrder: (id) => set((s) => ({ offers: s.offers.filter((o) => o.id !== id) })),
+  // từ chối quá DECLINE_FREE đơn / ngày: khách bực, để lại đánh giá xấu, trừ uy tín
+  declineOrder: (id) => {
+    const s = get()
+    const order = s.offers.find((o) => o.id === id)
+    if (!order) return
+    const rejected = [...s.rejected, order]
+    const angry = rejected.length > DECLINE_FREE
+    set({
+      offers: s.offers.filter((o) => o.id !== id),
+      rejected,
+      ...(angry ? { rep: s.rep + DECLINE_REP } : {}),
+    })
+    if (angry) s.addReviews([declineReview(order, s.day)])
+  },
   switchJob: (id) => {
     const s = get()
     if (s.stabAnim || s.lubeAnim || s.order?.id === id) return
@@ -238,9 +272,10 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     set({
       packed: s.packed.map((x) => (x === p ? { ...x, shipped: true } : x)),
       money: s.money + gain,
-      rep: s.rep + p.result.stars - 3 - (p.result.late ?? 0),
+      rep: s.rep + shipRep(p.result),
       done: s.done + 1,
     })
+    s.addReviews([shipReview(p.order, p.result, s.day)])
     s.toast(`📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · +${gain}k`, 'good')
   },
   // sang ngày mới: gửi nốt đơn đã đóng gói, đợt đơn mới, đơn chờ quá hạn lâu thì khách huỷ
@@ -252,7 +287,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const unsent = s.packed.filter((p) => !p.shipped)
     for (const p of unsent) {
       money += p.result.reimburse + p.result.labor
-      repGain += p.result.stars - 3 - (p.result.late ?? 0)
+      repGain += shipRep(p.result)
       s.toast(
         `📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · +${p.result.reimburse + p.result.labor}k`,
         'good',
@@ -295,7 +330,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
           'good',
         )
       },
-      offers: randomOffers(),
+      offers: randomOffers(rep),
       jobs: s.jobs.filter((j) => !cancelled.includes(j)),
       // đơn đang làm dở (chưa đóng gói) vẫn giữ để làm tiếp ngày mai
       order: s.result ? null : s.order,
@@ -306,10 +341,15 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       ...(s.result ? { build: null, ctx: null } : {}),
       day,
       rep,
+      rejected: [],
       screen: 'pc',
     })
     for (const j of cancelled)
       s.toast(`😡 ${j.order.customer} huỷ đơn vì trễ hạn quá lâu (−3 uy tín)`, 'bad')
+    s.addReviews([
+      ...unsent.map((p) => shipReview(p.order, p.result, s.day)),
+      ...cancelled.map((j) => cancelReview(j.order, s.day, -3)),
+    ])
   },
 
   // ---------- mua sắm ----------
@@ -353,25 +393,40 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     s.toast(`📦 Đã nhận: ${itemName(cat, item)}`, 'good')
     return 'ok'
   },
+  inboxPost: (id, action) =>
+    set((s) => ({ posts: s.posts.map((p) => (p.id === id ? negotiate(p, action) : p)) })),
+  // chốt đơn pass: trả giá đã thương lượng + ship; seller bùng thì mất trắng, hàng lỗi thì ghi flaw / thiếu switch
   buyPost: (post) => {
     const s = get()
+    if (post.deal?.blocked) return (s.toast('Bạn đã bị người bán chặn', 'bad'), 'fail')
     const cat = post.product.cat
+    const cost = (post.deal?.price ?? post.price) + (post.deal?.ship ?? 0)
+    // bản lưu cũ (chưa có sự thật ẩn): 20% bùng như trước
+    const scam = post.scammer === undefined ? 0.2 : post.scammer ? 1 : 0
+    let item = post.opt.item as PartItem
+    const flaw = post.cond && FLAW_TEXT[post.cond]
+    if (flaw) item = { ...item, flaw } as PartItem
+    if (post.cond === 'dead' && cat === 'switch') {
+      const sw = item as SwitchItem
+      item = { ...sw, count: Math.max(1, Math.round(sw.count * (0.8 + Math.random() * 0.1))) }
+    }
     const res =
       cat === 'supply'
-        ? s.buySupply(
-            (post.opt.item as SupplyItem).id,
-            (post.opt.item as SupplyItem).n,
-            post.price,
-            0.2,
-          )
+        ? s.buySupply((post.opt.item as SupplyItem).id, (post.opt.item as SupplyItem).n, cost, scam)
         : cat === 'tool' || cat === 'cert'
           ? s.buyTool(
               (post.opt.item as ToolItem).kind,
               (post.opt.item as ToolItem).level,
-              post.price,
-              0.2,
+              cost,
+              scam,
             )
-          : s.buy(cat, post.opt.item as PartItem, post.price, 0.2)
+          : s.buy(cat, item, cost, scam)
+    if (res === 'ok' && post.cond === 'dead' && cat === 'switch')
+      s.toast(
+        `😵 Nhận hàng mới thấy chết ${(post.opt.item as SwitchItem).count - (item as SwitchItem).count} con switch`,
+        'bad',
+      )
+    else if (res === 'ok' && flaw) s.toast(`😬 Nhận hàng mới thấy lỗi: ${flaw}`, 'bad')
     if (res !== 'fail')
       set((s) => ({ posts: s.posts.map((p) => (p.id === post.id ? { ...p, sold: true } : p)) }))
     return res

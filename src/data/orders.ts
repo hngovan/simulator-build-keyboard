@@ -1,5 +1,7 @@
 import type { SwitchKind, GroupPost, Kit, LayoutId, LubePref, Order, SoundWish } from '@/types'
 import { LAYOUTS, getLayout, randomVariant, variantText } from './layouts'
+import { repTier } from './reputation'
+import { makePost } from './market'
 import {
   CASES,
   PLATES,
@@ -106,17 +108,22 @@ function kitPcb(layout: LayoutId) {
   return { layout, type: pick(Object.keys(PCB_TYPES)) }
 }
 
-export function randomOffers(): Order[] {
-  const n = 5 + Math.floor(Math.random() * 3)
+/** Đợt đơn mới trong ngày: số đơn + hệ số tiền công theo bậc uy tín (`repTier`) */
+export function randomOffers(rep = 0): Order[] {
+  const { offers, pay } = repTier(rep).tier
+  const n = Math.max(
+    DAILY_LAYOUTS.length,
+    offers[0] + Math.floor(Math.random() * (offers[1] - offers[0] + 1)),
+  )
   const list = [
-    ...DAILY_LAYOUTS.map((l) => randomOrder(l)),
-    ...Array.from({ length: n - DAILY_LAYOUTS.length }, () => randomOrder()),
+    ...DAILY_LAYOUTS.map((l) => randomOrder(l, pay)),
+    ...Array.from({ length: n - DAILY_LAYOUTS.length }, () => randomOrder(undefined, pay)),
   ]
   return list.sort(() => Math.random() - 0.5)
 }
 
-/** layout: ép layout của đơn (đơn thiết kế mở chỉ chọn khi cùng layout) */
-export function randomOrder(layout_?: LayoutId): Order {
+/** layout: ép layout của đơn (đơn thiết kế mở chỉ chọn khi cùng layout); pay: hệ số tiền công theo uy tín */
+export function randomOrder(layout_?: LayoutId, pay = 1): Order {
   const designs = FEATURED.filter((f) => !layout_ || f.layout === layout_)
   const featured = designs.length && Math.random() < 0.3 ? pick(designs) : null
   const layout = layout_ ?? featured?.layout ?? pick(Object.keys(LAYOUTS) as LayoutId[])
@@ -204,7 +211,7 @@ export function randomOrder(layout_?: LayoutId): Order {
     (kit?.case && CASES[kit.case.id].pieces === 2 ? 100 : 0) +
     (lubePref === 'want' ? keys.length * 4 : 0) +
     (keys.some((k) => k.stab) ? 80 : 0)
-  const labor = Math.round((250 + keys.length * 6 + solder + extra) / 50) * 50
+  const labor = Math.round(((250 + keys.length * 6 + solder + extra) * pay) / 50) * 50
   const customer = pick(CUSTOMERS)
 
   const L = LAYOUTS[layout].name
@@ -282,16 +289,8 @@ const SELLERS = [
   'Sơn Lube Thuê',
   'Tú Hàn Mạch',
 ]
-const CAPTIONS = [
-  'Pass lại do lên đời',
-  'Dư 1 bộ, pass rẻ cho ae',
-  'Hàng new seal, ib chốt',
-  'Còn mới 95%, fullbox',
-  'Cần tiền pass gấp',
-  'Mua về không hợp tay, pass',
-]
 
-// Bài đăng trong "Hội Phím Cơ": hàng giá rẻ nhưng có tỉ lệ bị bùng
+// Bài đăng trong "Hội Phím Cơ": hàng giá rẻ, caption thuật ngữ chợ che tình trạng thật, có thể gặp seller bùng
 export function groupPosts(order: Order): GroupPost[] {
   const catalog = buildCatalog().filter(
     (p) => !p.layouts || p.layouts.includes(order.layout) || Math.random() < 0.15,
@@ -299,17 +298,7 @@ export function groupPosts(order: Order): GroupPost[] {
   const posts: GroupPost[] = []
   for (let i = 0; i < 9; i++) {
     const p = pick(catalog)
-    const opt = pick(p.options)
-    posts.push({
-      id: `post-${i}`,
-      seller: pick(SELLERS),
-      caption: pick(CAPTIONS),
-      product: p,
-      opt,
-      price: Math.round(opt.price * (0.6 + Math.random() * 0.2)),
-      likes: Math.floor(Math.random() * 80),
-      sold: false,
-    })
+    posts.push(makePost(`post-${i}`, pick(SELLERS), p, pick(p.options)))
   }
   return posts
 }

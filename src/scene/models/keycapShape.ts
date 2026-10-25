@@ -78,17 +78,19 @@ export const capRow = (profile: KeycapProfile, row: number) =>
  * (âm = mép sau cao hơn, hàng trên ngả về người gõ). Phím rộng dựng theo số này cho khớp phím 1u
  */
 const CAD_ROW: Partial<Record<KeycapProfile, Record<number, { height: number; tilt: number }>>> = {
+  // đo lại sau khi sửa thứ tự hàng (file r4-1u = R1) + bỏ xoay 180° (2026-10-25): R1 cao nhất, mép sau cao hơn;
+  // R4 mép trước cao hơn (như bảng profile R1–R4)
   cherry: {
-    1: { height: 0.428, tilt: -0.056 },
-    2: { height: 0.41, tilt: -0.033 },
-    3: { height: 0.436, tilt: -0.008 },
-    4: { height: 0.525, tilt: 0.015 },
+    1: { height: 0.53, tilt: -0.013 },
+    2: { height: 0.437, tilt: 0.005 },
+    3: { height: 0.421, tilt: 0.02 },
+    4: { height: 0.446, tilt: 0.036 },
   },
   oem: {
-    1: { height: 0.443, tilt: -0.045 },
-    2: { height: 0.415, tilt: -0.028 },
-    3: { height: 0.437, tilt: -0.007 },
-    4: { height: 0.536, tilt: 0.011 },
+    1: { height: 0.54, tilt: -0.013 },
+    2: { height: 0.438, tilt: 0.008 },
+    3: { height: 0.414, tilt: 0.033 },
+    4: { height: 0.444, tilt: 0.049 },
   },
   sa: {
     1: { height: 0.641, tilt: -0.069 },

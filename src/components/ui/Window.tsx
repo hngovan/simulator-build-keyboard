@@ -1,5 +1,57 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react'
+import { Copy, Minus, Square, X } from 'lucide-react'
 import { cn } from '@/lib/format'
+import { useNarrow } from '@/hooks/useNarrow'
+
+/** Nút trên thanh tiêu đề (thu nhỏ / phóng to / đóng) cùng 1 kiểu, icon căn giữa; nút đóng rê chuột thì đỏ */
+export function TitleButton({
+  close,
+  className,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { close?: boolean }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'grid size-[30px] place-items-center rounded-[9px] bg-black/25 [&_svg]:size-4 [&_svg]:stroke-[3]',
+        close ? 'hover:bg-red' : 'hover:bg-black/40',
+        className,
+      )}
+      onPointerDown={(e) => e.stopPropagation()}
+      {...props}
+    />
+  )
+}
+
+/** Thanh tiêu đề cửa sổ app (màu theo app); `children` = các nút bên phải */
+export function TitleBar({
+  title,
+  color,
+  className,
+  children,
+  ...props
+}: Omit<HTMLAttributes<HTMLDivElement>, 'title'> & { title: ReactNode; color: string }) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between py-1.5 pr-2 pl-3.5 font-head text-[17px] font-extrabold [text-shadow:0_2px_0_#0004]',
+        className,
+      )}
+      style={{ background: color }}
+      {...props}
+    >
+      <span className="min-w-0 truncate">{title}</span>
+      <div className="flex shrink-0 gap-1">{children}</div>
+    </div>
+  )
+}
 
 interface Props {
   title: ReactNode
@@ -47,6 +99,9 @@ export function Window({
 }: Props) {
   const [pos, setPos] = useState(initial)
   const [maximized, setMaximized] = useState(false)
+  // điện thoại: cửa sổ luôn phủ kín màn (trừ taskbar), không kéo / phóng to
+  const narrow = useNarrow()
+  const full = maximized || narrow
   const drag = useRef<{ dx: number; dy: number } | null>(null)
 
   useEffect(() => {
@@ -64,19 +119,17 @@ export function Window({
     <div
       className={cn(
         'absolute flex flex-col overflow-hidden bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]',
-        maximized
+        full
           ? 'max-w-none rounded-none border-0'
-          : 'max-w-[calc(100vw-16px)] rounded-2xl border-[3px] border-black/40 max-md:!top-24 max-md:!left-2 max-md:!w-[calc(100vw-16px)]',
+          : 'max-w-[calc(100vw-16px)] rounded-2xl border-[3px] border-black/40',
       )}
       style={
-        maximized
+        full
           ? {
-              left: 0,
-              top: 0,
-              width: window.innerWidth,
-              height: window.innerHeight,
-              maxHeight: window.innerHeight,
-              zIndex: 101,
+              // phủ kín màn nhưng chừa taskbar (cao theo biến CSS --taskbar-h, mobile 2 hàng)
+              inset: 0,
+              bottom: 'var(--taskbar-h)',
+              zIndex,
               display: minimized ? 'none' : undefined,
             }
           : {
@@ -90,11 +143,12 @@ export function Window({
       }
       onPointerDown={onFocus}
     >
-      <div
-        className="flex cursor-grab items-center justify-between py-1.5 pr-2 pl-3.5 font-head text-[17px] font-extrabold [text-shadow:0_2px_0_#0004]"
-        style={{ background: color }}
+      <TitleBar
+        title={title}
+        color={color}
+        className={full ? undefined : 'cursor-grab'}
         onPointerDown={(e) => {
-          if (maximized) return
+          if (full) return
           drag.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y }
           e.currentTarget.setPointerCapture(e.pointerId)
         }}
@@ -109,37 +163,29 @@ export function Window({
         }}
         onPointerUp={() => (drag.current = null)}
       >
-        <span className="min-w-0 truncate">{title}</span>
-        <div className="flex shrink-0 gap-1">
-          <button
-            className="size-[30px] rounded-[9px] bg-black/25 pb-2 font-extrabold hover:bg-black/40"
-            aria-label="Thu nhỏ cửa sổ xuống taskbar"
-            title="Thu nhỏ"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={onMinimize}
-          >
-            −
-          </button>
-          <button
-            className="size-[30px] rounded-[9px] bg-black/25 font-extrabold hover:bg-black/40"
+        <TitleButton aria-label="Thu nhỏ cửa sổ xuống taskbar" title="Thu nhỏ" onClick={onMinimize}>
+          <Minus />
+        </TitleButton>
+        {!narrow && (
+          <TitleButton
             aria-label={maximized ? 'Khôi phục kích thước cửa sổ' : 'Phóng to cửa sổ'}
             title={maximized ? 'Khôi phục' : 'Phóng to'}
-            onPointerDown={(e) => e.stopPropagation()}
             onClick={() => setMaximized((current) => !current)}
           >
-            {maximized ? '❐' : '□'}
-          </button>
-          <button
-            className="size-[30px] rounded-[9px] bg-black/25 font-extrabold hover:bg-red"
-            aria-label="Đóng cửa sổ"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </div>
+            {maximized ? <Copy /> : <Square />}
+          </TitleButton>
+        )}
+        <TitleButton close aria-label="Đóng cửa sổ" title="Đóng" onClick={onClose}>
+          <X />
+        </TitleButton>
+      </TitleBar>
+      {/* @container: app tự đổi bố cục theo bề rộng cửa sổ; data-fill: phóng to / mobile thì app giãn kín chiều cao */}
+      <div
+        data-fill={full || undefined}
+        className="group/win @container min-h-0 flex-1 overflow-auto p-3.5 max-md:p-2.5"
+      >
+        {children}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto p-3.5">{children}</div>
     </div>
   )
 }

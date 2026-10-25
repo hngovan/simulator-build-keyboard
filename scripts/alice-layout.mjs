@@ -87,7 +87,18 @@ const sw = [
 ].map((m) => {
   let deg = +(m[4] ?? 0)
   if (deg > 180) deg -= 360
-  return { ref: m[5], w: +m[1], x: +m[2], y: +m[3], deg }
+  // gốc footprint MX_Switch là góc trên trái phím, tâm switch (lỗ giữa Ø4) ở (w·U/2, U/2) trong hệ footprint
+  // → xoay theo góc footprint (KiCad: y hướng xuống, góc dương ngược kim đồng hồ trên màn hình)
+  const w = +m[1]
+  const t = (deg * Math.PI) / 180
+  const [px, py] = [(w * U) / 2, U / 2]
+  return {
+    ref: m[5],
+    w,
+    x: +m[2] + px * Math.cos(t) + py * Math.sin(t),
+    y: +m[3] - px * Math.sin(t) + py * Math.cos(t),
+    deg,
+  }
 })
 if (sw.length !== 67) throw new Error(`Cần 67 switch, tìm được ${sw.length}`)
 

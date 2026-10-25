@@ -30,3 +30,10 @@
 
 - `shopSlice.ts` `nextDay()`: trong `set({...})` có gán `equipSolder` / `undoSolderPurchase` / `lastSolderPurchase`
   (có vẻ chèn nhầm chỗ của phiên khác) — cần báo người dùng.
+
+## Giao việc nhỏ cho opencode qua Orca (2026-10-25)
+
+- Người dùng muốn việc nhỏ, độc lập (tài liệu, CSS...) giao cho opencode: `orca agent launch --agent opencode --prompt "<brief>" --json`
+  (chạy trong worktree hiện tại, trả `outcome.handle`); xem kết quả `orca terminal read --terminal <handle> --json`.
+- Brief ghi rõ chỉ được sửa file nào (vì mình / phiên khác đang sửa src/), chạy format / lint, không commit, ghi nhật ký vào docs/decisions.
+- Đã giao: `docs/OVERVIEW.md` + mục "Tài liệu" / "Cách chơi" trong README; thanh cuộn toàn app (`src/index.css`).

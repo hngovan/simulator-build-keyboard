@@ -8,7 +8,7 @@ import { MM } from '@/scene/models/Switch'
 import { WEIGHT_METALS, WOOD_TEX, prepWood, woodBoxGeometry, woodTexFor } from '@/scene/materials'
 import { boardOutline, outlineSlab } from '@/scene/parts/boardOutline'
 import { capGeometry, keycapModel, keycapShape, stretchCap } from '@/scene/models/keycapShape'
-import type { FormFactor, LayoutId, Order, Variant } from '@/types'
+import type { FormFactor, Key, LayoutId, Order, Variant } from '@/types'
 import { cachedThumb, glbMeshes, glbScene } from '../shop/modelThumb'
 
 // Ảnh minh hoạ đơn hàng: ghép bàn phím hoàn chỉnh (case CAD thật nếu có + keycap theo layout),
@@ -74,12 +74,18 @@ function woodMaterial(color: string) {
 async function shellMaterial(material: string, color: string) {
   if (material === 'wood') return (await woodMaterial(color)).clone()
   const clear = color === 'clear' || material === 'acrylic' || material === 'mica'
+  const pc = material === 'pc'
   return new THREE.MeshPhysicalMaterial({
     color: CASE_COLORS[color]?.hex ?? '#888',
-    roughness: material === 'anod' ? 0.35 : material === 'acrylic' ? 0.08 : 0.55,
+    roughness: material === 'anod' ? 0.35 : material === 'acrylic' ? 0.08 : pc ? 0.35 : 0.55,
     metalness: material === 'anod' ? 0.6 : 0,
-    transparent: clear || material === 'pc',
-    opacity: color === 'clear' ? 0.55 : clear ? 0.75 : material === 'pc' ? 0.9 : 1,
+    // PC mờ: trong mờ như bàn build (thấy lờ mờ bên trong)
+    transmission: pc ? 0.9 : 0,
+    thickness: pc ? 0.5 : 0,
+    ior: pc ? 1.58 : 1.5,
+    transparent: clear || pc,
+    opacity: color === 'clear' ? 0.55 : clear ? 0.75 : pc ? 0.6 : 1,
+    depthWrite: !(clear || pc),
   })
 }
 
@@ -94,6 +100,8 @@ export interface KeyboardSpec {
   keycapColor: string
   /** màu keycap phím chức năng */
   accent: string
+  /** phối màu riêng từng phím (hex), không trả về thì theo màu chính / màu nhấn (bàn phím chưng trên kệ) */
+  capOf?: (k: Key) => string | undefined
 }
 
 /** Bàn phím của đơn: case / keycap theo đơn, phím chức năng phối màu nhấn cố định theo mã đơn */
@@ -128,7 +136,8 @@ const FF_LAYOUT: Record<FormFactor, LayoutId> = {
 
 /** Bàn phím trưng bày cho 1 case (Shopii): layout theo cỡ case, keycap Cherry trắng chữ đen */
 export function caseSpec(caseId: string, color: string): KeyboardSpec {
-  const layout = FF_LAYOUT[CASES[caseId].ff]
+  // case chỉ hợp vài layout (vd HHKB) thì lấy layout đầu tiên, không thì theo form factor
+  const layout = CASES[caseId].layouts?.[0] ?? FF_LAYOUT[CASES[caseId].ff]
   const keycapKit = KEYCAP_KITS.base.layouts.includes(layout) ? 'base' : 'full'
   return {
     layout,
@@ -193,13 +202,35 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
     const W = width + 2 * (CASE_MARGIN + CASE_WALL)
     const D = depth + 2 * (CASE_MARGIN + CASE_WALL)
     const h = Y.caseTop - Y.floorBot
-    const caseGeometry =
+    const box = (w: number, bh: number, d: number, r: number) =>
       def.material === 'wood'
-        ? woodBoxGeometry(W, h, D, 0.15)
-        : new RoundedBoxGeometry(W, h, D, 3, 0.15)
-    const m = new THREE.Mesh(caseGeometry, caseMat)
-    m.position.y = Y.floorBot + h / 2
-    group.add(m)
+        ? woodBoxGeometry(w, bh, d, r)
+        : new RoundedBoxGeometry(w, bh, d, 3, r)
+    if (caseOnly) {
+      // xem riêng vỏ case: khay rỗng (đáy + 4 thành) như trên bàn build, không phải khối đặc
+      const t = CASE_WALL
+      const floor = new THREE.Mesh(
+        box(W - 0.02, Y.floorTop - Y.floorBot, D - 0.02, 0.08),
+        bottomMat,
+      )
+      floor.position.y = (Y.floorBot + Y.floorTop) / 2
+      group.add(floor)
+      const walls: [number, number, number, number][] = [
+        [0, -D / 2 + t / 2, W, t],
+        [0, D / 2 - t / 2, W, t],
+        [-W / 2 + t / 2, 0, t, D - 2 * t],
+        [W / 2 - t / 2, 0, t, D - 2 * t],
+      ]
+      for (const [x, z, w, d] of walls) {
+        const m = new THREE.Mesh(box(w, h, d, 0.08), caseMat)
+        m.position.set(x, Y.floorBot + h / 2, z)
+        group.add(m)
+      }
+    } else {
+      const m = new THREE.Mesh(box(W, h, D, 0.15), caseMat)
+      m.position.y = Y.floorBot + h / 2
+      group.add(m)
+    }
   }
   // lớp giữa case và keycap theo cao độ Y của bàn build: PCB → plate → housing switch từng phím
   // (case thấp như Planck không còn hở khúc giữa)
@@ -231,8 +262,15 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
   const mainMat = new THREE.MeshStandardMaterial({ color: main.hex, roughness: 0.55, side })
   const accentMat = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.55, side })
   const isMod = (label: string) => label.length > 1 || label === ''
+  const ownMats = new Map<string, THREE.MeshStandardMaterial>()
+  const capMat = (hex: string) => {
+    if (!ownMats.has(hex))
+      ownMats.set(hex, new THREE.MeshStandardMaterial({ color: hex, roughness: 0.55, side }))
+    return ownMats.get(hex)!
+  }
   for (const k of caseOnly ? [] : keys) {
-    const mat = isMod(k.label) && k.code !== 'Space' ? accentMat : mainMat
+    const own = spec.capOf?.(k)
+    const mat = own ? capMat(own) : isMod(k.label) && k.code !== 'Space' ? accentMat : mainMat
     // cả bàn 1 profile: model CAD 1u (phím rộng kéo dãn), ASA chưa có CAD thì dựng theo thông số
     const model = keycapModel(profile, k.row)
     let cap: THREE.Object3D
@@ -250,15 +288,19 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
   }
   // khối chặn liền case ở chỗ trống hàng dưới (HHKB, WKL...)
   // case CAD cao hơn: khối chặn tới BLOCKER_TOP; case dựng bằng code thì ngang mép trên case
-  const blockH = (caseModel ? BLOCKER_TOP : Y.caseTop) - Y.plateBot
+  // case CAD nghiêng (board thấp theo mặt nêm): khối chặn thấp ngang mặt khung, không nhô giữa hàng phím
+  const blockH = (caseModel ? (def.seat?.tilt ? 0.3 : BLOCKER_TOP) : Y.caseTop) - Y.plateBot
   for (const bl of blockerGaps(keys, width, depth, CASE_MARGIN + 0.05)) {
-    const block = new THREE.Mesh(new THREE.BoxGeometry(bl.w, blockH, bl.d), caseMat)
-    block.position.set(bl.x, Y.plateBot + blockH / 2, bl.z)
+    const h = bl.top !== undefined ? bl.top - Y.plateBot : blockH
+    const block = new THREE.Mesh(new THREE.BoxGeometry(bl.w, h, bl.d), caseMat)
+    block.position.set(bl.x, Y.plateBot + h / 2, bl.z)
     board.add(block)
   }
   // nghiêng bàn phím cho thấy mặt trên + cạnh trước
   if (def.seat) {
     board.position.y = def.seat.rise
+    board.position.z = def.seat.dz ?? 0
+    board.position.x = def.seat.dx ?? 0
     board.rotation.x = def.seat.tilt
   }
   group.add(board)

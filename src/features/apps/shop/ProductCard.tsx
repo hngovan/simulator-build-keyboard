@@ -53,6 +53,7 @@ export function ProductCard({ product, onBuy }: Props) {
             className="grid size-5 place-items-center rounded-full bg-white/10 text-xs font-extrabold text-muted hover:bg-orange hover:text-black focus:bg-orange focus:text-black"
             aria-label={`Xem mô tả ${product.name}`}
             aria-describedby={`desc-${product.id}`}
+            title={`Xem mô tả ${product.name}`}
           >
             i
           </button>
@@ -68,13 +69,7 @@ export function ProductCard({ product, onBuy }: Props) {
       {product.sound && <SoundBars {...product.sound} />}
       <div className="flex flex-wrap gap-1">
         {product.options.map((o, i) => (
-          <OptionChip
-            key={i}
-            active={i === sel}
-            swatch={o.swatch}
-            title={o.hint}
-            onClick={() => setSel(i)}
-          >
+          <OptionChip key={i} active={i === sel} swatch={o.swatch} onClick={() => setSel(i)}>
             {o.label}
           </OptionChip>
         ))}

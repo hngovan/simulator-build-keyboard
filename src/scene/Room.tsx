@@ -4,6 +4,7 @@ import { Text } from '@/scene/common/Text3D'
 import * as THREE from 'three'
 import { Y } from '@/data/steps'
 import { KEYCAP_COLORS, TOOLS } from '@/data/parts'
+import type { Key } from '@/types'
 import { useGame } from '@/store'
 import { MM } from './models/Switch'
 import { DIPLOMA_URL, createDiploma } from './models/diplomaModel'
@@ -20,7 +21,8 @@ const MODELS = {
   desk: `${DIR}/wooden_table_02.glb`,
   plant: `${DIR}/potted_plant_04.glb`,
   shelf: `${DIR}/Shelf_01.glb`,
-  screwdriver: `${DIR}/screwdriver.glb`,
+  // bản nhẹ không texture (`bun run convert:screwdriver-lite`)
+  screwdriver: `${DIR}/screwdriver-lite.glb`,
   chair: `${DIR}/painted_wooden_chair_01.glb`,
   picture: `${DIR}/hanging_picture_frame_01.glb`,
   clock: `${DIR}/wall_clock.glb`,
@@ -57,8 +59,42 @@ const SHELF_X = (DESK.w / 2 + 0.65) * M
 const SHELF_TIERS = [0.988, 0.706, 0.4247, 0.1433, -0.138, -0.4197, -0.6594].map(
   (h) => Y.table + h * M,
 )
-/** bàn phím ráp sẵn chưng trên kệ (không đổi theo đơn); x = lệch tâm kệ (m), tier = tầng (0 = tầng 1) */
-const SHELF_KEYBOARDS = [
+// TKL đỏ chưng trên kệ: hàng dưới WKL (space 7u, 86 phím), keycap đỏ / đen như ảnh mẫu người dùng:
+// chữ + số + space đỏ, phím chức năng / điều hướng đen, hàng F xen kẽ (F1–F4 đỏ, F5–F8 đen, F9–F12 đỏ)
+const RED_TKL_VARIANT = { bottom: 'wkl' }
+const CAP_RED = '#8a1a24'
+const CAP_BLACK = '#1e1e22'
+function redBlackCaps(k: Key) {
+  const f = /^F(\d+)$/.exec(k.code ?? '')
+  if (f) return +f[1] >= 5 && +f[1] <= 8 ? CAP_BLACK : CAP_RED
+  return k.label.length === 1 || k.code === 'Space' ? CAP_RED : CAP_BLACK
+}
+
+// Bộ vàng (theo ảnh mẫu): chữ cái + space kem, phím chức năng + F5–F8 vàng, Esc / Enter than
+const CAP_CREAM = '#d9d1ad'
+const CAP_YELLOW = '#f2c22e'
+const CAP_COAL = '#2b2b30'
+function yellowCaps(k: Key) {
+  if (k.code === 'Escape' || k.code === 'Enter') return CAP_COAL
+  const f = /^F(\d+)$/.exec(k.code ?? '')
+  if (f) return +f[1] >= 5 && +f[1] <= 8 ? CAP_YELLOW : CAP_CREAM
+  return k.label.length === 1 || k.code === 'Space' ? CAP_CREAM : CAP_YELLOW
+}
+
+/**
+ * bàn phím ráp sẵn chưng trên kệ (không đổi theo đơn); x = lệch tâm kệ (m), tier = tầng (0 = tầng 1);
+ * capOf: phối màu riêng từng phím (không có thì capColor + accent)
+ */
+const SHELF_KEYBOARDS: {
+  x: number
+  tier: number
+  caseId: string
+  color: string
+  caps: string
+  capColor: string
+  accent: string
+  capOf?: (k: Key) => string | undefined
+}[] = [
   {
     x: -0.21,
     tier: 2,
@@ -80,11 +116,12 @@ const SHELF_KEYBOARDS = [
   {
     x: -0.2,
     tier: 3,
-    caseId: 'exodus80',
-    color: 'black',
-    caps: 'mt3',
-    capColor: 'white',
-    accent: 'navy',
+    caseId: 'exodus80Pc',
+    color: 'frost',
+    // TKL nắp PC mờ + keycap Cherry xanh lá đậm chữ trắng, 1 màu cả bộ
+    caps: 'full',
+    capColor: 'green',
+    accent: 'green',
   },
   {
     x: 0.23,
@@ -118,9 +155,10 @@ const SHELF_KEYBOARDS = [
     tier: 5,
     caseId: 'rfBruh',
     color: 'white',
-    caps: 'asa',
-    capColor: 'mint',
+    caps: 'full',
+    capColor: 'white',
     accent: 'white',
+    capOf: yellowCaps,
   },
   {
     x: 0.23,
@@ -155,16 +193,20 @@ const ROOM = { w: 3.6 * M, d: 3.6 * M, h: 2.6 * M, back: -(DESK.d / 2 + 0.05) * 
 const ROOM_CZ = ROOM.back + ROOM.d / 2
 /** tâm chiều sâu kệ (kệ dựa tường sau) */
 const SHELF_Z = ROOM.back + 0.13 * M
-/** mép trước kệ lùi vào 2cm: chỗ đặt mép trước chân đỡ bàn phím */
-const SHELF_FRONT = ROOM.back + 0.235 * M
+/** mép trước chân đỡ bàn phím: lùi vào 5cm so với mép kệ (2cm cũ nhìn như sắp rớt) */
+const SHELF_FRONT = ROOM.back + 0.205 * M
 const FRONT_Z = ROOM.back + ROOM.d
-/** Vùng tâm camera được kéo tới: trong 4 bức tường, chừa 0.2m */
+/** Vùng tâm camera được kéo tới: trong 4 bức tường, chừa 0.2m; cao từ sát sàn tới tầm kệ trên bàn */
 const PAD = 0.2 * M
 export const ROOM_BOUNDS = {
   minX: -ROOM.w / 2 + PAD,
   maxX: ROOM.w / 2 - PAD,
   minZ: ROOM.back + PAD,
   maxZ: FRONT_Z - PAD,
+  minY: FLOOR_Y + 0.05 * M,
+  maxY: 0.8 * M,
+  /** camera không được chui xuống dưới sàn */
+  floorY: FLOOR_Y + 0.03 * M,
 }
 
 type MapSet = Record<keyof typeof FLOOR_TEX, THREE.Texture>
@@ -480,7 +522,19 @@ export function Room() {
       {/* tầng 1: hộp đồ nghề (tua vít + kìm nằm trên bàn, góc phải phía sau); tầng 2: chứng chỉ thợ;
           các tầng dưới: bàn phím ráp sẵn trên chân đỡ chữ A */}
       <ShelfToolBox position={[SHELF_X, SHELF_TIERS[0], SHELF_Z]} />
-      <ShelfDiploma position={[SHELF_X, SHELF_TIERS[1], SHELF_Z]} />
+      {/* tầng 2: chứng chỉ dời sang trái, nhường chỗ bàn phím TKL đỏ */}
+      <ShelfDiploma position={[SHELF_X - 0.24 * M, SHELF_TIERS[1], SHELF_Z]} />
+      <group position={[SHELF_X + 0.12 * M, SHELF_TIERS[1], SHELF_FRONT]} scale={M}>
+        <DisplayKeyboard
+          caseId="exodus80"
+          color="red"
+          keycapKit="full"
+          keycapColor="black"
+          accent={KEYCAP_COLORS.black.hex}
+          variant={RED_TKL_VARIANT}
+          capOf={redBlackCaps}
+        />
+      </group>
       {SHELF_KEYBOARDS.map((k) => (
         <group
           key={k.caseId}
@@ -493,6 +547,7 @@ export function Room() {
             keycapKit={k.caps}
             keycapColor={k.capColor}
             accent={KEYCAP_COLORS[k.accent].hex}
+            capOf={k.capOf}
           />
         </group>
       ))}
