@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { MessageCircle } from 'lucide-react'
-import { Avatar, Badge, Button, Muted } from '@/components/ui'
+import { MessageCircle, MessageSquareText, ThumbsUp } from 'lucide-react'
+import { Avatar, Badge, Button } from '@/components/ui'
 import { itemName } from '@/data/parts'
 import { fmt } from '@/lib/format'
 import type { GroupPost } from '@/types'
@@ -58,9 +58,16 @@ export function PostCard({ post }: { post: GroupPost }) {
               </Badge>
             ))}
           </div>
-          <Muted>
-            👍 {post.likes} · 💬 {Math.floor(post.likes / 3)} bình luận
-          </Muted>
+          <div className="mt-1.5 flex items-center gap-3 font-head text-sm font-bold text-ink/85 [&_svg]:size-4">
+            <span className="flex items-center gap-1" title="Lượt thích">
+              <ThumbsUp className="fill-blue/30 text-[#7fb0ff]" />
+              {post.likes}
+            </span>
+            <span className="flex items-center gap-1" title="Bình luận">
+              <MessageSquareText className="text-[#9ff0b8]" />
+              {Math.floor(post.likes / 3)} bình luận
+            </span>
+          </div>
         </div>
       </div>
       <Button

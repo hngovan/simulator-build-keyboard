@@ -41,3 +41,5 @@ Quy tắc của người dùng:
   (`assets/community/stab-variants/`), HHKB Pro JP (`assets/community/hhkb-desk/`); chờ: switch Cherry MX nhiều màu, switch low profile.
 - Model người dùng cung cấp 2026-10-25 (Sketchfab, chưa rõ giấy phép → chỉ dùng cá nhân): stab clip-in Cherry + stab plate-mount
   (`assets/community/stab-variants/`). Switch Cherry MX nhiều màu + low profile: người dùng dừng, không làm (đã hoàn tác).
+- Nhạc nền (2026-10-25): `bgm.mp3` Coffee House Bump (OatCog), `bgm-2.mp3` Chill lofi inspired (omfgdude), `bgm-3.mp3`
+  A cup of tea (TAD, lofi Compilation) — đều CC0 OpenGameArt; TAD xin ghi "Tad" (CC0 không bắt buộc, vẫn ghi trong credits).

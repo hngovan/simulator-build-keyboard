@@ -149,7 +149,8 @@ export function scoreDelivery({
     checks,
     score,
     stars,
-    reimburse: Math.min(spent, order.budget),
+    // khách trả đủ budget linh kiện: mua rẻ hơn thì phần dư vào túi shop, lố thì shop chịu
+    reimburse: order.budget,
     labor: Math.round((order.labor * score) / 100),
   }
 }

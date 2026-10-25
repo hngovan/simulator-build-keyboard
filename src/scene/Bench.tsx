@@ -12,6 +12,7 @@ import { StabModStation } from './stations/StabModStation'
 import { LubeStation } from './stations/LubeStation'
 import { SolderKit } from './stations/SolderKit'
 import { useSceneLoading } from './common/loadingStore'
+import { useCamLock } from './common/camLock'
 import { ROOM_BOUNDS, Room } from './Room'
 import { CuttingMat } from './common/CuttingMat'
 import { EmptyBench } from './EmptyBench'
@@ -182,9 +183,12 @@ function PcZoom() {
  */
 function Controls() {
   const pan = useGame((s) => s.camMode === 'pan')
+  // đang giữ chuột thao tác (hàn...) thì khoá camera
+  const locked = useCamLock((s) => s.locked)
   return (
     <OrbitControls
       makeDefault
+      enabled={!locked}
       screenSpacePanning={false}
       // lại gần sát keycap (1u = 19mm) nhưng vẫn dừng trên mặt bàn / bàn phím
       minDistance={1.8}

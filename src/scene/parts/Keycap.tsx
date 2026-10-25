@@ -45,6 +45,38 @@ function UntestedOutline({ w, h, y }: { w: number; h: number; y: number }) {
   )
 }
 
+/** chữ in lệch về phía sau mặt keycap */
+const LEGEND_Z = -0.1
+
+/**
+ * Mặt phẳng in chữ khớp mặt keycap: bắn tia xuống lưới điểm quanh vùng chữ, khớp độ cao theo z (nghiêng theo hàng)
+ * rồi nâng lên trên điểm cao nhất. Keycap lòng chảo sâu / nghiêng (SA, MT3...) trước bị mặt keycap che mất nửa chữ
+ */
+function legendPlane(cap: THREE.Object3D) {
+  cap.updateMatrixWorld(true)
+  const ray = new THREE.Raycaster()
+  const down = new THREE.Vector3(0, -1, 0)
+  const pts: [number, number][] = []
+  for (const x of [-0.16, 0, 0.16])
+    for (const dz of [-0.17, -0.08, 0, 0.08, 0.15]) {
+      ray.set(new THREE.Vector3(x, 5, LEGEND_Z + dz), down)
+      const hit = ray.intersectObject(cap, true)[0]
+      if (hit) pts.push([dz, hit.point.y])
+    }
+  if (pts.length < 4) return undefined
+  // khớp đường thẳng y = a + b·dz (bình phương nhỏ nhất)
+  const n = pts.length
+  const mz = pts.reduce((s, p) => s + p[0], 0) / n
+  const my = pts.reduce((s, p) => s + p[1], 0) / n
+  const b =
+    pts.reduce((s, p) => s + (p[0] - mz) * (p[1] - my), 0) /
+    (pts.reduce((s, p) => s + (p[0] - mz) ** 2, 0) || 1)
+  const a = my - b * mz
+  // nâng lên trên điểm cao nhất so với đường khớp (lòng chảo cong), cách mặt 0.012
+  const over = Math.max(...pts.map(([z, y]) => y - (a + b * z)))
+  return { y: a + over + 0.012, tilt: Math.atan(-b) }
+}
+
 function CapOverlay({
   k,
   color,
@@ -53,6 +85,7 @@ function CapOverlay({
   inset,
   testing,
   tested,
+  legend,
 }: {
   k: Key
   color: string
@@ -61,14 +94,16 @@ function CapOverlay({
   inset: number
   testing: boolean
   tested: boolean
+  /** chỗ in chữ đo trên mặt keycap thật: độ cao + góc nghiêng (không có = mặt phẳng ngang ở đáy lòng chảo) */
+  legend?: { y: number; tilt: number }
 }) {
   const col = KEYCAP_COLORS[color]
   return (
     <>
       {k.label && (
         <Text
-          position={[0, height - dish + 0.015, -0.1]}
-          rotation-x={-Math.PI / 2}
+          position={[0, legend?.y ?? height - dish + 0.015, LEGEND_Z]}
+          rotation-x={-Math.PI / 2 + (legend?.tilt ?? 0)}
           fontSize={k.label.length > 1 ? 0.2 : 0.3}
           color={col.legend}
         >
@@ -136,6 +171,7 @@ function NativeCap({
     })
     return { height, dish: Number.isFinite(center) ? height - center : shape.dish }
   }, [source, shape.dish])
+  const legend = useMemo(() => legendPlane(scene), [scene])
   return (
     <>
       <primitive object={scene} />
@@ -147,6 +183,7 @@ function NativeCap({
         inset={shape.inset}
         testing={testing}
         tested={tested}
+        legend={legend}
       />
     </>
   )

@@ -1,4 +1,13 @@
-import type { SwitchKind, GroupPost, Kit, LayoutId, LubePref, Order, SoundWish } from '@/types'
+import type {
+  SwitchKind,
+  GroupPost,
+  KeycapMaterial,
+  Kit,
+  LayoutId,
+  LubePref,
+  Order,
+  SoundWish,
+} from '@/types'
 import { LAYOUTS, getLayout, randomVariant, variantText } from './layouts'
 import { repTier } from './reputation'
 import { makePost } from './market'
@@ -15,10 +24,11 @@ import {
   SOUND_WISH,
   SIZE_MULT,
   buildCatalog,
-  keycapKitFor,
   stabNeed,
   caseFits,
+  SWITCHES,
   SWITCH_KINDS,
+  KEYCAP_MATERIALS,
 } from './parts'
 
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]
@@ -40,23 +50,36 @@ const avatarFor = (customer: string) =>
   `/avatars/customers/customer-${String(CUSTOMERS.indexOf(customer) + 1).padStart(2, '0')}.svg`
 const PACKAGING = ['túi zip', 'hộp giấy', 'thùng carton', 'rương gỗ']
 
-function estimateCost(layout: LayoutId, kit: Kit | null, keycapKit = keycapKitFor(layout)) {
+export function estimateCost(
+  layout: LayoutId,
+  kit: Kit | null,
+  keycapKit = 'full',
+  switchType?: string,
+  /** món khách đòi đích danh: tính theo giá món đó (case / stab / plate đắt không bị hụt budget) */
+  want: Pick<Order, 'caseId' | 'stabType' | 'plateMaterial'> = {},
+) {
   const { keys } = getLayout(layout, {})
   const needStab = keys.some((k) => k.stab)
-  let cost = Math.ceil(keys.length / 10) * 65 + KEYCAP_KITS[keycapKit].price
-  if (needStab && !kit?.stab) cost += 150
+  // khách đòi đúng con switch thì tính theo giá con đó (con đắt như Panda không bị hụt budget)
+  const sw10 = switchType ? Math.max(65, SWITCHES[switchType].price10) : 65
+  let cost = Math.ceil(keys.length / 10) * sw10 + KEYCAP_KITS[keycapKit].price
+  if (needStab && !kit?.stab)
+    cost += want.stabType ? Math.max(150, STABS[want.stabType].price) : 150
   // món khách không gửi thì shop phải mua
   if (!kit?.case) {
-    const ff = LAYOUTS[layout].ff
     const cheapestCase = Math.min(
       ...Object.values(CASES)
-        .filter((c) => c.ff === ff)
+        .filter((c) => caseFits(c, layout))
         .map((c) => c.price),
     )
-    cost += cheapestCase * 1.6
+    cost += want.caseId
+      ? Math.max(cheapestCase * 1.6, CASES[want.caseId].price)
+      : cheapestCase * 1.6
   }
   if (!kit?.pcb) cost += PCB_TYPES.hotswap.price * SIZE_MULT[layout]
-  if (!kit?.plate) cost += PLATES.fr4.price * SIZE_MULT[layout]
+  if (!kit?.plate)
+    cost +=
+      Math.max(PLATES.fr4.price, PLATES[want.plateMaterial ?? 'fr4'].price) * SIZE_MULT[layout]
   return cost
 }
 
@@ -127,10 +150,14 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
   const keycapColor = pick(Object.keys(KEYCAP_COLORS))
   // 1 bộ keycap (1 profile) cho cả bàn phím, chọn trong các bộ đủ phím cho layout
   const keycapKit = pick(
-    Object.keys(KEYCAP_KITS).filter((id) => KEYCAP_KITS[id].layouts.includes(layout)),
+    Object.keys(KEYCAP_KITS).filter(
+      (id) => !KEYCAP_KITS[id].hidden && KEYCAP_KITS[id].layouts.includes(layout),
+    ),
   )
+  // chất liệu keycap: đa số khách đòi rõ, 20% để shop tự chọn
+  const keycapMaterial =
+    Math.random() < 0.8 ? pick(Object.keys(KEYCAP_MATERIALS) as KeycapMaterial[]) : undefined
   const type: Order['type'] = featured || Math.random() < 0.5 ? 'kit' : 'full'
-  const ff = LAYOUTS[layout].ff
   let kit: Kit | null = null
   let caseColor: string | null = null
   let mount: string | null = null
@@ -171,11 +198,11 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
       kit.plate.material = pick(Object.keys(PLATES).filter((id) => !PLATES[id].flex))
   }
   if (!kit?.case && Math.random() < 0.6) {
-    // chỉ chọn màu mà có case cùng form factor bán
+    // chỉ chọn màu mà có case vừa layout bán
     caseColor = pick([
       ...new Set(
         Object.values(CASES)
-          .filter((c) => c.ff === ff)
+          .filter((c) => caseFits(c, layout))
           .flatMap((c) => c.colors),
       ),
     ])
@@ -183,13 +210,18 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
   // khách thích tiếng gốc (hay gặp với switch Cherry) thì dặn không lube
   const r = Math.random()
   const lubePref: LubePref = r < 0.4 ? 'want' : r < 0.6 ? 'none' : 'any'
-  // loại switch: khách muốn êm thì hay chọn silent, ồn thì hay chọn clicky
+  // loại switch: khách muốn êm thì hay chọn silent (linear / tactile), ồn thì hay chọn clicky
   const switchKind: SwitchKind =
     wish === 'silent' && Math.random() < 0.7
-      ? 'Silent'
+      ? pick(['Silent', 'SilentTactile'] as SwitchKind[])
       : wish === 'noisy' && Math.random() < 0.6
         ? 'Clicky'
-        : pick(['Linear', 'Tactile', 'Clicky', 'Silent'] as SwitchKind[])
+        : pick(['Linear', 'Tactile', 'Clicky', 'Silent', 'SilentTactile'] as SwitchKind[])
+  // ~35% khách đòi đúng 1 con switch cụ thể (vd Cherry MX Đen), còn lại đúng loại là được
+  const switchType =
+    Math.random() < 0.35
+      ? pick(Object.keys(SWITCHES).filter((id) => SWITCHES[id].kind === switchKind))
+      : undefined
   // đơn mua đủ: khách có thể đòi đúng loại PCB (kit thì PCB khách gửi sẵn)
   const pr = Math.random()
   const pcbType: Order['pcbType'] = kit?.pcb
@@ -199,7 +231,31 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
       : pr < 0.65
         ? 'solder'
         : undefined
-  const budget = round100(estimateCost(layout, kit, keycapKit) * (1.25 + Math.random() * 0.4))
+  // món khách không gửi: ~30% mỗi món khách đòi đích danh (vd case Bakeneko, stab Durock, plate đồng)
+  const caseId =
+    !kit?.case && Math.random() < 0.3
+      ? pick(
+          Object.keys(CASES).filter(
+            (id) =>
+              caseFits(CASES[id], layout) && (!caseColor || CASES[id].colors.includes(caseColor)),
+          ),
+        )
+      : undefined
+  const plateFlex = kit?.plate && PLATES[kit.plate.material].flex
+  const stabType =
+    keys.some((k) => k.stab) && !kit?.stab && Math.random() < 0.3
+      ? pick(Object.keys(STABS).filter((id) => !(plateFlex && STABS[id].mount === 'plate')))
+      : undefined
+  // stab plate-mount (khách gửi hoặc khách đòi) thì plate khách đòi phải cứng
+  const plateStab = STABS[kit?.stab?.type ?? stabType ?? '']?.mount === 'plate'
+  const plateMaterial =
+    !kit?.plate && Math.random() < 0.3
+      ? pick(Object.keys(PLATES).filter((id) => !(plateStab && PLATES[id].flex)))
+      : undefined
+  const want = { caseId, stabType, plateMaterial }
+  const budget = round100(
+    estimateCost(layout, kit, keycapKit, switchType, want) * (1.25 + Math.random() * 0.4),
+  )
   const solder = (kit?.pcb?.type ?? pcbType) === 'solder' ? keys.length * 3 : 0
   const extra =
     (kit?.case && CASES[kit.case.id].pieces === 2 ? 100 : 0) +
@@ -214,9 +270,13 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
   const vt = variantText(variant)
   if (vt.length) lines.push(`Layout mình chơi: ${vt.join(', ')}.`)
   lines.push(`${SOUND_WISH[wish].msg}.`)
-  lines.push(`Switch phải là loại ${SWITCH_KINDS[switchKind]} nhé.`)
   lines.push(
-    `Keycap profile ${KEYCAP_KITS[keycapKit].profile.toUpperCase()} (${KEYCAP_KITS[keycapKit].name}) màu ${KEYCAP_COLORS[keycapColor].name.toLowerCase()} nha, đồng bộ 1 profile cả bàn.`,
+    switchType
+      ? `Switch phải đúng con ${SWITCHES[switchType].name} (${SWITCH_KINDS[switchKind]}) nhé, con khác mình không nhận đâu.`
+      : `Switch loại ${SWITCH_KINDS[switchKind]} là được, hãng nào cũng ok.`,
+  )
+  lines.push(
+    `Keycap profile ${KEYCAP_KITS[keycapKit].profile.toUpperCase()}${keycapMaterial ? ` chất liệu ${KEYCAP_MATERIALS[keycapMaterial].name}` : ''} màu ${KEYCAP_COLORS[keycapColor].name.toLowerCase()} nha, đồng bộ 1 profile cả bàn.`,
   )
   if (kit) {
     lines.push(
@@ -237,7 +297,14 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
     lines.push('Mạch phải là loại HÀN (solder) nhé, mình thích switch hàn chết cho chắc.')
   if (pcbType === 'hotswap')
     lines.push('Mạch hotswap giúp mình nha, để sau mình tự thay switch được.')
-  if (caseColor) lines.push(`Case màu ${CASE_COLORS[caseColor].name.toLowerCase()} nếu được.`)
+  if (caseId)
+    lines.push(
+      `Case phải là ${CASES[caseId].name}${caseColor ? ` màu ${CASE_COLORS[caseColor].name.toLowerCase()}` : ''} nha, mình mê con này lâu rồi.`,
+    )
+  else if (caseColor) lines.push(`Case màu ${CASE_COLORS[caseColor].name.toLowerCase()} nếu được.`)
+  if (plateMaterial)
+    lines.push(`Plate ${PLATES[plateMaterial].name} giúp mình, đúng chất liệu đó nhé.`)
+  if (stabType) lines.push(`Stab dùng đúng ${STABS[stabType].name} cho mình nha.`)
   if (lubePref === 'want')
     lines.push('Nhớ lube switch giúp mình nha, lube đúng loại mỡ nhé (switch lube sẵn thì thôi).')
   if (lubePref === 'none') lines.push('Mình thích tiếng sạn gốc của switch, đừng lube switch nhé!')
@@ -260,13 +327,18 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
     wish,
     keycapColor,
     keycapKit,
+    keycapMaterial,
     type,
     kit,
     caseColor,
     mount,
     lubePref,
     switchKind,
+    ...(switchType ? { switchType } : {}),
     ...(pcbType ? { pcbType } : {}),
+    ...(caseId ? { caseId } : {}),
+    ...(stabType ? { stabType } : {}),
+    ...(plateMaterial ? { plateMaterial } : {}),
     budget,
     labor,
     lines,
@@ -293,7 +365,9 @@ export function groupPosts(order: Order, day = 1): GroupPost[] {
   const posts: GroupPost[] = []
   for (let i = 0; i < 9; i++) {
     const p = pick(catalog)
-    posts.push(makePost(`post-d${day}-${i}`, pick(SELLERS), p, pick(p.options)))
+    // stab chỉ pass nguyên bộ (không đăng bán lẻ 1 con)
+    const opts = p.cat === 'stab' ? p.options.filter((o) => o.label.includes('Bộ')) : p.options
+    posts.push(makePost(`post-d${day}-${i}`, pick(SELLERS), p, pick(opts)))
   }
   return posts
 }

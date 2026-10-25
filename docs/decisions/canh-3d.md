@@ -333,3 +333,47 @@
 - Sửa kèm (BenchHud): câu "Đang xem mặt đáy — bấm Lật lại…" trước đây che gợi ý của mọi bước tự lật (hàn, vặn vít đáy); giờ chỉ
   hiện khi người chơi tự lật ra mặt kia (`viewFlip`).
 - Đã chụp Gasket60 mount top: thứ tự bước, case trên + 6 vít khi lật, case trên nhấc theo board ở bước thả vào case.
+- Feet cao su vào đúng hốc case CAD (2026-10-25, "bot case có chỗ dán feet mà không dán vào"): trước `RubberFeet` đặt 4 góc
+  theo công thức chung (W/2 − 0.7, D/2 − 0.5) nên lệch hốc của case CAD. `scripts/probe-case-feet.mjs` dò hốc: mặt quay xuống
+  cao hơn đáy 0.3–4mm, gom cụm union-find (lưới 3mm), bán kính 3.5–6.5mm, gần tròn, tâm phải có trần (loại lỗ vít vành khuyên),
+  hốc chồng nhau giữ hốc lớn, phải có cặp đối xứng trái / phải, đủ ≥ 4 hốc mới ghi → `src/data/caseFeet.json` ([x, z, r, sâu] mm).
+  14 case có hốc (Exodus60/80, Eclipse, Catto, TA65, Repent75, Head4, Planck 6 hốc, Vintage...); Alice, Bakeneko, Duality,
+  RF-Bruh không dò được → feet mặc định. Feet = trụ r × 0.92 lấp hốc, lồi 1mm dưới đáy. Đã chụp kiểm tra Exodus60 lật đáy.
+- Case 40% vừa layout Planck (2026-10-25): `caseFits` đòi `ff` case = `ff` layout nên case 40% (plastic40 / alu40 / mica40) bị báo
+  "Case không vừa layout Planck". Thêm `LayoutDef.fits` (planck: `['40']`), chỉ áp dụng cho case không có `model` CAD (case dựng theo
+  kích thước layout nên board 12u × 4u nằm đúng khay). `estimateCost` / màu case của đơn (orders.ts) và `orderLook` (orderThumb.ts)
+  dùng `caseFits` thay vì so `c.ff === ff`. Case Planck nhôm (CAD) vẫn chỉ nhận Planck.
+- Plate CAD typ60 bị lật gương (2026-10-25, "plate layout 60 chơi backspace 2u nhưng đang bỏ vào plate 1u"): DXF `typ60-full`
+  vẽ ngược trái / phải (backspace 2u ở x âm nhất), `plateGeometry` (Board.tsx) chỉ lật y → cả plate bị gương (2u sang trái, shift
+  trái / phải đổi chỗ, 24/61 phím lệch lỗ). Sửa: nhánh `cadCutouts` lật thêm x `-(x - centerX)`; thêm `PLATE60_SPACE` = lỗ switch
+  spacebar (DXF nối thông ra mép trước nên nằm trong viền ngoài). Kiểm bằng script: 61/61 phím + stab nằm trong lỗ; plate universal
+  60 đủ 8 tổ hợp variant không lỗi.
+- Case Planck ngược chiều (2026-10-25, "case 40% lắp ngược chiều cổng C"): `convert-cases.mjs` đoán mặt trước theo "mép thấp
+  hơn" — Planck là khay phẳng nên đoán sai, lỗ USB-C ra trước phải. Thêm `turn: true` cho planck trong `SOURCES` (đảo cả x lẫn z =
+  xoay 180°, không lật gương), chạy lại `bun run convert:cases` (Bakeneko không đổi) + `probe-case-feet.mjs`. Chụp kiểm tra: lỗ
+  USB-C ở mặt sau, phía Tab / Esc.
+- Mỡ wire dây dài (2026-10-25, "sao lại bôi hết wire 6.25 và 7u, đáng lẽ bôi như wire 2u"): `wireGreaseCurve` (ModTools.tsx)
+  trước cho dây > 30mm phết hết thanh ngang (`barLen = spanMm − bendR + 0.5`); giờ mọi dây dùng `WIRE_PATH.barLen` (đoạn móc →
+  góc uốn → 2mm thanh ngang). Cọ ở bàn mod stab đi theo cùng đường (`StabModStation`) nên cũng ngắn lại.
+- Chữ keycap SA bị cắt (2026-10-25, "lỗi font chữ ở layout SA"): chữ in trên mặt phẳng ngang ở đáy lòng chảo (giữa phím) nên
+  SA (lòng chảo sâu 0.085 + nghiêng theo hàng) che mất nửa sau của chữ. `legendPlane` (Keycap.tsx) bắn 15 tia xuống model
+  keycap quanh vùng chữ, khớp đường y = a + b·z, nghiêng chữ `atan(-b)` và nâng trên điểm cao nhất + 0.012; chỉ cho keycap GLB
+  (`NativeCap`), keycap dựng bằng code giữ như cũ. Chụp kiểm tra SA navy 60%: chữ đủ.
+- Changelog: 5 mục mình thêm sau commit bfd1e41 (feet, Planck, khoá camera, mỡ wire, Shopii hết hàng) dời từ 0.1.1 (đã commit)
+  sang 0.1.2 (phiên khác đã mở bản này).
+
+## Case mica xếp lớp (2026-10-26)
+
+- Người dùng: "vỏ case mica là nhiều lớp cắt phẳng xếp chồng lên nhau ms đúng, render đang sai". Trước: bàn build ghép mỗi lớp bằng 4 thanh
+  hộp (góc nối, không giống tấm cắt), ảnh Shopii / khung xem 3D (`orderThumb.ts`) vẽ mica thành 1 khối bo tròn đặc.
+- `scene/parts/micaLayers.ts` (nay là `caseShell.ts`): `micaLayerGeometry` = 1 tấm mica cắt phẳng (`ExtrudeGeometry` không vát: viền ngoài bo góc 0,12u, khoét
+  ruột theo `CASE_WALL`, `solid` = tấm đáy liền), `micaStackPlan` (lớp ~0,15u ≈ 3mm, khe 0,012u), viền mép cắt `EdgesGeometry` trắng mờ
+  (`micaEdgeMaterial`), `micaStack` cho three thuần. `Layers` (Case.tsx) dùng chung geometry (memo theo W / D / y0 / y1, dispose khi đổi);
+  `buildKeyboardModel` case mica không có model CAD → `micaStack` (2 lớp dưới là đáy liền) cho cả xem riêng case lẫn cả bàn phím.
+- Vỏ case liền khối (2026-10-26, người dùng: "các loại case chất liệu khác ex 40% đáng lẽ phải liền khối như case mica, hiện đang có nét
+  tách nhau rõ rệt giữa các cạnh"): case dựng bằng code (không model CAD, không mica) trước ghép 4 `RoundedBox` thành + 1 tấm đáy → lộ đường
+  nối ở góc / chân thành. `caseShellGeometry` (`scene/parts/caseShell.ts`, đổi tên từ micaLayers.ts): vành ngoài bo góc 0,12u đùn 1 lần từ y0
+  tới y1, khoét ruột theo `CASE_WALL`, mép trên / dưới bo 0,035u (`SHELL_BEVEL`), `floorTop` thì `mergeGeometries` thêm sàn lọt trong ruột
+  (góc bo theo góc ruột, không hở 4 góc) → 1 geometry. `Walls` (Case.tsx) dùng nó (case dưới kèm sàn, case trên chỉ vành); gỗ trải UV qua
+  `woodUV` (tách từ `woodBoxGeometry`, materials.tsx). `buildKeyboardModel` cũng dựng vỏ liền (case 2 mảnh: phần dưới màu đáy + vành trên),
+  bỏ khối đặc khi xem cả bàn phím.

@@ -5,13 +5,14 @@ import {
   CASE_COLORS,
   KEYCAP_COLORS,
   KEYCAP_KITS,
+  KEYCAP_MATERIALS,
   MOUNTS,
   PCB_TYPES,
   pcbLabel,
   PLATES,
   SOUND_WISH,
   STABS,
-  SWITCH_KINDS,
+  switchWant,
 } from '@/data/parts'
 import { cn, fmt } from '@/lib/format'
 import { KeyValueTable } from '@/components/ui'
@@ -58,18 +59,36 @@ export function OrderSpec({ order, compact }: { order: Order; compact?: boolean 
   const rows: [string, ReactNode][] = [
     ['Layout', `${LAYOUTS[order.layout].name}${vt.length ? ' · ' + vt.join(' · ') : ''}`],
     ['Âm thanh', SOUND_WISH[order.wish].name],
-    ['Switch', order.switchKind ? SWITCH_KINDS[order.switchKind] : 'Shop tự chọn'],
+    ['Switch', switchWant(order) ?? 'Shop tự chọn'],
     [
       'Keycap',
-      `${order.keycapKit ? `${KEYCAP_KITS[order.keycapKit].profile.toUpperCase()} · ` : ''}${KEYCAP_COLORS[order.keycapColor].name}`,
+      [
+        order.keycapKit && KEYCAP_KITS[order.keycapKit].profile.toUpperCase(),
+        order.keycapMaterial && KEYCAP_MATERIALS[order.keycapMaterial].name,
+        KEYCAP_COLORS[order.keycapColor].name,
+      ]
+        .filter(Boolean)
+        .join(' · '),
     ],
   ]
   // kit chỉ có 1 vài món: món nào khách không gửi thì hiện yêu cầu như đơn mua đủ
   const k = order.kit
   if (!k) rows.push(['Loại đơn', 'Mua từ A → Z'])
   if (k?.case) rows.push(['Mount', order.mount ? MOUNTS[order.mount].name : '—'])
-  else rows.push(['Case', order.caseColor ? CASE_COLORS[order.caseColor].name : 'Shop tự chọn'])
+  else
+    rows.push([
+      'Case',
+      [
+        order.caseId && CASES[order.caseId]?.name,
+        order.caseColor && CASE_COLORS[order.caseColor].name,
+      ]
+        .filter(Boolean)
+        .join(' · ') || 'Shop tự chọn',
+    ])
   if (!k?.pcb) rows.push(['PCB', order.pcbType ? PCB_TYPES[order.pcbType].name : 'Shop tự chọn'])
+  if (!k?.plate)
+    rows.push(['Plate', order.plateMaterial ? PLATES[order.plateMaterial].name : 'Shop tự chọn'])
+  if (order.stabType && !k?.stab) rows.push(['Stab', STABS[order.stabType].name])
   rows.push(
     ['Lube switch', LUBE_PREF[order.lubePref]],
     ['Budget linh kiện', fmt(order.budget)],

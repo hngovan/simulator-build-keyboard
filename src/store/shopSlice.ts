@@ -3,10 +3,13 @@ import { groupPosts, randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
 import {
   CASES,
+  CATS,
   TOOLS,
   checkInventory,
   itemName,
   stabStock,
+  addStab,
+  stabTotal,
   type InventoryCheck,
 } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
@@ -35,8 +38,9 @@ import {
   shipReview,
 } from '@/data/reviews'
 import { certBonus } from '@/data/reputation'
-import { FLAW_TEXT, dealFloor, negotiate, type InboxAction } from '@/data/market'
+import { BAN_DAYS, FLAW_TEXT, dealFloor, negotiate, type InboxAction } from '@/data/market'
 import type { Job, JobSession, PackedOrder } from './persistence'
+import { addPart, fillFromStock, stashAll, without } from './spare'
 
 type BuyResult = 'ok' | 'scam' | 'fail'
 export interface LubePick {
@@ -83,9 +87,17 @@ export interface ShopSlice {
   shipOrder: (id: string) => void
   nextDay: () => void
   buy: (cat: PartCategory, item: PartItem, price: number, scamRate?: number) => BuyResult
+  /** lấy 1 món trong kho chung vào đơn đang làm (key: switch:<loại> / stab:<loại> / item:<chỉ số>), món đang có cất lại */
+  takeStock: (key: string) => void
+  /** cất 1 món của đơn đang chờ (chưa build) về kho chung */
+  releasePart: (jobId: string, cat: PartCategory) => void
+  /** đơn đang làm tự lấy đồ hợp yêu cầu trong kho chung */
+  fillActive: () => void
   buyPost: (post: GroupPost) => BuyResult
   /** inbox người bán 1 hành động (xin hình, check var, xin bớt, lowball...) */
-  inboxPost: (id: string, action: InboxAction) => void
+  inboxPost: (id: string, action: InboxAction, amount?: number) => void
+  /** bị ban khỏi chợ Hội Phím Cơ tới hết ngày trước ngày này (đi ăn xin) */
+  isMarketBanned: () => boolean
   buySupply: (id: string, n: number, price: number, scamRate?: number) => BuyResult
   buyTool: (kind: ToolKind, level: number, price?: number, scamRate?: number) => BuyResult
   useSupply: (id: string, n: number) => boolean
@@ -222,6 +234,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       const job = freshSession(order, s.day)
       set({ offers, order, ...job, ctx: null, result: null, pressed: {}, future: [] })
       s.toast('Đã nhận đơn! Mở Shopii hoặc Hội Phím Cơ để mua linh kiện', 'good')
+      get().fillActive()
     } else {
       set({ offers, jobs: [...s.jobs, { order, session: freshSession(order, s.day) }] })
       s.toast(`Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}`, 'good')
@@ -263,6 +276,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       screen: 'pc',
     })
     s.toast(`Chuyển sang đơn của ${order.customer}`)
+    get().fillActive()
   },
   shipOrder: (id) => {
     const s = get()
@@ -341,6 +355,11 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       result: null,
       packed: [],
       money,
+      // khách huỷ: switch / stab đã mua cho đơn đó cất vào đồ dư
+      spare: cancelled.reduce(
+        (sp, j) => stashAll(sp, j.session.inventory, j.session.provided),
+        s.spare,
+      ),
       done: s.done + unsent.length,
       ...(s.result ? { build: null, ctx: null } : {}),
       day,
@@ -381,6 +400,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       return 'scam'
     }
     let value: PartItem = item
+    let spare = s.spare
     if (cat === 'switch' && s.inventory.switch?.type === sw.type)
       value = { ...sw, count: s.inventory.switch.count + sw.count }
     // stab cùng loại thì cộng dồn (bộ + lẻ), khác loại thì thay bộ cũ
@@ -388,27 +408,155 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (cat === 'stab' && s.inventory.stab?.type === st.type) {
       const have = stabStock(s.inventory.stab)
       const add = stabStock(st)
-      value = { type: st.type, short: have.short + add.short, long: have.long + add.long }
+      value = { type: st.type, ...addStab(have, add) }
+    }
+    // đã có món khác loại (mua thay): món cũ (đã trả tiền) cất vào kho chung, không mất
+    const old = s.inventory[cat]
+    const merged =
+      (cat === 'switch' && s.inventory.switch?.type === sw.type) ||
+      (cat === 'stab' && s.inventory.stab?.type === st.type)
+    if (old && !merged) spare = addPart(spare, cat, old)
+    // switch / stab cùng loại trong kho chung tự gộp vào
+    let fromSpare = 0
+    if (cat === 'switch' && spare.switches[sw.type]) {
+      fromSpare = spare.switches[sw.type]
+      value = { ...(value as SwitchItem), count: (value as SwitchItem).count + fromSpare }
+      spare = { ...spare, switches: without(spare.switches, sw.type) }
+    }
+    if (cat === 'stab' && !st.flaw && spare.stabs[st.type]) {
+      const extra = spare.stabs[st.type]
+      const have = stabStock(value as StabItem)
+      fromSpare = stabTotal(stabStock(extra))
+      value = { ...(value as StabItem), ...addStab(have, stabStock(extra)) }
+      spare = { ...spare, stabs: without(spare.stabs, st.type) }
     }
     set({
       inventory: { ...s.inventory, [cat]: value },
       spent: s.spent + price,
+      spare,
       ...(cat === 'case' ? { mount: CASES[(item as CaseItem).id].mounts[0] } : {}),
     })
-    s.toast(`📦 Đã nhận: ${itemName(cat, item)}`, 'good')
+    s.toast(
+      `📦 Đã nhận: ${itemName(cat, item)}${fromSpare ? ` (+${fromSpare} trong kho chung)` : ''}`,
+      'good',
+    )
     return 'ok'
   },
-  inboxPost: (id, action) =>
-    set((s) => ({ posts: s.posts.map((p) => (p.id === id ? negotiate(p, action) : p)) })),
+  takeStock: (key) => {
+    const s = get()
+    if (!s.order || s.result) return s.toast('Nhận đơn trước rồi hãy lấy đồ trong kho nhé', 'bad')
+    const [kind, id] = key.split(':') as ['switch' | 'stab' | 'item', string]
+    let spare = s.spare
+    let cat: PartCategory
+    let item: PartItem
+    if (kind === 'switch') {
+      if (!spare.switches[id]) return
+      cat = 'switch'
+      item = { type: id, count: spare.switches[id] }
+      spare = { ...spare, switches: without(spare.switches, id) }
+    } else if (kind === 'stab') {
+      if (!spare.stabs[id]) return
+      cat = 'stab'
+      item = { type: id, ...spare.stabs[id] }
+      spare = { ...spare, stabs: without(spare.stabs, id) }
+    } else {
+      const x = spare.items[Number(id)]
+      if (!x) return
+      cat = x.cat
+      item = x.item
+      spare = { ...spare, items: spare.items.filter((_, i) => i !== Number(id)) }
+    }
+    if (s.provided[cat]) return s.toast('Khách đã gửi món này trong kit rồi', 'bad')
+    if (s.build && KIT_PARTS.includes(cat as (typeof KIT_PARTS)[number]))
+      return s.toast('Đã bắt đầu build, không thay được món này nữa', 'bad')
+    const cur = s.inventory[cat]
+    const same =
+      (cat === 'switch' || (cat === 'stab' && !(item as StabItem).flaw)) &&
+      (cur as { type?: string } | null)?.type === (item as { type: string }).type
+    if (cat === 'switch' && cur && !same && s.build && Object.keys(s.build.switches).length)
+      return s.toast('Board đã cắm switch loại khác, không trộn được', 'bad')
+    if (same && cat === 'switch')
+      item = {
+        ...(item as SwitchItem),
+        count: (item as SwitchItem).count + (cur as SwitchItem).count,
+      }
+    else if (same) {
+      const x = stabStock(cur as StabItem)
+      const y = stabStock(item as StabItem)
+      item = { type: (item as StabItem).type, ...addStab(x, y) }
+    } else spare = addPart(spare, cat, cur)
+    set({
+      spare,
+      inventory: { ...s.inventory, [cat]: item },
+      ...(cat === 'case' && !s.order.mount
+        ? { mount: CASES[(item as CaseItem).id].mounts[0] }
+        : {}),
+    })
+    s.toast(`📦 Lấy từ kho: ${itemName(cat, item)}`, 'good')
+  },
+  releasePart: (jobId, cat) => {
+    const s = get()
+    const job = s.jobs.find((j) => j.order.id === jobId)
+    if (!job || job.session.provided[cat] || !job.session.inventory[cat]) return
+    if (job.session.build) return s.toast('Đơn đó đã bắt đầu build, không lấy đồ ra được', 'bad')
+    set({
+      spare: addPart(s.spare, cat, job.session.inventory[cat]),
+      jobs: s.jobs.map((j) =>
+        j === job
+          ? { ...j, session: { ...j.session, inventory: { ...j.session.inventory, [cat]: null } } }
+          : j,
+      ),
+    })
+    s.toast(`Đã cất ${CATS[cat]} của đơn ${job.order.customer} về kho chung`)
+    get().fillActive()
+  },
+  fillActive: () => {
+    const s = get()
+    if (!s.order || s.result) return
+    // đã bắt đầu build thì chỉ còn gộp switch (case / PCB / plate / stab không đổi được nữa)
+    const locked: Partial<Record<PartCategory, true>> = s.build
+      ? { ...s.provided, case: true, pcb: true, plate: true, stab: true }
+      : s.provided
+    const r = fillFromStock(s.spare, s.inventory, s.order, locked)
+    if (!r.taken.length) return
+    set({
+      spare: r.spare,
+      inventory: r.inventory,
+      ...(!s.mount && r.inventory.case && !s.order.mount
+        ? { mount: CASES[r.inventory.case.id].mounts[0] }
+        : {}),
+    })
+    s.toast(`📦 Lấy từ kho chung: ${r.taken.join(', ')}`, 'good')
+  },
+  isMarketBanned: () => get().day < get().marketBanUntil,
+  inboxPost: (id, action, amount) => {
+    const s = get()
+    const post = s.posts.find((p) => p.id === id)
+    if (!post || s.isMarketBanned()) return
+    const next = negotiate(post, action, amount)
+    set({ posts: s.posts.map((p) => (p === post ? next : p)) })
+    // đi ăn xin bị ban: khoá chợ BAN_DAYS ngày + thông báo góc phải trên
+    if (next.deal?.ban && !post.deal?.ban) {
+      set({ marketBanUntil: s.day + BAN_DAYS })
+      s.notify(
+        '🚫 Bị ban khỏi chợ',
+        `Bạn đã bị ban khỏi Hội Phím Cơ ${BAN_DAYS} ngày (tới ngày ${s.day + BAN_DAYS}) vì đi ăn xin người bán ${post.seller}`,
+      )
+    }
+  },
   // chốt đơn pass: trả giá đã thương lượng + ship; seller bùng thì mất trắng, hàng lỗi thì ghi flaw / thiếu switch
   buyPost: (post) => {
     const s = get()
+    if (s.isMarketBanned()) return (s.toast('Bạn đang bị ban khỏi chợ', 'bad'), 'fail')
     if (post.deal?.blocked) return (s.toast('Bạn đã bị người bán chặn', 'bad'), 'fail')
     const cat = post.product.cat
     // giá deal không dưới giá sàn (save cũ có thể đã bị bớt về 0đ)
-    const cost = Math.max(dealFloor(post), post.deal?.price ?? post.price) + (post.deal?.ship ?? 0)
+    // được tặng free (đi ăn xin) thì 0đ, người tặng không bùng
+    const cost = post.deal?.gift
+      ? 0
+      : Math.max(dealFloor(post), post.deal?.price ?? post.price) + (post.deal?.ship ?? 0)
     // bản lưu cũ (chưa có sự thật ẩn): 20% bùng như trước
-    const scam = post.scammer === undefined ? 0.2 : post.scammer ? 1 : 0
+    const scam = post.deal?.gift ? 0 : post.scammer === undefined ? 0.2 : post.scammer ? 1 : 0
     let item = post.opt.item as PartItem
     const flaw = post.cond && FLAW_TEXT[post.cond]
     if (flaw) item = { ...item, flaw } as PartItem

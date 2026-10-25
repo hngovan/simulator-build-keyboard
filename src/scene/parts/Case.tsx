@@ -1,7 +1,7 @@
-import { useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { RoundedBox, useGLTF } from '@react-three/drei'
-import { DoubleSide } from 'three'
+import { DoubleSide, EdgesGeometry } from 'three'
 import type * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import { CASE_MARGIN, CASE_WALL, Y } from '@/data/steps'
@@ -10,24 +10,12 @@ import type { Key, StepId } from '@/types'
 import { playClick } from '@/sound'
 import { lerpTo } from '../common/anim'
 import { useHover } from '../common/useHover'
-import { CaseMaterial, WEIGHT_METALS, woodBoxGeometry } from '../materials'
+import { CaseMaterial, WEIGHT_METALS, woodBoxGeometry, woodUV } from '../materials'
 import { ScrewSet } from './Screw'
+import { caseShellGeometry, micaEdgeMaterial, micaLayerGeometry, micaStackPlan } from './caseShell'
 import { caseModelOf } from '@/data/parts'
 import { MM } from '../models/Switch'
 import CASE_FEET from '@/data/caseFeet.json'
-
-type Rect = [x: number, z: number, w: number, d: number]
-
-// 4 thành case theo kích thước ngoài W × D
-const wallRects = (W: number, D: number): Rect[] => {
-  const t = CASE_WALL
-  return [
-    [0, -D / 2 + t / 2, W, t],
-    [0, D / 2 - t / 2, W, t],
-    [-W / 2 + t / 2, 0, t, D - 2 * t],
-    [W / 2 - t / 2, 0, t, D - 2 * t],
-  ]
-}
 
 interface ShellProps {
   W: number
@@ -72,43 +60,57 @@ function CaseBox({
   )
 }
 
-function Walls({ W, D, y0, y1, mat, wood }: ShellProps) {
-  const h = y1 - y0
-  return wallRects(W, D).map(([x, z, w, d], i) => (
-    <CaseBox
-      key={i}
-      w={w}
-      h={h}
-      d={d}
-      radius={Math.min(0.08, h / 3)}
-      position={[x, (y0 + y1) / 2, z]}
-      mat={mat}
-      wood={wood}
-    />
-  ))
+/**
+ * Vỏ case liền 1 khối (không phải 4 thanh + tấm đáy ghép): vành bo góc khoét ruột từ y0 tới y1,
+ * `floorTop`: kèm sàn đáy liền. Gỗ trải UV vân theo toạ độ thật
+ */
+function Walls({ W, D, y0, y1, mat, wood, floorTop }: ShellProps & { floorTop?: number }) {
+  const geometry = useMemo(() => {
+    const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floorTop)
+    return wood ? woodUV(g) : g
+  }, [W, D, y0, y1, floorTop, wood])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  return (
+    <mesh geometry={geometry} castShadow receiveShadow>
+      {mat}
+    </mesh>
+  )
 }
 
-/** Case mica: nhiều lớp mỏng xếp chồng, có khe giữa các lớp. floor: 2 lớp dưới là tấm đáy liền */
+/**
+ * Case mica: nhiều tấm mica cắt phẳng xếp chồng (mỗi lớp 1 tấm viền liền bo góc ngoài, khoét ruột), khe nhỏ
+ * giữa các lớp + viền mép cắt trắng mờ. floor: 2 lớp dưới là tấm đáy liền
+ */
 function Layers({ W, D, y0, y1, mat, floor }: ShellProps & { floor?: boolean }) {
-  const n = Math.max(1, Math.round((y1 - y0) / 0.15))
-  const h = (y1 - y0) / n
+  const { n, step } = micaStackPlan(y0, y1)
+  const geo = useMemo(() => {
+    const { h } = micaStackPlan(y0, y1)
+    const ring = micaLayerGeometry(W, D, h, CASE_WALL)
+    const solid = micaLayerGeometry(W, D, h, CASE_WALL, true)
+    return {
+      ring,
+      solid,
+      ringEdges: new EdgesGeometry(ring, 30),
+      solidEdges: new EdgesGeometry(solid, 30),
+    }
+  }, [W, D, y0, y1])
+  useEffect(
+    () => () => {
+      for (const g of Object.values(geo)) g.dispose()
+    },
+    [geo],
+  )
   return Array.from({ length: n }, (_, i) => {
-    const y = y0 + i * h + h / 2
-    if (floor && i < 2)
-      return (
-        <mesh key={i} position-y={y}>
-          <boxGeometry args={[W, h - 0.012, D]} />
+    const solid = floor && i < 2
+    return (
+      <group key={i} position-y={y0 + i * step}>
+        <mesh geometry={solid ? geo.solid : geo.ring} castShadow receiveShadow>
           {mat}
         </mesh>
-      )
-    return (
-      <group key={i}>
-        {wallRects(W, D).map(([x, z, w, d], j) => (
-          <mesh key={j} position={[x, y, z]}>
-            <boxGeometry args={[w, h - 0.012, d]} />
-            {mat}
-          </mesh>
-        ))}
+        <lineSegments
+          geometry={solid ? geo.solidEdges : geo.ringEdges}
+          material={micaEdgeMaterial}
+        />
       </group>
     )
   })
@@ -322,25 +324,15 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
           ) : mica ? (
             <Layers W={W} D={D} y0={Y.floorBot} y1={wallTop} mat={mat(bottom.hover)} floor />
           ) : (
-            <>
-              <CaseBox
-                w={W}
-                h={Y.floorTop - Y.floorBot}
-                d={D}
-                radius={0.12}
-                position={[0, (Y.floorTop + Y.floorBot) / 2, 0]}
-                mat={bottomMat(bottom.hover)}
-                wood={wood && !lower}
-              />
-              <Walls
-                W={W}
-                D={D}
-                y0={Y.floorBot}
-                y1={wallTop}
-                mat={bottomMat(bottom.hover)}
-                wood={wood && !lower}
-              />
-            </>
+            <Walls
+              W={W}
+              D={D}
+              y0={Y.floorBot}
+              y1={wallTop}
+              floorTop={Y.floorTop}
+              mat={bottomMat(bottom.hover)}
+              wood={wood && !lower}
+            />
           )}
           <RubberFeet W={W} D={D} model={model} origin={ctx.origin} />
           {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên */}

@@ -26,6 +26,13 @@ export interface SupplyDef {
   spell?: number
 }
 
+/** gói sách phép: 100 / 200 / 500 lần (gói lớn rẻ hơn mỗi lần) */
+const SPELL_PACKS: [number, number][] = [
+  [100, 450],
+  [200, 800],
+  [500, 1800],
+]
+
 export const SUPPLIES: Record<string, SupplyDef> = {
   // mỗi cuộn thiếc dùng được 1000 mối hàn (mỗi phím 2 mối)
   solderCheap: {
@@ -175,48 +182,48 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     name: 'Phép mở switch',
     unit: 'lần',
     color: '#e9dfb4',
-    packs: [[200, 800]],
-    desc: 'Mỗi lần mở 10 switch (10 đồ mở trên bàn); có chứng chỉ thợ thì cộng thêm 10. Dùng 200 lần',
+    packs: SPELL_PACKS,
+    desc: 'Mỗi lần mở 10 switch (10 đồ mở trên bàn); có chứng chỉ thợ thì cộng thêm 10',
     spell: 10,
   },
   spellLube: {
     name: 'Phép lube switch',
     unit: 'lần',
     color: '#e9dfb4',
-    packs: [[200, 800]],
-    desc: 'Mỗi mẻ lube 10 switch; có chứng chỉ thợ thì cộng thêm 10. Dùng 200 lần',
+    packs: SPELL_PACKS,
+    desc: 'Mỗi mẻ lube 10 switch; có chứng chỉ thợ thì cộng thêm 10',
     spell: 10,
   },
   spellAssem: {
     name: 'Phép lắp switch',
     unit: 'lần',
     color: '#e9dfb4',
-    packs: [[200, 800]],
-    desc: 'Mỗi lần lắp 10 switch (cùng hàng phím); có chứng chỉ thợ thì cộng thêm 10. Dùng 200 lần',
+    packs: SPELL_PACKS,
+    desc: 'Mỗi lần lắp 10 switch (cùng hàng phím); có chứng chỉ thợ thì cộng thêm 10',
     spell: 10,
   },
   spellKeycap: {
     name: 'Phép lắp keycap',
     unit: 'lần',
     color: '#e9dfb4',
-    packs: [[200, 800]],
-    desc: 'Mỗi lần lắp 10 keycap (cùng hàng phím); có chứng chỉ thợ thì cộng thêm 10. Dùng 200 lần',
+    packs: SPELL_PACKS,
+    desc: 'Mỗi lần lắp 10 keycap (cùng hàng phím); có chứng chỉ thợ thì cộng thêm 10',
     spell: 10,
   },
   spellSolder: {
     name: 'Phép hàn switch',
     unit: 'lần',
     color: '#e9dfb4',
-    packs: [[200, 800]],
-    desc: 'Mỗi lần hàn được 10 phím: phím đang hàn + 9 phím kế tiếp (vẫn tốn thiếc); hàn cháy thì cháy cả 10. Dùng 200 lần',
+    packs: SPELL_PACKS,
+    desc: 'Mỗi lần hàn được 10 phím: phím đang hàn + 9 phím kế tiếp (vẫn tốn thiếc); hàn cháy thì cháy cả 10',
     spell: 10,
   },
   spellDesolder: {
     name: 'Phép rã hàn',
     unit: 'lần',
     color: '#e9dfb4',
-    packs: [[200, 800]],
-    desc: 'Mỗi lần hút thiếc cháy được 10 phím: phím đang rã + 9 phím cháy kế tiếp. Dùng 200 lần',
+    packs: SPELL_PACKS,
+    desc: 'Mỗi lần hút thiếc cháy được 10 phím: phím đang rã + 9 phím cháy kế tiếp',
     spell: 10,
   },
 }

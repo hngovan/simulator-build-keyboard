@@ -3,7 +3,9 @@ import { randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
 import type { InventoryCheck } from '@/data/parts'
 import type { AudioSettings, Order, ShopCategory, Toast, Review } from '@/types'
-import { START, loadSave, writeSave, type Profile, type SaveData } from './persistence'
+import { newRunId, runEntry } from '@/data/gameOver'
+import { submitRun, type RunEndReason, type RunEntry } from '@/lib/leaderboardApi'
+import { START, clearSave, loadSave, writeSave, type Profile, type SaveData } from './persistence'
 import { emptyInventory } from './shopSlice'
 import { compactHistory } from './buildSlice'
 import type { GameState } from '.'
@@ -11,7 +13,7 @@ import { applyAudioSettings, stopBgm } from '@/sound'
 
 type Screen = 'title' | 'pc' | 'bench'
 export type AppId =
-  'messenger' | 'shopii' | 'group' | 'inventory' | 'order' | 'reviews' | 'settings'
+  'messenger' | 'shopii' | 'group' | 'inventory' | 'order' | 'reviews' | 'leaderboard' | 'settings'
 
 // Trạng thái chung: màn hình, cửa sổ, thông báo, tiến trình lưu
 export interface MetaSlice extends Profile {
@@ -28,6 +30,10 @@ export interface MetaSlice extends Profile {
   /** lưu đánh giá + hiện thông báo; cộng / trừ uy tín do nơi gọi tự tính */
   addReviews: (reviews: Review[]) => void
   dismissReview: (id: string) => void
+  /** thông báo hệ thống ở góc phải trên (bị ban khỏi chợ...), không lưu */
+  notices: Notice[]
+  notify: (title: string, text: string) => void
+  dismissNotice: (id: number) => void
   /** người chơi tự lật bàn phím xem đáy */
   viewFlip: boolean
   /** tăng lên để đưa camera về góc mặc định */
@@ -59,6 +65,25 @@ export interface MetaSlice extends Profile {
   setAudio: (audio: Partial<AudioSettings>) => void
   returnToTitle: () => void
   save: () => void
+  /** lượt chơi vừa kết thúc (thua / phá sản): hiện popup tổng kết, không lưu */
+  gameOver: GameOver | null
+  /** kết thúc lượt chơi: gửi bảng xếp hạng, xoá bản lưu, hiện popup */
+  endRun: (reason: RunEndReason) => void
+  /** đóng popup thua game, về màn hình tiêu đề */
+  closeGameOver: () => void
+}
+
+export interface GameOver {
+  reason: RunEndReason
+  entry: RunEntry
+  /** đang gửi / hạng theo uy tín trên server / gửi lỗi (đã cất hàng chờ) */
+  sent: 'sending' | { rank: number; total: number } | 'offline'
+}
+
+export interface Notice {
+  id: number
+  title: string
+  text: string
 }
 
 let toastId = 0
@@ -66,15 +91,31 @@ let toastId = 0
 const REVIEW_KEEP = 100
 /** thông báo đánh giá tự ẩn sau (ms) */
 const REVIEW_POP_MS = 6000
+/** thông báo hệ thống tự ẩn sau (ms) */
+const NOTICE_MS = 10000
 
 const infoOf = (s: SaveData | null) =>
   s?.name ? { name: s.name, day: s.day, money: s.money } : null
 
 /** Ảnh chụp toàn bộ tiến trình để lưu */
 function snapshot(s: GameState): SaveData {
-  const { name, money, rep, day, done, tools, supplies, audio, screwBit, rev, wear, reviews } = s
+  const {
+    name,
+    money,
+    rep,
+    day,
+    done,
+    tools,
+    supplies,
+    audio,
+    screwBit,
+    rev,
+    wear,
+    reviews,
+    spare,
+  } = s
   const { offers, jobs, order, inventory, provided, spent, posts, mount, result, build, packed } = s
-  const { supplyUsed } = s
+  const { supplyUsed, marketBanUntil } = s
   return {
     name,
     money,
@@ -89,6 +130,9 @@ function snapshot(s: GameState): SaveData {
     rev,
     wear,
     reviews,
+    spare,
+    marketBanUntil,
+    runId: s.runId,
     session: {
       offers,
       jobs: jobs.map((j) => ({
@@ -119,6 +163,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   minimized: [],
   toasts: [],
   reviewPops: [],
+  notices: [],
   viewFlip: false,
   camKey: 0,
   pcZoom: false,
@@ -126,6 +171,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   shopCat: 'case',
   benchPicker: false,
   benchShort: null,
+  gameOver: null,
 
   toast: (text, kind = 'info') => {
     const id = ++toastId
@@ -141,9 +187,20 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     for (const r of reviews) setTimeout(() => get().dismissReview(r.id), REVIEW_POP_MS)
   },
   dismissReview: (id) => set((s) => ({ reviewPops: s.reviewPops.filter((r) => r.id !== id) })),
+  notify: (title, text) => {
+    const id = ++toastId
+    set((s) => ({ notices: [...s.notices, { id, title, text }].slice(-3) }))
+    setTimeout(() => get().dismissNotice(id), NOTICE_MS)
+  },
+  dismissNotice: (id) => set((s) => ({ notices: s.notices.filter((n) => n.id !== id) })),
   newGame: (name) => {
+    // chơi mới đè bản lưu cũ: ghi lượt cũ lên bảng xếp hạng
+    const old = loadSave()
+    if (old?.name) void submitRun(runEntry(old, 'newgame'))
     set({
       ...START,
+      runId: newRunId(),
+      gameOver: null,
       reviewPops: [],
       rejected: [],
       name: name.trim() || 'Thợ phím',
@@ -191,6 +248,9 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       supplyUsed: session?.supplyUsed ?? {},
       rejected: session?.rejected ?? [],
       reviews: profile.reviews ?? [],
+      // bản lưu cũ chưa có mã lượt chơi
+      runId: profile.runId || newRunId(),
+      gameOver: null,
       screen: 'pc',
       windows: ['messenger'],
       minimized: [],
@@ -238,9 +298,25 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   },
   save: () => {
     const s = get()
-    if (s.screen === 'title' || !s.name) return
+    if (s.screen === 'title' || !s.name || s.gameOver) return
     const data = snapshot(s)
     writeSave(data)
     set({ saveInfo: infoOf(data) })
+  },
+  endRun: (reason) => {
+    const s = get()
+    if (s.gameOver || !s.name) return
+    const entry = runEntry(s, reason)
+    // thua là hết: bản lưu bị xoá, màn tiêu đề chỉ còn chơi mới
+    clearSave()
+    set({ gameOver: { reason, entry, sent: 'sending' }, saveInfo: null, pcZoom: false })
+    void submitRun(entry).then((res) => {
+      const g = get().gameOver
+      if (g?.entry.runId === entry.runId) set({ gameOver: { ...g, sent: res ?? 'offline' } })
+    })
+  },
+  closeGameOver: () => {
+    stopBgm()
+    set({ gameOver: null, name: '', screen: 'title', windows: [], minimized: [] })
   },
 })

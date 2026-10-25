@@ -32,8 +32,10 @@ Bấm số phiên bản ở góc màn hình tiêu đề để xem lịch sử c�
 - Hàn đúng vùng xanh và đừng giữ quá lâu; lau mũi hàn khi bị cháy. Lube switch thì mở vỏ trước; mod stab theo đúng mẫu; chọn đúng đầu vít.
 - Test bằng bàn phím thật hoặc click phím 3D; càng nhiều phím được test càng cao điểm.
 - Bấm **Đóng gói đơn này** để chấm điểm, sau đó gửi khách trong Mezzenger (hoặc để **Kết thúc ngày** gửi nốt).
-- Tiền nhận gồm tiền hoàn linh kiện + tiền công theo điểm; lố ngân sách bị trừ điểm và không được hoàn phần lố.
+- Tiền nhận gồm budget linh kiện (mua rẻ hơn thì phần dư vào túi) + tiền công theo điểm; lố ngân sách thì shop chịu phần lố và bị trừ điểm.
+- Kho chung của shop: mọi linh kiện mua dư / bị thay / thừa sau khi giao đều nằm trong Kho, nhận hoặc chuyển đơn thì tự lấy món hợp yêu cầu, chỉ cần mua phần thiếu.
 - Giữ đơn trong hạn để tránh mất uy tín; đơn chờ trễ quá 3 ngày sẽ bị khách huỷ. Dụng cụ có độ bền và chứng chỉ thợ giúp lắp / lube nhanh hơn.
+- **Thua game** khi uy tín từ −10 trở xuống (bị phốt quá nhiều) hoặc rảnh tay mà ví không đủ mua linh kiện cho đơn rẻ nhất. Có thể tự **tuyên bố phá sản** ở Cài đặt. Thua / phá sản / chơi mới đè bản lưu thì kết quả được ghi lên bảng xếp hạng server (app **Bảng xếp hạng**, xếp theo tiền).
 
 ## Yêu cầu
 
@@ -51,6 +53,7 @@ bun run dev
 | Lệnh                   | Mục đích                                                       |
 | ---------------------- | -------------------------------------------------------------- |
 | `bun run dev`          | Chạy môi trường phát triển Vite.                               |
+| `bun run server`       | Chạy server bảng xếp hạng (cổng 8787, Vite proxy `/api`).      |
 | `bun run build`        | Kiểm tra TypeScript và tạo bản build production trong `dist/`. |
 | `bun run preview`      | Xem trước bản build production.                                |
 | `bun run typecheck`    | Kiểm tra kiểu TypeScript.                                      |

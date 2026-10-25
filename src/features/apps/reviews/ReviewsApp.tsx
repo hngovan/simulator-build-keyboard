@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useGame } from '@/store'
-import { Muted, OptionChip } from '@/components/ui'
+import { Badge, Muted, OptionChip } from '@/components/ui'
 import { ReviewCard, Stars } from './ReviewCard'
 
 const FILTERS = { all: 'Tất cả', good: '4–5 sao', bad: '1–2 sao' } as const
@@ -20,9 +20,14 @@ export function ReviewsApp() {
         <div className="font-head text-3xl font-extrabold">{avg ? avg.toFixed(1) : '–'}</div>
         <div className="flex-1">
           <Stars n={Math.round(avg)} className="block text-lg" />
-          <Muted className="text-[13px]">
-            {reviews.length} đánh giá · uy tín {rep}
-          </Muted>
+          <div className="mt-0.5 flex flex-wrap gap-1">
+            <Badge solid className="ml-0">
+              {reviews.length} đánh giá
+            </Badge>
+            <Badge solid tone={rep < 0 ? 'red' : 'yellow'} className="ml-0">
+              Uy tín {rep}
+            </Badge>
+          </div>
         </div>
       </div>
       <div className="flex gap-1.5">

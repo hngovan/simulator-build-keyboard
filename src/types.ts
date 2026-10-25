@@ -51,7 +51,7 @@ export interface AudioSettings {
 /** Đầu tua vít (tua vít thay đầu được) */
 export type ScrewBit = 'phillips' | 'hex' | 'torx' | 'flat'
 
-export type SwitchKind = 'Linear' | 'Tactile' | 'Clicky' | 'Silent'
+export type SwitchKind = 'Linear' | 'Tactile' | 'Clicky' | 'Silent' | 'SilentTactile'
 export type PartCategory = 'case' | 'pcb' | 'plate' | 'stab' | 'switch' | 'keycap'
 export type ShopCategory = PartCategory | 'supply' | 'tool' | 'cert' | 'spell'
 export type ToolKind =
@@ -91,8 +91,10 @@ export interface StabItem {
   type: string
   /** số stab ngắn (2u–2.75u) đang có; bản lưu cũ không có = 1 bộ tiêu chuẩn */
   short?: number
-  /** số stab phím dài (6u / 6.25u / 7u, bộ kèm cả dây 6.25u + 7u) */
+  /** số stab phím dài dây 6.25u (spacebar 6u / 6.25u) */
   long?: number
+  /** số stab dây 7u (spacebar 7u, WKL); bản lưu cũ không có = bằng long (bộ cũ kèm cả 2 dây) */
+  long7?: number
   /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
   flaw?: string
 }
@@ -100,9 +102,13 @@ export interface SwitchItem {
   type: string
   count: number
 }
+/** chất liệu keycap: PBT / ABS / mix PBT + ABS */
+export type KeycapMaterial = 'pbt' | 'abs' | 'mix'
 export interface KeycapItem {
   kit: string
   color: string
+  /** bản lưu cũ không có = PBT */
+  material?: KeycapMaterial
   /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
   flaw?: string
 }
@@ -124,6 +130,15 @@ export interface Inventory {
   keycap: KeycapItem | null
 }
 export type PartItem = NonNullable<Inventory[PartCategory]>
+/** Đồ dư sau khi giao đơn (switch thừa, stab thừa), giữ lại dùng cho đơn sau */
+export interface Spare {
+  /** loại switch → số con */
+  switches: Record<string, number>
+  /** loại stab → số stab ngắn / dài */
+  stabs: Record<string, import('./data/parts').StabCount>
+  /** case / PCB / plate / keycap (và stab lỗi): từng món riêng */
+  items: { cat: PartCategory; item: PartItem }[]
+}
 
 // ---------- shop ----------
 export interface ProductOption {
@@ -132,6 +147,8 @@ export interface ProductOption {
   price: number
   item: PartItem | SupplyItem | ToolItem
   hint?: string
+  /** nhóm option cấp 1 (vd chất liệu case); thẻ sản phẩm chọn nhóm trước rồi mới chọn option (màu) */
+  group?: string
 }
 export interface Product {
   id: string
@@ -173,6 +190,10 @@ export interface GroupPost {
     blocked?: boolean
     revealed?: boolean
     varChecked?: boolean
+    /** người bán cho free (đi ăn xin thành công): giá 0, không chặn sàn */
+    gift?: boolean
+    /** đi ăn xin bị admin ban khỏi chợ */
+    ban?: boolean
   }
 }
 
@@ -203,6 +224,8 @@ export interface Order {
   variant: Variant
   wish: SoundWish
   keycapColor: string
+  /** chất liệu keycap khách đòi (không có = shop tự chọn) */
+  keycapMaterial?: KeycapMaterial
   /** bộ keycap khách muốn (quyết định profile cho cả bàn phím); bản lưu cũ không có */
   keycapKit?: string
   type: 'kit' | 'full'
@@ -212,8 +235,14 @@ export interface Order {
   lubePref: LubePref
   /** loại switch khách đòi; không có = shop tự chọn (bản lưu cũ) */
   switchKind?: SwitchKind
+  /** khách đòi đúng 1 con switch (id trong SWITCHES, vd cherryBlack); không có = loại nào trong `switchKind` cũng được */
+  switchType?: string
   /** đơn mua từ A → Z: khách đòi đúng loại PCB (hàn / hotswap); không có = shop tự chọn */
   pcbType?: 'hotswap' | 'solder'
+  /** khách đòi đúng 1 case (id trong CASES) / 1 loại stab (STABS) / 1 chất liệu plate (PLATES); chỉ với món khách không gửi */
+  caseId?: string
+  stabType?: string
+  plateMaterial?: string
   budget: number
   labor: number
   lines: string[]

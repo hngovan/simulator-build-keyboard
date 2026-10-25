@@ -7,6 +7,7 @@ import { InventoryApp } from '@/features/apps/inventory/InventoryApp'
 import { OrderApp } from '@/features/apps/inventory/OrderApp'
 import { SettingsApp } from '@/features/apps/settings/SettingsApp'
 import { ReviewsApp } from '@/features/apps/reviews/ReviewsApp'
+import { LeaderboardApp } from '@/features/apps/leaderboard/LeaderboardApp'
 
 export interface AppDef {
   title: string
@@ -59,6 +60,13 @@ export const APPS: Record<AppId, AppDef> = {
     color: '#d9a441',
     width: 520,
     Component: ReviewsApp,
+  },
+  leaderboard: {
+    title: 'Bảng xếp hạng',
+    icon: '/icons/apps/trophy.svg',
+    color: '#c0392b',
+    width: 560,
+    Component: LeaderboardApp,
   },
   settings: {
     title: 'Cài đặt',

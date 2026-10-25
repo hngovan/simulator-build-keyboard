@@ -230,3 +230,73 @@
   (`features/title/Changelog.tsx`: TitleBar + danh sách phiên bản / ngày / commit / các ý, bản mới nhất chữ vàng).
 - Màn chờ tải cảnh 3D (2026-10-25, "bỏ khung viền nhiều màu, chỉ hiện chữ và icon"): `BenchLoader` bỏ khung viền vàng + nền +
   thanh tiến độ chuyển màu, chỉ còn icon ⌨️, dòng chữ trạng thái và số % (đổ bóng nhẹ cho dễ đọc trên cảnh 3D).
+
+### Bảng xếp hạng (2026-10-25)
+
+- App "Bảng xếp hạng" (`features/apps/leaderboard/LeaderboardApp.tsx`, icon `trophy.svg`, AppId `leaderboard`): game offline nên so
+  shop người chơi với 9 shop đối thủ giả lập (`data/leaderboard.ts`, `RIVALS`: đơn / ngày, chất lượng sao, tiền công, số ngày mở trước).
+- Chỉ số đối thủ tất định: seed cố định + hash (đối thủ, ngày) → mỗi ngày số đơn / sao / tiền; `rivalsAt(day)` cộng dồn tới hết hôm qua, không lưu.
+- Tiêu chí Uy tín / Đơn đã giao / Tiền (ví hiện tại) / Sao TB (đánh giá `kind: 'ship'`); dòng người chơi viền vàng + "Bạn",
+  đầu bảng hiện hạng + "Cần thêm X để vượt Y"; đối thủ có ▲/▼ thay đổi hôm qua.
+- Chữ phụ khó đọc (2026-10-25, người dùng yêu cầu): dòng "N đơn · uy tín · sao" và dòng chú thích đáy bỏ `Muted` 12px (`text-muted`)
+  → `div` `text-[13px] text-ink/75` (không bọc `Muted` vì `cn` không gộp class, `text-muted` có thể đè màu). Chú thích đáy đổi thành
+  "Cập nhật lần cuối: cuối ngày {day − 1}" (ngày 1: "đầu ngày 1") — game không có giờ, chỉ số đối thủ đổi khi qua ngày.
+- Viền vàng dòng "Bạn" bị cắt (2026-10-25): danh sách `overflow-y-auto` cắt `ring` vẽ ra ngoài → thêm `ring-inset`.
+
+### Nhạc nền xoay 3 bài (2026-10-25)
+
+- Thêm `bgm-2.mp3` (Chill lofi inspired, omfgdude) và `bgm-3.mp3` (A cup of tea, TAD), CC0 từ OpenGameArt, MP3 160 kbps, hạ âm lượng
+  cho đều với `bgm.mp3` (~−21 dB). `src/sound.ts`: `BGM_URLS` + `pickTrack()` ngẫu nhiên, không lặp bài vừa nghe (`lastTrack`);
+  mỗi bài phát 1 lần, `onended` → `playNext()`; tải lười + cache (`tracks`), bài lỗi vào `badTracks`. Loop ambient chỉ khi không tải được bài nào.
+  Nguồn ở `public/audio/README.md` + `credits.ts`.
+- Mô tả PCB Hotswap (2026-10-25, người dùng yêu cầu): `PCB_TYPES.hotswap.desc` "Cắm switch vào socket, không cần hàn" → "Dùng để cố
+  định switch với PCB".
+
+### Thông báo góc phải trên (2026-10-25, "noti đang chưa fix góc trên cùng")
+
+- `ReviewPops` trước ở `fixed top-28` z 1000 → bị popup inbox (z 2000) che và không sát góc. Giờ `fixed top-3 right-3 z-[3000]`,
+  hiện cả thông báo hệ thống (`notices` / `notify(title, text)` trong metaSlice, khung đỏ) lẫn đánh giá mới.
+- Shopii không có sản phẩm (2026-10-25, "thêm icon hết hàng chính giữa"): thay dòng chữ xám bằng khối giữa khung sản phẩm
+  (lưới `relative`, khối `absolute inset-0`, `pointer-events-none` để không chặn chip lọc): icon `PackageX` + "Hết hàng" +
+  "Không có sản phẩm phù hợp".
+- Badge đồng bộ (2026-10-25, "bảng xếp hạng sửa lại badge cho đồng bộ với style hiện tại như button"): "Ngày N" và "Bạn" ở Bảng xếp hạng,
+  "Khách gửi" ở Chi tiết đơn đổi sang `Badge solid` (khối màu giống `Button`, như Mezzenger / OrderCard / PostCard). Quy ước ghi trong CLAUDE.md:
+  badge luôn `solid` + tone trong `BUTTON_TONES`.
+- Bảng xếp hạng bỏ ô avatar tròn (`Avatar small`) ở mỗi dòng, chỉ còn huy chương / số hạng + tên (bỏ luôn field `avatar` trong data).
+- Tên ô switch / stab trong Kho bỏ số lượng ("Cherry Đen × 450" → "Cherry Đen", "Stab X (4 ngắn + 1 dài)" → "Stab X") vì badge góc ô
+  đã hiện số con / số cái (`partOwned` trong OwnedItems).
+- Hội Phím Cơ, số like / bình luận khó đọc (2026-10-26, người dùng yêu cầu): `PostCard` bỏ `Muted` (text-xs text-muted) + emoji 👍💬 →
+  icon lucide `ThumbsUp` (xanh dương) / `MessageSquareText` (xanh lá), chữ `font-head text-sm font-bold text-ink/85`.
+
+### Shopii: dropdown option, nút mua khi rê, stab theo kiểu gắn, preview stab dài (2026-10-26)
+
+- Mọi thẻ sản phẩm chọn option bằng ô đổ xuống `OptionSelect` (components/ui, cùng kiểu khối OptionChip, mỗi dòng kèm giá) thay hàng OptionChip
+  ("tất cả đều đổi thành option cho gọn"). Khung xem 3D vẫn dùng OptionChip làm picker; bộ lọc mục Shopii vẫn là chip.
+- Nút "Mua ngay" luôn hiện (đã thử chỉ hiện khi rê chuột, người dùng bảo đổi lại luôn hiện).
+- Stab: badge số stab theo cỡ (`4× 2u`, `1× 6.25u`, `1× 7u`) nổi góc trên phải ảnh (`ProductImage` prop `tags`), không còn ở dưới thẻ.
+  Stab Cherry tách 3 sản phẩm như các hãng khác; kiểu gắn (`STAB_MOUNTS`: Clip-in / Screw-in / Plate-mount) là nhãn vàng góc ảnh (`Product.badge`)
+  - bộ lọc mục Stab (`shopFilters`). Option chỉ còn "Bộ TKL / Lẻ 2u / Lẻ 6.25u / Lẻ 7u".
+- Ảnh preview stab theo option: lẻ 6.25u / 7u chụp dây dài (`stabThumbType` trong ProductImage → khoá "loại:6.25u" / "loại:7u";
+  `buildScene` dùng `wire625`, 7u kéo giãn tới slider 57.15mm `STAB_SPAN_MM`). Đã chụp kiểm tra headless (playwright, swiftshader).
+- Thanh trên Shopii (2026-10-26, "filter phải fixed ở top", "hiển thị filter option", "tất cả các mục đều có filter"): bộ lọc là `OptionSelect`
+  (mỗi dòng kèm số sản phẩm) góc phải; chú thích âm thanh `SoundLegend` bên trái (`md:mr-auto`); cả thanh `sticky -top-3.5` + `bg-panel`, bù
+  padding thân Window nên không cuộn theo. `shopFilters` có nhóm cho mọi mục: case (cỡ), PCB / plate (layout), stab (kiểu gắn), switch (loại),
+  keycap (profile), lube & vật tư (`supplyGroup`: thiếc / lube switch / lube stab / dầu lò xo / khác), dụng cụ (việc dùng); mục còn lại
+  (chứng chỉ, sách phép) lọc theo từng sản phẩm (`groupBy`).
+- Khung xem 3D stab luôn có hàng chọn option (Bộ TKL / Lẻ 2u / Lẻ 6.25u / Lẻ 7u) như đổi màu keycap: trước picker chỉ hiện khi option khác
+  màu / loại nên stab (cùng màu, cùng loại) không đổi được (`ProductCard` picker: `product.cat === 'stab' ||`). Đã chụp kiểm tra Lẻ 7u.
+- Toggle Shopii "Chỉ hiện đồ hợp layout đơn" → "Chỉ hiện đồ hợp đơn" (2026-10-26, keycap trước không lọc được vì mọi bộ đều đủ layout):
+  `fitsOrder` (Shopii.tsx) = đúng layout + keycap đúng profile khách đặt + switch `switchFits`; `fitOptions` keycap chỉ còn option đúng
+  chất liệu + màu. Thẻ đổi `key` theo trạng thái lọc để chọn lại option đầu.
+- App Đánh giá: dòng "n đánh giá · uy tín x" (Muted) → 2 `Badge solid` (xám số đánh giá, vàng / đỏ khi âm uy tín).
+- Shopii gộp case cùng dòng (2026-10-26, người dùng: "chỉ có 1 tên case duy nhất và có option để chọn chất liệu chứ ko phải tách ra"):
+  `CASE_LINES` (parts.ts) = tên dòng + [id case, nhãn chất liệu] (Case 60% / 40% / 75% / TKL / FRL / Full, 4HEAD, Repent75, Exodus80);
+  id case giữ nguyên (bản lưu, đơn, model CAD), case không thuộc dòng nào đứng riêng. `buildCatalog`: 1 sản phẩm / dòng
+  (`case-<id đầu dòng>`), option = chất liệu × màu, `ProductOption.group` = chất liệu, `hint` = mô tả riêng từng chất liệu. 39 → 23 sản phẩm.
+  `ProductCard`: có `group` thì 2 ô đổ xuống (chất liệu → màu), đổi chất liệu giữ màu nếu có; chip màu trong khung 3D chỉ hiện màu của chất
+  liệu đang chọn. Shopii `fitsOrder` (đơn đòi `caseId`) xét theo option, `fitOptions` bỏ chất liệu không vừa layout / không phải con
+  khách đòi rồi lọc màu; `shopFilters.ffOf` lấy cỡ theo case của option đầu. Tên đầy đủ từng case (`CASES[id].name`) vẫn dùng ở đơn / kho.
+- Tên case gọn + nhãn cỡ (2026-10-26, người dùng: "Catto RF v4 (TKL) => Catto RF, còn lại nếu ex 40% thì thêm badge lên card ảnh"):
+  đổi tên `cattoRF` → "Catto RF", `rfBruh` → "RF Bruh", `dualityHorns` → "Duality Horns", `aliceAlu` → "Blossom" (bỏ cỡ trong ngoặc).
+  Mọi sản phẩm case Shopii có `badge` = cỡ (`FF_BADGE` trong parts.ts: 40% / 60% / TKL / Full...) ở góc ảnh như nhãn loại switch.
+  Tên dòng case chung ("Case 60%"...) giữ cỡ trong tên vì không có tên riêng nào khác để phân biệt.

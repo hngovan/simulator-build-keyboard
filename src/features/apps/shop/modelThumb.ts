@@ -309,7 +309,9 @@ export async function buildScene(kind: ThumbKind, type: string) {
     group.rotation.set(0.5, -0.6, 0)
   } else {
     const n = await meshes(STAB_GLB)
-    const st = STABS[type]
+    // "loại:cỡ" (cỡ 2u / 6.25u / 7u theo option đang chọn; không ghi = 2u)
+    const [stabType, size = '2u'] = type.split(':')
+    const st = STABS[stabType]
     // housing theo kiểu lắp như bàn build: clip-in / plate-mount có model riêng, screw-in dùng CAD gốc
     const own =
       st.mount === 'clip' || st.mount === 'plate' ? await meshes(HOUSING_GLB[st.mount]) : null
@@ -322,12 +324,15 @@ export async function buildScene(kind: ThumbKind, type: string) {
     })
     const stem = new THREE.MeshPhysicalMaterial({ color: st.stem, roughness: 0.45 })
     const wire = new THREE.MeshStandardMaterial({ color: '#cfd3d8', metalness: 1, roughness: 0.22 })
-    const span = stabModel.spans['2.25u']
+    // dây dài: dây 6.25u của CAD, 7u kéo giãn theo khoảng cách slider (giống StabWireCad trên bàn build)
+    const long = size !== '2u'
+    const span = long ? (STAB_SPAN_MM[size] ?? stabModel.spans['6.25u']) : stabModel.spans['2.25u']
     for (const x of [-span, span]) {
       add(housingGeo, housing, x)
       add(n.stem.geometry, stem, x)
     }
-    const wireMesh = add(n.wire225.geometry, wire)
+    const wireMesh = add(long ? n.wire625.geometry : n.wire225.geometry, wire)
+    if (long) wireMesh.scale.x = span / stabModel.spans['6.25u']
     // dây nằm đúng rãnh giữ dây của housing (plate-mount thấp + gần slider hơn)
     const [wy, wz] = WIRE_SEAT[st.mount] ?? [0, 0]
     wireMesh.position.y += wy
@@ -336,6 +341,9 @@ export async function buildScene(kind: ThumbKind, type: string) {
   }
   return group
 }
+
+/** khoảng cách tâm → slider (mm) của stab phím dài: 6.25u theo CAD, 7u = 57.15mm (chuẩn Cherry) */
+const STAB_SPAN_MM: Record<string, number> = { '6.25u': stabModel.spans['6.25u'], '7u': 57.15 }
 
 /** Chụp 1 vật thể (đã dựng sẵn) thành ảnh PNG, canh khung theo khối bao */
 async function shootObject(model: THREE.Object3D) {

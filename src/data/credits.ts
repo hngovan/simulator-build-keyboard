@@ -212,6 +212,20 @@ export const CREDITS: CreditGroup[] = [
         url: 'https://opengameart.org/content/coffee-house-bump',
         note: 'WAV nguồn đã chuyển sang MP3 160 kbps để làm nhạc nền game',
       },
+      {
+        what: 'Chill lofi inspired (bgm-2.mp3)',
+        author: 'omfgdude',
+        license: 'CC0',
+        url: 'https://opengameart.org/content/chill-lofi-inspired',
+        note: 'Chuyển MP3 160 kbps, hạ âm lượng cho đều với bài khác',
+      },
+      {
+        what: 'A cup of tea (bgm-3.mp3, trong bộ lofi Compilation)',
+        author: 'TAD',
+        license: 'CC0',
+        url: 'https://opengameart.org/content/lofi-compilation',
+        note: 'Chuyển MP3 160 kbps, hạ âm lượng cho đều với bài khác',
+      },
     ],
   },
   {

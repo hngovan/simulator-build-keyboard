@@ -5,9 +5,11 @@ import {
   CASE_COLORS,
   KEYCAP_COLORS,
   KEYCAP_KITS,
+  KEYCAP_MATERIALS,
   MOUNTS,
   PLATES,
   STABS,
+  SWITCHES,
   SWITCH_KINDS,
 } from '@/data/parts'
 import type { Order } from '@/types'
@@ -20,8 +22,13 @@ function termsOf(order: Order): [RegExp, string][] {
   const words = [
     LAYOUTS[order.layout].name,
     order.switchKind && SWITCH_KINDS[order.switchKind],
+    order.switchType && SWITCHES[order.switchType]?.name,
+    order.caseId && CASES[order.caseId]?.name,
+    order.stabType && STABS[order.stabType]?.name,
+    order.plateMaterial && PLATES[order.plateMaterial]?.name,
     order.keycapKit && KEYCAP_KITS[order.keycapKit]?.profile.toUpperCase(),
     order.keycapKit && KEYCAP_KITS[order.keycapKit]?.name,
+    order.keycapMaterial && KEYCAP_MATERIALS[order.keycapMaterial]?.name,
     KEYCAP_COLORS[order.keycapColor]?.name.toLowerCase(),
     order.caseColor && CASE_COLORS[order.caseColor]?.name.toLowerCase(),
     order.mount && MOUNTS[order.mount]?.name,

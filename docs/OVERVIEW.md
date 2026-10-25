@@ -108,11 +108,14 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/com
    đơn, từ chối, gửi hàng, xem điểm chấm và bấm **Kết thúc ngày**.
 4. **Shopii**: mua case, PCB, plate, stab, switch, keycap, vật tư, dụng cụ, chứng chỉ thợ và sách phép.
 5. **Kho**: xem linh kiện của đơn đang làm, dụng cụ (kèm độ bền còn lại) và vật tư; kéo thả đổi chỗ.
+   Hiện cả đồ của đơn đang chờ (ghi tên khách) và **kho chung** (mua dư, bị thay, thừa sau khi giao); nhận / chuyển đơn
+   thì tự lấy món hợp yêu cầu, bấm ô để "Dùng cho đơn đang làm" / "Cất về kho chung".
 6. **Danh sách đơn** (app `order`, trước đây là "Chi tiết đơn"): yêu cầu khách, đối chiếu linh kiện,
    chọn mount, dự đoán âm thanh, ngân sách; nhận đơn / đổi đơn / ra bàn build.
 7. **Hội Phím Cơ VN**: bài pass đồ của người chơi khác. Hàng rẻ hơn 20–40% nhưng có khoảng 20% khả
-   năng bị seller bùng tiền.
-8. **Cài đặt**: tắt âm thanh, chỉnh âm lượng nhạc nền / hiệu ứng, xem ghi công, về màn hình title.
+   năng bị seller bùng tiền. Inbox: tự nhập giá trả (popup, 3 lần), "Đi ăn xin" xin free (hiếm được, 10% bị ban chợ 3 ngày).
+8. **Bảng xếp hạng**: bảng server, xếp theo tiền các lượt chơi đã kết thúc (thua / phá sản / chơi lại) + lượt đang chơi.
+9. **Cài đặt**: tắt âm thanh, chỉnh âm lượng nhạc nền / hiệu ứng, xem ghi công, về màn hình title.
    Tiến trình được lưu tự động.
 
 ### Bàn build 3D
@@ -187,13 +190,18 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 | Ngân sách linh kiện | 10   | Trong budget thì đủ điểm; lố budget bị trừ theo mức lố                           |
 
 - Điểm làm tròn; số sao: **90+ = 5★**, **75+ = 4★**, **55+ = 3★**, **35+ = 2★**, còn lại **1★**.
-- Khi gửi: tiền nhận = `min(spent, budget)` (hoàn tiền linh kiện) + `round(labor × score / 100)`
-  (tiền công). Lố budget thì phần lố không được hoàn và còn bị trừ điểm ngân sách.
+- Khi gửi: tiền nhận = `budget` (khách trả đủ budget linh kiện, mua rẻ hơn thì phần dư là lãi) +
+  `round(labor × score / 100)` (tiền công). Lố budget thì shop chịu phần lố và còn bị trừ điểm ngân sách.
 - Uy tín thay đổi theo `stars - 3 - số ngày trễ`: 5★ 0 ngày trễ được +2, 3★ là 0, 1★ là -2. Mỗi
   ngày giao trễ trừ thêm 1 uy tín. Uy tín hiện chỉ được cộng/trừ và hiển thị, chưa dùng để khoá đơn.
 - **Kết thúc ngày**: ngày + 1, sinh đợt đơn mới 5–7 đơn, xoá danh sách đơn đã đóng gói. Đơn trong
   danh sách chờ (`jobs`) trễ quá 3 ngày bị khách huỷ và trừ 3 uy tín mỗi đơn. Đơn đang làm dở (chưa
   đóng gói) được giữ sang ngày sau.
+- **Thua game** (`data/gameOver.ts`, `lossReason`, store tự xét sau mỗi lần đổi tiền / uy tín / đơn): uy tín ≤ −10 (bị phốt
+  quá nhiều), hoặc không còn đơn đang làm / chờ gửi mà ví ít hơn tiền linh kiện ước tính của đơn chào rẻ nhất (`estimateCost`).
+  Người chơi cũng tự **tuyên bố phá sản** được (Cài đặt, hỏi lại "99% người chơi dừng lại ngay trước khi thắng lớn").
+  Khi đó `endRun(reason)`: gửi kết quả lên server bảng xếp hạng, xoá bản lưu, popup tổng kết (`GameOverDialog`) → về màn tiêu đề.
+  Chơi mới đè bản lưu cũ cũng gửi lượt cũ (lý do `newgame`).
 
 ## 3. Cách chơi
 
@@ -215,9 +223,10 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 - **Hội Phím Cơ VN** bán đồ pass rẻ hơn 20–40% nhưng khoảng 20% bị bùng tiền. Chỉ nên mua khi
   chấp nhận rủi ro.
 - Ngân sách của đơn chỉ tính tiền linh kiện (`spent`), không tính dụng cụ / vật tư. Mua lố budget
-  vẫn được nhưng phần lố không được hoàn và bị trừ điểm.
+  vẫn được nhưng phần lố shop chịu và bị trừ điểm; mua rẻ hơn budget thì phần dư vào túi. Switch / stab thừa
+  sau khi giao được giữ lại cho đơn sau.
 - Stab plate-mount cần plate cứng (PC / POM / PP quá dẻo, không gài được). Switch phải đúng
-  `switchKind`; keycap phải đủ phím cho layout và đúng profile khách muốn.
+  `switchKind` (đơn có `switchType` thì phải đúng con switch đó); keycap phải đủ phím cho layout và đúng profile khách muốn.
 
 ### Chọn mount và build
 

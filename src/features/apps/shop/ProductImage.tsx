@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { KEYCAP_KITS, SHOP_CATS, keycapKitSize } from '@/data/parts'
+import { KEYCAP_KITS, KEYCAP_MATERIALS, SHOP_CATS, keycapMaterialOf, stabStock } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { PartArt } from '@/components/art/PartArt'
 import { SupplyArt, ToolArt } from '@/components/art/ToolArt'
@@ -22,6 +22,12 @@ import { ShopProductViewer } from './ShopProductViewer'
 import { useCaseThumb } from '../messenger/orderThumb'
 import { CaseViewer } from '../messenger/OrderViewer'
 
+/** ảnh stab theo option: chỉ có stab dài 6.25u / 7u thì chụp dây dài, còn lại (bộ, lẻ 2u) chụp stab 2u */
+function stabThumbType(item: StabItem) {
+  const { short, long, long7 } = stabStock(item)
+  return short ? item.type : long ? `${item.type}:6.25u` : long7 ? `${item.type}:7u` : item.type
+}
+
 /**
  * Ảnh sản phẩm: switch / stab / keycap chụp từ model 3D trong game (theo option đang chọn),
  * các món khác dùng ảnh SVG vẽ sẵn. Trong lúc chụp hiện ảnh SVG.
@@ -32,6 +38,7 @@ export function ProductImage({
   item,
   className,
   picker,
+  tags,
 }: {
   product: Product
   swatch: string
@@ -39,6 +46,8 @@ export function ProductImage({
   className?: string
   /** dãy nút chọn option (màu...) hiện trong khung xem 3D */
   picker?: ReactNode
+  /** nhãn nổi góc dưới phải ảnh (vd số stab nhận được) */
+  tags?: ReactNode
 }) {
   const frame = cn(
     'relative flex h-[110px] items-center justify-center overflow-hidden rounded-[10px] bg-black/15',
@@ -74,7 +83,9 @@ export function ProductImage({
             ? tool && `${tool.kind}:${tool.level}`
             : product.cat === 'supply' || product.cat === 'spell'
               ? product.supply
-              : (item as SwitchItem | StabItem | undefined)?.type
+              : product.cat === 'stab'
+                ? item && stabThumbType(item as StabItem)
+                : (item as SwitchItem | StabItem | undefined)?.type
   const thumb = useModelThumb(kind, type)
   // case: chụp nguyên bàn phím ghép với đúng case + màu đang chọn
   const caseItem = product.cat === 'case' ? (item as CaseItem | undefined) : undefined
@@ -82,10 +93,19 @@ export function ProductImage({
   const [viewing, setViewing] = useState(false)
   const profile = product.cat === 'keycap' ? KEYCAP_KITS[cap?.kit ?? 'base']?.profile : null
   // nhãn góc dưới trái (loại switch...), cùng kiểu nhãn profile keycap
-  const badge = product.badge && (
-    <span className="absolute bottom-1 left-1 rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]">
-      {product.badge}
-    </span>
+  const badge = (
+    <>
+      {product.badge && (
+        <span className="absolute bottom-1 left-1 rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]">
+          {product.badge}
+        </span>
+      )}
+      {tags && (
+        <span className="pointer-events-none absolute top-1 right-1 flex flex-col items-end gap-0.5">
+          {tags}
+        </span>
+      )}
+    </>
   )
 
   if (product.cat === 'keycap')
@@ -97,7 +117,7 @@ export function ProductImage({
           ) : (
             <PartArt category="keycap" color={swatch} />
           )}
-          {/* nhãn nổi trên ảnh: profile (vàng) + cỡ bộ Full / Base (xanh) */}
+          {/* nhãn nổi trên ảnh: profile (vàng) + chất liệu PBT / ABS / Mix (xanh) */}
           <span
             className="absolute bottom-1 left-1 rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]"
             title={profile ? `Profile keycap: ${profile.toUpperCase()}` : 'Profile keycap'}
@@ -106,9 +126,9 @@ export function ProductImage({
           </span>
           <span
             className="absolute right-1 bottom-1 rounded-md border-2 border-black/40 bg-blue px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-[0_2px_0_#0006]"
-            title={`Bộ keycap ${keycapKitSize(KEYCAP_KITS[cap?.kit ?? 'base']?.name ?? '')}`}
+            title={`Chất liệu keycap: ${KEYCAP_MATERIALS[keycapMaterialOf(cap ?? {})].name}`}
           >
-            {keycapKitSize(KEYCAP_KITS[cap?.kit ?? 'base']?.name ?? '')}
+            {KEYCAP_MATERIALS[keycapMaterialOf(cap ?? {})].name}
           </span>
         </div>
       </ImageZoom>

@@ -1,7 +1,17 @@
 import { useState, type ReactNode } from 'react'
 import { Droplet, Keyboard, LayoutGrid, Wrench, type LucideIcon } from 'lucide-react'
 import { useGame } from '@/store'
-import { CATS, TOOLS, TOOL_KINDS, itemName } from '@/data/parts'
+import {
+  CATS,
+  STABS,
+  SWITCHES,
+  TOOLS,
+  TOOL_KINDS,
+  itemName,
+  stabStock,
+  stabText,
+  stabTotal,
+} from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { SupplyArt, ToolArt } from '@/components/art/ToolArt'
 import { PartArt } from '@/components/art/PartArt'
@@ -13,12 +23,13 @@ import type {
   CaseItem,
   KeycapItem,
   PartCategory,
+  PartItem,
   PcbItem,
   PlateItem,
   StabItem,
   SwitchItem,
 } from '@/types'
-import { Heading, Muted, OptionChip, Panel, Tooltip, ViewHint } from '@/components/ui'
+import { Button, Heading, Muted, OptionChip, Panel, Tooltip, ViewHint } from '@/components/ui'
 import { cn } from '@/lib/format'
 import type { ToolKind } from '@/types'
 
@@ -34,7 +45,7 @@ const SLOT_STEP = 12
 type Filter = 'all' | 'part' | 'tool' | 'supply'
 const FILTERS: { id: Filter; icon: LucideIcon; label: string }[] = [
   { id: 'all', icon: LayoutGrid, label: 'Tất cả' },
-  { id: 'part', icon: Keyboard, label: 'Linh kiện đơn đang làm' },
+  { id: 'part', icon: Keyboard, label: 'Linh kiện (mọi đơn + kho chung)' },
   { id: 'tool', icon: Wrench, label: 'Dụng cụ' },
   { id: 'supply', icon: Droplet, label: 'Lube & vật tư' },
 ]
@@ -43,16 +54,31 @@ const remainText = (it: Owned) =>
     ? null
     : it.total
       ? `Còn ${it.left}/${it.total} lần`
-      : it.id === 'part:switch'
-        ? `Còn ${it.left} con`
+      : it.id.startsWith('part:')
+        ? `Còn ${it.left} ${it.id.includes('stab') ? 'cái' : 'con'}`
         : `Còn ${it.left} lượt`
 
 /** Khung xem 3D của 1 món trong kho (như Shopii), chân khung ghi nhóm + số lần còn dùng */
 function ItemViewer({ it, onClose }: { it: Owned; onClose: () => void }) {
   const footer = (
     <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
+      {it.tag && <b className="text-muted">{it.tag}</b>}
+      {it.detail && <b className="text-yellow">{it.detail}</b>}
       {it.using && <b className="text-green">Đang dùng</b>}
       {remainText(it) && <b className="text-yellow">{remainText(it)}</b>}
+      {it.action && (
+        <Button
+          size="sm"
+          tone="green"
+          title={it.action.title}
+          onClick={() => {
+            it.action!.run()
+            onClose()
+          }}
+        >
+          {it.action.label}
+        </Button>
+      )}
     </div>
   )
   if (it.thumb && 'caseId' in it.thumb)
@@ -90,6 +116,12 @@ interface Owned {
   total?: number
   /** đang lắp dùng (dụng cụ có nhiều bậc như bút hàn / trạm hàn) */
   using?: boolean
+  /** linh kiện thuộc đơn nào / kho chung (ghi dưới tên) */
+  tag?: string
+  /** chi tiết số lượng (stab theo cỡ dây) hiện ở khung xem */
+  detail?: string
+  /** nút trong khung xem (lấy từ kho chung, cất về kho) */
+  action?: { label: string; title: string; run: () => void }
 }
 
 /** Vị trí ô người chơi tự xếp (tiện ích riêng máy): phần tử i = id món ở ô i, null = ô trống */
@@ -116,39 +148,121 @@ function Thumb({ it }: { it: Owned }) {
   )
 }
 
-/** Linh kiện của đơn đang làm còn trong kho (switch còn bao nhiêu con) */
+/** Ảnh model 3D của 1 linh kiện (case dùng ảnh vỏ case riêng) */
+function partThumb(cat: PartCategory, item: PartItem): Owned['thumb'] {
+  if (cat === 'case') return { caseId: (item as CaseItem).id, color: (item as CaseItem).color }
+  if (cat === 'keycap')
+    return { kind: 'keycap', type: `${(item as KeycapItem).kit}:${(item as KeycapItem).color}` }
+  if (cat === 'pcb')
+    return { kind: 'pcb', type: `${(item as PcbItem).layout}:${(item as PcbItem).type}` }
+  if (cat === 'plate')
+    return { kind: 'plate', type: `${(item as PlateItem).layout}:${(item as PlateItem).material}` }
+  return { kind: cat, type: (item as SwitchItem | StabItem).type }
+}
+
+/** 1 linh kiện thành 1 ô kho; switch hiện số con, stab hiện số cái */
+function partOwned(
+  id: string,
+  cat: PartCategory,
+  item: PartItem,
+  group: string,
+  extra: Partial<Owned> = {},
+): Owned {
+  const left =
+    cat === 'switch'
+      ? (item as SwitchItem).count
+      : cat === 'stab'
+        ? stabTotal(stabStock(item as StabItem))
+        : undefined
+  return {
+    id,
+    // số lượng đã có badge ở góc ô: tên chỉ ghi loại (bỏ × 450 / (4 ngắn + 1 dài))
+    name:
+      cat === 'switch'
+        ? SWITCHES[(item as SwitchItem).type].name
+        : cat === 'stab'
+          ? `Stab ${STABS[(item as StabItem).type].name}`
+          : itemName(cat, item),
+    group,
+    art: <PartArt category={cat} color="#888" />,
+    thumb: partThumb(cat, item),
+    ...(left !== undefined ? { left } : {}),
+    ...(cat === 'stab' ? { detail: stabText(stabStock(item as StabItem)) } : {}),
+    ...extra,
+  }
+}
+
+/**
+ * Linh kiện của shop: đơn đang làm, đơn đang chờ (ghi tên khách) và kho chung (mua dư, bị thay, thừa sau khi giao).
+ * Đồ trong kho chung tự vào đơn hợp yêu cầu khi nhận / chuyển đơn, hoặc bấm vào ô để lấy
+ */
 function useParts(): Owned[] {
   const inv = useGame((s) => s.inventory)
   const provided = useGame((s) => s.provided)
+  const order = useGame((s) => s.order)
+  const result = useGame((s) => s.result)
+  const jobs = useGame((s) => s.jobs)
+  const spare = useGame((s) => s.spare)
+  const { takeStock, releasePart } = useGame.getState()
   const list: Owned[] = []
-  for (const cat of Object.keys(CATS) as PartCategory[]) {
+  const cats = Object.keys(CATS) as PartCategory[]
+  for (const cat of cats) {
     const item = inv[cat]
     if (!item) continue
-    const thumb: Owned['thumb'] =
-      cat === 'case'
-        ? { caseId: (item as CaseItem).id, color: (item as CaseItem).color }
-        : cat === 'keycap'
-          ? { kind: 'keycap', type: `${(item as KeycapItem).kit}:${(item as KeycapItem).color}` }
-          : cat === 'pcb'
-            ? {
-                kind: 'pcb',
-                type: `${(item as PcbItem).layout}:${(item as PcbItem).type}`,
-              }
-            : cat === 'plate'
-              ? {
-                  kind: 'plate',
-                  type: `${(item as PlateItem).layout}:${(item as PlateItem).material}`,
-                }
-              : { kind: cat, type: (item as SwitchItem | StabItem).type }
-    list.push({
-      id: `part:${cat}`,
-      name: itemName(cat, item),
-      group: provided[cat] ? `${CATS[cat]} · khách gửi` : CATS[cat],
-      art: <PartArt category={cat} color="#888" />,
-      thumb,
-      ...(cat === 'switch' ? { left: (item as SwitchItem).count } : {}),
-    })
+    list.push(
+      partOwned(`part:${cat}`, cat, item, provided[cat] ? `${CATS[cat]} · khách gửi` : CATS[cat], {
+        tag: order ? `Đơn ${order.customer}` : undefined,
+        using: true,
+      }),
+    )
   }
+  for (const j of jobs)
+    for (const cat of cats) {
+      const item = j.session.inventory[cat]
+      if (!item) continue
+      const free = !j.session.build && !j.session.provided[cat]
+      list.push(
+        partOwned(`part:job:${j.order.id}:${cat}`, cat, item, CATS[cat], {
+          tag: `Đơn ${j.order.customer}`,
+          action: free
+            ? {
+                label: 'Cất về kho chung',
+                title: 'Bỏ món này khỏi đơn đang chờ để đơn khác dùng',
+                run: () => releasePart(j.order.id, cat),
+              }
+            : undefined,
+        }),
+      )
+    }
+  const canTake = !!order && !result
+  const take = (key: string) =>
+    canTake
+      ? { label: 'Dùng cho đơn đang làm', title: 'Lấy vào đơn đang làm', run: () => takeStock(key) }
+      : undefined
+  for (const [type, n] of Object.entries(spare.switches))
+    if (n > 0)
+      list.push(
+        partOwned(`part:stock:switch:${type}`, 'switch', { type, count: n }, CATS.switch, {
+          tag: 'Kho chung',
+          action: take(`switch:${type}`),
+        }),
+      )
+  for (const [type, st] of Object.entries(spare.stabs))
+    if (stabTotal(stabStock(st)) > 0)
+      list.push(
+        partOwned(`part:stock:stab:${type}`, 'stab', { type, ...st }, CATS.stab, {
+          tag: 'Kho chung',
+          action: take(`stab:${type}`),
+        }),
+      )
+  spare.items.forEach((x, i) =>
+    list.push(
+      partOwned(`part:stock:item:${i}:${x.cat}`, x.cat, x.item, CATS[x.cat], {
+        tag: 'Kho chung',
+        action: take(`item:${i}`),
+      }),
+    ),
+  )
   return list
 }
 
@@ -328,6 +442,16 @@ export function OwnedItems() {
                     <Thumb it={it} />
                     <ViewHint className="top-2 right-2 bottom-auto" />
                     <div className="truncate text-xs leading-tight font-bold">{it.name}</div>
+                    {it.tag && (
+                      <div
+                        className={cn(
+                          'truncate text-[10px] leading-tight font-bold',
+                          it.tag === 'Kho chung' ? 'text-yellow' : 'text-muted',
+                        )}
+                      >
+                        {it.tag}
+                      </div>
+                    )}
                     {/* số lần / lượt còn lại: badge tròn góc ảnh (đang dùng = viền xanh) */}
                     {it.left !== undefined && (
                       <span

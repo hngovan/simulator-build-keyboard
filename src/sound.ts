@@ -1,5 +1,5 @@
 // Âm thanh: sample CC0 trong public/audio/sfx (tải trước khi tạo AudioContext), thiếu file thì
-// tổng hợp bằng WebAudio; nhạc nền từ public/audio/bgm.mp3 hoặc loop tổng hợp
+// tổng hợp bằng WebAudio; nhạc nền xoay ngẫu nhiên public/audio/bgm*.mp3 hoặc loop tổng hợp
 import type { AudioSettings, SoundProfile } from '@/types'
 
 let ctx: AudioContext | undefined
@@ -194,47 +194,82 @@ export function playBrush() {
 }
 
 /**
- * Nhạc nền từ file: chép bài vào public/audio/bgm.mp3 (hiện là Coffee House Bump, OatCog, CC0)
- * là game phát lặp; không có file thì dùng loop ambient tự tổng hợp bên dưới
+ * Nhạc nền từ file (CC0, nguồn ở public/audio/README.md): phát ngẫu nhiên từng bài, hết bài thì
+ * sang bài khác (không lặp bài vừa nghe); không tải được bài nào thì dùng loop ambient tổng hợp
  */
-const BGM_URL = '/audio/bgm.mp3'
-let track: Promise<AudioBuffer | null> | undefined
+const BGM_URLS = ['/audio/bgm.mp3', '/audio/bgm-2.mp3', '/audio/bgm-3.mp3']
+/** bài đã tải / đang tải (tải lười, mỗi bài một lần) */
+const tracks = new Map<number, Promise<AudioBuffer | null>>()
+/** bài tải lỗi, không chọn lại */
+const badTracks = new Set<number>()
+let lastTrack = -1
 /** đang muốn phát nhạc (để huỷ nếu đã stopBgm trong lúc file còn đang tải) */
 let bgmWanted = false
 
-function loadTrack(a: AudioContext) {
-  track ??= fetch(BGM_URL)
-    .then((res) =>
-      res.ok && res.headers.get('content-type')?.startsWith('audio')
-        ? res.arrayBuffer().then((buf) => a.decodeAudioData(buf))
-        : null,
-    )
-    .catch(() => null)
+function loadTrack(a: AudioContext, idx: number) {
+  let track = tracks.get(idx)
+  if (!track) {
+    track = fetch(BGM_URLS[idx])
+      .then((res) =>
+        res.ok && res.headers.get('content-type')?.startsWith('audio')
+          ? res.arrayBuffer().then((buf) => a.decodeAudioData(buf))
+          : null,
+      )
+      .catch(() => null)
+    tracks.set(idx, track)
+  }
   return track
 }
 
-/** Nhạc nền cho bàn build: bài trong public/audio/bgm.mp3 nếu có, không thì loop ambient tổng hợp */
+/** chọn ngẫu nhiên bài còn dùng được, khác bài vừa phát (nếu còn bài khác) */
+function pickTrack() {
+  const ok = BGM_URLS.map((_, i) => i).filter((i) => !badTracks.has(i))
+  const fresh = ok.filter((i) => i !== lastTrack)
+  const pool = fresh.length ? fresh : ok
+  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : -1
+}
+
+/** Nhạc nền ở máy tính / bàn build: xoay ngẫu nhiên các bài trong BGM_URLS */
 export function startBgm(settings = audioSettings) {
   applyAudioSettings(settings)
   const a = ac()
   void a.resume().catch(() => undefined)
   if (bgmSource || bgmWanted) return
   bgmWanted = true
-  void loadTrack(a).then((buffer) => {
+  playNext(a)
+}
+
+function playNext(a: AudioContext) {
+  const idx = pickTrack()
+  if (idx < 0) {
+    if (bgmWanted && !bgmSource) playBuffer(a, ambientLoop(a), true)
+    return
+  }
+  void loadTrack(a, idx).then((buffer) => {
     if (!bgmWanted || bgmSource) return
-    playLoop(a, buffer ?? ambientLoop(a))
+    if (!buffer) {
+      badTracks.add(idx)
+      playNext(a)
+      return
+    }
+    lastTrack = idx
+    playBuffer(a, buffer, false)
   })
 }
 
-function playLoop(a: AudioContext, buffer: AudioBuffer) {
-  bgmSource = a.createBufferSource()
-  bgmSource.buffer = buffer
-  bgmSource.loop = true
-  bgmSource.connect(musicGain!)
-  bgmSource.onended = () => {
-    bgmSource = undefined
+function playBuffer(a: AudioContext, buffer: AudioBuffer, loop: boolean) {
+  const source = a.createBufferSource()
+  source.buffer = buffer
+  source.loop = loop
+  source.connect(musicGain!)
+  source.onended = () => {
+    source.disconnect()
+    if (bgmSource === source) bgmSource = undefined
+    // hết bài: sang bài khác
+    if (!loop && bgmWanted) playNext(a)
   }
-  bgmSource.start()
+  bgmSource = source
+  source.start()
 }
 
 /** Loop ambient 12 giây tạo từ sóng sin (dự phòng khi chưa có file nhạc) */

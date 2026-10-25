@@ -340,12 +340,11 @@ const wireScaleX = (spanMm: number) =>
   spanMm / (spanMm > 30 ? stabModel.spans['6.25u'] : stabModel.spans['2.25u'])
 
 /**
- * Đường phết mỡ 1 bên: đoạn móc → góc uốn → thanh ngang. Dây ngắn chỉ phết 1 đoạn qua góc uốn;
- * dây dài phết hết thanh ngang (mỗi bên tới giữa, chồng nhẹ)
+ * Đường phết mỡ 1 bên: đoạn móc → góc uốn → 1 đoạn ngắn thanh ngang (chỗ cọ vào ngàm stab).
+ * Mọi dây (2u … 7u) như nhau: dây dài cũng không phết dọc cả thanh ngang
  */
 export function wireGreaseCurve(side: -1 | 1, spanMm: number) {
-  const { y, barZ, bendR, greaseFromZ } = WIRE_PATH
-  const barLen = spanMm > 30 ? spanMm - bendR + 0.5 : WIRE_PATH.barLen
+  const { y, barZ, bendR, greaseFromZ, barLen } = WIRE_PATH
   const hx = hookCenterX(side, spanMm)
   const v = (x: number, z: number) => new THREE.Vector3(x, y, z)
   const path = new THREE.CurvePath<THREE.Vector3>()

@@ -6,6 +6,17 @@ import { PostCard } from './PostCard'
 export function GroupFeed() {
   const posts = useGame((s) => s.posts)
   const order = useGame((s) => s.order)
+  const day = useGame((s) => s.day)
+  const banUntil = useGame((s) => s.marketBanUntil)
+  // đi ăn xin bị ban: không xem / mua được tới hết ngày banUntil - 1
+  if (day < banUntil)
+    return (
+      <div className="p-6">
+        <Alert tone="red" title={`🚫 Bạn đang bị ban khỏi chợ (còn ${banUntil - day} ngày)`}>
+          Admin ban vì đi ăn xin người bán. Ngày {banUntil} mới vào lại được, giờ mua ở Shopii nhé.
+        </Alert>
+      </div>
+    )
   if (!order)
     return (
       <div className="p-8 text-center text-muted">

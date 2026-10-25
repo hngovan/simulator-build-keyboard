@@ -10,6 +10,7 @@ import type {
   PartCategory,
   ToolLevels,
   Review,
+  Spare,
 } from '@/types'
 import type { HistoryEntry } from './buildSlice'
 
@@ -35,6 +36,12 @@ export interface Profile {
   wear: Partial<Record<ToolKind, number>>
   /** đánh giá khách để lại (mới nhất ở cuối, giữ tối đa REVIEW_KEEP) */
   reviews: Review[]
+  /** switch / stab dư từ đơn trước, dùng cho đơn sau */
+  spare: Spare
+  /** bị ban khỏi chợ Hội Phím Cơ tới trước ngày này (đi ăn xin) */
+  marketBanUntil: number
+  /** mã lượt chơi (gửi bảng xếp hạng server, 1 lượt 1 dòng); bản lưu cũ: rỗng */
+  runId: string
 }
 
 // Đơn đang làm dở (lưu lại để thoát game vào lại vẫn tiếp tục được)
@@ -127,6 +134,9 @@ export const START: Profile = {
   wear: {},
   solderOwned: {},
   reviews: [],
+  spare: { switches: {}, stabs: {}, items: [] },
+  marketBanUntil: 0,
+  runId: '',
 }
 
 export function loadSave(): SaveData | null {
@@ -157,9 +167,19 @@ export function loadSave(): SaveData | null {
       },
       supplies,
       audio: { ...START.audio, ...save.audio },
+      spare: { ...START.spare, ...save.spare },
     }
   } catch {
     return null
+  }
+}
+
+/** xoá bản lưu (thua game / phá sản) */
+export function clearSave() {
+  try {
+    localStorage.removeItem(SAVE_KEY)
+  } catch {
+    // storage bị chặn: bỏ qua
   }
 }
 

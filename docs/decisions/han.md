@@ -52,3 +52,6 @@
   chọn 1 chỗ: phím cháy đầu tiên (nếu có bút hút thiếc) → bùi nhùi khi mũi hàn đen (`'clean'`) → phím chưa hàn đầu tiên
   (hàng → cột). `SolderPad` vẽ `HintArrow` (size 1.5) trên phím đó, ẩn khi đang giữ mỏ hàn; `SolderKit` vẽ trên giá bùi nhùi.
   `HintArrow` thêm `size` (mặc định 1, các bàn cũ không đổi).
+- Khoá camera khi hàn (2026-10-25, "trong lúc hàn thì khoá cam, không xoay lung tung"): `useCamLock` (`scene/common/camLock.ts`)
+  bật khi `SolderPad` đang `holding` (giữ mỏ hàn / bút hút thiếc trên chân), nhả / hàn xong / cháy / rời ô thì tắt (cleanup effect);
+  `Controls` trong Bench.tsx đặt `OrbitControls enabled={!locked}` (không xoay / kéo / zoom). Dùng lại được cho thao tác giữ chuột khác.

@@ -33,6 +33,7 @@ export const REP_RULES: [string, string][] = [
   ['Làm sai mô tả khách', 'ít sao → trừ uy tín'],
   ['Từ chối quá 2 đơn / ngày', '−1 mỗi đơn từ đơn thứ 3'],
   ['Khách huỷ vì trễ quá 3 ngày', '−3'],
+  ['Uy tín từ −10 trở xuống', 'bị phốt quá nhiều, thua game'],
 ]
 
 /** thu nhập cơ bản mỗi đơn nhận theo bậc chứng chỉ thợ (TOOLS.cert): lõ / middle / senior (k) */

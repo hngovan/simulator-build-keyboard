@@ -26,6 +26,7 @@ import {
 import { SUPPLIES } from '@/data/supplies'
 import type { BuildContext, BuildState, ScrewBit, ScrewStep, StepId, ToolKind } from '@/types'
 import { scoreDelivery } from './scoring'
+import { leftoverSpare } from './spare'
 import type { GameState } from '.'
 import { emptyInventory } from './shopSlice'
 
@@ -728,6 +729,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       // đóng gói: chấm điểm sẵn, cất vào danh sách hôm nay; tiền + uy tín tính khi gửi cho khách (Mezzenger)
       set({
         packed: [...s.packed, { order: s.order, result }],
+        // switch / stab thừa giữ lại cho đơn sau
+        spare: leftoverSpare(s.spare, s.inventory, s.ctx.keys, !!s.provided.stab),
         order: null,
         result: null,
         inventory: emptyInventory(),

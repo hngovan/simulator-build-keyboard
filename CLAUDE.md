@@ -25,6 +25,8 @@ Stack: React 18 + TypeScript (strict) + Vite 6 + Tailwind v4 + React Three Fiber
 Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 
 - `bun run dev` — dev server
+- `bun run server` — server bảng xếp hạng (`server/leaderboard.ts`, Bun, lưu `server/data/leaderboard.json`, cổng
+  `LEADERBOARD_PORT` mặc định 8787); Vite proxy `/api` về đó, client đổi địa chỉ bằng `VITE_LEADERBOARD_URL`.
 - `bun run build` — `tsc` + `vite build`
 - `bun run typecheck` / `bun run lint` / `bun run format:check` — chạy cả ba trước khi coi là xong
 - `bun run convert:solder-tools`: bút hàn 60W (GLB), trạm hàn (OBJ), giá bùi nhùi (3MF) trong
@@ -38,7 +40,8 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
   → `src/data/generated/plateUniversal.ts` (Board.tsx dùng, trừ 60 chuẩn giữ plate CAD typ60).
 - `bun run convert:switch` / `bun run convert:stab` — chuyển CAD STEP trong `assets/cad/` thành
   GLB trong `public/models/` (stab còn sinh `src/data/stabModel.json`). `scripts/probe-*.mjs`,
-  `inspect-step.mjs` là script dò/kiểm tra model.
+  `inspect-step.mjs` là script dò/kiểm tra model. Thêm / đổi model case thì chạy `node scripts/probe-case-feet.mjs`
+  (dò hốc dán feet dưới đáy → `src/data/caseFeet.json`, `RubberFeet` trong Case.tsx dán feet vào đúng hốc).
 
 Không có test tự động. Khi dev, store được gắn vào `window.__game`, camera / controls / scene của bàn build
 vào `window.__r3f` để debug trong console.
@@ -50,7 +53,11 @@ vào `window.__r3f` để debug trong console.
 - Import qua alias `@/` → `src/`.
 - Comment / text UI viết tiếng Việt, ngắn gọn, giống code xung quanh.
 - ESLint flat config: TS + react-hooks + react-refresh.
+- Chọn option sản phẩm: `OptionSelect` (ô đổ xuống); `OptionChip` chỉ cho bộ lọc / picker khung 3D.
 - Tooltip: chỉ cần ghi `title="..."` (1 dòng ngắn), `GlobalTooltip` tự vẽ kiểu game; không dùng dòng phụ trong tooltip.
+- Badge / nhãn trạng thái: luôn dùng `<Badge solid tone="...">` (khối màu đặc + bóng đổ giống `Button`, màu lấy từ `BUTTON_TONES`:
+  default / green / yellow / red / blue / orange); đứng đầu dòng / trong flex thì thêm `className="ml-0"`. Không dùng Badge viền mảnh
+  (không `solid`) hay tự vẽ span màu; nút chọn dùng `OptionChip`, nút bấm dùng `Button`. Sửa UI thì đồng bộ theo các component này.
 
 ## Kiến trúc
 
@@ -118,7 +125,10 @@ vào `window.__r3f` để debug trong console.
   Stab plate-mount: gài vào plate (lắp sau bước plate, cao hơn PCB), cần plate cứng (`PlateDef.flex` = PC / POM / PP
   không dùng được, `plateStabClash`).
   Đơn full có `pcbType` thì kho phải đúng loại PCB. Save có `rev` để nâng cấp bản cũ (`loadSave`).
-- Đơn có `switchKind` (Linear / Tactile / Clicky / Silent, `SWITCH_KINDS`): kho phải đúng loại switch.
+- Đơn có thể đòi đích danh `switchType` / `caseId` / `stabType` / `plateMaterial` (món khách không gửi), `checkInventory` bắt đúng; thiếc / vật tư không bị đòi.
+- Keycap có chất liệu `material` (PBT / ABS / Mix, `KEYCAP_MATERIALS`), đơn có thể đòi `keycapMaterial` (`keycapCheck`); bộ `KEYCAP_KITS.base` ẩn (`hidden`).
+- Đơn có `switchKind` (Linear / Tactile / Clicky / Silent / SilentTactile, `SWITCH_KINDS`): kho phải hợp loại (`switchFits`: Silent Tactile hợp cả Tactile / Silent).
+  ~35% đơn có thêm `switchType` = đòi đúng 1 con (vd Cherry MX Đen): kiểm bằng `switchOk(type, order)`, tên hiện bằng `switchWant(order)`.
   Đơn kit: khách gửi từng món ngẫu nhiên (`Kit.case? / pcb? / plate? / stab?`, ít nhất 1 món); chỉ có `mount` khi gửi case,
   món không gửi thì đơn có thể ghi `pcbType` / `caseColor`.
 - Nhiều đơn mỗi ngày: `deliver()` chấm điểm rồi đẩy vào `packed` (Session) và trả bàn trống; gửi từng đơn ở Mezzenger
@@ -148,7 +158,21 @@ vào `window.__r3f` để debug trong console.
 - Phím có `rot` (Alice: cột trong xoay ±12°, layout `fixed` toạ độ thật + `origin` / `outline`); `row` = hàng keycap đếm từ dưới lên (R1–R4 theo profile).
   PCB / plate theo đường viền `boardOutline` (layout xoay: đa giác lồi mỗi nửa). Chỗ trống hàng dưới
   (HHKB, WKL) có khối chặn liền case (`blockerGaps`).
+- Shopii gộp case cùng dòng (`CASE_LINES`): 1 sản phẩm, chọn chất liệu (`ProductOption.group`) rồi màu; id case giữ riêng.
 - Ảnh đơn / case Shopii / cửa sổ xem 3D dùng chung `buildKeyboardModel` (`features/apps/messenger/orderThumb.ts`).
 - Hội Phím Cơ: bài pass viết bằng thuật ngữ chợ phím che tình trạng thật (`data/market.ts`); inbox người bán (xin hình, check var,
-  xin bớt, lowball...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
-- Nhạc nền: file `public/audio/bgm.mp3` nếu có, không thì loop tổng hợp (`src/sound.ts`).
+  xin bớt, lowball, tự nhập giá `'offer'` popup, đi ăn xin `'beg'` → 10% ban chợ 3 ngày `marketBanUntil`...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
+- Nhạc nền: xoay ngẫu nhiên `public/audio/bgm.mp3` / `bgm-2.mp3` / `bgm-3.mp3` (không lặp bài vừa nghe), không tải được thì loop tổng hợp (`src/sound.ts`).
+- Tiền linh kiện: giao xong khách trả đủ `budget` (`reimburse`), mua rẻ hơn thì phần dư là lãi, lố thì shop chịu.
+- Stab đếm theo cỡ dây: `short` 2u, `long` 6.25u, `long7` 7u (`StabCount`, `stabStock` / `stabNeed` / `stabText` trong parts.ts).
+- Kho chung (`Profile.spare`, `src/store/spare.ts`): áp dụng cho **mọi linh kiện**. Switch / stab gộp theo loại, case / PCB / plate /
+  keycap / stab lỗi để từng món (`spare.items`). Vào kho chung: switch / stab thừa khi giao (`leftoverSpare`), món bị thay khi mua món khác
+  (`buy` / `takeStock`), đồ của đơn bị huỷ (`stashAll`), cất từ đơn đang chờ chưa build (`releasePart`). Nhận / chuyển đơn thì
+  `fillActive` → `fillFromStock` tự lấy món hợp yêu cầu (`checkInventory`). App Kho hiện đồ đơn đang làm + đơn đang chờ (tên khách)
+  - kho chung trong cùng lưới (`useParts` trong OwnedItems), bấm ô để lấy / cất.
+- App "Bảng xếp hạng" (`apps/leaderboard/LeaderboardApp`, `lib/leaderboardApi.ts`): chỉ tính server (bỏ shop đối thủ giả lập),
+  lượt chơi đã kết thúc của mọi người + lượt đang chơi chèn vào, xếp theo tiền; gửi lỗi thì cất hàng chờ `sbk-lb-pending`.
+  Tiền gọn theo cỡ `fmtMoney` (< 10.000k giữ k, ≥ 10.000k → m, ≥ 100.000k → B; `lib/format.ts`) ở bảng xếp hạng + ví; giá Shopii vẫn `fmt` (k).
+- Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
+  (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Tự phá sản ở Cài đặt; chơi mới đè save cũng gửi lượt cũ.
+- Layout có `fits` (Planck: `['40']`): case cỡ khác không có model CAD cũng vừa (`caseFits`).

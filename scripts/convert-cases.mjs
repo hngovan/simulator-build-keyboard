@@ -10,9 +10,11 @@ import occtimportjs from 'occt-import-js'
 import { Document, NodeIO } from '@gltf-transform/core'
 
 const OUT = 'public/models/cases'
+// turn: xoay thêm 180° quanh trục đứng. Planck là khay phẳng (2 mép cao bằng nhau) nên đoán mặt trước theo
+// "phía thấp hơn" bị ngược → lỗ cổng USB-C ra trước phải; xoay lại để cổng ở sau bên trái như bàn thật
 const SOURCES = {
   bakeneko60: { file: 'assets/community/bakeneko-60/case/case.step', kind: 'step' },
-  planck: { file: 'assets/community/planck/case/planck.stl', kind: 'stl' },
+  planck: { file: 'assets/community/planck/case/planck.stl', kind: 'stl', turn: true },
 }
 
 /** STL nhị phân → mảng tam giác không chỉ số (position + pháp tuyến mặt) */
@@ -74,7 +76,8 @@ for (const [id, src] of Object.entries(SOURCES)) {
   for (let i = 0; i < pos.length; i += 3)
     if (pos[i + ad] < cy) hiNeg = Math.max(hiNeg, pos[i + up])
     else hiPos = Math.max(hiPos, pos[i + up])
-  const flip = hiNeg < hiPos ? -1 : 1 // CAD y âm thấp hơn → đưa về +z
+  // CAD y âm thấp hơn → đưa về +z; `turn` đảo cả x lẫn z = xoay 180° (không phải lật gương)
+  const flip = (hiNeg < hiPos ? -1 : 1) * (src.turn ? -1 : 1)
   const P = new Float32Array(pos.length)
   const N = new Float32Array(nor.length)
   // phép đổi trục (ax, up, ad) → (x, y, z) là hoán vị lẻ thì là ảnh gương: đảo dấu x để thành phép xoay thật

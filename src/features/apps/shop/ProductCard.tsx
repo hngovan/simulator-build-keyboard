@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Button, OptionChip, SoundBars } from '@/components/ui'
+import { Badge, Button, OptionChip, OptionSelect, SoundBars } from '@/components/ui'
+import { stabStock } from '@/data/parts'
 import { fmt } from '@/lib/format'
-import type { Product, ProductOption, ToolItem } from '@/types'
+import type { Product, ProductOption, StabItem, ToolItem } from '@/types'
 import { ProductImage } from './ProductImage'
 import { useGame } from '@/store'
 
@@ -10,10 +11,27 @@ interface Props {
   onBuy: (product: Product, option: ProductOption) => void
 }
 
+/** cỡ stab hiện thành nhãn trên ảnh */
+const STAB_SIZES = [
+  ['short', '2u'],
+  ['long', '6.25u'],
+  ['long7', '7u'],
+] as const
 /** Thẻ sản phẩm: chọn option (màu / chất liệu / số lượng) rồi mua */
 export function ProductCard({ product, onBuy }: Props) {
   const [sel, setSel] = useState(0)
-  const opt = product.options[sel]
+  const opt = product.options[sel] ?? product.options[0]
+  // option 2 cấp (case: chất liệu → màu): chỉ hiện các option cùng nhóm đang chọn
+  const groups = [...new Set(product.options.flatMap((o) => (o.group ? [o.group] : [])))]
+  const shown = product.options
+    .map((o, i) => [o, i] as const)
+    .filter(([o]) => !groups.length || o.group === opt.group)
+  // đổi nhóm: giữ màu đang chọn nếu nhóm mới có, không thì lấy option đầu của nhóm
+  const pickGroup = (gi: number) => {
+    const g = groups[gi]
+    const same = product.options.findIndex((o) => o.group === g && o.label === opt.label)
+    setSel(same >= 0 ? same : product.options.findIndex((o) => o.group === g))
+  }
   const tools = useGame((s) => s.tools)
   const owned = useGame((s) => s.solderOwned)
   const solderItem =
@@ -29,13 +47,26 @@ export function ProductCard({ product, onBuy }: Props) {
         swatch={opt.swatch}
         item={opt.item}
         className="h-[110px]"
+        // stab: số stab nhận được theo cỡ dây, nổi trên ảnh
+        tags={
+          product.cat === 'stab' &&
+          STAB_SIZES.map(([k, size]) => {
+            const n = stabStock(opt.item as StabItem)[k]
+            return n ? (
+              <Badge key={k} solid tone="blue" className="ml-0">
+                {n}× {size}
+              </Badge>
+            ) : null
+          })
+        }
         // chọn màu / loại ngay trong khung xem 3D (đồng bộ với lựa chọn trên thẻ)
         picker={
-          // khác màu hoặc khác loại (vd stab Cherry clip-in / screw-in / plate-mount cùng màu); chỉ khác số lượng thì không hiện
-          new Set(
-            product.options.map((o) => `${o.swatch}|${(o.item as { type?: string }).type ?? ''}`),
-          ).size > 1 &&
-          product.options.map((o, i) => (
+          // khác màu hoặc khác loại; stab luôn hiện (bộ / lẻ 2u / 6.25u / 7u xem được dây dài khác nhau);
+          // chỉ khác số lượng (switch 10 / 70 con...) thì không hiện
+          (product.cat === 'stab' ||
+            new Set(shown.map(([o]) => `${o.swatch}|${(o.item as { type?: string }).type ?? ''}`))
+              .size > 1) &&
+          shown.map(([o, i]) => (
             <OptionChip
               key={o.label}
               active={i === sel}
@@ -70,13 +101,26 @@ export function ProductCard({ product, onBuy }: Props) {
         </div>
       </div>
       {product.sound && <SoundBars {...product.sound} />}
-      <div className="flex flex-wrap gap-1">
-        {product.options.map((o, i) => (
-          <OptionChip key={i} active={i === sel} swatch={o.swatch} onClick={() => setSel(i)}>
-            {o.label}
-          </OptionChip>
-        ))}
-      </div>
+      {/* mọi sản phẩm chọn option bằng ô đổ xuống cho gọn (kèm giá từng option); có nhóm thì chọn nhóm trước */}
+      {groups.length > 1 && (
+        <OptionSelect
+          value={groups.indexOf(opt.group ?? '')}
+          onChange={pickGroup}
+          options={groups.map((g) => ({
+            label: g,
+            note: fmt(product.options.find((o) => o.group === g)!.price),
+          }))}
+        />
+      )}
+      <OptionSelect
+        value={shown.findIndex(([, i]) => i === sel)}
+        onChange={(k) => setSel(shown[k][1])}
+        options={shown.map(([o]) => ({
+          label: o.label,
+          swatch: o.swatch,
+          note: fmt(o.price),
+        }))}
+      />
       <div className="mt-auto flex items-center justify-between">
         <span className="font-head text-lg font-extrabold text-[#ff8c5a]">{fmt(opt.price)}</span>
         <Button tone="orange" size="sm" disabled={equipped} onClick={() => onBuy(product, opt)}>

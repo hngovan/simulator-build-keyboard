@@ -3,7 +3,7 @@ import { CalendarDays, Star, UserRound, Wallet } from 'lucide-react'
 import { useGame } from '@/store'
 import { TOOLS } from '@/data/parts'
 import { CERT_BONUS, REP_RULES, REP_TIERS, certBonus, repTier } from '@/data/reputation'
-import { cn, fmt } from '@/lib/format'
+import { cn, fmt, fmtMoney } from '@/lib/format'
 import { Button, Chip, Tooltip } from '@/components/ui'
 
 type Side = 'top' | 'bottom'
@@ -164,7 +164,7 @@ function MoneyInfo({ money, cert }: { money: number; cert: number }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="font-head text-base font-extrabold">
-        Ví: <span className="text-green">{fmt(money)}</span>
+        Ví: <span className="text-green">{fmtMoney(money)}</span>
       </div>
       <div className="rounded-lg bg-panel-2 px-2.5 py-1.5">
         <Row k="Bậc thợ" v={TOOLS.cert[cert]?.name ?? 'Thợ lõ'} />
@@ -186,8 +186,8 @@ function MoneyInfo({ money, cert }: { money: number; cert: number }) {
         . Mua ở Shopii → Chứng chỉ thợ.
       </div>
       <div className="text-xs leading-snug text-muted">
-        Tiền linh kiện shop ứng trước, giao hàng khách hoàn lại (tối đa bằng budget) + trả tiền công
-        theo điểm.
+        Tiền linh kiện shop ứng trước, giao hàng khách trả đủ budget (mua rẻ hơn thì phần dư vào
+        túi, lố thì shop chịu) + tiền công theo điểm.
       </div>
     </div>
   )
@@ -222,7 +222,7 @@ export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
         chip={
           <Chip tone="money">
             <Wallet className="text-[#9ff0b8]" />
-            {fmt(money)}
+            {fmtMoney(money)}
           </Chip>
         }
       >

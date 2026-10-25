@@ -4,6 +4,7 @@ import { useKeyboardTest } from '@/hooks/useKeyboardTest'
 import { Toasts } from '@/components/game/Toasts'
 import { GlobalTooltip } from '@/components/ui/GlobalTooltip'
 import { ReviewPops } from '@/features/apps/reviews/ReviewPops'
+import { GameOverDialog } from '@/features/gameover/GameOverDialog'
 import { TitleScreen } from '@/features/title/TitleScreen'
 import { Desktop } from '@/features/desktop/Desktop'
 import { BenchHud } from '@/features/bench/BenchHud'
@@ -41,6 +42,7 @@ export default function App() {
       <Toasts />
       <GlobalTooltip />
       <ReviewPops />
+      <GameOverDialog />
     </>
   )
 }

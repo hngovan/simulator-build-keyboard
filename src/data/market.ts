@@ -27,7 +27,24 @@ export const FLAW_TEXT: Partial<Record<Cond, string>> = {
 export type PriceTag = 'firm' | 'lowball' | 'normal'
 
 /** hành động khi inbox người bán */
-export type InboxAction = 'photo' | 'var' | 'loc' | 'chot' | 'lowball' | 'mute'
+export type InboxAction =
+  | 'photo'
+  | 'var'
+  | 'loc'
+  | 'chot'
+  | 'lowball'
+  | 'mute'
+  /** tự nhập giá trả (được trả tối đa OFFER_MAX lần) */
+  | 'offer'
+  /** đi ăn xin: năn nỉ xin free, BEG_BAN bị ban khỏi chợ */
+  | 'beg'
+
+/** số lần được tự trả giá với 1 người bán */
+export const OFFER_MAX = 3
+/** đi ăn xin: tỉ lệ bị admin ban khỏi chợ / người bán cho free thật; số ngày bị ban */
+const BEG_BAN = 0.1
+const BEG_GIFT = 0.05
+export const BAN_DAYS = 3
 
 export interface ChatLine {
   from: 'me' | 'seller' | 'system'
@@ -187,17 +204,25 @@ export function makePost(
  * Inbox 1 hành động: trả về bài đăng mới (giá thương lượng, log chat, bị block...).
  * Hàm thuần: tỉ lệ ngẫu nhiên nằm ở đây, store chỉ lưu kết quả
  */
-export function negotiate(post: GroupPost, action: InboxAction): GroupPost {
+export function negotiate(post: GroupPost, action: InboxAction, amount = 0): GroupPost {
   const deal: NonNullable<GroupPost['deal']> = post.deal ?? {
     price: post.price,
     ship: post.fs ? 0 : SHIP_FEE,
     log: [],
     used: [],
   }
-  if (deal.blocked || deal.used.includes(action)) return post
+  const tries = deal.used.filter((a) => a === 'offer').length
+  if (
+    deal.blocked ||
+    deal.gift ||
+    (action === 'offer' ? tries >= OFFER_MAX : deal.used.includes(action))
+  )
+    return post
   const log: ChatLine[] = [...deal.log]
   const say = (from: ChatLine['from'], text: string) => log.push({ from, text })
-  let { price, ship, revealed, varChecked } = deal
+  let { price, ship, revealed, varChecked, ban } = deal
+  // khai báo riêng: deal.gift đã bị thu hẹp về false ở dòng kiểm tra trên
+  let gift: boolean | undefined = false
   const floor = dealFloor(post)
   // giá sau khi bớt, không xuống dưới giá sàn
   const cut = (p: number) => Math.max(floor, round50(p))
@@ -274,6 +299,54 @@ export function negotiate(post: GroupPost, action: InboxAction): GroupPost {
       } else say('seller', 'Giá đó bác ra chợ mà mua 😤')
       break
     }
+    case 'offer': {
+      const offer = round50(amount)
+      say('me', `${offer.toLocaleString('vi-VN')}k được không bác?`)
+      if (offer >= price) {
+        say('seller', 'Ok bác, chốt giá đó nhé')
+      } else if (tag === 'firm') {
+        // price no offer: trả giá là dễ ăn block
+        if (chance(0.6)) {
+          say('seller', 'Price no offer mà bác 🙄')
+          blocked = true
+        } else say('seller', 'Giá chốt rồi bác, không bớt được ạ')
+      } else if (price <= floor) noRoom()
+      else if (offer < floor) {
+        // trả dưới sàn = lowball nặng
+        if (chance(LOWBALL_BLOCK[tag] * (offer < floor * 0.6 ? 2 : 1))) {
+          say('seller', 'Trả giá kiểu này thôi em block nhé')
+          blocked = true
+        } else say('seller', `Thấp quá bác, ${cut(floor).toLocaleString('vi-VN')}k là đáy rồi`)
+      } else {
+        // càng gần giá đăng càng dễ đồng ý, không thì người bán chào giá giữa
+        const gap = (price - offer) / (price - floor)
+        if (chance((tag === 'lowball' ? 0.85 : 0.7) - gap * 0.55)) {
+          price = cut(offer)
+          say('seller', 'Thôi cũng được, em để bác giá đó')
+        } else if (chance(0.7)) {
+          price = cut((price + offer) / 2)
+          say('seller', `Thôi ${price.toLocaleString('vi-VN')}k em bán, không bớt nữa`)
+        } else say('seller', 'Giá đó em không bán được bác ơi')
+      }
+      break
+    }
+    case 'beg': {
+      say('me', pick(BEG_LINES))
+      if (chance(BEG_BAN)) {
+        say('system', '🚫 Admin xoá bình luận: xin xỏ trong group. Bạn bị ban khỏi chợ 3 ngày')
+        blocked = true
+        ban = true
+      } else if (chance(BEG_GIFT)) {
+        price = 0
+        ship = 0
+        gift = true
+        say('seller', 'Thôi thấy bác tội quá, em tặng luôn, ship em bao 🥲')
+      } else if (chance(0.3)) {
+        say('seller', pick(['Bác đi chỗ khác chơi giùm em', 'Xin xỏ vậy em block nha']))
+        blocked = true
+      } else say('seller', pick(BEG_REPLIES))
+      break
+    }
     case 'mute': {
       // "nhanh gọn cho người câm điếc": không hỏi gì, xin stk luôn → bớt hữu duyên
       say('me', 'Cho em xin stk ạ')
@@ -296,7 +369,17 @@ export function negotiate(post: GroupPost, action: InboxAction): GroupPost {
   if (blocked) say('system', '⛔ Bạn đã bị người bán chặn')
   return {
     ...post,
-    deal: { price, ship, log, used: [...deal.used, action], blocked, revealed, varChecked },
+    deal: {
+      price,
+      ship,
+      log,
+      used: [...deal.used, action],
+      blocked,
+      revealed,
+      varChecked,
+      gift,
+      ban,
+    },
   }
 }
 
@@ -304,6 +387,18 @@ export function negotiate(post: GroupPost, action: InboxAction): GroupPost {
 const LOWBALL_BLOCK: Record<PriceTag, number> = { firm: 1, normal: 0.25, lowball: 0.05 }
 /** bài ghi "nhanh gọn cho người câm điếc": mỗi câu hỏi han (không phải xin stk luôn) có tỉ lệ ăn block */
 const MUTE_BLOCK = 0.3
+
+/** câu năn nỉ xin free + người bán đáp lại */
+const BEG_LINES = [
+  'Bác ơi em sinh viên nghèo, bác cho em xin free được không ạ 🥺',
+  'Em mê phím lắm mà hết tiền, bác thương em cho em xin nha 🙏',
+  'Bác cho em xin làm kỷ niệm đi, em hứa review 5 sao 😭',
+]
+const BEG_REPLIES = [
+  'Em cũng nghèo bác ơi 😅',
+  'Free thì em cũng muốn xin bác đây',
+  'Bác chịu khó cày thêm rồi quay lại nha',
+]
 
 /** câu chào inbox đầu tiên của người bán */
 export const greet = (post: GroupPost) =>

@@ -57,6 +57,11 @@ export function prepWood(maps: Record<string, THREE.Texture>) {
 /** UV theo kích thước thật: thớ chạy dọc cạnh dài, không kéo giãn trên mặt hẹp. */
 export function woodBoxGeometry(w: number, h: number, d: number, radius = 0) {
   const geo = radius ? new RoundedBoxGeometry(w, h, d, 3, radius) : new THREE.BoxGeometry(w, h, d)
+  return woodUV(geo)
+}
+
+/** Trải UV vân gỗ theo toạ độ thật (chiếu theo hướng pháp tuyến) cho geometry bất kỳ (khối hộp, vỏ case liền) */
+export function woodUV<G extends THREE.BufferGeometry>(geo: G) {
   const pos = geo.getAttribute('position')
   const nor = geo.getAttribute('normal')
   const uv = geo.getAttribute('uv')

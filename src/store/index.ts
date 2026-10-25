@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { create } from 'zustand'
 import { buildSound } from '@/data/parts'
+import { lossReason } from '@/data/gameOver'
 import { createMetaSlice, type MetaSlice } from './metaSlice'
 import { createShopSlice, type ShopSlice } from './shopSlice'
 import { createBuildSlice, type BuildSlice } from './buildSlice'
@@ -50,6 +51,8 @@ const SAVED_KEYS = [
   'screwBit',
   'wear',
   'reviews',
+  'spare',
+  'marketBanUntil',
   'rejected',
   'offers',
   'jobs',
@@ -64,12 +67,26 @@ const SAVED_KEYS = [
   'build',
   'history',
   'supplyUsed',
+  'runId',
 ] as const satisfies readonly (keyof GameState)[]
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 useGame.subscribe((s, prev) => {
   if (s.screen === 'title' || !SAVED_KEYS.some((k) => s[k] !== prev[k])) return
   clearTimeout(saveTimer)
   saveTimer = setTimeout(() => useGame.getState().save(), 400)
+})
+
+// Thua game: uy tín quá thấp / hết tiền nhận đơn. Chờ một nhịp cho toast / đánh giá kịp hiện rồi xét lại
+const LOSS_KEYS = ['rep', 'money', 'offers', 'order', 'jobs', 'packed'] as const
+let lossTimer: ReturnType<typeof setTimeout> | undefined
+useGame.subscribe((s, prev) => {
+  if (s.screen === 'title' || s.gameOver || !LOSS_KEYS.some((k) => s[k] !== prev[k])) return
+  clearTimeout(lossTimer)
+  lossTimer = setTimeout(() => {
+    const now = useGame.getState()
+    const reason = now.screen === 'title' || now.gameOver ? null : lossReason(now)
+    if (reason) now.endRun(reason)
+  }, 1200)
 })
 
 // Mở store trong console khi dev để debug

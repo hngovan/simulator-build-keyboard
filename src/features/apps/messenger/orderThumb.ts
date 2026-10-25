@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import * as THREE from 'three'
-import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
-import { BLOCKER_TOP, LAYOUTS, blockerGaps, getLayout } from '@/data/layouts'
-import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS, caseModelOf } from '@/data/parts'
+import { BLOCKER_TOP, blockerGaps, getLayout } from '@/data/layouts'
+import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS, caseFits, caseModelOf } from '@/data/parts'
 import { CASE_MARGIN, CASE_WALL, Y } from '@/data/steps'
 import { MM } from '@/scene/models/Switch'
-import { WEIGHT_METALS, WOOD_TEX, prepWood, woodBoxGeometry, woodTexFor } from '@/scene/materials'
+import { caseShellGeometry, micaStack } from '@/scene/parts/caseShell'
+import { WEIGHT_METALS, WOOD_TEX, prepWood, woodTexFor, woodUV } from '@/scene/materials'
 import { boardOutline, outlineSlab } from '@/scene/parts/boardOutline'
 import { capGeometry, keycapModel, keycapShape, stretchCap } from '@/scene/models/keycapShape'
 import type { FormFactor, Key, LayoutId, Order, Variant } from '@/types'
@@ -28,16 +28,15 @@ function seeded(id: string) {
 /** case + màu case của đơn: kit khách gửi → đúng case đó; đơn full → case rẻ nhất cùng cỡ */
 export function orderLook(order: Order) {
   const rnd = seeded(order.id)
-  const kits = Object.keys(KEYCAP_KITS).filter((id) =>
-    KEYCAP_KITS[id].layouts.includes(order.layout),
+  const kits = Object.keys(KEYCAP_KITS).filter(
+    (id) => !KEYCAP_KITS[id].hidden && KEYCAP_KITS[id].layouts.includes(order.layout),
   )
   // khách đã đặt bộ keycap thì dùng đúng bộ đó; đơn cũ chưa có thì bốc theo mã đơn
   const picked = kits[Math.floor(rnd() * kits.length)]
   const keycapKit = order.keycapKit && KEYCAP_KITS[order.keycapKit] ? order.keycapKit : picked
   if (order.kit?.case)
     return { caseId: order.kit.case.id, color: order.kit.case.color, keycapKit, rnd }
-  const ff = LAYOUTS[order.layout].ff
-  const ids = Object.keys(CASES).filter((id) => CASES[id].ff === ff)
+  const ids = Object.keys(CASES).filter((id) => caseFits(CASES[id], order.layout))
   const caseId = ids[Math.floor(rnd() * ids.length)]
   const colors = CASES[caseId].colors
   const color =
@@ -138,7 +137,7 @@ const FF_LAYOUT: Record<FormFactor, LayoutId> = {
 export function caseSpec(caseId: string, color: string): KeyboardSpec {
   // case chỉ hợp vài layout (vd HHKB) thì lấy layout đầu tiên, không thì theo form factor
   const layout = CASES[caseId].layouts?.[0] ?? FF_LAYOUT[CASES[caseId].ff]
-  const keycapKit = KEYCAP_KITS.base.layouts.includes(layout) ? 'base' : 'full'
+  const keycapKit = 'full'
   return {
     layout,
     variant: {},
@@ -200,35 +199,19 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
   } else {
     const W = width + 2 * (CASE_MARGIN + CASE_WALL)
     const D = depth + 2 * (CASE_MARGIN + CASE_WALL)
-    const h = Y.caseTop - Y.floorBot
-    const box = (w: number, bh: number, d: number, r: number) =>
-      def.material === 'wood'
-        ? woodBoxGeometry(w, bh, d, r)
-        : new RoundedBoxGeometry(w, bh, d, 3, r)
-    if (caseOnly) {
-      // xem riêng vỏ case: khay rỗng (đáy + 4 thành) như trên bàn build, không phải khối đặc
-      const t = CASE_WALL
-      const floor = new THREE.Mesh(
-        box(W - 0.02, Y.floorTop - Y.floorBot, D - 0.02, 0.08),
-        bottomMat,
-      )
-      floor.position.y = (Y.floorBot + Y.floorTop) / 2
-      group.add(floor)
-      const walls: [number, number, number, number][] = [
-        [0, -D / 2 + t / 2, W, t],
-        [0, D / 2 - t / 2, W, t],
-        [-W / 2 + t / 2, 0, t, D - 2 * t],
-        [W / 2 - t / 2, 0, t, D - 2 * t],
-      ]
-      for (const [x, z, w, d] of walls) {
-        const m = new THREE.Mesh(box(w, h, d, 0.08), caseMat)
-        m.position.set(x, Y.floorBot + h / 2, z)
-        group.add(m)
-      }
+    if (def.material === 'mica') {
+      // mica: tấm cắt phẳng xếp chồng (2 lớp dưới là đáy liền), giống bàn build
+      group.add(micaStack(W, D, Y.floorBot, Y.caseTop, CASE_WALL, caseMat, 2))
     } else {
-      const m = new THREE.Mesh(box(W, h, D, 0.15), caseMat)
-      m.position.y = Y.floorBot + h / 2
-      group.add(m)
+      // vỏ liền 1 khối (vành + sàn đáy) như bàn build; case 2 mảnh: phần dưới (đáy riêng màu) + vành trên
+      const shell = (y0: number, y1: number, mat: THREE.Material, floor?: number) => {
+        const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floor)
+        group.add(new THREE.Mesh(def.material === 'wood' ? woodUV(g) : g, mat))
+      }
+      if (def.pieces === 2) {
+        shell(Y.floorBot, Y.split, bottomMat, Y.floorTop)
+        shell(Y.split, Y.caseTop, caseMat)
+      } else shell(Y.floorBot, Y.caseTop, def.bottom ? bottomMat : caseMat, Y.floorTop)
     }
   }
   // lớp giữa case và keycap theo cao độ Y của bàn build: PCB → plate → housing switch từng phím

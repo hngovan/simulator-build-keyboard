@@ -67,7 +67,11 @@ function OrderDetail({ c }: { c: OrderEntry }) {
                 <td className="p-1.5 align-top text-ink">
                   {/* chưa có món này thì chỉ hiện lý do thiếu */}
                   {inventory[x.cat] && itemName(x.cat, inventory[x.cat])}
-                  {provided[x.cat] && <Badge tone="green">Khách gửi</Badge>}
+                  {provided[x.cat] && (
+                    <Badge solid tone="green">
+                      Khách gửi
+                    </Badge>
+                  )}
                   {!x.ok && <div className="text-red">{x.msg}</div>}
                 </td>
               </tr>
@@ -125,6 +129,11 @@ function OrderDetail({ c }: { c: OrderEntry }) {
           </b>
         </div>
         <ProgressBar value={spent / order.budget} tone={over ? 'red' : 'green'} />
+        <Muted className="mt-1 block text-xs">
+          {over
+            ? `Lố ${fmt(spent - order.budget)}, khách chỉ trả ${fmt(order.budget)}`
+            : `Còn dư ${fmt(order.budget - spent)} vào túi khi giao`}
+        </Muted>
       </Panel>
       {active && !ready && !build && (
         <Muted className="mt-2">Mua đủ linh kiện còn thiếu rồi ra bàn build</Muted>

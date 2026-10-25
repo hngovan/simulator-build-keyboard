@@ -1,6 +1,7 @@
 import { LAYOUTS, getLayout } from './layouts'
 import { SUPPLIES } from './supplies'
 import type {
+  KeycapMaterial,
   SwitchKind,
   BuildState,
   CaseDef,
@@ -124,6 +125,30 @@ export const SWITCHES: Record<string, SwitchDef> = {
     price10: 70,
     desc: 'Tactile nhẹ, chưa lube',
   },
+  cherryOrange: {
+    name: 'Cherry Cam',
+    brand: 'Cherry',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: false,
+    color: '#f07a1e',
+    loud: 0.5,
+    pitch: 0.45,
+    price10: 70,
+    desc: 'Linear mượt: stem cam, housing full đen, chưa lube',
+  },
+  cherryPurple: {
+    name: 'Cherry Tím',
+    brand: 'Cherry',
+    kind: 'Tactile',
+    feel: 'tactile',
+    prelubed: false,
+    color: '#8e44c9',
+    loud: 0.5,
+    pitch: 0.45,
+    price10: 75,
+    desc: 'Tactile khấc rõ hơn Cherry Nâu: stem tím, housing full đen, chưa lube',
+  },
   cherryBlue: {
     name: 'Cherry Xanh',
     brand: 'Cherry',
@@ -197,8 +222,32 @@ export const SWITCHES: Record<string, SwitchDef> = {
     price10: 45,
     desc: 'Linear phổ thông, đã lube sẵn từ nhà máy',
   },
+  gateronMilky: {
+    name: 'Gateron Milky Vàng',
+    brand: 'Gateron',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: true,
+    color: '#f2dc6b',
+    loud: 0.5,
+    pitch: 0.4,
+    price10: 50,
+    desc: 'Linear: housing full trắng sữa hơi trong, stem vàng nhạt, tiếng đục êm. Đã lube sẵn',
+  },
+  rubenBumblebee: {
+    name: 'Ruben Bumblebee',
+    brand: 'Ruben',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: true,
+    color: '#e0a800',
+    loud: 0.5,
+    pitch: 0.35,
+    price10: 75,
+    desc: 'Linear: housing full xám tro, stem vàng đậm. Đã lube sẵn',
+  },
   hmxWhite: {
-    name: 'HMX Linear Trắng',
+    name: 'HMX Snow',
     brand: 'HMX',
     kind: 'Linear',
     feel: 'linear',
@@ -207,19 +256,127 @@ export const SWITCHES: Record<string, SwitchDef> = {
     loud: 0.6,
     pitch: 0.8,
     price10: 60,
-    desc: 'Tiếng "clack" giòn, cao. Đã lube sẵn',
+    desc: 'Linear trắng tuyết, tiếng "clack" giòn, cao. Đã lube sẵn',
+  },
+  hmxSnowfall: {
+    name: 'HMX Snowfall',
+    brand: 'HMX',
+    kind: 'Tactile',
+    feel: 'tactile',
+    prelubed: true,
+    color: '#f3f1ec',
+    loud: 0.55,
+    pitch: 0.6,
+    price10: 80,
+    desc: 'Tactile: housing trên trong suốt đính kim tuyến, dưới + stem trắng đục. Đã lube sẵn',
+  },
+  hmxV2u: {
+    name: 'HMX V2U',
+    brand: 'HMX',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: true,
+    color: '#7b3fc4',
+    loud: 0.55,
+    pitch: 0.5,
+    price10: 70,
+    desc: 'Linear full tím: housing + stem tím. Đã lube sẵn',
+  },
+  hmxWaverider: {
+    name: 'HMX Waverider',
+    brand: 'HMX',
+    kind: 'Tactile',
+    feel: 'tactile',
+    prelubed: true,
+    color: '#f4f4f4',
+    loud: 0.55,
+    pitch: 0.5,
+    price10: 85,
+    desc: 'Tactile: housing trên xanh trong đính kim tuyến, dưới xanh navy, stem trắng. Đã lube sẵn',
+  },
+  hmxSuColor: {
+    name: 'HMX Su Color',
+    brand: 'HMX',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: true,
+    color: '#ffc8dc',
+    loud: 0.5,
+    pitch: 0.55,
+    price10: 80,
+    desc: 'Linear: housing full trong suốt hồng đính kim tuyến, stem hồng nhạt. Đã lube sẵn',
+  },
+  hmxXinhai: {
+    name: 'HMX Xinhai',
+    brand: 'HMX',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: true,
+    color: '#1f2a5a',
+    loud: 0.55,
+    pitch: 0.45,
+    price10: 70,
+    desc: 'Linear: housing trên trắng, dưới + stem xanh navy. Đã lube sẵn',
+  },
+  hmxKd200: {
+    name: 'HMX KD200',
+    brand: 'HMX',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: true,
+    color: '#1e1e22',
+    loud: 0.55,
+    pitch: 0.55,
+    price10: 65,
+    desc: 'Linear: housing trên vàng đậm, dưới đen, stem đen. Đã lube sẵn',
   },
   wingtreeSmoke: {
-    name: 'Wingtree Linear Khói',
+    name: 'Wingtree Camellia',
     brand: 'Wingtree',
     kind: 'Linear',
     feel: 'linear',
     prelubed: true,
-    color: '#3a3a44',
+    color: '#c8202f',
     loud: 0.55,
     pitch: 0.2,
     price10: 85,
-    desc: 'Housing dày, "thock" trầm. Đã lube sẵn',
+    desc: 'Stem đỏ, housing full trắng đục dày, "thock" trầm. Đã lube sẵn',
+  },
+  wingtreeTorrero: {
+    name: 'Wingtree Torrero',
+    brand: 'Wingtree',
+    kind: 'Tactile',
+    feel: 'tactile',
+    prelubed: true,
+    color: '#d9a400',
+    loud: 0.55,
+    pitch: 0.25,
+    price10: 90,
+    desc: 'Tactile đầm: housing nâu coffee, stem vàng đậm. Đã lube sẵn',
+  },
+  gateronTypeR: {
+    name: 'Gateron Type R',
+    brand: 'Gateron',
+    kind: 'Tactile',
+    feel: 'tactile',
+    prelubed: true,
+    color: '#d42a2a',
+    loud: 0.55,
+    pitch: 0.4,
+    price10: 80,
+    desc: 'Tactile đỏ rực: stem đỏ, housing full đỏ đục. Đã lube sẵn',
+  },
+  wingtreeTactile: {
+    name: 'Wingtree Tactile',
+    brand: 'Wingtree',
+    kind: 'Tactile',
+    feel: 'tactile',
+    prelubed: true,
+    color: '#f6b77a',
+    loud: 0.55,
+    pitch: 0.3,
+    price10: 85,
+    desc: 'Stem cam nhạt, housing trắng đục dày, khấc đầm. Đã lube sẵn',
   },
   keygeekTactile: {
     name: 'Keygeek Tactile',
@@ -257,10 +414,58 @@ export const SWITCHES: Record<string, SwitchDef> = {
     price10: 90,
     desc: 'Silent linear, đã lube sẵn',
   },
+  otemuSilent: {
+    name: 'Otemu Silent V1',
+    brand: 'Otemu',
+    kind: 'Silent',
+    feel: 'linear',
+    prelubed: false,
+    color: '#f2c230',
+    loud: 0.15,
+    pitch: 0.35,
+    price10: 40,
+    desc: 'Silent linear giá rẻ: stem vàng, housing full hồng, chưa lube',
+  },
+  otemuSilentV2: {
+    name: 'Otemu Silent V2',
+    brand: 'Otemu',
+    kind: 'Silent',
+    feel: 'linear',
+    prelubed: false,
+    color: '#d6ecae',
+    loud: 0.13,
+    pitch: 0.32,
+    price10: 45,
+    desc: 'Bản V2 êm hơn V1: stem xanh ngà lá chuối non, housing full xanh lá chuối, chưa lube',
+  },
+  gateronSilentTactile: {
+    name: 'Gateron Silent Tactile',
+    brand: 'Gateron',
+    kind: 'SilentTactile',
+    feel: 'tactile',
+    prelubed: true,
+    color: '#8a5a3c',
+    loud: 0.12,
+    pitch: 0.35,
+    price10: 95,
+    desc: 'Khấc nhẹ, không tiếng: stem nâu, housing trên trong suốt, dưới trắng đục. Đã lube sẵn',
+  },
+  hmxVolume0T: {
+    name: 'HMX Volume 0 T',
+    brand: 'HMX',
+    kind: 'SilentTactile',
+    feel: 'tactile',
+    prelubed: true,
+    color: '#f3e5c0',
+    loud: 0.1,
+    pitch: 0.3,
+    price10: 90,
+    desc: 'Silent tactile: housing trên nâu đậm, dưới coffee sữa, stem cream. Đã lube sẵn',
+  },
   silentTactile: {
     name: 'Silent Tactile Tím',
     brand: 'Khác',
-    kind: 'Silent',
+    kind: 'SilentTactile',
     feel: 'tactile',
     prelubed: false,
     color: '#9c6ade',
@@ -385,6 +590,9 @@ export const CASE_COLORS: Record<string, ColorDef> = {
   yellow: { name: 'Vàng', hex: '#e8c14a' },
   green: { name: 'Xanh lá', hex: '#4f9a66' },
   red: { name: 'Đỏ', hex: '#8f1d26' },
+  purple: { name: 'Tím', hex: '#5e3a8c' },
+  latte: { name: 'Coffee sữa', hex: '#b39274' },
+  brown: { name: 'Nâu đậm', hex: '#4a2e1f' },
   frost: { name: 'Mờ sữa', hex: '#eef2f5' },
   walnut: { name: 'Gỗ óc chó', hex: '#5b3a24' },
   oak: { name: 'Gỗ sồi', hex: '#b88a55' },
@@ -392,6 +600,98 @@ export const CASE_COLORS: Record<string, ColorDef> = {
   ash: { name: 'Gỗ tần bì', hex: '#f6ead6' },
   rosewood: { name: 'Gỗ hồng mộc', hex: '#c98572' },
 }
+
+/** nhãn cỡ case trên ảnh sản phẩm Shopii */
+const FF_BADGE: Record<string, string> = {
+  '40': '40%',
+  '60': '60%',
+  '65': '65%',
+  '75': '75%',
+  tkl: 'TKL',
+  frl: 'FRL',
+  full: 'Full',
+  alice: 'Alice',
+  planck: 'Planck',
+}
+
+/**
+ * Dòng case: các case cùng dòng gộp thành 1 sản phẩm Shopii (1 tên), chất liệu chọn ở option.
+ * Id từng case giữ riêng (bản lưu, đơn khách, model CAD); case không nằm trong dòng nào thì đứng riêng như cũ
+ */
+export const CASE_LINES: { name: string; variants: [id: string, label: string][] }[] = [
+  {
+    name: 'Case 60%',
+    variants: [
+      ['plastic60', 'Nhựa ABS'],
+      ['wood60', 'Gỗ'],
+      ['mica60', 'Mica xếp lớp'],
+      ['pc60', 'PC 2 mảnh'],
+      ['gasket60', 'Nhôm 2 mảnh'],
+      ['gasket60Duo', 'Nắp PC · đáy nhôm'],
+    ],
+  },
+  {
+    name: 'Case 40%',
+    variants: [
+      ['plastic40', 'Nhựa ABS'],
+      ['mica40', 'Mica xếp lớp'],
+      ['alu40', 'Nhôm E-coat'],
+    ],
+  },
+  {
+    name: 'Case 75%',
+    variants: [
+      ['case75Plastic', 'Nhựa ABS'],
+      ['case75Mica', 'Mica xếp lớp'],
+      ['case75Alu', 'Nhôm gasket'],
+    ],
+  },
+  {
+    name: 'Case TKL',
+    variants: [
+      ['tklTray', 'Nhựa ABS'],
+      ['tklAcrylic', 'Acrylic 2 mảnh'],
+      ['tklGasket', 'Nhôm 2 mảnh'],
+    ],
+  },
+  {
+    name: 'Case FRL',
+    variants: [
+      ['frlMica', 'Mica xếp lớp'],
+      ['frlAlu', 'Nhôm'],
+    ],
+  },
+  {
+    name: 'Case Full',
+    variants: [
+      ['fullTray', 'Nhựa ABS'],
+      ['fullMica', 'Mica xếp lớp'],
+      ['fullGasket', 'Nhôm E-coat'],
+    ],
+  },
+  {
+    name: '4HEAD',
+    variants: [
+      ['head4Acrylic', 'Acrylic'],
+      ['head4Alu', 'Nhôm'],
+    ],
+  },
+  {
+    name: 'Repent75',
+    variants: [
+      ['repent75', 'Nhôm'],
+      ['repent75Pc', 'Nắp PC · đáy nhôm'],
+    ],
+  },
+  {
+    name: 'Exodus80',
+    variants: [
+      ['exodus80Pc', 'PC'],
+      ['exodus80', 'Nhôm'],
+      ['exodus80Duo', 'Nắp nhôm · đáy PC'],
+    ],
+  },
+]
 
 // Chất liệu case: ảnh hưởng hình ảnh (Bench) và âm thanh
 const CASE_MATERIALS: Record<string, SoundMod> = {
@@ -414,7 +714,18 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['tray', 'oring', 'og'],
     price: 1600,
-    colors: ['black', 'silver', 'pink', 'yellow', 'green'],
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'Nhôm CNC anod 1 mảnh',
   },
   plastic60: {
@@ -424,7 +735,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'abs',
     mounts: ['tray'],
     price: 300,
-    colors: ['black', 'white', 'yellow', 'green'],
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
   },
   wood60: {
@@ -445,7 +756,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket', 'top'],
     price: 2100,
-    colors: ['silver', 'navy', 'black', 'yellow', 'green'],
+    colors: ['silver', 'navy', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Top + bottom anod, vít ở đáy',
   },
   pc60: {
@@ -477,7 +788,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'abs',
     mounts: ['tray'],
     price: 280,
-    colors: ['white', 'pink', 'yellow', 'green'],
+    colors: ['white', 'pink', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhỏ gọn',
   },
   alu40: {
@@ -488,7 +799,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'ecoat',
     mounts: ['gasket', 'top'],
     price: 1400,
-    colors: ['silver', 'black', 'navy', 'yellow', 'green'],
+    colors: ['silver', 'black', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm phủ E-coat sần, vít ở đáy',
   },
   mica40: {
@@ -509,7 +820,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'abs',
     mounts: ['tray'],
     price: 550,
-    colors: ['black', 'white', 'yellow', 'green'],
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Phổ thông',
   },
   tklGasket: {
@@ -520,7 +831,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket', 'top'],
     price: 2700,
-    colors: ['silver', 'navy', 'yellow', 'green'],
+    colors: ['silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm anod, vít ở đáy',
   },
   gasket60Duo: {
@@ -553,7 +864,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'abs',
     mounts: ['tray'],
     price: 650,
-    colors: ['black', 'white', 'yellow', 'green'],
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Phổ thông',
   },
   fullGasket: {
@@ -564,7 +875,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'ecoat',
     mounts: ['gasket', 'top'],
     price: 3100,
-    colors: ['silver', 'black', 'yellow', 'green'],
+    colors: ['silver', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhôm E-coat sần, vít ở đáy',
   },
   fullMica: {
@@ -587,7 +898,18 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket', 'tray'],
     price: 2300,
-    colors: ['black', 'silver', 'navy', 'pink', 'yellow', 'green'],
+    colors: [
+      'black',
+      'silver',
+      'navy',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+    ],
     desc: 'Nhôm CNC có tạ đáy; nắp riêng cho WK / WKL / HHKB (tự đổi theo layout)',
     model: 'exodus60',
     modelFor: { hhkb: 'exodus60-hhkb', wkl: 'exodus60-wkl' },
@@ -601,7 +923,18 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket', 'tray'],
     price: 2100,
-    colors: ['silver', 'black', 'pink', 'yellow', 'green'],
+    colors: [
+      'silver',
+      'black',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'Case 60% dáng "trứng" bo tròn, có tạ đáy',
     model: 'eclipse60',
     // case nêm: board nghiêng theo mép trước / sau (đo bằng script, plate thấp hơn giữa mép 0.25u; dz bù mặt keycap ngả về sau khi nghiêng)
@@ -614,7 +947,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['tray'],
     price: 2000,
-    colors: ['silver', 'black', 'navy', 'yellow', 'green'],
+    colors: ['silver', 'black', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nắp nhôm, đáy acrylic, tạ đồng; góc gõ 6.2° làm sẵn',
     model: 'head4-alu',
     bottom: { material: 'acrylic', color: 'clear' },
@@ -644,7 +977,18 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['tray', 'oring'],
     price: 1900,
-    colors: ['white', 'black', 'pink', 'yellow', 'green'],
+    colors: [
+      'white',
+      'black',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'Case HHKB có khối chặn liền case, tạ đáy',
     model: 'catto-hhkb',
     // case nêm: board nghiêng theo mép trước / sau (đo bằng script, plate thấp hơn giữa mép 0.25u; dz bù mặt keycap ngả về sau khi nghiêng)
@@ -658,7 +1002,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'abs',
     mounts: ['tray'],
     price: 700,
-    colors: ['white', 'black', 'yellow', 'green'],
+    colors: ['white', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Case HHKB dáng cổ điển (bản in 3D)',
     model: 'vintage60-hhkb',
     // case nêm: board nghiêng theo mép trước / sau (đo bằng script, plate thấp hơn giữa mép 0.25u; dz bù mặt keycap ngả về sau khi nghiêng)
@@ -671,7 +1015,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['tray', 'gasket'],
     price: 1800,
-    colors: ['black', 'silver', 'navy', 'yellow', 'green'],
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Case 65% có tạ đáy, góc gõ 6.9° làm sẵn',
     model: 'ta65',
     seat: { rise: 0.006, tilt: 0.12 },
@@ -683,7 +1027,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'abs',
     mounts: ['tray'],
     price: 400,
-    colors: ['black', 'white', 'yellow', 'green'],
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
   },
   repent75: {
@@ -693,7 +1037,18 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket'],
     price: 2200,
-    colors: ['black', 'silver', 'pink', 'yellow', 'green'],
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'Case 75% nắp liền, tạ đáy',
     model: 'repent75',
     // có thêm đáy: góc gõ 7° làm sẵn
@@ -721,7 +1076,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket', 'tray'],
     price: 2500,
-    colors: ['black', 'navy', 'green'],
+    colors: ['black', 'navy', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nắp nhôm anod, đáy PC mờ, tạ đồng',
     model: 'exodus80',
     // case nêm (mép sau 1.11u, mép trước −0.06u, dốc ~10°): board nghiêng theo, nằm dưới mép case
@@ -736,7 +1091,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket', 'tray'],
     price: 2800,
-    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red'],
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'TKL nhôm, tạ trong + tạ ngoài',
     model: 'exodus80',
     seat: { rise: 0.2, tilt: 0.15, dz: 0.07 },
@@ -757,13 +1112,24 @@ export const CASES: Record<string, CaseDef> = {
     weight: 'copper',
   },
   rfBruh: {
-    name: 'RF Bruh (TKL)',
+    name: 'RF Bruh',
     ff: 'tkl',
     pieces: 1,
     material: 'anod',
     mounts: ['tray', 'gasket'],
     price: 2000,
-    colors: ['white', 'black', 'silver', 'yellow', 'green'],
+    colors: [
+      'white',
+      'black',
+      'silver',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'Case TKL dáng Realforce R1 / R2, thành dày',
     model: 'rf-bruh',
     // case gờ trước dày hơn gờ sau: căn theo khung bao thì phím lệch về sau ~0.6u so với lỗ case
@@ -771,25 +1137,36 @@ export const CASES: Record<string, CaseDef> = {
     seat: { rise: 0.34, tilt: 0.114, dz: 0.76, dx: -0.08 },
   },
   cattoRF: {
-    name: 'Catto RF v4 (TKL)',
+    name: 'Catto RF',
     ff: 'tkl',
     pieces: 1,
     material: 'anod',
     mounts: ['tray'],
     price: 1900,
-    colors: ['black', 'white', 'pink', 'yellow', 'green'],
+    colors: [
+      'black',
+      'white',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'Case TKL kiểu Realforce bản Catto v4',
     model: 'catto-rf',
     seat: { rise: 0.686, tilt: 0 },
   },
   dualityHorns: {
-    name: 'Duality Horns (TKL)',
+    name: 'Duality Horns',
     ff: 'tkl',
     pieces: 1,
     material: 'anod',
     mounts: ['gasket', 'tray'],
     price: 3000,
-    colors: ['black', 'silver', 'navy', 'yellow', 'green'],
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'TKL nhôm, tạ đáy + badge + accent, góc gõ 4.5°',
     model: 'duality-horns',
     seat: { rise: 0.19, tilt: 0.079 },
@@ -803,7 +1180,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket', 'tray'],
     price: 1500,
-    colors: ['black', 'silver', 'navy', 'yellow', 'green'],
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm CNC 1 mảnh kiểu Q1, gasket mount êm',
   },
   case75Plastic: {
@@ -813,7 +1190,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'abs',
     mounts: ['tray'],
     price: 450,
-    colors: ['black', 'white', 'yellow', 'green'],
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
   },
   case75Mica: {
@@ -835,7 +1212,18 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['gasket', 'tray'],
     price: 1700,
-    colors: ['black', 'silver', 'pink', 'yellow', 'green'],
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'TKL bỏ hàng F, gọn hơn TKL thường, nhôm 1 mảnh',
   },
   frlMica: {
@@ -869,18 +1257,29 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['oring'],
     price: 1900,
-    colors: ['black', 'silver', 'navy', 'yellow', 'green'],
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Thiết kế mở của kkatano: nhôm 1 mảnh, O-ring mount gõ êm, nảy',
     model: 'bakeneko60',
   },
   aliceAlu: {
-    name: 'Blossom (Alice)',
+    name: 'Blossom',
     ff: 'alice',
     pieces: 1,
     material: 'anod',
     mounts: ['tray'],
     price: 2400,
-    colors: ['black', 'silver', 'pink', 'yellow', 'green'],
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'Case Alice gasket mount kiểu Arisu, 2 nửa xoay ±12° + cụm mũi tên (doughnut923/Blossom, MIT)',
     model: 'alice-blossom',
     // ghép 2 mảnh in 3D (scripts/convert-user-cases.mjs): đáy hình nêm, nắp + plate nghiêng ~4.9° theo đáy
@@ -893,7 +1292,18 @@ export const CASES: Record<string, CaseDef> = {
     material: 'anod',
     mounts: ['tray'],
     price: 1100,
-    colors: ['black', 'silver', 'pink', 'yellow', 'green'],
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
     desc: 'Case khay thấp cho Planck ortholinear 12 × 4 (OLKB, bản vẽ MIT)',
     model: 'planck',
     // khay thấp (thành tới −0.3u): hạ board để plate nằm ngang mép case, PCB không lòi lên trên thành
@@ -902,18 +1312,44 @@ export const CASES: Record<string, CaseDef> = {
 }
 
 export const PCB_TYPES: Record<string, Named> = {
-  hotswap: { name: 'Hotswap', price: 450, desc: 'Cắm switch vào socket, không cần hàn' },
+  hotswap: { name: 'Hotswap', price: 450, desc: 'Dùng để cố định switch với PCB' },
   solder: { name: 'Hàn (solder)', price: 280, desc: 'Phải hàn từng switch' },
 }
 
-/** 4 loại switch khách có thể đòi (SwitchDef.kind) */
+/** loại switch khách có thể đòi (SwitchDef.kind); Silent = silent linear */
 export const SWITCH_KINDS: Record<SwitchKind, string> = {
   Linear: 'Linear',
   Tactile: 'Tactile',
   Clicky: 'Clicky',
   Silent: 'Silent',
+  SilentTactile: 'Silent Tactile',
 }
-const switchKindOf = (type: string): SwitchKind => SWITCHES[type].kind
+export const switchKindOf = (type: string): SwitchKind => SWITCHES[type].kind
+/**
+ * Switch có hợp loại khách đòi không: đúng loại, hoặc Silent Tactile cũng tính là Tactile / Silent
+ * (khách đòi Tactile hay Silent mà shop lắp silent tactile vẫn đúng)
+ */
+export const switchFits = (type: string, want?: SwitchKind) => {
+  if (!want) return true
+  const kind = switchKindOf(type)
+  return kind === want || (kind === 'SilentTactile' && (want === 'Tactile' || want === 'Silent'))
+}
+/** Switch có đúng yêu cầu đơn không: khách đòi đúng con (`switchType`) thì phải đúng con đó, không thì theo loại */
+export const switchOk = (type: string, order: Pick<Order, 'switchType' | 'switchKind'>) =>
+  order.switchType ? type === order.switchType : switchFits(type, order.switchKind)
+/** Tên switch khách đòi: đúng con (vd "Cherry MX Đen") hoặc loại ("Silent"); null = shop tự chọn */
+export const switchWant = (order: Pick<Order, 'switchType' | 'switchKind'>) =>
+  order.switchType
+    ? (SWITCHES[order.switchType]?.name ?? order.switchType)
+    : order.switchKind
+      ? SWITCH_KINDS[order.switchKind]
+      : null
+/** kiểu gắn stab (nhãn ảnh + bộ lọc Shopii) */
+export const STAB_MOUNTS: Record<StabModel['mount'], string> = {
+  clip: 'Clip-in',
+  screw: 'Screw-in',
+  plate: 'Plate-mount',
+}
 
 /** Tên PCB (loại tiêu chuẩn của shop) */
 export const pcbLabel = (p: { type: string }) => PCB_TYPES[p.type].name
@@ -1037,18 +1473,37 @@ export type KeycapProfile = 'cherry' | 'oem' | 'sa' | 'dsa' | 'xda' | 'mt3' | 'a
 
 /** Tên bộ keycap không kèm cỡ: "Cherry Base (40/60/HHKB/Planck)" → "Cherry" */
 export const keycapKitShort = (name: string) => name.replace(/\s*\b(Full|Base)\b.*$/i, '')
-/** Cỡ bộ keycap: Base (layout nhỏ) / Full (mọi layout) */
-export const keycapKitSize = (name: string) => (/\bbase\b/i.test(name) ? 'Base' : 'Full')
+
+/** chất liệu keycap: hệ số giá (PBT rẻ nhất → mix → ABS đắt nhất), thứ tự = thứ tự option ở Shopii */
+export const KEYCAP_MATERIALS: Record<
+  KeycapMaterial,
+  { name: string; mult: number; desc: string }
+> = {
+  pbt: { name: 'PBT', mult: 0.8, desc: 'nhựa PBT nhám, in dye-sub, giá mềm nhất' },
+  mix: { name: 'Mix PBT + ABS', mult: 0.9, desc: 'alpha PBT, mod ABS' },
+  abs: { name: 'ABS', mult: 1, desc: 'nhựa ABS doubleshot, mịn, chữ sắc nét nhất' },
+}
+/** chất liệu của 1 bộ keycap (bản lưu cũ = PBT) */
+export const keycapMaterialOf = (item: { material?: KeycapMaterial }) => item.material ?? 'pbt'
 
 export const KEYCAP_KITS: Record<
   string,
-  { name: string; profile: KeycapProfile; price: number; layouts: LayoutId[] }
+  {
+    name: string
+    profile: KeycapProfile
+    price: number
+    layouts: LayoutId[]
+    /** bộ cũ đã bỏ khỏi Shopii / đơn mới (giữ để bản lưu cũ còn đọc được) */
+    hidden?: boolean
+  }
 > = {
+  // bộ Cherry Base cũ (chỉ 40/60/HHKB/Planck) trùng với Cherry Full → bỏ, chỉ còn 1 bộ Cherry
   base: {
     name: 'Cherry Base (40/60/HHKB/Planck)',
     profile: 'cherry',
     price: 400,
     layouts: ['40', '60', 'hhkb', 'truehhkb', 'planck'],
+    hidden: true,
   },
   full: {
     name: 'Cherry Full (mọi layout)',
@@ -1312,25 +1767,42 @@ export function soundLabel(profile: SoundProfile) {
   return SOUND_WISH[best].name
 }
 
-export const keycapKitFor = (layout: LayoutId) =>
-  KEYCAP_KITS.base.layouts.includes(layout) ? 'base' : 'full'
-
 // Danh mục sản phẩm cho các shop. Mỗi sản phẩm có nhiều option (màu / chất liệu / loại / số lượng)
 export function buildCatalog(): Product[] {
   const products: Product[] = []
-  for (const [id, c] of Object.entries(CASES)) {
-    products.push({
-      id: `case-${id}`,
-      cat: 'case',
-      name: c.name,
-      desc: `${CASE_MATERIALS[c.material].name} · ${c.pieces === 2 ? '2 mảnh' : '1 mảnh'}. ${c.desc}. Mount: ${c.mounts.map((m) => MOUNTS[m].name).join(', ')}`,
-      layouts: (Object.keys(LAYOUTS) as LayoutId[]).filter((l) => caseFits(c, l)),
-      options: c.colors.map((col) => ({
-        label: CASE_COLORS[col].name,
-        swatch: CASE_COLORS[col].hex,
-        price: c.price,
-        item: { id, color: col },
+  // case: mỗi dòng (CASE_LINES) là 1 sản phẩm, option = chất liệu (group) × màu; case lẻ thì 1 chất liệu
+  const caseDesc = (c: CaseDef) =>
+    `${CASE_MATERIALS[c.material].name} · ${c.pieces === 2 ? '2 mảnh' : '1 mảnh'}. ${c.desc}. Mount: ${c.mounts.map((m) => MOUNTS[m].name).join(', ')}`
+  const lined = new Set(CASE_LINES.flatMap((l) => l.variants.map(([id]) => id)))
+  const caseGroups: { key: string; name: string; variants: [string, string | undefined][] }[] = [
+    ...CASE_LINES.map((l) => ({ key: l.variants[0][0], name: l.name, variants: l.variants })),
+    ...Object.keys(CASES)
+      .filter((id) => !lined.has(id))
+      .map((id) => ({
+        key: id,
+        name: CASES[id].name,
+        variants: [[id, undefined]] as [string, string | undefined][],
       })),
+  ]
+  for (const g of caseGroups) {
+    const defs = g.variants.map(([id]) => CASES[id])
+    products.push({
+      id: `case-${g.key}`,
+      cat: 'case',
+      name: g.name,
+      // cỡ case (60% / TKL...) hiện thành nhãn góc ảnh, tên case không cần ghi cỡ
+      badge: FF_BADGE[defs[0].ff] ?? defs[0].ff,
+      desc: caseDesc(defs[0]),
+      layouts: (Object.keys(LAYOUTS) as LayoutId[]).filter((l) => defs.some((c) => caseFits(c, l))),
+      options: g.variants.flatMap(([id, label]) =>
+        CASES[id].colors.map((col) => ({
+          label: CASE_COLORS[col].name,
+          swatch: CASE_COLORS[col].hex,
+          price: CASES[id].price,
+          item: { id, color: col },
+          ...(label ? { group: label, hint: caseDesc(CASES[id]) } : {}),
+        })),
+      ),
     })
   }
   for (const [lay, L] of Object.entries(LAYOUTS) as [LayoutId, (typeof LAYOUTS)[LayoutId]][]) {
@@ -1363,49 +1835,52 @@ export function buildCatalog(): Product[] {
       })),
     })
   }
-  products.push({
-    id: 'stab-cherry',
-    cat: 'stab',
-    name: `Stab Cherry (${KIT_TEXT})`,
-    desc: `Stab cổ điển, giá rẻ nhưng phải mod nhiều. ${KIT_DESC}`,
-    options: ['cherryClip', 'cherryScrew', 'cherryPlate'].map((t) => ({
-      label: STABS[t].name,
-      swatch: STABS[t].housing,
-      price: STABS[t].price,
-      item: { type: t, ...STAB_KIT },
-      hint: STABS[t].desc,
-    })),
-  })
-  for (const [t, st] of Object.entries(STABS).filter(([, st]) => st.brand !== 'Cherry')) {
+  // mỗi loại stab: bộ TKL + bán lẻ 1 con stab 2u / 6.25u / 7u
+  const stabOptions = (t: string) => {
+    const st = STABS[t]
+    const label = (x: string) => x
+    return [
+      {
+        label: label('Bộ TKL'),
+        swatch: st.housing,
+        price: st.price,
+        item: { type: t, ...STAB_KIT },
+        hint: `${st.desc}. ${KIT_DESC}`,
+      },
+      {
+        label: label('Lẻ 2u'),
+        swatch: st.housing,
+        price: stabSinglePrice(t),
+        item: { type: t, short: 1, long: 0, long7: 0 },
+        hint: `1 stab ngắn 2u–2.75u. Khác loại với stab đang có thì sẽ thay bộ cũ`,
+      },
+      {
+        label: label('Lẻ 6.25u'),
+        swatch: st.housing,
+        price: stabLongPrice(t),
+        item: { type: t, short: 0, long: 1, long7: 0 },
+        hint: `1 stab spacebar dây 6.25u (cả 6u). Khác loại với stab đang có thì sẽ thay bộ cũ`,
+      },
+      {
+        label: label('Lẻ 7u'),
+        swatch: st.housing,
+        price: stabLongPrice(t),
+        item: { type: t, short: 0, long: 0, long7: 1 },
+        hint: `1 stab spacebar dây 7u (WKL / 7u). Khác loại với stab đang có thì sẽ thay bộ cũ`,
+      },
+    ]
+  }
+  // mỗi loại stab 1 sản phẩm, kiểu gắn (Clip-in / Screw-in / Plate-mount) là nhãn góc ảnh + bộ lọc Shopii
+  for (const [t, st] of Object.entries(STABS)) {
     products.push({
       id: `stab-${t}`,
       cat: 'stab',
-      name: `Stab ${st.name} (${KIT_TEXT})`,
-      desc: `${st.desc}. ${KIT_DESC}`,
-      options: [
-        {
-          label: `${st.mount === 'screw' ? 'Screw-in' : st.mount === 'clip' ? 'Clip-in' : 'Plate-mount'}`,
-          swatch: st.housing,
-          price: st.price,
-          item: { type: t, ...STAB_KIT },
-        },
-      ],
+      name: `Stab ${st.name}`,
+      badge: STAB_MOUNTS[st.mount],
+      desc: `${st.desc}. ${KIT_DESC}. Có bán lẻ stab 2u / 6.25u / 7u`,
+      options: stabOptions(t),
     })
   }
-  // full size cần thêm stab 2u (Enter / + / 0 numpad...): mua lẻ từng con, cùng loại với bộ đang có
-  products.push({
-    id: 'stab-single',
-    cat: 'stab',
-    name: 'Stab lẻ 2u (1 con)',
-    desc: 'Mua thêm cho layout cần nhiều hơn 4 stab ngắn (full size). Nên mua cùng loại với bộ đang có',
-    options: Object.entries(STABS).map(([t, st]) => ({
-      label: st.name,
-      swatch: st.housing,
-      price: stabSinglePrice(t),
-      item: { type: t, short: 1, long: 0 },
-      hint: `Thêm 1 stab ngắn ${st.name}. Khác loại với bộ đang có thì sẽ thay bộ cũ`,
-    })),
-  })
   for (const [t, s] of Object.entries(SWITCHES)) {
     products.push({
       id: `sw-${t}`,
@@ -1456,19 +1931,26 @@ export function buildCatalog(): Product[] {
     })
   }
   for (const [k, kit] of Object.entries(KEYCAP_KITS)) {
+    if (kit.hidden) continue
     products.push({
       id: `kc-${k}`,
       cat: 'keycap',
       // tên gọn: bỏ chữ "Keycap" và cỡ bộ (Full / Base hiện thành nhãn trên ảnh)
-      name: `PBT ${keycapKitShort(kit.name)}`,
-      desc: `Profile ${kit.profile.toUpperCase()}, in dye-sub`,
+      name: `Keycap ${keycapKitShort(kit.name)}`,
+      desc: `Profile ${kit.profile.toUpperCase()}, có 3 chất liệu: PBT / ABS / mix PBT + ABS`,
       layouts: kit.layouts,
-      options: Object.entries(KEYCAP_COLORS).map(([c, col]) => ({
-        label: col.name,
-        swatch: col.hex,
-        price: kit.price,
-        item: { kit: k, color: c },
-      })),
+      // chất liệu × màu
+      options: (
+        Object.entries(KEYCAP_MATERIALS) as [KeycapMaterial, (typeof KEYCAP_MATERIALS)['pbt']][]
+      ).flatMap(([m, mat]) =>
+        Object.entries(KEYCAP_COLORS).map(([c, col]) => ({
+          label: `${mat.name} · ${col.name}`,
+          swatch: col.hex,
+          price: Math.round((kit.price * mat.mult) / 10) * 10,
+          item: { kit: k, color: c, material: m },
+          hint: `Profile ${kit.profile.toUpperCase()}, ${mat.desc}`,
+        })),
+      ),
     })
   }
   return products
@@ -1512,8 +1994,7 @@ export function itemName(cat: ShopCategory, item: unknown): string {
     }
     case 'stab': {
       const it = item as StabItem
-      const { short, long } = stabStock(it)
-      return `Stab ${STABS[it.type].name} (${short} ngắn${long ? ` + ${long} dài` : ''})`
+      return `Stab ${STABS[it.type].name} (${stabText(stabStock(it))})`
     }
     case 'tool':
     case 'cert': {
@@ -1526,7 +2007,7 @@ export function itemName(cat: ShopCategory, item: unknown): string {
     }
     case 'keycap': {
       const it = item as KeycapItem
-      return `Keycap ${KEYCAP_KITS[it.kit].name} ${KEYCAP_COLORS[it.color].name}`
+      return `Keycap ${keycapKitShort(KEYCAP_KITS[it.kit].name)} ${KEYCAP_MATERIALS[keycapMaterialOf(it)].name} ${KEYCAP_COLORS[it.color].name}`
     }
   }
 }
@@ -1538,39 +2019,59 @@ export interface InventoryCheck {
 }
 
 // ---------- số lượng stab ----------
-/** 1 bộ stab tiêu chuẩn: 4 stab ngắn + 1 stab dài (kèm dây 6.25u + 7u) → đủ cho tới TKL */
-const STAB_KIT = { short: 4, long: 1 }
-const KIT_TEXT = 'bộ 4 ngắn + 1 dài'
-const KIT_DESC = 'Bộ gồm 4 stab 2u–2.75u + 1 stab phím dài (kèm dây 6.25u và 7u), đủ cho tới TKL'
+/** 1 bộ stab TKL: 4 stab 2u + 1 dây 6.25u + 1 dây 7u → đủ cho tới TKL (dùng 6.25u thì còn dư dây 7u và ngược lại) */
+const STAB_KIT = { short: 4, long: 1, long7: 1 }
+const KIT_DESC = 'Bộ TKL gồm 4 stab 2u + 1 stab dây 6.25u + 1 stab dây 7u, đủ cho tới TKL'
+/** số stab theo cỡ: 2u (2u–2.75u), dây 6.25u (6u / 6.25u), dây 7u */
+export interface StabCount {
+  short: number
+  long: number
+  long7: number
+}
+export const stabTotal = (c: StabCount) => c.short + c.long + c.long7
+export const addStab = (a: StabCount, b: StabCount): StabCount => ({
+  short: a.short + b.short,
+  long: a.long + b.long,
+  long7: a.long7 + b.long7,
+})
+/** "4× 2u + 1× 6.25u + 1× 7u" (bỏ cỡ = 0) */
+export const stabText = (c: StabCount) =>
+  [c.short && `${c.short}× 2u`, c.long && `${c.long}× 6.25u`, c.long7 && `${c.long7}× 7u`]
+    .filter(Boolean)
+    .join(' + ') || '0'
 const stabSinglePrice = (t: string) => Math.max(15, Math.round((STABS[t].price * 0.16) / 5) * 5)
+/** stab phím dài lẻ (dây dài + 2 housing) ~ gấp đôi stab 2u */
+const stabLongPrice = (t: string) => Math.max(30, Math.round((STABS[t].price * 0.3) / 5) * 5)
 
-/** Số stab đang có (bản lưu cũ chưa đếm = 1 bộ tiêu chuẩn) */
-export const stabStock = (item: StabItem | null) =>
-  item
-    ? { short: item.short ?? STAB_KIT.short, long: item.long ?? STAB_KIT.long }
-    : { short: 0, long: 0 }
-
-/** Số stab layout cần: ngắn = phím 2u–2.75u, dài = phím ≥ 6u */
-export function stabNeed(keys: { w: number; h: number; stab: boolean }[]) {
-  const lens = keys.filter((k) => k.stab).map((k) => Math.max(k.w, k.h))
-  return { short: lens.filter((l) => l < 6).length, long: lens.filter((l) => l >= 6).length }
+/** Số stab đang có (bản lưu cũ chưa đếm = 1 bộ tiêu chuẩn; chưa có long7 = bộ cũ kèm cả 2 dây → bằng long) */
+export const stabStock = (item: Partial<StabCount> | null): StabCount => {
+  if (!item) return { short: 0, long: 0, long7: 0 }
+  const long = item.long ?? STAB_KIT.long
+  return { short: item.short ?? STAB_KIT.short, long, long7: item.long7 ?? long }
 }
 
-function stabCheck(
-  item: StabItem | null,
-  need: { short: number; long: number },
-  needStab: boolean,
-): InventoryCheck {
+/** Số stab layout cần: 2u = phím 2u–2.75u, 6.25u = phím 6u–6.75u, 7u = phím ≥ 7u */
+export function stabNeed(keys: { w: number; h: number; stab: boolean }[]): StabCount {
+  const lens = keys.filter((k) => k.stab).map((k) => Math.max(k.w, k.h))
+  return {
+    short: lens.filter((l) => l < 6).length,
+    long: lens.filter((l) => l >= 6 && l < 7).length,
+    long7: lens.filter((l) => l >= 7).length,
+  }
+}
+
+function stabCheck(item: StabItem | null, need: StabCount, needStab: boolean): InventoryCheck {
   if (!needStab) return { cat: 'stab', ok: true, msg: 'Layout không cần stab' }
   if (!item) return { cat: 'stab', ok: false, msg: 'Chưa có stab' }
   const have = stabStock(item)
   const lack = [
-    have.short < need.short && `${need.short - have.short} stab ngắn (mua lẻ 2u)`,
-    have.long < need.long && `${need.long - have.long} stab dài`,
+    have.short < need.short && `${need.short - have.short} stab 2u`,
+    have.long < need.long && `${need.long - have.long} stab 6.25u`,
+    have.long7 < need.long7 && `${need.long7 - have.long7} stab 7u`,
   ].filter(Boolean)
   return lack.length
-    ? { cat: 'stab', ok: false, msg: `Thiếu ${lack.join(' + ')}` }
-    : { cat: 'stab', ok: true, msg: `OK (${need.short} ngắn + ${need.long} dài)` }
+    ? { cat: 'stab', ok: false, msg: `Thiếu ${lack.join(' + ')} (mua lẻ ở Shopii)` }
+    : { cat: 'stab', ok: true, msg: `OK (${stabText(need)})` }
 }
 
 /** Keycap: đủ phím cho layout và đúng profile khách đặt (cả bàn 1 profile) */
@@ -1585,6 +2086,13 @@ function keycapCheck(inv: Inventory, order: Order): InventoryCheck {
       cat: 'keycap',
       ok: false,
       msg: `Khách muốn profile ${want.toUpperCase()}, đang có ${kit.profile.toUpperCase()}`,
+    }
+  const mat = keycapMaterialOf(inv.keycap)
+  if (order.keycapMaterial && mat !== order.keycapMaterial)
+    return {
+      cat: 'keycap',
+      ok: false,
+      msg: `Khách muốn keycap ${KEYCAP_MATERIALS[order.keycapMaterial].name}, đang có ${KEYCAP_MATERIALS[mat].name}`,
     }
   return { cat: 'keycap', ok: true, msg: 'OK' }
 }
@@ -1603,12 +2111,15 @@ export function checkInventory(
   return [
     {
       cat: 'case',
-      ok: !!c && caseFits(c, order.layout),
+      // khách đòi đúng case nào thì phải đúng case đó
+      ok: !!c && caseFits(c, order.layout) && (!order.caseId || inv.case!.id === order.caseId),
       msg: !c
         ? 'Chưa có case'
         : !caseFits(c, order.layout)
           ? `Case không vừa layout ${lay.name}`
-          : 'OK',
+          : order.caseId && inv.case!.id !== order.caseId
+            ? `Khách cần case ${CASES[order.caseId]?.name ?? order.caseId}, đang có ${c.name}`
+            : 'OK',
     },
     {
       cat: 'pcb',
@@ -1625,25 +2136,35 @@ export function checkInventory(
     {
       cat: 'plate',
       // stab plate-mount gài thẳng vào plate: plate dẻo (PC / POM / PP) giữ ngàm không chắc
-      ok: inv.plate?.layout === order.layout && !plateStabClash(inv),
+      ok:
+        inv.plate?.layout === order.layout &&
+        !plateStabClash(inv) &&
+        (!order.plateMaterial || inv.plate.material === order.plateMaterial),
       msg: !inv.plate
         ? 'Chưa có plate'
         : inv.plate.layout !== order.layout
           ? `Cần plate ${lay.name}`
-          : plateStabClash(inv)
-            ? `Stab plate-mount cần plate cứng (nhôm / đồng / thép / FR4 / PEI), ${PLATES[inv.plate.material].name} quá dẻo`
-            : 'OK',
+          : order.plateMaterial && inv.plate.material !== order.plateMaterial
+            ? `Khách cần plate ${PLATES[order.plateMaterial]?.name ?? order.plateMaterial}, đang có ${PLATES[inv.plate.material].name}`
+            : plateStabClash(inv)
+              ? `Stab plate-mount cần plate cứng (nhôm / đồng / thép / FR4 / PEI), ${PLATES[inv.plate.material].name} quá dẻo`
+              : 'OK',
     },
-    stabCheck(inv.stab, stabNeed(keys), needStab),
+    // khách đòi đúng loại stab thì phải đúng loại đó
+    order.stabType && needStab && inv.stab && inv.stab.type !== order.stabType
+      ? {
+          cat: 'stab',
+          ok: false,
+          msg: `Khách cần stab ${STABS[order.stabType]?.name ?? order.stabType}, đang có ${STABS[inv.stab.type].name}`,
+        }
+      : stabCheck(inv.stab, stabNeed(keys), needStab),
     {
       cat: 'switch',
       // khách đòi loại switch nào thì phải đúng loại đó
-      ok:
-        (inv.switch?.count ?? 0) >= need &&
-        (!order.switchKind || !inv.switch || switchKindOf(inv.switch.type) === order.switchKind),
+      ok: (inv.switch?.count ?? 0) >= need && (!inv.switch || switchOk(inv.switch.type, order)),
       msg:
-        order.switchKind && inv.switch && switchKindOf(inv.switch.type) !== order.switchKind
-          ? `Khách cần switch ${SWITCH_KINDS[order.switchKind]}, đang có ${SWITCH_KINDS[switchKindOf(inv.switch.type)]}`
+        inv.switch && !switchOk(inv.switch.type, order)
+          ? `Khách cần switch ${switchWant(order)}, đang có ${order.switchType ? SWITCHES[inv.switch.type].name : SWITCH_KINDS[switchKindOf(inv.switch.type)]}`
           : `Cần ${need} con, đang có ${inv.switch?.count ?? 0}`,
     },
     keycapCheck(inv, order),
@@ -1664,6 +2185,10 @@ const plateStabClash = (inv: Pick<Inventory, 'plate' | 'stab'>) =>
   !!inv.plate &&
   !!PLATES[inv.plate.material]?.flex
 
-/** Case có hợp layout không (cùng cỡ + layout case cho phép) */
-export const caseFits = (def: CaseDef, layout: LayoutId) =>
-  def.ff === LAYOUTS[layout].ff && (!def.layouts || def.layouts.includes(layout))
+/** Case có hợp layout không (cùng cỡ, hoặc cỡ layout cho phép với case không có model CAD,
+ * vd case 40% vừa Planck) + layout case cho phép */
+export function caseFits(def: CaseDef, layout: LayoutId) {
+  const lay = LAYOUTS[layout]
+  const ff = def.ff === lay.ff || (!def.model && !!lay.fits?.includes(def.ff))
+  return ff && (!def.layouts || def.layouts.includes(layout))
+}

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
@@ -18,6 +18,7 @@ import type { Key, SolderJoint } from '@/types'
 import { playSolder, playDesolder } from '@/sound'
 import { cn } from '@/lib/format'
 import { useHover } from '../common/useHover'
+import { useCamLock } from '../common/camLock'
 import { HintArrow } from '../stations/StationKit'
 import { useSolderHint } from './solderHint'
 import { SolderingIron } from '../models/HandTools'
@@ -148,6 +149,12 @@ export function SolderPad({ k }: { k: Key }) {
   // lúc thiếc chảy khác nhau một chút giữa các phím (cố định theo phím)
   const { ready, burn } = solderTiming(station, wire, seedOf(k.id))
   const [holding, setHolding] = useState(false)
+  // đang giữ mỏ hàn / bút hút thiếc trên chân: khoá camera cho khỏi xoay lung tung theo chuột
+  useEffect(() => {
+    if (!holding) return
+    useCamLock.setState({ locked: true })
+    return () => useCamLock.setState({ locked: false })
+  }, [holding])
   const [t, setT] = useState(0)
   const time = useRef(0)
   const active = useRef(false)

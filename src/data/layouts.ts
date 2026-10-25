@@ -308,6 +308,8 @@ const numpad: RowSpec[] = [
 interface LayoutDef {
   name: string
   ff: FormFactor
+  /** cỡ case khác cũng vừa (case dựng theo kích thước layout, không có model CAD) */
+  fits?: FormFactor[]
   variants: Partial<Record<VariantKey, string[]>>
   rows: (v: Variant) => RowSpec[]
   /** layout lấy toạ độ thật từ PCB CAD (Alice / Blossom): bỏ qua rows */
@@ -406,6 +408,8 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
   planck: {
     name: 'Planck (ortho 40%)',
     ff: 'planck',
+    // 12u × 4u lọt khay case 40% (case 40% dựng theo bề rộng layout)
+    fits: ['40'],
     variants: {},
     rows: () =>
       stack([

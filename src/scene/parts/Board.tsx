@@ -24,6 +24,16 @@ import { plateUniversal } from '@/data/generated/plateUniversal'
 const CUTOUT = 14 * MM
 /** lỗ cắt stab Cherry trên plate: ~7mm dọc theo phím × 13mm ngang phím */
 const STAB_CUT = { along: 7 * MM, across: 13 * MM }
+/**
+ * Lỗ switch spacebar của typ60 (toạ độ DXF, mm): trong DXF nó nối thông ra mép trước nên nằm trong
+ * đường viền ngoài, không có trong plate60Cutouts → thêm tay
+ */
+const PLATE60_SPACE: [number, number][] = [
+  [-149.9, 78.7],
+  [-124, 78.7],
+  [-124, 92.7],
+  [-149.9, 92.7],
+]
 
 /**
  * Plate có lỗ cắt cho từng switch (nhìn xuyên xuống PCB), đáy ở y = 0, dày bằng plate thật.
@@ -66,10 +76,11 @@ function plateGeometry(
     const maxY = Math.max(...points.map(([, y]) => y))
     const centerX = (minX + maxX) / 2
     const centerY = (minY + maxY) / 2
-    for (const loop of cadCutouts) {
+    for (const loop of [...cadCutouts, PLATE60_SPACE]) {
       const hole = new THREE.Path()
       loop.forEach(([x, y], i) => {
-        const p = new THREE.Vector2((x - centerX) * MM, -(y - centerY) * MM)
+        // DXF typ60 vẽ ngược trái / phải (backspace 2u ở x âm nhất) → lật x cho khớp layout
+        const p = new THREE.Vector2(-(x - centerX) * MM, -(y - centerY) * MM)
         if (i === 0) hole.moveTo(p.x, p.y)
         else hole.lineTo(p.x, p.y)
       })

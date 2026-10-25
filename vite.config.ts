@@ -10,4 +10,6 @@ export default defineConfig({
   resolve: {
     alias: { '@': '/src' },
   },
+  // server bảng xếp hạng (`bun run server`)
+  server: { proxy: { '/api': 'http://localhost:8787' } },
 })
