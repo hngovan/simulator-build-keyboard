@@ -5,6 +5,8 @@ Ghi chú cho Claude Code khi làm việc với repo này.
 **Đọc `docs/decisions/` trước khi làm**: nhật ký những gì đã làm + quyết định theo từng mảng (hàn, đơn hàng,
 dụng cụ, UI, cảnh 3D, giấy phép, quy trình). **Mỗi task làm xong phải ghi lại** (ngày, yêu cầu, đã làm gì, file / hàm chính,
 lý do) vào đúng file để lần sau khỏi làm lại / làm ngược.
+**Mỗi lần commit tính năng**: thêm 1 mục lên đầu `src/data/changelog.ts` (phiên bản, ngày, commit, tóm tắt) và nâng
+`version` trong `package.json` cho khớp — màn hình tiêu đề hiện số phiên bản, bấm vào xem lịch sử cập nhật.
 Tổng quan source + luồng game + cách chơi: `docs/OVERVIEW.md` (sửa luồng chơi thì cập nhật cả file này + README).
 
 **Việc nhỏ, độc lập** (tài liệu, CSS, sửa 1 file...) giao cho opencode qua Orca:
@@ -73,7 +75,7 @@ vào `window.__r3f` để debug trong console.
   - `mods.ts` (mod stab, lube), `orders.ts` (sinh đơn ngẫu nhiên), `supplies.ts` (vật tư tiêu hao).
 - `src/features/` — UI 2D:
   - `desktop/`: Desktop, Taskbar; `apps.ts` là registry app (thêm app = thêm 1 dòng + `AppId`).
-  - `apps/`: messenger, shop (Shopii), group, inventory, settings, tools.
+  - `apps/`: messenger, shop (Shopii), group, inventory, settings.
   - `bench/`: HUD bàn build (StepList, ModPanels, SoundMeter) dùng `HudPanel` / `HudSection`
     (`components/ui/HudPanel.tsx`: thu gọn được, nhớ trạng thái; `StepDot` = chấm ✓ / số);
     Khung xem 3D dùng chung: `components/ui/ModelViewerFrame.tsx` (sản phẩm Shopii, case, đơn hàng);

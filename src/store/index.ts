@@ -6,8 +6,7 @@ import { createShopSlice, type ShopSlice } from './shopSlice'
 import { createBuildSlice, type BuildSlice } from './buildSlice'
 
 export type GameState = MetaSlice & ShopSlice & BuildSlice
-export type { AppId, Screen } from './metaSlice'
-export type { BuyResult } from './shopSlice'
+export type { AppId } from './metaSlice'
 export type { StabModKind } from './buildSlice'
 
 export const useGame = create<GameState>()((...a) => ({

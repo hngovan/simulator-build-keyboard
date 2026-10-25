@@ -35,11 +35,18 @@ export interface ChatLine {
 }
 
 /** phí ship khi không freeship (k) */
-export const SHIP_FEE = 30
+const SHIP_FEE = 30
 
 const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)]
 const chance = (p: number) => Math.random() < p
 const round50 = (n: number) => Math.max(0, Math.round(n / 50) * 50)
+
+/**
+ * Giá sàn người bán chịu bớt tới: ~60% giá đăng (tối thiểu 50k), món rẻ hơn 50k thì không bớt.
+ * Trước đây bớt số tiền cố định (lộc / chốt / câm điếc) nên món rẻ bị trả về 0đ
+ */
+export const dealFloor = (post: { price: number }) =>
+  Math.min(post.price, Math.max(50, round50(post.price * 0.6)))
 
 /** tình trạng có thể gặp theo loại hàng [tình trạng, tỉ lệ] */
 const CONDS: Record<string, [Cond, number][]> = {
@@ -191,6 +198,10 @@ export function negotiate(post: GroupPost, action: InboxAction): GroupPost {
   const log: ChatLine[] = [...deal.log]
   const say = (from: ChatLine['from'], text: string) => log.push({ from, text })
   let { price, ship, revealed, varChecked } = deal
+  const floor = dealFloor(post)
+  // giá sau khi bớt, không xuống dưới giá sàn
+  const cut = (p: number) => Math.max(floor, round50(p))
+  const noRoom = () => say('seller', 'Giá này sát đáy rồi bác, em hết bớt được ạ')
   // khai báo riêng: deal.blocked đã bị thu hẹp về false ở dòng kiểm tra trên
   let blocked: boolean | undefined = false
   const tag = post.tag ?? 'normal'
@@ -220,36 +231,45 @@ export function negotiate(post: GroupPost, action: InboxAction): GroupPost {
       else if (ship) {
         ship = 0
         say('seller', 'Ok em freeship cho bác nhé')
-      } else {
-        price = round50(price - 50)
-        say('seller', 'Ok bớt bác 50k lấy lộc')
+      } else if (price <= floor) noRoom()
+      else {
+        const before = price
+        price = cut(price - 50)
+        say('seller', `Ok bớt bác ${before - price}k lấy lộc`)
       }
       break
     }
     case 'chot': {
       say('me', 'Nhanh gọn em chốt luôn nè bác')
       if (tag === 'firm') say('seller', 'Giá đó là chốt rồi bác ơi')
+      else if (price <= floor) noRoom()
       else if (chance(0.65)) {
-        const off = chance(0.5) ? 100 : 200
-        price = round50(price - off)
-        say('seller', `Bác nhanh gọn thì em bớt ${off}k`)
+        const before = price
+        price = cut(price - (chance(0.5) ? 100 : 200))
+        say('seller', `Bác nhanh gọn thì em bớt ${before - price}k`)
       } else say('seller', 'Giá đó em lỗ rồi bác 😭')
       break
     }
     case 'lowball': {
       const offer = round50(price * 0.7)
       say('me', `${offer.toLocaleString('vi-VN')}k được không bác?`)
-      if (chance(LOWBALL_BLOCK[tag])) {
+      if (price <= floor) noRoom()
+      else if (chance(LOWBALL_BLOCK[tag])) {
         say(
           'seller',
           tag === 'firm' ? 'Price no offer mà bác 🙄' : 'Lowball kiểu này thôi em block nhé',
         )
         blocked = true
       } else if (tag === 'lowball' ? chance(0.55) : chance(0.3)) {
-        price = offer
-        say('seller', 'Thôi cũng được, em cần tiền')
+        price = cut(offer)
+        say(
+          'seller',
+          price === offer
+            ? 'Thôi cũng được, em cần tiền'
+            : `Thấp nhất ${price.toLocaleString('vi-VN')}k thôi bác`,
+        )
       } else if (tag === 'lowball' || chance(0.6)) {
-        price = round50(price * 0.9)
+        price = cut(price * 0.9)
         say('seller', `Lố quá bác, ${price.toLocaleString('vi-VN')}k em bán`)
       } else say('seller', 'Giá đó bác ra chợ mà mua 😤')
       break
@@ -257,9 +277,14 @@ export function negotiate(post: GroupPost, action: InboxAction): GroupPost {
     case 'mute': {
       // "nhanh gọn cho người câm điếc": không hỏi gì, xin stk luôn → bớt hữu duyên
       say('me', 'Cho em xin stk ạ')
-      const off = Math.min(round50(price * 0.3), round50(200 + Math.random() * 800))
-      price = round50(price - off)
-      say('seller', `Bác nhanh gọn ghê, em bớt hữu duyên ${off}k nhé. STK đây ạ`)
+      const before = price
+      price = cut(price - Math.min(round50(price * 0.3), round50(200 + Math.random() * 800)))
+      say(
+        'seller',
+        before > price
+          ? `Bác nhanh gọn ghê, em bớt hữu duyên ${before - price}k nhé. STK đây ạ`
+          : 'Bác nhanh gọn ghê, STK đây ạ',
+      )
       break
     }
   }
@@ -276,9 +301,9 @@ export function negotiate(post: GroupPost, action: InboxAction): GroupPost {
 }
 
 /** tỉ lệ người bán block khi lowball: price no offer chắc chắn, bình thường 25%, lowball thoải mái vẫn 5% */
-export const LOWBALL_BLOCK: Record<PriceTag, number> = { firm: 1, normal: 0.25, lowball: 0.05 }
+const LOWBALL_BLOCK: Record<PriceTag, number> = { firm: 1, normal: 0.25, lowball: 0.05 }
 /** bài ghi "nhanh gọn cho người câm điếc": mỗi câu hỏi han (không phải xin stk luôn) có tỉ lệ ăn block */
-export const MUTE_BLOCK = 0.3
+const MUTE_BLOCK = 0.3
 
 /** câu chào inbox đầu tiên của người bán */
 export const greet = (post: GroupPost) =>

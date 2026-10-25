@@ -157,7 +157,7 @@ interface LubeLook {
   thick: number
 }
 /** Hình ảnh lớp mỡ theo loại: mỡ đặc dày + đục (BDZ), mỡ dielectric / dầu trong suốt (Permatex, GPL 105) */
-export function lubeLook(lube: string): LubeLook {
+function lubeLook(lube: string): LubeLook {
   const sp = SUPPLIES[lube]
   const visc = sp.viscosity ?? 0.5
   return { color: sp.color, opacity: sp.opacity ?? 0.5, thick: 0.12 + visc * 0.55 }
@@ -317,7 +317,7 @@ export function greaseGeometry(lube: string, strokes: Stroke[]) {
 
 // ---------- mỡ bọc dây ----------
 /** Đường tâm dây đo từ CAD (mm, hệ của dây: gốc = tâm stab) */
-export const WIRE_PATH = {
+const WIRE_PATH = {
   y: 1.62,
   r: 0.8,
   /** tâm thanh ngang */
@@ -333,11 +333,10 @@ export const WIRE_PATH = {
 }
 
 /** x tâm đoạn móc ở mỗi bên */
-export const hookCenterX = (side: -1 | 1, spanMm: number) =>
-  WIRE_PATH.offsetX + side * (spanMm + 0.1)
+const hookCenterX = (side: -1 | 1, spanMm: number) => WIRE_PATH.offsetX + side * (spanMm + 0.1)
 
 /** dây dài (6.25u / 7u) dùng dây CAD 6.25u kéo giãn theo trục x (StabWireCad) → dây dày lên theo hệ số này */
-export const wireScaleX = (spanMm: number) =>
+const wireScaleX = (spanMm: number) =>
   spanMm / (spanMm > 30 ? stabModel.spans['6.25u'] : stabModel.spans['2.25u'])
 
 /**

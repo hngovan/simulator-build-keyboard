@@ -3,6 +3,7 @@ import { useGame } from '@/store'
 import { Button } from '@/components/ui'
 import { fmt } from '@/lib/format'
 import { SolderingScene } from './SolderingScene'
+import { Changelog } from './Changelog'
 
 const BG =
   'radial-gradient(circle at 30% 20%, #3b2a6b, transparent 50%), radial-gradient(circle at 80% 80%, #0f5a5a, transparent 50%), #12131c'
@@ -59,6 +60,7 @@ export function TitleScreen() {
   const saveInfo = useGame((s) => s.saveInfo)
   const continueGame = useGame((s) => s.continueGame)
   const [creating, setCreating] = useState(!saveInfo)
+  const [log, setLog] = useState(false)
   return (
     <div className="fixed inset-0 grid place-items-center" style={{ background: BG }}>
       <div className="px-4 text-center">
@@ -98,9 +100,17 @@ export function TitleScreen() {
           </div>
         )}
       </div>
-      {/* góc dưới: phiên bản game + link tác giả */}
+      {/* góc dưới: phiên bản game (bấm xem lịch sử cập nhật) + link tác giả */}
       <div className="fixed inset-x-4 bottom-3 flex items-center justify-between text-xs text-muted">
-        <span>v{__APP_VERSION__}</span>
+        <button
+          type="button"
+          title="Lịch sử cập nhật"
+          onClick={() => setLog(true)}
+          className="underline decoration-dotted underline-offset-2 hover:text-yellow"
+        >
+          v{__APP_VERSION__}
+        </button>
+        {log && <Changelog onClose={() => setLog(false)} />}
         <a
           href={AUTHOR_FB}
           target="_blank"

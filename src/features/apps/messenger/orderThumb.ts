@@ -151,8 +151,7 @@ export function caseSpec(caseId: string, color: string): KeyboardSpec {
 }
 
 /** Dựng bàn phím của đơn (đơn vị u, mặt trên plate ở y = 0). tilt: nghiêng sẵn cho ảnh chụp */
-export const buildKeyboard = (order: Order, tilt = true) =>
-  buildKeyboardModel(orderSpec(order), tilt)
+const buildKeyboard = (order: Order, tilt = true) => buildKeyboardModel(orderSpec(order), tilt)
 
 /**
  * Ghép bàn phím hoàn chỉnh từ spec: case (CAD thật nếu có) → PCB → plate → switch → keycap → khối chặn.

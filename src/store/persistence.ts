@@ -54,7 +54,7 @@ export interface Job {
   session: JobSession
 }
 
-export interface Session {
+interface Session {
   /** đơn mới trong ngày (chưa nhận) */
   offers?: Order[]
   /** bản lưu cũ: chỉ có 1 đơn chào */

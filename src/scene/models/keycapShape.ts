@@ -70,7 +70,7 @@ const R_OF: Partial<Record<KeycapProfile, number[]>> = {
   // SA chỉ có CAD R1–R3: hàng ASDF, Shift, hàng dưới cùng đều dùng R3
   sa: [1, 2, 3, 3, 3],
 }
-export const capRow = (profile: KeycapProfile, row: number) =>
+const capRow = (profile: KeycapProfile, row: number) =>
   (R_OF[profile] ?? [1, 1, 1, 1, 1])[Math.max(0, Math.min(4, Math.round(row)))]
 
 /**
@@ -125,7 +125,7 @@ const stretch1 = (v: number, half: number) =>
   v > CORE ? v + half - HALF : v < -CORE ? v - half + HALF : (v * (CORE + half - HALF)) / CORE
 
 /** Hình học keycap CAD 1u kéo dãn tới w × h (u) theo kiểu 9-slice: mép không bị vót nhọn */
-export function stretchCapGeometry(geo: THREE.BufferGeometry, w: number, h: number) {
+function stretchCapGeometry(geo: THREE.BufferGeometry, w: number, h: number) {
   const hw = (w - 0.08) / 2
   const hd = (h - 0.08) / 2
   if (Math.abs(hw - HALF) < 1e-3 && Math.abs(hd - HALF) < 1e-3) return geo

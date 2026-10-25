@@ -226,3 +226,7 @@
   nhóm có sản phẩm, chip "Tất cả" đầu tiên.
 - `Shopii.tsx`: hàng `OptionChip` (tên + số sản phẩm khớp, tính sau bộ lọc layout / đồ đã có) trên lưới; bộ lọc gắn với mục,
   đổi mục thì về "Tất cả". Định giao opencode nhưng opencode hết lượt miễn phí trong ngày → tự làm.
+- Lịch sử cập nhật (2026-10-25): số phiên bản góc dưới màn hình tiêu đề thành nút (gạch chân chấm), bấm mở `Changelog`
+  (`features/title/Changelog.tsx`: TitleBar + danh sách phiên bản / ngày / commit / các ý, bản mới nhất chữ vàng).
+- Màn chờ tải cảnh 3D (2026-10-25, "bỏ khung viền nhiều màu, chỉ hiện chữ và icon"): `BenchLoader` bỏ khung viền vàng + nền +
+  thanh tiến độ chuyển màu, chỉ còn icon ⌨️, dòng chữ trạng thái và số % (đổ bóng nhẹ cho dễ đọc trên cảnh 3D).

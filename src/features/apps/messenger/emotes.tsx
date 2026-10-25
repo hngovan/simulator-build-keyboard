@@ -34,7 +34,7 @@ const RE = new RegExp(
 )
 
 /** Ảnh emote nằm cùng dòng chữ */
-export function Emote({ name, className }: { name: string; className?: string }) {
+function Emote({ name, className }: { name: string; className?: string }) {
   return (
     <img
       src={`/emotes/${name}.png`}

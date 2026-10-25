@@ -394,7 +394,7 @@ export const CASE_COLORS: Record<string, ColorDef> = {
 }
 
 // Chất liệu case: ảnh hưởng hình ảnh (Bench) và âm thanh
-export const CASE_MATERIALS: Record<string, SoundMod> = {
+const CASE_MATERIALS: Record<string, SoundMod> = {
   abs: { name: 'Nhựa ABS', dl: 0.05, dp: 0 },
   anod: { name: 'Nhôm anod', dl: 0, dp: 0.04 },
   ecoat: { name: 'Nhôm E-coat (sần)', dl: 0, dp: 0.02 },
@@ -913,7 +913,7 @@ export const SWITCH_KINDS: Record<SwitchKind, string> = {
   Clicky: 'Clicky',
   Silent: 'Silent',
 }
-export const switchKindOf = (type: string): SwitchKind => SWITCHES[type].kind
+const switchKindOf = (type: string): SwitchKind => SWITCHES[type].kind
 
 /** Tên PCB (loại tiêu chuẩn của shop) */
 export const pcbLabel = (p: { type: string }) => PCB_TYPES[p.type].name
@@ -1245,7 +1245,7 @@ export const SOUND_WISH: Record<
 const clamp = (v: number) => Math.max(0, Math.min(1, v))
 
 // lubeFrac: tỉ lệ switch đã lube (0..1)
-export function soundProfile(
+function soundProfile(
   switchType: string,
   plate: string,
   mount: string | null,
@@ -1539,7 +1539,7 @@ export interface InventoryCheck {
 
 // ---------- số lượng stab ----------
 /** 1 bộ stab tiêu chuẩn: 4 stab ngắn + 1 stab dài (kèm dây 6.25u + 7u) → đủ cho tới TKL */
-export const STAB_KIT = { short: 4, long: 1 }
+const STAB_KIT = { short: 4, long: 1 }
 const KIT_TEXT = 'bộ 4 ngắn + 1 dài'
 const KIT_DESC = 'Bộ gồm 4 stab 2u–2.75u + 1 stab phím dài (kèm dây 6.25u và 7u), đủ cho tới TKL'
 const stabSinglePrice = (t: string) => Math.max(15, Math.round((STABS[t].price * 0.16) / 5) * 5)
@@ -1658,7 +1658,7 @@ export function caseModelOf(def: CaseDef, layout: LayoutId, variant: { bottom?: 
 }
 
 /** Stab plate-mount mà plate lại dẻo (không gài được) */
-export const plateStabClash = (inv: Pick<Inventory, 'plate' | 'stab'>) =>
+const plateStabClash = (inv: Pick<Inventory, 'plate' | 'stab'>) =>
   !!inv.stab &&
   STABS[inv.stab.type]?.mount === 'plate' &&
   !!inv.plate &&

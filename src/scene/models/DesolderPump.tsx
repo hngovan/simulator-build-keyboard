@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 
-export const DESOLDER_PUMP_GLB = '/models/solder/desolder-pump.glb'
+const DESOLDER_PUMP_GLB = '/models/solder/desolder-pump.glb'
 useGLTF.preload(DESOLDER_PUMP_GLB)
 
 /** Nozzle at origin; cocking/release moves the plunger assembly along the barrel. */

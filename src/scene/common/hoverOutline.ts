@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 /** màu viền hover, giống màn hình PC trên bàn */
-export const HOVER_COLOR = '#ffd84a'
+const HOVER_COLOR = '#ffd84a'
 
 // vỏ ngược (inverted hull): đẩy đỉnh ra theo pháp tuyến, chỉ vẽ mặt sau → viền vàng quanh vật.
 // Độ dày tính theo khoảng cách camera nên nhìn gần / xa đều mảnh như nhau

@@ -9,7 +9,7 @@ import { compactHistory } from './buildSlice'
 import type { GameState } from '.'
 import { applyAudioSettings, stopBgm } from '@/sound'
 
-export type Screen = 'title' | 'pc' | 'bench'
+type Screen = 'title' | 'pc' | 'bench'
 export type AppId =
   'messenger' | 'shopii' | 'group' | 'inventory' | 'order' | 'reviews' | 'settings'
 
@@ -71,7 +71,7 @@ const infoOf = (s: SaveData | null) =>
   s?.name ? { name: s.name, day: s.day, money: s.money } : null
 
 /** Ảnh chụp toàn bộ tiến trình để lưu */
-export function snapshot(s: GameState): SaveData {
+function snapshot(s: GameState): SaveData {
   const { name, money, rep, day, done, tools, supplies, audio, screwBit, rev, wear, reviews } = s
   const { offers, jobs, order, inventory, provided, spent, posts, mount, result, build, packed } = s
   const { supplyUsed } = s

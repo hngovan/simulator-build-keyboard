@@ -1,8 +1,6 @@
-import { useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { SWITCHES } from '@/data/parts'
-import { springGeometry } from './spring'
 
 export const MM = 1 / 19.05 // 1u = 19.05mm
 
@@ -128,21 +126,6 @@ export function SwitchStem({ type, lubed = false }: { type: string; lubed?: bool
       ))}
       <mesh geometry={postGeo} material={mat} />
     </group>
-  )
-}
-
-/** Lò xo switch (mm): dài 18mm, Ø 5.2 */
-export function SwitchSpring({ lubed = false }: { lubed?: boolean }) {
-  const geo = useMemo(() => springGeometry(2.6, 18, 9, 0.25), [])
-  return (
-    <mesh geometry={geo}>
-      <meshPhysicalMaterial
-        color="#d6dae0"
-        metalness={1}
-        roughness={lubed ? 0.05 : 0.3}
-        clearcoat={lubed ? 1 : 0}
-      />
-    </mesh>
   )
 }
 

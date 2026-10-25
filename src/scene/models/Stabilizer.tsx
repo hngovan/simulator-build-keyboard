@@ -38,7 +38,7 @@ export const CAD = {
 /** Khoảng cách tâm stab → tâm slider (mm) của 2 dây có sẵn trong CAD */
 const SPANS = { 225: stabModel.spans['2.25u'], 625: stabModel.spans['6.25u'] }
 
-export function useStabParts() {
+function useStabParts() {
   const { nodes } = useGLTF(STAB_GLB) as unknown as { nodes: Record<string, THREE.Mesh> }
   return {
     housing: nodes.housing.geometry,
@@ -74,7 +74,7 @@ export function StabHousingCad({ model, lubed = false }: { model: string; lubed?
 }
 
 /** Băng Holee: mảnh Urgo mỏng lót trần lỗ cắm dây, 2 mép gập ra 2 mặt slider */
-export function HoleePiece() {
+function HoleePiece() {
   const y = CAD.wireHoleY + CAD.wireR + 0.15
   const mat = <meshStandardMaterial color="#e3b58e" roughness={0.95} />
   return (

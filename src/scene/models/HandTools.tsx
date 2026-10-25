@@ -46,7 +46,7 @@ const SCREWDRIVER_TIP_Y = 0.135
 const SCREWDRIVER_SCALE = 1.6 / 0.215
 useGLTF.preload(SCREWDRIVER_GLB)
 
-export function ManualScrewdriver({ spinKey }: { spinKey: number }) {
+function ManualScrewdriver({ spinKey }: { spinKey: number }) {
   const ref = useRef<THREE.Group>(null)
   useSpin(ref, spinKey, false)
   const { scene } = useGLTF(SCREWDRIVER_GLB)
@@ -196,7 +196,7 @@ export function SolderingIron({
 // ---------- Đầu vít thay được ----------
 
 /** dài đầu vít (đơn vị tool): mũi ở gốc, chuôi lục giác cắm vào tua vít ở y = BIT_LEN */
-export const BIT_LEN = 0.3
+const BIT_LEN = 0.3
 const bitSteel = new THREE.MeshStandardMaterial({ color: '#c9ced6', metalness: 1, roughness: 0.25 })
 const bitShank = new THREE.CylinderGeometry(0.035, 0.035, 0.16, 6).translate(0, BIT_LEN - 0.08, 0)
 
@@ -241,7 +241,7 @@ function BitTip({ bit }: { bit: ScrewBit }) {
 }
 
 /** 1 đầu vít hoàn chỉnh: mũi + chuôi lục giác */
-export function DriverBit({ bit }: { bit: ScrewBit }) {
+function DriverBit({ bit }: { bit: ScrewBit }) {
   return (
     <group>
       <BitTip bit={bit} />

@@ -1,5 +1,4 @@
 import { useProgress } from '@react-three/drei'
-import { ProgressBar } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { useSceneLoading } from '@/scene/common/loadingStore'
 
@@ -16,12 +15,12 @@ export function BenchLoader() {
         ready ? 'pointer-events-none z-[4] bg-black/35' : 'z-[50] bg-bg',
       )}
     >
-      <div className="flex w-[260px] flex-col items-center gap-3 rounded-2xl border-[3px] border-yellow bg-[rgba(14,16,24,0.92)] px-5 py-4 shadow-[0_6px_0_#0006]">
+      {/* chỉ icon + chữ, không khung viền / thanh tiến độ */}
+      <div className="flex flex-col items-center gap-2 drop-shadow-[0_2px_4px_#000a]">
         <span className="animate-bob text-4xl">⌨️</span>
         <span className="font-head text-lg font-extrabold text-yellow">
           {ready ? 'Đang tải mô hình...' : 'Đang dọn bàn build...'}
         </span>
-        <ProgressBar value={active ? progress / 100 : 1} className="w-full" />
         <span className="text-xs text-muted">
           {active ? `${Math.round(progress)}%` : 'Sắp xong'}
         </span>

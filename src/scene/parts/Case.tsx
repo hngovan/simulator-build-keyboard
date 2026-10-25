@@ -14,6 +14,7 @@ import { CaseMaterial, WEIGHT_METALS, woodBoxGeometry } from '../materials'
 import { ScrewSet } from './Screw'
 import { caseModelOf } from '@/data/parts'
 import { MM } from '../models/Switch'
+import CASE_FEET from '@/data/caseFeet.json'
 
 type Rect = [x: number, z: number, w: number, d: number]
 
@@ -154,7 +155,36 @@ function Blockers({
   ))
 }
 
-function RubberFeet({ W, D }: { W: number; D: number }) {
+const FEET_MAT = <meshStandardMaterial color="#111" roughness={1} />
+
+/**
+ * Feet cao su: case CAD có hốc dán feet (`caseFeet.json`, `node scripts/probe-case-feet.mjs`) thì dán đúng vào hốc,
+ * lồi ra 1mm dưới đáy; case dựng bằng code / case CAD không dò được hốc thì đặt 4 góc
+ */
+function RubberFeet({
+  W,
+  D,
+  model,
+  origin,
+}: {
+  W: number
+  D: number
+  model?: string
+  origin: [number, number]
+}) {
+  const pockets = model ? (CASE_FEET as Record<string, number[][]>)[model] : undefined
+  if (pockets)
+    return (
+      <group position={[-origin[0], Y.floorBot, -origin[1]]} scale={MM}>
+        {/* [x, z, bán kính, độ sâu trần hốc] (mm, hệ toạ độ model case) */}
+        {pockets.map(([x, z, r, depth], i) => (
+          <mesh key={i} position={[x, (depth - 1) / 2, z]}>
+            <cylinderGeometry args={[r * 0.92, r * 0.92, depth + 1, 24]} />
+            {FEET_MAT}
+          </mesh>
+        ))}
+      </group>
+    )
   return [
     [-1, -1],
     [1, -1],
@@ -163,7 +193,7 @@ function RubberFeet({ W, D }: { W: number; D: number }) {
   ].map(([sx, sz], i) => (
     <mesh key={i} position={[sx * (W / 2 - 0.7), Y.floorBot - 0.02, sz * (D / 2 - 0.5)]}>
       <cylinderGeometry args={[0.22, 0.22, 0.04, 16]} />
-      <meshStandardMaterial color="#111" roughness={1} />
+      {FEET_MAT}
     </mesh>
   ))
 }
@@ -312,7 +342,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               />
             </>
           )}
-          <RubberFeet W={W} D={D} />
+          <RubberFeet W={W} D={D} model={model} origin={ctx.origin} />
           {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên */}
           <Blockers
             keys={ctx.keys}

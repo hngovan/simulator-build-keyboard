@@ -108,3 +108,10 @@
 - Tỉ lệ block (2026-10-25): lowball `LOWBALL_BLOCK` price no offer 100% / thường 25% / lowball thoải mái 5%. 30% bài ghi tag
   "Nhanh gọn cho người câm điếc" (`post.mute`, badge xanh, người bán chào kiểu này): mỗi câu hỏi han (xin hình, check var, xin bớt,
   lowball) thêm `MUTE_BLOCK` 30% bị block; xin stk luôn thì không. Giả lập: lowball bài câm điếc thường ~47%, lowball thoải mái ~33%.
+- Chợ Hội Phím Cơ theo ngày (2026-10-25, "qua ngày mới thì phải reset chợ ra vật phẩm khác"): `nextDay` đăng lại
+  `groupPosts(order, day)` cho đơn đang làm + mọi job đang chờ (bài cũ, kể cả inbox / đã mua, bị thay hết), toast báo có hàng mới.
+  Id bài `post-d<ngày>-<i>` (nhận đơn cũng theo ngày hiện tại, `freshSession(order, day)`).
+- Sửa deal về 0đ (2026-10-25): `negotiate` (market.ts) bớt số tiền cố định (lộc −50, chốt −100/200, câm điếc −200…1000) mà
+  `round50` chỉ chặn ở 0 → món rẻ về 0đ. Thêm `dealFloor(post)` = min(giá đăng, max(50k, ~60% giá đăng)); mọi lần bớt qua `cut()`
+  không dưới sàn, tin người bán ghi đúng số tiền thật đã bớt, chạm sàn thì "sát đáy rồi". `buyPost` cũng chặn sàn (save cũ).
+  Thử 20.000 lượt trả giá ngẫu nhiên: 0 lượt dưới sàn / 0đ.

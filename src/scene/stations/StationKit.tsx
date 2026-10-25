@@ -116,12 +116,6 @@ export function MissingSlot({
   )
 }
 
-// Lớp lube bóng phủ lên bộ phận đã mod
-export const lubed = (on: boolean) =>
-  on
-    ? { roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05 }
-    : { roughness: 0.55, clearcoat: 0 }
-
 /** Mặt bàn làm việc của station = tấm cutting mat (mặt trên y = -0.55); đặt sát mặt bàn bất kể tỉ lệ k */
 export function StationTable({
   k,

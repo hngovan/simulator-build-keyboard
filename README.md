@@ -5,6 +5,20 @@ Mô phỏng quy trình build bàn phím cơ: nhận đơn, mua linh kiện, lắ
 
 Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho game nằm tại [assets/community](assets/community/README.md), kèm nguồn và giấy phép.
 
+## Ảnh demo
+
+![Màn hình tiêu đề](docs/images/title.jpg)
+
+| Nhận đơn ở Mezzenger                    | Mua đồ ở Shopii (Sách phép)                 |
+| --------------------------------------- | ------------------------------------------- |
+| ![Mezzenger](docs/images/mezzenger.jpg) | ![Shopii](docs/images/shopii-sach-phep.jpg) |
+| **Bàn build 3D: lắp keycap**            | **Bàn lube: mở và lube switch**             |
+| ![Bàn build](docs/images/ban-build.jpg) | ![Bàn lube](docs/images/ban-lube.jpg)       |
+
+Bấm số phiên bản ở góc màn hình tiêu đề để xem lịch sử cập nhật:
+
+![Lịch sử cập nhật](docs/images/lich-su-cap-nhat.jpg)
+
 ## Tài liệu
 
 - [Tổng quan source và luồng game](docs/OVERVIEW.md)

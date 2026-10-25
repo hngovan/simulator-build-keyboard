@@ -65,7 +65,7 @@ function standGeometry() {
 }
 
 /** 1 chân đỡ (gốc = mép trước đế, giữa bề dày) */
-export function KeyboardStand(props: JSX.IntrinsicElements['group']) {
+function KeyboardStand(props: JSX.IntrinsicElements['group']) {
   const geo = useMemo(() => standGeometry(), [])
   return (
     <group {...props}>

@@ -35,10 +35,10 @@ import {
   shipReview,
 } from '@/data/reviews'
 import { certBonus } from '@/data/reputation'
-import { FLAW_TEXT, negotiate, type InboxAction } from '@/data/market'
+import { FLAW_TEXT, dealFloor, negotiate, type InboxAction } from '@/data/market'
 import type { Job, JobSession, PackedOrder } from './persistence'
 
-export type BuyResult = 'ok' | 'scam' | 'fail'
+type BuyResult = 'ok' | 'scam' | 'fail'
 export interface LubePick {
   switch: string
   housing: string
@@ -46,7 +46,7 @@ export interface LubePick {
   spring: string
 }
 
-// Đơn hàng, kho đồ, mua sắm (Shopii, Hội Phím Cơ, Tiệm Đồ Nghề)
+// Đơn hàng, kho đồ, mua sắm (Shopii, Hội Phím Cơ)
 export interface ShopSlice {
   lastSolderPurchase: {
     level: number
@@ -116,7 +116,7 @@ const KIT_PARTS = ['case', 'pcb', 'plate', 'stab'] as const
 const CANCEL_AFTER = 3
 
 /** Kho đồ ban đầu của 1 đơn: món khách gửi trong kit */
-function freshSession(order: Order): JobSession {
+function freshSession(order: Order, day: number): JobSession {
   const inventory = emptyInventory()
   const provided: JobSession['provided'] = {}
   if (order.kit)
@@ -131,7 +131,7 @@ function freshSession(order: Order): JobSession {
     inventory,
     provided,
     spent: 0,
-    posts: groupPosts(order),
+    posts: groupPosts(order, day),
     mount: order.mount ?? (order.kit?.case ? CASES[order.kit.case.id].mounts[0] : null),
     build: null,
     history: [],
@@ -219,11 +219,11 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     // chưa làm đơn nào thì làm luôn đơn này, không thì xếp vào danh sách chờ
     // (vừa giao xong thì cũng xếp chờ: phải bấm kết thúc ngày để sang ngày mới)
     if (!s.order) {
-      const job = freshSession(order)
+      const job = freshSession(order, s.day)
       set({ offers, order, ...job, ctx: null, result: null, pressed: {}, future: [] })
       s.toast('Đã nhận đơn! Mở Shopii hoặc Hội Phím Cơ để mua linh kiện', 'good')
     } else {
-      set({ offers, jobs: [...s.jobs, { order, session: freshSession(order) }] })
+      set({ offers, jobs: [...s.jobs, { order, session: freshSession(order, s.day) }] })
       s.toast(`Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}`, 'good')
     }
   },
@@ -331,9 +331,13 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
         )
       },
       offers: randomOffers(rep),
-      jobs: s.jobs.filter((j) => !cancelled.includes(j)),
+      // chợ Hội Phím Cơ qua ngày mới: bỏ bài cũ, đăng đợt hàng mới cho từng đơn đang làm / đang chờ
+      jobs: s.jobs
+        .filter((j) => !cancelled.includes(j))
+        .map((j) => ({ ...j, session: { ...j.session, posts: groupPosts(j.order, day) } })),
       // đơn đang làm dở (chưa đóng gói) vẫn giữ để làm tiếp ngày mai
       order: s.result ? null : s.order,
+      posts: s.order && !s.result ? groupPosts(s.order, day) : [],
       result: null,
       packed: [],
       money,
@@ -346,6 +350,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     })
     for (const j of cancelled)
       s.toast(`😡 ${j.order.customer} huỷ đơn vì trễ hạn quá lâu (−3 uy tín)`, 'bad')
+    if (get().order || get().jobs.length) s.toast('🛒 Hội Phím Cơ có đợt hàng pass mới hôm nay')
     s.addReviews([
       ...unsent.map((p) => shipReview(p.order, p.result, s.day)),
       ...cancelled.map((j) => cancelReview(j.order, s.day, -3)),
@@ -400,7 +405,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const s = get()
     if (post.deal?.blocked) return (s.toast('Bạn đã bị người bán chặn', 'bad'), 'fail')
     const cat = post.product.cat
-    const cost = (post.deal?.price ?? post.price) + (post.deal?.ship ?? 0)
+    // giá deal không dưới giá sàn (save cũ có thể đã bị bớt về 0đ)
+    const cost = Math.max(dealFloor(post), post.deal?.price ?? post.price) + (post.deal?.ship ?? 0)
     // bản lưu cũ (chưa có sự thật ẩn): 20% bùng như trước
     const scam = post.scammer === undefined ? 0.2 : post.scammer ? 1 : 0
     let item = post.opt.item as PartItem

@@ -145,7 +145,7 @@ export interface HistoryEntry {
 }
 const HISTORY_MAX = 300
 
-export interface LubeAnim {
+interface LubeAnim {
   /** open = đang tách switch trên đồ mở */
   kind: 'switch' | 'spring' | 'open'
   lube: string
@@ -374,7 +374,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         case 'clip':
           if (mods.assembled) return fail('Slider đã lắp vào housing, phải tháo ra mới clip được')
           if (TOOLS.clipper[s.tools.clipper].none)
-            return fail('Cần kìm cắt — mua ở Tiệm Đồ Nghề hoặc Shopii')
+            return fail('Cần kìm cắt — mua ở Shopii → Dụng cụ')
           break
         case 'bandaid':
           if (mods.assembled)
@@ -397,8 +397,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
             return fail('Đã lắp slider rồi, không lube housing được nữa')
           if (kind === 'wire' && mods.wired)
             return fail('Wire đã lắp vào ngàm, không lube được nữa')
-          if (TOOLS.brush[s.tools.brush].none)
-            return fail('Cần cọ lube — mua ở Tiệm Đồ Nghề hoặc Shopii')
+          if (TOOLS.brush[s.tools.brush].none) return fail('Cần cọ lube — mua ở Shopii → Dụng cụ')
           lube = s.lubePick[kind]
           const [fit, note] = lubeUseFit(lube, kind)
           if (!fit) return fail(`Không dùng ${SUPPLIES[lube].name} cho phần này được`)
@@ -424,7 +423,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const s = at('switchLube')
       if (!s || s.lubeAnim) return false
       if (TOOLS.opener[s.tools.opener].none)
-        return (s.toast('Cần đồ mở switch — mua ở Tiệm Đồ Nghề hoặc Shopii', 'bad'), false)
+        return (s.toast('Cần đồ mở switch — mua ở Shopii → Dụng cụ', 'bad'), false)
       const opened = s.build.opened ?? s.build.lubed
       const left = s.ctx.keys.length - opened
       if (left <= 0) return false
@@ -449,10 +448,9 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!s || s.lubeAnim) return 0
       const snap = snapshot()
       const opener = TOOLS.opener[s.tools.opener]
-      if (opener.none)
-        return (s.toast('Cần đồ mở switch — mua ở Tiệm Đồ Nghề hoặc Shopii', 'bad'), 0)
+      if (opener.none) return (s.toast('Cần đồ mở switch — mua ở Shopii → Dụng cụ', 'bad'), 0)
       if (TOOLS.brush[s.tools.brush].none)
-        return (s.toast('Cần cọ lube — mua ở Tiệm Đồ Nghề hoặc Shopii', 'bad'), 0)
+        return (s.toast('Cần cọ lube — mua ở Shopii → Dụng cụ', 'bad'), 0)
       const type = s.lubePick.switch
       const sw = SWITCHES[s.inventory.switch!.type]
       const [fit, note] = lubeUseFit(type, sw.feel)
@@ -506,7 +504,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         return (s.toast('Mở hết switch để lấy đủ lò xo vào hộp rồi mới lube', 'bad'), false)
       const snap = snapshot()
       if (TOOLS.brush[s.tools.brush].none)
-        return (s.toast('Cần cọ lube — mua ở Tiệm Đồ Nghề hoặc Shopii', 'bad'), false)
+        return (s.toast('Cần cọ lube — mua ở Shopii → Dụng cụ', 'bad'), false)
       const type = s.lubePick.spring
       const [fit, note] = lubeUseFit(type, 'spring')
       if (!fit) return (s.toast(`Không dùng ${type} cho lò xo được`, 'bad'), false)

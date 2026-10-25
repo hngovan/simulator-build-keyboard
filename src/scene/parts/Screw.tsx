@@ -47,7 +47,7 @@ const ease = (t: number) => t * t * (3 - 2 * t)
  * Vặn vào: xoay cùng chiều kim đồng hồ, lún dần xuống. Tháo: xoay ngược chiều, trồi dần lên theo
  * ren; lần cuối ốc tuột khỏi lỗ, bay lên, nghiêng và mờ dần rồi mới biến mất
  */
-export function Screw({ id, x, y = 0, z, mode, interactive, bit, requiredBit, style }: ScrewProps) {
+function Screw({ id, x, y = 0, z, mode, interactive, bit, requiredBit, style }: ScrewProps) {
   const turns = useGame((s) => s.build?.screws[id] ?? 0)
   const toolLv = useGame((s) => s.tools.screw)
   const turnScrew = useGame((s) => s.turnScrew)

@@ -338,7 +338,7 @@ export async function buildScene(kind: ThumbKind, type: string) {
 }
 
 /** Chụp 1 vật thể (đã dựng sẵn) thành ảnh PNG, canh khung theo khối bao */
-export async function shootObject(model: THREE.Object3D) {
+async function shootObject(model: THREE.Object3D) {
   const r = setup()
   const scene = new THREE.Scene()
   scene.environment = envMap
@@ -360,7 +360,7 @@ export async function shootObject(model: THREE.Object3D) {
 }
 
 /** Ảnh PNG (data URL) của sản phẩm; null nếu máy không có WebGL */
-export function modelThumb(kind: ThumbKind, type: string) {
+function modelThumb(kind: ThumbKind, type: string) {
   return cachedThumb(`${kind}:${type}`, () => buildScene(kind, type))
 }
 

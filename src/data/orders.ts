@@ -117,7 +117,7 @@ export function randomOffers(rep = 0): Order[] {
 }
 
 /** layout: ép layout của đơn (đơn thiết kế mở chỉ chọn khi cùng layout); pay: hệ số tiền công theo uy tín */
-export function randomOrder(layout_?: LayoutId, pay = 1): Order {
+function randomOrder(layout_?: LayoutId, pay = 1): Order {
   const designs = FEATURED.filter((f) => !layout_ || f.layout === layout_)
   const featured = designs.length && Math.random() < 0.3 ? pick(designs) : null
   const layout = layout_ ?? featured?.layout ?? pick(Object.keys(LAYOUTS) as LayoutId[])
@@ -284,15 +284,16 @@ const SELLERS = [
   'Tú Hàn Mạch',
 ]
 
-// Bài đăng trong "Hội Phím Cơ": hàng giá rẻ, caption thuật ngữ chợ che tình trạng thật, có thể gặp seller bùng
-export function groupPosts(order: Order): GroupPost[] {
+// Bài đăng trong "Hội Phím Cơ": hàng giá rẻ, caption thuật ngữ chợ che tình trạng thật, có thể gặp seller bùng.
+// Mỗi ngày đăng đợt mới (`nextDay`), id theo ngày để inbox / bài đã mua của hôm trước không lẫn sang
+export function groupPosts(order: Order, day = 1): GroupPost[] {
   const catalog = buildCatalog().filter(
     (p) => !p.layouts || p.layouts.includes(order.layout) || Math.random() < 0.15,
   )
   const posts: GroupPost[] = []
   for (let i = 0; i < 9; i++) {
     const p = pick(catalog)
-    posts.push(makePost(`post-${i}`, pick(SELLERS), p, pick(p.options)))
+    posts.push(makePost(`post-d${day}-${i}`, pick(SELLERS), p, pick(p.options)))
   }
   return posts
 }

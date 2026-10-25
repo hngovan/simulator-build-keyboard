@@ -429,7 +429,7 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
   },
 }
 
-export const VARIANT_INFO: Record<VariantKey, Record<string, string>> = {
+const VARIANT_INFO: Record<VariantKey, Record<string, string>> = {
   backspace: { '2u': 'Backspace 2u', split: 'Split backspace (1u + 1u)' },
   bottom: { wk: 'Hàng dưới WK (có phím Win)', wkl: 'Hàng dưới WKL (không Win, space 7u)' },
   rshift: { '2.75u': 'Shift phải 2.75u', split: 'Split shift phải (1.75u + Fn)' },

@@ -37,3 +37,14 @@
   (chạy trong worktree hiện tại, trả `outcome.handle`); xem kết quả `orca terminal read --terminal <handle> --json`.
 - Brief ghi rõ chỉ được sửa file nào (vì mình / phiên khác đang sửa src/), chạy format / lint, không commit, ghi nhật ký vào docs/decisions.
 - Đã giao: `docs/OVERVIEW.md` + mục "Tài liệu" / "Cách chơi" trong README; thanh cuộn toàn app (`src/index.css`).
+- Lịch sử cập nhật (2026-10-25, "ghi thêm lịch sử commit từng tính năng, update version trên màn hình"): `src/data/changelog.ts`
+  (`CHANGELOG`, mới nhất ở đầu) các commit cũ đều ghi 0.1.0 (mỗi tính năng 1 mục), bản này 0.1.1 (người dùng: "lần này chỉ lên v0.1.1"); `package.json` version = mục đầu
+  (`__APP_VERSION__`, vite.config.ts). Mỗi lần commit tính năng: thêm mục + nâng version (ghi trong CLAUDE.md).
+- Ảnh demo README (2026-10-25): chụp bằng trình duyệt Orca, profile riêng "sbk-demo" (không đụng save thật), dev server 5173;
+  nạp đơn / đẩy build bằng `window.__game` + `import('/src/data/parts.ts')` (mua đủ linh kiện, gán `build` tới bước keycap / lube).
+  Ảnh JPEG 1280px trong `docs/images/` (title, mezzenger, shopii-sach-phep, ban-build, ban-lube, lich-su-cap-nhat), README mục "Ảnh demo".
+- Dọn code không dùng (2026-10-25, `bunx knip`): xoá `ToolShop.tsx` (app Tiệm Đồ Nghề đã bỏ) + `ArtCard` (chỉ ToolShop dùng),
+  `SolderingWorkbench.tsx`, `SwitchSpring`, `lubed` (StationKit), re-export `Screen` / `BuyResult`; bỏ `export` thừa ở ~30 hàm / hằng chỉ
+  dùng trong file. Giữ: `src/data/credits.ts` (nguồn ghi công CC BY, xem giay-phep.md), script `probe-*` / `inspect-step` / `alice-layout` /
+  `convert-stab-variants` / `fetch-props` (chạy tay), test `scripts/*.test.ts`. knip báo nhầm `PriceTag` / `ChatLine` (types.ts dùng qua
+  `import('...')`). Toast "mua ở Tiệm Đồ Nghề hoặc Shopii" → "mua ở Shopii → Dụng cụ".
