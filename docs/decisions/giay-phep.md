@@ -29,3 +29,6 @@ Quy tắc của người dùng:
 
 - `assets/community/hand-tools/SOURCE.md`: tua vít điện + đồ mở switch.
 - `assets/community/README.md`: các bộ CAD bàn phím (MIT).
+- `assets/community/mechlovin-pcb/`: clone repo mechlovin/PCB (commit `e8286ea`), **không đưa vào git** (`.gitignore`,
+  chưa rõ giấy phép, ~351MB). Máy khác cần `bun run convert:pcbs` thì clone lại theo `SOURCE.md` trong đó; game chỉ
+  dùng GLB đã chuyển ở `public/models/pcbs/`.
