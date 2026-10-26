@@ -23,6 +23,13 @@ export default function App() {
   // đang bay camera vào màn hình máy tính: ẩn HUD cho thấy rõ màn hình
   const zooming = useGame((s) => s.pcZoom)
   const audio = useGame((s) => s.audio)
+  // bài bid ở Hội Phím Cơ hết giờ thì chốt bán (kể cả khi không mở tab chợ)
+  const hasBid = useGame((s) => s.listings.some((l) => l.bid))
+  useEffect(() => {
+    if (!hasBid) return
+    const t = setInterval(() => useGame.getState().settleBids(), 1000)
+    return () => clearInterval(t)
+  }, [hasBid])
   useKeyboardTest()
   useAppShortcuts()
   useEffect(() => {

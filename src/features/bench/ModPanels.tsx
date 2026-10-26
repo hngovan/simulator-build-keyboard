@@ -3,6 +3,7 @@ import { useGame, useBuild, useCtx } from '@/store'
 import { STABS, SWITCHES, TOOLS } from '@/data/parts'
 import {
   FEET_IDS,
+  FOAM_ID,
   JOINTS_PER_KEY,
   LUBE_IDS,
   SOLDER_IDS,
@@ -446,6 +447,30 @@ export function FeetPanel() {
           {have >= left && <Muted>Loại kia còn đủ, đổi loại để dán tiếp.</Muted>}
           <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
             Mua feet ở Shopii
+          </Button>
+        </Alert>
+      )}
+    </HudPanel>
+  )
+}
+
+/** Bảng bước lót foam PCB (tuỳ chọn): còn bao nhiêu tấm Poron, thiếu thì mua ở Shopii */
+export function FoamPanel() {
+  const build = useBuild()
+  const have = useGame((s) => s.supplies[FOAM_ID] ?? 0)
+  const openShop = useGame((s) => s.openShop)
+  return (
+    <HudPanel id="foam" title="🧽 Foam Poron lót PCB">
+      <div className="text-xs">
+        {build.foam ? 'Đã lót foam' : `Còn ${have} tấm foam (1 tấm / bàn phím)`}
+      </div>
+      <Muted>
+        Foam nằm giữa PCB và plate: giảm rung, tiếng gõ trầm, thock hơn. Không cần thì bấm "Bỏ qua".
+      </Muted>
+      {!build.foam && have < 1 && (
+        <Alert tone="yellow" title="Hết foam Poron">
+          <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
+            Mua foam ở Shopii
           </Button>
         </Alert>
       )}

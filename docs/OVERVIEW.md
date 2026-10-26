@@ -226,7 +226,10 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 - Ngân sách của đơn chỉ tính tiền linh kiện (`spent`), không tính dụng cụ / vật tư. Mua lố budget
   vẫn được nhưng phần lố shop chịu và bị trừ điểm; mua rẻ hơn budget thì phần dư vào túi. Switch / stab thừa
   sau khi giao được giữ lại cho đơn sau.
-- Stab plate-mount cần plate cứng (PC / POM / PP quá dẻo, không gài được). Switch phải đúng
+- Stab plate-mount gài được mọi plate. Plateless (`PLATELESS`, bật ở app Danh sách đơn): bỏ bước foam + plate, bắt buộc PCB hàn
+  - Tray mount, không stab plate-mount. Foam Poron (`foamPoron`) lót PCB là bước tuỳ chọn `foam` trước plate.
+- Qua ngày: phải nhận ≥ 1 đơn trong ngày; đơn đã nhận cả ngày không làm thì đền `NO_WORK_FINE` 20% tiền công.
+- Switch phải đúng
   `switchKind` (đơn có `switchType` thì phải đúng con switch đó); keycap phải đủ phím cho layout và đúng profile khách muốn.
 
 ### Chọn mount và build

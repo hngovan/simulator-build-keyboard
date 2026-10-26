@@ -1,4 +1,12 @@
-import { addStab, checkInventory, stabNeed, stabStock, stabTotal, switchOk } from '@/data/parts'
+import {
+  PLATELESS,
+  addStab,
+  checkInventory,
+  stabNeed,
+  stabStock,
+  stabTotal,
+  switchOk,
+} from '@/data/parts'
 import { getLayout } from '@/data/layouts'
 import type { Inventory, Key, Order, PartCategory, PartItem, Spare, StabItem } from '@/types'
 
@@ -7,8 +15,11 @@ import type { Inventory, Key, Order, PartCategory, PartItem, Spare, StabItem } f
 
 /** Cất 1 món vào kho chung: switch / stab cùng loại gộp số lượng, món khác (case, PCB...) xếp riêng từng cái */
 export function addPart(spare: Spare, cat: PartCategory, item: PartItem | null): Spare {
-  if (!item) return spare
-  if (cat === 'switch') {
+  // plateless không phải món thật, không cất
+  if (!item || (cat === 'plate' && (item as { material: string }).material === PLATELESS))
+    return spare
+  // switch lỗi để riêng từng lô (không gộp với switch tốt)
+  if (cat === 'switch' && !(item as { flaw?: string }).flaw) {
     const sw = item as { type: string; count: number }
     if (sw.count <= 0) return spare
     return {

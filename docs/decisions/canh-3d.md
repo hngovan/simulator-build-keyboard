@@ -464,3 +464,19 @@
   (Case.tsx + `buildKeyboardModel` bỏ `Blockers` khi mica). Case 2 mảnh không phải mica: khung chặn chuyển sang nhóm case trên (nhấc /
   đậy cùng case trên, trước đây nằm ở case dưới nên lơ lửng khi mở case). Kiểm tra 23 tổ hợp case 2 mảnh × layout: vít không chạm hốc
   feet / vùng phím, hình không lỗi; chụp mica 75 / full (khung liền tấm), đo 10 lỗ vít đáy TKL nhôm 2 mảnh lõm −0,858 (đáy −0,9).
+
+## Plateless, foam PCB, ốc case mica (2026-10-26, 0.1.9)
+
+- **Stab plate-mount dùng mọi plate** (người dùng: "tại sao stab plate mount cần plate cứng... tất cả plate đều dùng được"): bỏ
+  `PlateDef.flex` + `plateStabClash`, đơn không còn né plate PC / POM / PP.
+- **Plateless**: "plate" ảo `PLATELESS` = `'none'` trong `PLATES` (giá 0, âm mềm trầm; Shopii / đơn / chợ dùng `plateIds()` để không bán).
+  Bật / tắt ở app Chi tiết đơn (Toggle dưới Kiểu mount, `setPlateless`): plate đang có cất về kho chung. Điều kiện (`platelessIssue`):
+  PCB hàn, stab không phải plate-mount; mount chỉ `PLATELESS_MOUNTS` = tray (các mount khác kẹp / bắt vít vào plate). Khách gửi plate
+  hoặc đòi chất liệu plate thì không bật được. `buildContext` bỏ bước `foam` + `plate`, `ctx.plateless`. `addPart` không cất plateless.
+- **Foam Poron PCB** (ảnh mẫu 75% của người dùng): vật tư `foamPoron` (`FOAM_ID`, 1 tấm 60k / 5 tấm 250k, Shopii → Lube & vật tư).
+  Bước tuỳ chọn `foam` ngay trước `plate` (OPTIONAL_STEPS, "Bỏ qua"), click board → `placeFoam` trừ 1 tấm, `build.foam`. `FoamPanel`
+  (ModPanels) báo còn bao nhiêu tấm. Âm: `soundProfile` foam −0,05 loud / −0,08 pitch (thock hơn). Cảnh 3D `scene/parts/Foam.tsx`:
+  tấm đen dày 0,1u trên mặt PCB, viền theo `boardOutline`, mỗi phím 1 lỗ (phím − 0,2u), phím ≥ 4u (space) để liền tấm, chỉ khoét lỗ
+  switch giữa + 2 khe stab — giống ảnh mẫu, tự sinh cho mọi layout. Save rev 6 (`addFoamStep`): build cũ dời stepIdx theo tên bước.
+- **Ốc case mica** (người dùng: "ốc case mica ghép đang bị ngắn"): `Screw` có `shaft` (thân ren dài thêm); `ScrewSet` bước
+  `caseScrew` / `caseOpen` của case mica vít từ trên → thân dài tới cách mặt đáy 0,06u (xuyên mọi lớp tới tấm đáy).

@@ -14,6 +14,7 @@ import { makePost } from './market'
 import {
   CASES,
   PLATES,
+  plateIds,
   STABS,
   PCB_TYPES,
   pcbLabel,
@@ -192,18 +193,10 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
       packaging: pick(PACKAGING),
       ...(send.case ? { case: { id: caseId, color: pick(c.colors) } } : {}),
       ...(send.pcb ? { pcb: kitPcb(layout) } : {}),
-      ...(send.plate ? { plate: { layout, material: pick(Object.keys(PLATES)) } } : {}),
+      ...(send.plate ? { plate: { layout, material: pick(plateIds()) } } : {}),
       // khách gửi stab thì gửi đủ số cho layout (full size có cả stab lẻ)
       stab: send.stab ? { type: pick(Object.keys(STABS)), ...stabNeed(keys) } : null,
     }
-    // stab plate-mount gài vào plate: khách gửi plate cứng
-    if (
-      kit.stab &&
-      kit.plate &&
-      STABS[kit.stab.type].mount === 'plate' &&
-      PLATES[kit.plate.material].flex
-    )
-      kit.plate.material = pick(Object.keys(PLATES).filter((id) => !PLATES[id].flex))
   }
   if (!kit?.case && Math.random() < 0.6) {
     // chỉ chọn màu mà có case vừa layout bán
@@ -250,17 +243,11 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
           ),
         )
       : undefined
-  const plateFlex = kit?.plate && PLATES[kit.plate.material].flex
   const stabType =
     keys.some((k) => k.stab) && !kit?.stab && Math.random() < 0.3
-      ? pick(Object.keys(STABS).filter((id) => !(plateFlex && STABS[id].mount === 'plate')))
+      ? pick(Object.keys(STABS))
       : undefined
-  // stab plate-mount (khách gửi hoặc khách đòi) thì plate khách đòi phải cứng
-  const plateStab = STABS[kit?.stab?.type ?? stabType ?? '']?.mount === 'plate'
-  const plateMaterial =
-    !kit?.plate && Math.random() < 0.3
-      ? pick(Object.keys(PLATES).filter((id) => !(plateStab && PLATES[id].flex)))
-      : undefined
+  const plateMaterial = !kit?.plate && Math.random() < 0.3 ? pick(plateIds()) : undefined
   const want = { caseId, stabType, plateMaterial }
   const budget = round100(
     estimateCost(layout, kit, keycapKit, switchType, want) * (1.25 + Math.random() * 0.4),

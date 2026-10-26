@@ -16,7 +16,7 @@ import { OrderSpec } from '@/components/game/OrderSpec'
 import { StatusChips } from '@/components/game/StatusChips'
 import type { ScrewStep, StepId, ToolKind } from '@/types'
 import { StepList } from './StepList'
-import { FeetPanel, LubePanel, SolderPanel, StabModPanel } from './ModPanels'
+import { FeetPanel, FoamPanel, LubePanel, SolderPanel, StabModPanel } from './ModPanels'
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
 import { CamModeButton, ResetCamButton } from './CamModeButton'
@@ -153,7 +153,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const info = STEP_INFO[step]
   const [done, total] = stepProgress(step, build, ctx, TOOLS.screw[s.tools.screw].clicks!)
   const finished = done >= total
-  const optional = step === 'stabMod' || step === 'switchLube'
+  const optional = step === 'stabMod' || step === 'switchLube' || step === 'foam'
   // hàn dở vẫn đi tiếp được (nút đỏ cảnh báo), khớp nextStep
   const soft = step === 'solder' && done > 0 && !finished
   const last = build.stepIdx >= ctx.steps.length - 1
@@ -270,6 +270,8 @@ export function BenchHud() {
       <SolderPanel />
     ) : step === 'feet' ? (
       <FeetPanel />
+    ) : step === 'foam' ? (
+      <FoamPanel />
     ) : step === 'test' ? (
       <SoundMeter />
     ) : null

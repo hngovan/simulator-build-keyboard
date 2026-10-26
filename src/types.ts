@@ -101,6 +101,8 @@ export interface StabItem {
 export interface SwitchItem {
   type: string
   count: number
+  /** hàng pass lỗi: không lắp cho khách được, chỉ đăng bán lại */
+  flaw?: string
 }
 /** chất liệu keycap: PBT / ABS / mix PBT + ABS */
 export type KeycapMaterial = 'pbt' | 'abs' | 'mix'
@@ -255,6 +257,8 @@ export type StepId =
   | 'stabMod'
   | 'stab'
   | 'stabScrew'
+  /** lót foam Poron giữa PCB và plate (tuỳ chọn) */
+  | 'foam'
   | 'plate'
   | 'switchLube'
   | 'switch'
@@ -299,6 +303,8 @@ export interface BuildState {
   screws: Record<string, number>
   stabs: Record<string, true>
   plate: boolean
+  /** đã lót foam PCB (bước tuỳ chọn `foam`); bản lưu cũ không có */
+  foam?: boolean
   switches: Record<string, true>
   /** mối hàn từng phím: loại thiếc + đạt / cháy xém (bản lưu cũ: true = đạt, thiếc thường) */
   solder: Record<string, SolderJoint | true>
@@ -360,6 +366,8 @@ export interface BuildContext {
   feet: FootPocket[]
   screwSide: 'top' | 'bottom'
   pcbType: string
+  /** không plate: bỏ bước foam + plate, switch hàn thẳng vào PCB */
+  plateless: boolean
 }
 export interface FootPocket {
   x: number

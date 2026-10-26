@@ -123,8 +123,10 @@ vào `window.__r3f` để debug trong console.
   Top mount (case 2 mảnh): `topCase` (úp case trên lên plate) → `topScrew` (lật board, vặn vít từ dưới vào vách case trên) →
   `caseIn` (case trên nhấc theo board) → `caseScrew`, không có `caseClose`. O-ring mount (case 1 mảnh): vòng `ring` kẹp giữa PCB
   và plate, gá trước bước plate, không gasket.
-  Stab plate-mount: gài vào plate (lắp sau bước plate, cao hơn PCB), cần plate cứng (`PlateDef.flex` = PC / POM / PP
-  không dùng được, `plateStabClash`).
+  Stab plate-mount: gài vào plate (lắp sau bước plate, cao hơn PCB), mọi chất liệu plate đều được.
+  Plateless: plate ảo `PLATELESS` (`'none'` trong `PLATES`, không bán: `plateIds()`), bật ở app Danh sách đơn (`setPlateless`);
+  cần PCB hàn + stab không plate-mount (`platelessIssue`) + mount tray (`PLATELESS_MOUNTS`); `buildContext` bỏ bước `foam` / `plate`.
+  Foam Poron PCB: bước tuỳ chọn `foam` trước `plate` (`placeFoam` trừ vật tư `FOAM_ID`, `build.foam`, âm thock hơn), cảnh `scene/parts/Foam.tsx`.
   Feet: bước `feet` (trước `topCase` / `caseIn`, case tự lật úp, chỉ hiện case) dán 1 feet vào mỗi hốc `ctx.feet`
   (`feetPockets` trong steps.ts: case CAD = hốc `caseFeet.json`, case dựng bằng code = 4 hốc CNC lõm `FOOT_R` / `FOOT_DEPTH`
   khoét trong `caseShellGeometry` / tấm mica đáy), `placeFoot(i)` trừ 1 vật tư `feetPick` (`FEET_IDS` feetBlack / feetWhite,
@@ -178,11 +180,19 @@ vào `window.__r3f` để debug trong console.
   `fillActive` → `fillFromStock` tự lấy món hợp yêu cầu (`checkInventory`). App Kho hiện đồ đơn đang làm + đơn đang chờ (tên khách)
   - kho chung trong cùng lưới (`useParts` trong OwnedItems), bấm ô để lấy / cất.
 - App "Bảng xếp hạng" (`apps/leaderboard/LeaderboardApp`, `lib/leaderboardApi.ts`): chỉ tính server (bỏ shop đối thủ giả lập),
-  lượt chơi đã kết thúc của mọi người + lượt đang chơi chèn vào, xếp theo điểm tổng (`runScore`: đơn ×10 + uy tín ×20 + ngày ×5 + tiền / 100k), chip lọc theo tiền / đơn / uy tín / ngày (`server/leaderboardCore.ts`); gửi lỗi thì cất hàng chờ `sbk-lb-pending`.
+  lượt chơi đã kết thúc của mọi người + lượt đang chơi chèn vào, xếp theo điểm tổng (`runScore`: tiền lãi so với vốn 7.500k / 100k + uy tín ×20 + sao TB ×20 + đơn ×10 × sao TB / 5, ngày không tính), chip lọc theo tiền / đơn / uy tín / ngày (`server/leaderboardCore.ts`); gửi lỗi thì cất hàng chờ `sbk-lb-pending`.
   Tiền gọn theo cỡ `fmtMoney` (< 10.000k giữ k, ≥ 10.000k → m, ≥ 100.000k → B; `lib/format.ts`) ở bảng xếp hạng + ví; giá Shopii vẫn `fmt` (k).
-- Shop tự đăng bán ở Hội Phím Cơ (tab "Bài của tôi", `apps/group/MyListings`, `data/selling.ts`, `store/sellSlice.ts`): đồ kho chung
-  hoặc phím của khách (đơn đóng gói chưa gửi); bot hỏi / trả giá (`botTurn`), bấm giá để bán. Bán phím của khách: 5% (`STEAL_OK`) khách quên,
-  còn lại −1 uy tín + `stolen` (chuộc lại `buyBack` giá ×1.3, 30% không cho chuộc, chuộc được +1 uy tín, quá 3 ngày mất). `listings` / `stolen` trong Profile.
+- Shop tự đăng bán ở Hội Phím Cơ (tab "Bài của tôi", `apps/group/MyListings`, `data/selling.ts`, `store/sellSlice.ts`): đồ kho chung,
+  linh kiện đơn đã nhận chưa build (kind `job`, kể cả đồ khách gửi) hoặc phím của khách (đơn đóng gói chưa gửi). Giá gốc `sourceBase` /
+  giá chợ `sourceValue` (70%); bot hỏi / up bài / khen thợ / chê / trả giá (`botTurn(l, cert)`), bấm giá để bán; giá trên giá chợ tới
+  `RICH_MAX` 1.4× giá gốc thì đêm có đại gia chốt (`richChance`, tối đa 1 / đêm, +5% / bậc thợ). Tag bài `ListingTag` (Free ship...).
+  Bài bid (`Listing.bid`, 60s, khởi điểm từ 0, `settleBids` gọi mỗi giây ở App.tsx). Gỡ bài > `UNLIST_FREE` 3 lần / ngày → `banMarket`.
+  Bán phím của khách: 5% (`STEAL_OK`) khách quên, còn lại −1 uy tín + `stolen` (chuộc lại `buyBack` giá ×1.1~1.3, 30% không cho
+  chuộc, chuộc được +1 uy tín, quá 3 ngày mất). `listings` / `stolen` / `unlists` / `marketBanWhy` trong Profile.
+- Hàng pass lỗi keycap / switch / stab (`FLAW_UNUSABLE`): mua về vào thẳng kho chung (viền đỏ + badge "Hàng lỗi" ở app Kho),
+  `checkInventory` không cho lắp cho khách, chỉ bán lại (giá gốc ½, `FLAW_CAUGHT` 10% bị tố → ban chợ 3 ngày).
+- Qua ngày (`nextDay`): phải nhận ≥ 1 đơn trong ngày (`acceptedToday`, hoặc đã làm / đóng gói đơn); đơn đã nhận mà cả ngày không làm
+  (`worked`, ghi ở subscribe trong `store/index.ts`) thì đền `NO_WORK_FINE` 20% `labor`.
 - Test phím: PCB hàn còn phím chưa hàn / cháy thì bấm không ăn (`deadKey`, `build.testFaults` → StepList sáng "!" bước hàn để quay lại sửa);
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).

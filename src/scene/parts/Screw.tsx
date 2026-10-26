@@ -4,7 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, useCtx, useStep } from '@/store'
 import { TOOLS } from '@/data/parts'
-import { BIT_LABELS, SCREW_BITS, SCREW_STEPS } from '@/data/steps'
+import { BIT_LABELS, SCREW_BITS, SCREW_STEPS, Y } from '@/data/steps'
 import type { ScrewBit, ScrewPoint, ScrewStep } from '@/types'
 import { playDrill, playScrew } from '@/sound'
 import { useHover } from '../common/useHover'
@@ -18,6 +18,8 @@ interface ScrewProps extends ScrewPoint {
   bit: ScrewBit
   requiredBit: ScrewBit
   style: ScrewStyle
+  /** thân ốc dài thêm (u) tính từ mặt bắt vít xuống: case mica xếp lớp vít xuyên tới tấm đáy */
+  shaft?: number
 }
 
 type ScrewStyle = 'countersunk' | 'socket' | 'button'
@@ -46,7 +48,18 @@ const ease = (t: number) => t * t * (3 - 2 * t)
  * Vặn vào: xoay cùng chiều kim đồng hồ, lún dần xuống. Tháo: xoay ngược chiều, trồi dần lên theo
  * ren; lần cuối ốc tuột khỏi lỗ, bay lên, nghiêng và mờ dần rồi mới biến mất
  */
-function Screw({ id, x, y = 0, z, mode, interactive, bit, requiredBit, style }: ScrewProps) {
+function Screw({
+  id,
+  x,
+  y = 0,
+  z,
+  mode,
+  interactive,
+  bit,
+  requiredBit,
+  style,
+  shaft = 0,
+}: ScrewProps) {
   const turns = useGame((s) => s.build?.screws[id] ?? 0)
   const toolLv = useGame((s) => s.tools.screw)
   const turnScrew = useGame((s) => s.turnScrew)
@@ -167,6 +180,13 @@ function Screw({ id, x, y = 0, z, mode, interactive, bit, requiredBit, style }: 
           // thân ốc chui vào trong (vít stab bắt từ đáy PCB thì thân ăn vào housing, không lòi lên mặt trên)
           <group ref={head} position-y={HEAD_H[style] * MM}>
             <primitive object={model} scale={MM} />
+            {shaft > 0 && (
+              // thân ren dài xuyên các lớp mica (model gốc chỉ M2×6)
+              <mesh position-y={-HEAD_H[style] * MM - shaft / 2} castShadow>
+                <cylinderGeometry args={[1 * MM, 1 * MM, shaft, 12]} />
+                <meshStandardMaterial color="#9aa1aa" metalness={0.85} roughness={0.35} />
+              </mesh>
+            )}
             {requiredBit !== 'hex' && (
               <mesh position-y={0.004}>
                 <cylinderGeometry args={[0.064, 0.064, 0.008, 20]} />
@@ -217,6 +237,13 @@ export function ScrewSet({ step, y, flip }: { step: ScrewStep; y: number; flip?:
   const cur = useStep()
   const bit = useGame((s) => s.screwBit)
   const requiredBit = SCREW_BITS[step]
+  // case mica xếp lớp: vít từ mặt trên xuyên mọi tấm, dài tới gần tấm đáy (không chỉ ăn vài lớp trên)
+  const longShaft =
+    (step === 'caseScrew' || step === 'caseOpen') &&
+    ctx.caseDef.material === 'mica' &&
+    ctx.screwSide === 'top'
+      ? y - Y.floorBot - 0.06
+      : 0
   const list = ctx.screws[step].map((sc) => (
     <Screw
       key={sc.id}
@@ -229,6 +256,7 @@ export function ScrewSet({ step, y, flip }: { step: ScrewStep; y: number; flip?:
       bit={bit}
       requiredBit={requiredBit}
       style={SCREW_STYLES[step]}
+      shaft={longShaft}
     />
   ))
   return (

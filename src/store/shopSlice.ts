@@ -4,9 +4,13 @@ import { buildContext } from '@/data/steps'
 import {
   CASES,
   CATS,
+  PLATELESS,
+  PLATELESS_MOUNTS,
   TOOLS,
   checkInventory,
+  isPlateless,
   itemName,
+  unusable,
   stabStock,
   addStab,
   stabTotal,
@@ -38,7 +42,7 @@ import {
   shipReview,
 } from '@/data/reviews'
 import { certBonus } from '@/data/reputation'
-import { BAN_DAYS, FLAW_TEXT, dealFloor, negotiate, type InboxAction } from '@/data/market'
+import { FLAW_TEXT, dealFloor, negotiate, type InboxAction } from '@/data/market'
 import type { Job, JobSession, PackedOrder } from './persistence'
 import { addPart, fillFromStock, stashAll, without } from './spare'
 
@@ -79,6 +83,10 @@ export interface ShopSlice {
   declineOrder: (id: string) => void
   /** đơn đã từ chối hôm nay (hội thoại vẫn còn ở Mezzenger tới hết ngày) */
   rejected: Order[]
+  /** số đơn đã nhận hôm nay (qua ngày phải nhận ít nhất 1 đơn) */
+  acceptedToday: number
+  /** id đơn đã làm hôm nay (mua đồ / thao tác build); đơn đã nhận mà không làm thì qua ngày khách report, đền tiền */
+  worked: string[]
   /** chuyển sang làm 1 đơn đã nhận (đơn đang làm dở được cất lại nguyên trạng) */
   switchJob: (id: string) => void
   /** đơn đã đóng gói hôm nay, chờ kết thúc ngày mới gửi cho khách */
@@ -109,6 +117,8 @@ export interface ShopSlice {
   feetPick: string
   setFeetPick: (id: string) => void
   setMount: (mount: string) => void
+  /** bật / tắt plateless cho đơn đang làm (chưa vào build): plate đang có cất về kho chung */
+  setPlateless: (on: boolean) => void
   startBuild: () => void
   /**
    * Chọn 1 đơn để build ngay từ bàn build trống (đơn mới thì nhận luôn, đơn chờ thì chuyển sang).
@@ -129,6 +139,8 @@ export const emptyInventory = (): Inventory => ({
 const KIT_PARTS = ['case', 'pcb', 'plate', 'stab'] as const
 /** trễ hạn quá số ngày này thì khách huỷ đơn */
 const CANCEL_AFTER = 3
+/** nhận đơn mà cả ngày không làm: đền khách phần này của tiền công */
+export const NO_WORK_FINE = 0.2
 
 /** Kho đồ ban đầu của 1 đơn: món khách gửi trong kit */
 function freshSession(order: Order, day: number): JobSession {
@@ -153,6 +165,10 @@ function freshSession(order: Order, day: number): JobSession {
     supplyUsed: {},
   }
 }
+/** mount mặc định của case: đang plateless thì ưu tiên mount không cần plate */
+const firstMount = (mounts: string[], inv: Inventory) =>
+  (isPlateless(inv.plate) && mounts.find((m) => PLATELESS_MOUNTS.includes(m))) || mounts[0]
+
 /** Cất đơn đang làm (nếu có) thành 1 job */
 const stashActive = (s: GameState): Job[] =>
   s.order && !s.result
@@ -215,6 +231,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   result: null,
   packed: [],
   rejected: [],
+  acceptedToday: 0,
+  worked: [],
   lubePick: { switch: 'g0', housing: 'g2', wire: 'bdz', spring: 'gpl105' },
   solderPick: 'solder6337',
   feetPick: 'feetBlack',
@@ -226,6 +244,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (!offer) return
     const order = { ...offer, dueDay: s.day + offer.days }
     const offers = s.offers.filter((o) => o.id !== id)
+    set({ acceptedToday: s.acceptedToday + 1 })
     // chứng chỉ thợ: thu nhập cơ bản cộng ngay vào ví mỗi lần nhận đơn
     const bonus = certBonus(s.tools.cert ?? 0)
     if (bonus) {
@@ -298,6 +317,12 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   },
   // sang ngày mới: gửi nốt đơn đã đóng gói, đợt đơn mới, đơn chờ quá hạn lâu thì khách huỷ
   nextDay: () => {
+    {
+      // phải nhận làm ít nhất 1 đơn mỗi ngày (hết đơn chào vì từ chối hết thì thôi, đã bị trừ uy tín rồi)
+      const s = get()
+      if (!s.acceptedToday && !s.worked.length && !s.packed.length && s.offers.length)
+        return s.toast('Phải nhận làm ít nhất 1 đơn trong ngày mới qua ngày mới được!', 'bad')
+    }
     // phím của khách đang đăng bán mà chưa bán: trả về chờ gửi (gửi luôn bên dưới), vụ chuộc quá hạn thì mất
     get().closeSellDay(get().day + 1)
     const s = get()
@@ -316,40 +341,15 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const day = s.day + 1
     const cancelled = s.jobs.filter((j) => day - (j.order.dueDay ?? day) > CANCEL_AFTER)
     const rep = s.rep + repGain - cancelled.length * 3
+    // đơn đã nhận mà cả ngày không đụng tới (không mua đồ, không build): khách report nhận không làm,
+    // shop đền NO_WORK_FINE tiền công của đơn
+    const idleJobs = [...(s.order && !s.result ? [s.order] : []), ...s.jobs.map((j) => j.order)]
+      .filter((o) => !s.worked.includes(o.id))
+      .filter((o) => !cancelled.some((j) => j.order.id === o.id))
+    const fines = idleJobs.map((o) => ({ o, fine: Math.round((o.labor * NO_WORK_FINE) / 10) * 10 }))
+    money -= fines.reduce((a, f) => a + f.fine, 0)
     set({
       lastSolderPurchase: null,
-      equipSolder: (level) => {
-        const s = get()
-        const owned = {
-          ...s.solderOwned,
-          ...(s.tools.solder > 0 ? { [s.tools.solder]: s.wear.solder ?? 0 } : {}),
-        }
-        if (owned[level] === undefined || !TOOLS.solder[level] || TOOLS.solder[level].none)
-          return false
-        set({
-          solderOwned: owned,
-          tools: { ...s.tools, solder: level },
-          wear: { ...s.wear, solder: owned[level] },
-        })
-        s.toast(`Đang dùng ${TOOLS.solder[level].name}`, 'good')
-        return true
-      },
-      undoSolderPurchase: () => {
-        const s = get(),
-          purchase = s.lastSolderPurchase
-        if (!purchase) return
-        set({
-          money: s.money + purchase.cost,
-          tools: { ...s.tools, solder: purchase.previousLevel },
-          wear: { ...s.wear, solder: purchase.previousWear },
-          solderOwned: purchase.previousOwned,
-          lastSolderPurchase: null,
-        })
-        s.toast(
-          `Đã hoàn tác mua ${TOOLS.solder[purchase.level].name}, hoàn ${purchase.cost}k`,
-          'good',
-        )
-      },
       offers: randomOffers(rep),
       // chợ Hội Phím Cơ qua ngày mới: bỏ bài cũ, đăng đợt hàng mới cho từng đơn đang làm / đang chờ
       jobs: s.jobs
@@ -371,8 +371,15 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       day,
       rep,
       rejected: [],
+      acceptedToday: 0,
+      worked: [],
       screen: 'pc',
     })
+    for (const { o, fine } of fines)
+      s.notify(
+        '🚩 Khách report nhận đơn không làm',
+        `${o.customer}: shop nhận đơn mà cả ngày không làm gì. Đền khách ${fine}k (${Math.round(NO_WORK_FINE * 100)}% tiền công)`,
+      )
     for (const j of cancelled)
       s.toast(`😡 ${j.order.customer} huỷ đơn vì trễ hạn quá lâu (−3 uy tín)`, 'bad')
     if (get().order || get().jobs.length) s.toast('🛒 Hội Phím Cơ có đợt hàng pass mới hôm nay')
@@ -440,7 +447,9 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       inventory: { ...s.inventory, [cat]: value },
       spent: s.spent + price,
       spare,
-      ...(cat === 'case' ? { mount: CASES[(item as CaseItem).id].mounts[0] } : {}),
+      ...(cat === 'case'
+        ? { mount: firstMount(CASES[(item as CaseItem).id].mounts, s.inventory) }
+        : {}),
     })
     s.toast(
       `📦 Đã nhận: ${itemName(cat, item)}${fromSpare ? ` (+${fromSpare} trong kho chung)` : ''}`,
@@ -477,7 +486,9 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       return s.toast('Đã bắt đầu build, không thay được món này nữa', 'bad')
     const cur = s.inventory[cat]
     const same =
-      (cat === 'switch' || (cat === 'stab' && !(item as StabItem).flaw)) &&
+      !(item as { flaw?: string }).flaw &&
+      !(cur as { flaw?: string } | null)?.flaw &&
+      (cat === 'switch' || cat === 'stab') &&
       (cur as { type?: string } | null)?.type === (item as { type: string }).type
     if (cat === 'switch' && cur && !same && s.build && Object.keys(s.build.switches).length)
       return s.toast('Board đã cắm switch loại khác, không trộn được', 'bad')
@@ -542,13 +553,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const next = negotiate(post, action, amount)
     set({ posts: s.posts.map((p) => (p === post ? next : p)) })
     // đi ăn xin bị ban: khoá chợ BAN_DAYS ngày + thông báo góc phải trên
-    if (next.deal?.ban && !post.deal?.ban) {
-      set({ marketBanUntil: s.day + BAN_DAYS })
-      s.notify(
-        '🚫 Bị ban khỏi chợ',
-        `Bạn đã bị ban khỏi Hội Phím Cơ ${BAN_DAYS} ngày (tới ngày ${s.day + BAN_DAYS}) vì đi ăn xin người bán ${post.seller}`,
-      )
-    }
+    if (next.deal?.ban && !post.deal?.ban) s.banMarket(`Đi ăn xin người bán ${post.seller}`)
   },
   // chốt đơn pass: trả giá đã thương lượng + ship; seller bùng thì mất trắng, hàng lỗi thì ghi flaw / thiếu switch
   buyPost: (post) => {
@@ -569,6 +574,22 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (post.cond === 'dead' && cat === 'switch') {
       const sw = item as SwitchItem
       item = { ...sw, count: Math.max(1, Math.round(sw.count * (0.8 + Math.random() * 0.1))) }
+    }
+    // keycap / switch / stab lỗi: không lắp cho khách được → cất thẳng vào kho chung để bán lại
+    if (flaw && unusable(cat as PartCategory, item)) {
+      if (s.money < cost) return (s.toast('Không đủ tiền!', 'bad'), 'fail')
+      set({ money: s.money - cost })
+      const scammed = Math.random() < scam
+      if (scammed) s.toast(`😱 Seller bùng hàng! Mất trắng ${cost}k`, 'bad')
+      else {
+        set({ spare: addPart(get().spare, cat as PartCategory, item) })
+        s.notify(
+          '😬 Dính hàng lỗi',
+          `${itemName(cat as PartCategory, item)} bị ${flaw}: không lắp cho khách được, đã cất vào kho chung (viền đỏ). Chỉ đăng bán lại ở Hội Phím Cơ được thôi`,
+        )
+      }
+      set((s) => ({ posts: s.posts.map((p) => (p.id === post.id ? { ...p, sold: true } : p)) }))
+      return scammed ? 'scam' : 'ok'
     }
     const res =
       cat === 'supply' || cat === 'spell'
@@ -657,7 +678,34 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   setSolderPick: (solderPick) => set({ solderPick }),
   setFeetPick: (feetPick) => set({ feetPick }),
   setMount: (mount) => {
-    if (!get().build) set({ mount })
+    const s = get()
+    if (s.build) return
+    if (isPlateless(s.inventory.plate) && !PLATELESS_MOUNTS.includes(mount))
+      return s.toast('Plateless chỉ lắp kiểu Tray mount (mount khác đều cần plate)', 'bad')
+    set({ mount })
+  },
+  setPlateless: (on) => {
+    const s = get()
+    if (!s.order || s.result) return
+    if (s.build) return s.toast('Đã bắt đầu build, không đổi plate được nữa', 'bad')
+    if (on === isPlateless(s.inventory.plate)) return
+    if (!on) {
+      set({ inventory: { ...s.inventory, plate: null } })
+      return get().fillActive()
+    }
+    if (s.provided.plate) return s.toast('Khách đã gửi plate, phải dùng plate đó', 'bad')
+    if (s.order.plateMaterial)
+      return s.toast('Khách đòi đúng chất liệu plate, không bỏ plate được', 'bad')
+    const mounts = s.inventory.case ? CASES[s.inventory.case.id].mounts : PLATELESS_MOUNTS
+    const mount = s.order.mount ?? mounts.find((m) => PLATELESS_MOUNTS.includes(m))
+    if (!mount || !PLATELESS_MOUNTS.includes(mount))
+      return s.toast('Case / mount của đơn này không làm plateless được (cần Tray mount)', 'bad')
+    set({
+      spare: addPart(s.spare, 'plate', s.inventory.plate),
+      inventory: { ...s.inventory, plate: { layout: s.order.layout, material: PLATELESS } },
+      mount,
+    })
+    s.toast('Đã chọn plateless: bỏ bước plate, nhớ dùng PCB hàn nhé', 'good')
   },
 
   buildOrder: (id) => {
@@ -676,7 +724,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (s.build) return (set({ benchPicker: false }), [])
     const missing = checkInventory(s.inventory, s.order).filter((c) => !c.ok)
     if (missing.length) return missing
-    if (!s.mount) s.setMount(s.order.mount ?? CASES[s.inventory.case!.id].mounts[0])
+    if (!s.mount)
+      s.setMount(s.order.mount ?? firstMount(CASES[s.inventory.case!.id].mounts, s.inventory))
     set({ benchPicker: false })
     get().startBuild()
     return []
@@ -687,6 +736,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (s.build) return set({ screen: 'bench' })
     if (!s.order || !s.mount || !checkInventory(s.inventory, s.order).every((c) => c.ok))
       return s.toast('Chưa đủ linh kiện!', 'bad')
+    if (isPlateless(s.inventory.plate) && !PLATELESS_MOUNTS.includes(s.mount))
+      return s.toast('Plateless chỉ lắp kiểu Tray mount', 'bad')
     set({
       build: newBuild(),
       ctx: buildContext(s.order, s.inventory, s.mount),

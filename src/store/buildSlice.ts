@@ -23,7 +23,7 @@ import {
   type StabAnim,
   type StabModKind,
 } from '@/data/mods'
-import { SUPPLIES } from '@/data/supplies'
+import { FOAM_ID, SUPPLIES } from '@/data/supplies'
 import type { BuildContext, BuildState, ScrewBit, ScrewStep, StepId, ToolKind } from '@/types'
 import { deadKey, scoreDelivery } from './scoring'
 import { leftoverSpare } from './spare'
@@ -75,6 +75,8 @@ export interface BuildSlice {
   turnScrew: (id: string) => void
   installStab: (id: string) => void
   placePlate: () => void
+  /** lót foam Poron lên PCB (bước tuỳ chọn `foam`), trừ 1 tấm */
+  placeFoam: () => void
   modStab: (kind: StabModKind) => boolean
   /** tách switch bằng đồ mở: mỗi lần bậc thợ + phép mở con */
   openSwitch: () => boolean
@@ -314,7 +316,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (s.build.stepIdx >= s.ctx.steps.length - 1) return
       // đang ở bước cũ (đã quay lại, chưa làm gì mới): đi tiếp theo nhánh đã làm
       if (s.future.length > 1) return s.forwardToStep(s.build.stepIdx + 1)
-      const optional = step === 'stabMod' || step === 'switchLube'
+      const optional = step === 'stabMod' || step === 'switchLube' || step === 'foam'
       const [done, total] = stepProgress(step, s.build, s.ctx, screwClicks(s))
       // hàn dở (đã hàn ít nhất 1 phím) vẫn cho đi tiếp: phím chưa hàn / cháy sẽ lộ ra lúc test hoặc khách báo lỗi
       const soft = step === 'solder' && done > 0
@@ -333,6 +335,15 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     },
     unbox: once('unbox', { unboxed: true }),
     placePlate: once('plate', { plate: true }),
+    placeFoam: () => {
+      const s = at('foam')
+      if (!s || s.build.foam) return
+      // chụp trước khi trừ vật tư: hoàn tác thì trả lại tấm foam
+      const snap = snapshot()
+      if (!s.useSupply(FOAM_ID, 1)) return
+      commit(snap)
+      get().patchBuild({ foam: true })
+    },
     wrapRing: once('ring', { ring: true }),
     dropInCase: once('caseIn', { inCase: true }),
     closeCase: once('caseClose', { closed: true }),

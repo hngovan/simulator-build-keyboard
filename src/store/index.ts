@@ -55,7 +55,11 @@ const SAVED_KEYS = [
   'reviews',
   'spare',
   'marketBanUntil',
+  'marketBanWhy',
+  'unlists',
   'rejected',
+  'acceptedToday',
+  'worked',
   'offers',
   'jobs',
   'order',
@@ -80,6 +84,14 @@ useGame.subscribe((s, prev) => {
   if (s.screen === 'title' || !SAVED_KEYS.some((k) => s[k] !== prev[k])) return
   clearTimeout(saveTimer)
   saveTimer = setTimeout(() => useGame.getState().save(), 400)
+})
+
+// Đơn đang làm có mua đồ / thao tác build thì tính là hôm nay đã làm đơn đó (chuyển đơn / tải save thì không tính)
+useGame.subscribe((s, prev) => {
+  const o = s.order
+  if (!o || s.result || o.id !== prev.order?.id || s.worked.includes(o.id)) return
+  if ((s.build && s.build !== prev.build) || s.spent > prev.spent)
+    useGame.setState({ worked: [...s.worked, o.id] })
 })
 
 // Thua game: uy tín quá thấp / hết tiền nhận đơn. Chờ một nhịp cho toast / đánh giá kịp hiện rồi xét lại

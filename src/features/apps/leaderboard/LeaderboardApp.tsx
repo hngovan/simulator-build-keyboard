@@ -35,7 +35,7 @@ const SORTS: [ServerRankKey, string, (r: Row) => string][] = [
 const valueOf = (r: Row, key: ServerRankKey) => (key === 'score' ? runScore(r) : r[key])
 
 // Bảng xếp hạng server: lượt chơi đã kết thúc của mọi người (thua / phá sản / chơi lại) + lượt đang chơi,
-// mặc định xếp theo điểm tổng hợp (đơn + uy tín + ngày + tiền, `runScore`), lọc lại theo từng thông số
+// mặc định xếp theo điểm tổng hợp (tiền lãi + uy tín + sao + đơn theo sao, ngày không tính, `runScore`), lọc lại theo từng thông số
 export function LeaderboardApp() {
   const name = useGame((s) => s.name)
   const day = useGame((s) => s.day)

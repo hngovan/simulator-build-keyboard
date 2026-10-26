@@ -51,6 +51,10 @@ const STEP_LINES: Record<StepId, string[]> = {
   stabScrew: [
     'Stab screw-in thì mỗi con cần 2 vít bắt từ mặt dưới PCB. Vặn chặt kẻo stab bị lỏng nha!',
   ],
+  foam: [
+    'Lót foam Poron giữa PCB và plate là tuỳ chọn, nhưng gõ sẽ bớt rung và ra tiếng thock trầm hơn đó!',
+    'Có foam trong kho thì click vào PCB để lót. Không cần thì bấm "Bỏ qua" nha.',
+  ],
   plate: ['Đặt plate lên trên PCB nào. Click vào board để thả plate xuống.'],
   switchLube: [
     'Lube switch cũng tuỳ chọn, nhưng switch lube rồi gõ mượt và đầm tiếng hơn nhiều ✨',

@@ -13,6 +13,25 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.9',
+    date: '2026-10-26',
+    commits: [],
+    title: 'Chợ lời được, bài bid, plateless + foam PCB, luật qua ngày',
+    items: [
+      'Đăng bán: giá trên giá chợ tới 1.4× giá gốc có thể gặp đại gia chốt trong đêm; chứng chỉ thợ +5% mỗi bậc, có người khen thợ, up bài',
+      'Bài bid 1 phút (giá khởi điểm từ 0, chọn bước giá): may thì lời, ế thì lỗ',
+      'Bài đăng có tag Free ship / Price no offer / Lowball thoải mái / Bao test, thu gọn được; số bài hiện bằng badge',
+      'Bán được linh kiện trong đơn đã nhận (kể cả đồ khách gửi) như đồ thường',
+      'Hàng pass lỗi keycap / switch / stab: viền đỏ + badge trong Kho, không lắp cho khách, chỉ bán lại (giá ½, 10% bị tố → ban chợ)',
+      'Gỡ bài quá 3 lần / ngày bị admin ban chợ 3 ngày; chuộc phím khách giá ×1.1 ~ ×1.3',
+      'Qua ngày phải nhận ít nhất 1 đơn; đơn đã nhận cả ngày không làm thì khách report, đền 20% tiền công',
+      'Điểm xếp hạng: chỉ tính tiền lãi so với vốn, uy tín, sao; số ngày không còn cộng điểm',
+      'Plateless (PCB hàn + Tray mount) và foam Poron lót PCB (bước tuỳ chọn, tiếng thock hơn)',
+      'Stab plate-mount gắn được mọi plate; ốc case mica dài xuyên tới tấm đáy',
+      'Keeb-chan và màn hình tiêu đề dùng ảnh nhân vật mới; Kho trống có icon',
+    ],
+  },
+  {
     version: '0.1.8',
     date: '2026-10-26',
     commits: ['0d5e99b'],

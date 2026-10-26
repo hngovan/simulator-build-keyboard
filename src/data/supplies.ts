@@ -26,7 +26,12 @@ export interface SupplyDef {
   spell?: number
   /** feet cao su dán đáy case (bước `feet`): 1 vỉ 4 cái */
   feet?: true
+  /** tấm foam Poron lót giữa PCB và plate (bước `foam`), cắt sẵn theo layout */
+  pcbFoam?: true
 }
+
+/** foam Poron lót PCB – plate: 1 tấm / bàn phím */
+export const FOAM_ID = 'foamPoron'
 
 /** feet cao su dán đáy case: id vật tư theo màu (chọn ở bảng bước dán feet) */
 export const FEET_IDS = ['feetBlack', 'feetWhite'] as const
@@ -79,6 +84,17 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     packs: [[4, 25]],
     desc: 'Vỉ 4 feet bán cầu dán đáy case, chống trượt, hợp case sáng màu. 1 lần mua = 4 cái',
     feet: true,
+  },
+  foamPoron: {
+    name: 'Foam Poron lót PCB (đen)',
+    unit: 'tấm',
+    color: '#2a2b30',
+    packs: [
+      [1, 60],
+      [5, 250],
+    ],
+    desc: 'Tấm Poron đen cắt sẵn lỗ switch theo layout, lót giữa PCB và plate: giảm rung, tiếng thock trầm hơn',
+    pcbFoam: true,
   },
   urgo: {
     name: 'Băng keo cá nhân Urgo',

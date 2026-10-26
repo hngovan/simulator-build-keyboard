@@ -12,7 +12,7 @@ import type {
   StepId,
 } from '@/types'
 import { blockerGaps, getLayout } from './layouts'
-import { CASES, STABS, caseModelOf } from './parts'
+import { CASES, STABS, caseModelOf, isPlateless } from './parts'
 import CASE_FEET from './caseFeet.json'
 import { stabModRules } from './mods'
 import stabModel from './stabModel.json'
@@ -33,10 +33,14 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     hint: 'Click switch trên đồ mở để tách housing, stem và lò xo, rồi click switch đã mở để lube 1 mẻ',
   },
   stabScrew: { title: 'Vặn vít stab', hint: 'Stab screw-in: vặn chặt 2 vít cho mỗi stab' },
+  foam: {
+    title: 'Lót foam PCB (tuỳ chọn)',
+    hint: 'Click vào PCB để lót tấm foam Poron (mua ở Shopii → Lube & vật tư): giảm rung, tiếng thock hơn. Không lót thì bấm bước tiếp',
+  },
   plate: { title: 'Đặt plate lên PCB', hint: 'Click vào board để đặt plate xuống' },
   switch: {
     title: 'Lắp switch',
-    hint: 'Click vào lỗ trên plate để cắm switch (số con mỗi lần theo bậc thợ + phép lắp switch)',
+    hint: 'Click vào lỗ switch để cắm switch (số con mỗi lần theo bậc thợ + phép lắp switch)',
   },
   solder: {
     title: 'Hàn switch',
@@ -94,7 +98,7 @@ export const BIT_LABELS: Record<ScrewBit, string> = {
   torx: 'Torx',
   flat: 'Dẹt',
 }
-export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'switchLube', 'test']
+export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'foam', 'switchLube', 'test']
 export const CASE_WALL = 0.45
 export const CASE_MARGIN = 0.15
 
@@ -115,7 +119,16 @@ const cache = new Map<string, BuildContext>()
 
 // Kế hoạch build: danh sách bước + vị trí vít/gasket, phụ thuộc kit, mount, layout
 export function buildContext(order: Order, inv: Inventory, mount: string): BuildContext {
-  const ck = JSON.stringify([order.layout, order.variant, inv.case, inv.pcb, inv.stab, mount])
+  const plateless = isPlateless(inv.plate)
+  const ck = JSON.stringify([
+    order.layout,
+    order.variant,
+    inv.case,
+    inv.pcb,
+    inv.stab,
+    mount,
+    plateless,
+  ])
   const hit = cache.get(ck)
   if (hit) return hit
   const { keys, width, depth, origin, outline } = getLayout(order.layout, order.variant)
@@ -130,8 +143,9 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     steps.push('stabMod', 'stab')
     if (stabType === 'screw') steps.push('stabScrew')
   }
-  steps.push('plate')
-  if (stabKeys.length && stabType === 'plate') steps.push('stabMod', 'stab')
+  // plateless: không foam / plate, switch cắm thẳng PCB (stab plate-mount đã bị chặn ở checkInventory)
+  if (!plateless) steps.push('foam', 'plate')
+  if (stabKeys.length && stabType === 'plate' && !plateless) steps.push('stabMod', 'stab')
   steps.push('switchLube', 'switch')
   if (inv.pcb!.type === 'solder') steps.push('solder')
   if (['gasket', 'og'].includes(mount)) steps.push('gasket')
@@ -227,6 +241,7 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     feet,
     screwSide,
     pcbType: inv.pcb!.type,
+    plateless,
   }
   cache.set(ck, ctx)
   return ctx
@@ -434,6 +449,8 @@ export function stepProgress(
       return [count(b.stabs), ctx.stabKeys.length]
     case 'plate':
       return [b.plate ? 1 : 0, 1]
+    case 'foam':
+      return [b.foam ? 1 : 0, 1]
     case 'switch':
       return [count(b.switches), ctx.keys.length]
     case 'solder':

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useGame } from '@/store'
 import { ClipboardList } from 'lucide-react'
-import { Alert, Empty, OptionChip } from '@/components/ui'
+import { Alert, Badge, Empty, OptionChip } from '@/components/ui'
 import { PostCard } from './PostCard'
 import { MyListings } from './MyListings'
 
@@ -12,15 +12,17 @@ export function GroupFeed() {
   const order = useGame((s) => s.order)
   const day = useGame((s) => s.day)
   const banUntil = useGame((s) => s.marketBanUntil)
+  const banWhy = useGame((s) => s.marketBanWhy)
   const mine = useGame((s) => s.listings.length)
   const openStolen = useGame((s) => s.stolen.some((x) => x.status === 'open'))
   const [tab, setTab] = useState<'feed' | 'mine'>(openStolen ? 'mine' : 'feed')
-  // đi ăn xin bị ban: không xem / mua / đăng được tới hết ngày banUntil - 1
+  // bị admin ban (ăn xin, gỡ bài quá nhiều, bán hàng lỗi bị tố): không xem / mua / đăng được tới hết ngày banUntil - 1
   if (day < banUntil)
     return (
       <div className="p-6">
         <Alert tone="red" title={`🚫 Bạn đang bị ban khỏi chợ (còn ${banUntil - day} ngày)`}>
-          Admin ban vì đi ăn xin người bán. Ngày {banUntil} mới vào lại được, giờ mua ở Shopii nhé.
+          Lý do: {banWhy || 'đi ăn xin người bán'}. Ngày {banUntil} mới vào lại được, giờ mua ở
+          Shopii nhé.
         </Alert>
       </div>
     )
@@ -31,8 +33,17 @@ export function GroupFeed() {
         <OptionChip active={tab === 'feed'} onClick={() => setTab('feed')}>
           Chợ pass
         </OptionChip>
-        <OptionChip active={tab === 'mine'} onClick={() => setTab('mine')}>
-          Bài của tôi{mine ? ` (${mine})` : ''}
+        <OptionChip
+          active={tab === 'mine'}
+          onClick={() => setTab('mine')}
+          className="inline-flex items-center gap-1.5"
+        >
+          Bài của tôi
+          {mine > 0 && (
+            <Badge solid tone="blue" className="ml-0 px-1.5 py-0 text-[11px]">
+              {mine}
+            </Badge>
+          )}
           {openStolen && ' 🚨'}
         </OptionChip>
       </div>
@@ -44,6 +55,7 @@ export function GroupFeed() {
         <>
           <Alert tone="yellow" title="Hàng pass rẻ hơn 20–40% nhưng mô tả toàn thuật ngữ chợ">
             Xin hình, check var trước khi chuyển khoản kẻo dính flaw hoặc gặp seller bùng!
+            <i className="mt-1 block font-bold">“Ai cũng uy tín cho đến khi...”</i>
           </Alert>
           {posts.map((post) => (
             <PostCard key={post.id} post={post} />

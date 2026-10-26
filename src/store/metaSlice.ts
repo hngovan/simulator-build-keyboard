@@ -138,6 +138,8 @@ function snapshot(s: GameState): SaveData {
     reviews,
     spare,
     marketBanUntil,
+    marketBanWhy: s.marketBanWhy,
+    unlists: s.unlists,
     runId: s.runId,
     lbSynced: s.lbSynced,
     listings: s.listings,
@@ -161,6 +163,8 @@ function snapshot(s: GameState): SaveData {
       history: compactHistory(s.history),
       supplyUsed,
       rejected: s.rejected,
+      acceptedToday: s.acceptedToday,
+      worked: s.worked,
     },
   }
 }
@@ -213,6 +217,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       gameOver: null,
       reviewPops: [],
       rejected: [],
+      acceptedToday: 0,
+      worked: [],
       name: name.trim() || 'Thợ phím',
       lastSolderPurchase: null,
       screen: 'pc',
@@ -257,6 +263,11 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       future: [],
       supplyUsed: session?.supplyUsed ?? {},
       rejected: session?.rejected ?? [],
+      // bản lưu cũ: coi như hôm nay đã làm các đơn đang có (không bị phạt oan)
+      acceptedToday: session?.acceptedToday ?? 0,
+      worked:
+        session?.worked ??
+        [rest.order, ...(jobs ?? []).map((j) => j.order)].flatMap((o) => (o ? [o.id] : [])),
       reviews: profile.reviews ?? [],
       // bản lưu cũ chưa có mã lượt chơi
       runId: profile.runId || newRunId(),

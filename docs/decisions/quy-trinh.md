@@ -27,8 +27,8 @@
 
 ## Điều đã thấy nhưng chưa sửa (không phải của phiên này)
 
-- `shopSlice.ts` `nextDay()`: trong `set({...})` có gán `equipSolder` / `undoSolderPurchase` / `lastSolderPurchase`
-  (có vẻ chèn nhầm chỗ của phiên khác) — cần báo người dùng.
+- ~~`shopSlice.ts` `nextDay()`: trong `set({...})` có gán `equipSolder` / `undoSolderPurchase`~~ — đã bỏ (2026-10-26, 0.1.9),
+  chỉ giữ `lastSolderPurchase: null`.
 
 ## Giao việc nhỏ cho opencode qua Orca (2026-10-25)
 
@@ -55,3 +55,7 @@
 - README "Có gì mới" (2026-10-26, "update vào readme cho tôi"): thêm mục "Lịch sử cập nhật" (bảng mọi phiên bản: phiên bản / ngày / mảng / thay đổi) trên "Tài liệu", tóm tắt
   mục 0.1.3 trong `src/data/changelog.ts` (thua game, bảng xếp hạng server, feet, case theo cụm phím, mount, Shopii, switch mới,
   UI điện thoại); điền `commits: ['e14e8a0']` cho 0.1.3. Bản sau: thêm dòng phiên bản mới lên đầu bảng.
+- Ảnh demo bản 0.1.9 (2026-10-26, "chụp lại ảnh màn hình version mới nhất + cập nhật readme rồi push"): playwright-core + chromium
+  swiftshader (scratchpad `pw/demo.mjs`, trình duyệt sạch, không đụng save thật), dev server cổng 5199; dựng đơn / kho / build bằng
+  `window.__game` + `import('/src/data/parts.ts')`, camera bằng `__r3f`. Chụp lại title / mezzenger (Keeb-chan mới), thêm kho (hàng lỗi),
+  cho (đăng bán + bid), lot-foam, plateless, oc-mica; PNG → JPEG bằng ffmpeg `-q:v 3`.

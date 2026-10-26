@@ -332,3 +332,36 @@ bấm phá sản, new game".
 - 2026-10-26, người dùng: chuộc lại phím đúng ra chỉ +1 uy tín → `BUYBACK_REP` 2 → 1 (gỡ lại đúng phần −1 lúc lộ). Bảng tỉ lệ:
   "Đòi đúng 1 con switch" → "Yêu cầu đúng loại switch"; phím chưa hàn = "không nhận tín hiệu" (toast test, nhãn chấm điểm, đánh giá khách);
   "Fs" ghi rõ free ship (bảng tỉ lệ + tooltip badge ở bài pass).
+
+## Đợt chỉnh chợ + luật qua ngày + plateless / foam (2026-10-26, 0.1.9)
+
+- **Qua ngày** (người dùng: "40 ngày vẫn 7.500k mà vẫn top cao... qua ngày mới phải nhận làm ít nhất 1 đơn, không làm thì khách report,
+  đền 20% tiền công"): `nextDay` chặn khi hôm nay chưa nhận đơn nào, chưa làm / đóng gói đơn nào (`acceptedToday`, `worked`, `packed`)
+  mà vẫn còn đơn chào (từ chối hết thì cho qua, đã bị trừ uy tín). Đơn đã nhận (đang làm + đang chờ) mà cả ngày không mua đồ / không
+  thao tác build (`worked` ghi bằng subscribe trong `store/index.ts`: `build` đổi hoặc `spent` tăng khi cùng đơn) → khách report,
+  đền `NO_WORK_FINE` 20% `labor` (notify). Session lưu `acceptedToday` / `worked`; save cũ coi các đơn đang có là đã làm.
+- **Điểm xếp hạng** (`runScore`, `server/leaderboardCore.ts`): bỏ ngày; tiền chỉ tính lãi so với `START_MONEY` 7.500k (/100),
+  uy tín ×20, sao TB ×20, đơn ×10 × sao TB / 5 (đơn làm ẩu ít điểm). Ngồi chơi 40 ngày = 0 điểm.
+- Bỏ `equipSolder` / `undoSolderPurchase` gán nhầm trong `set()` của `nextDay` (đã ghi ở quy-trinh.md).
+- **Hàng lỗi keycap / switch / stab** (`FLAW_UNUSABLE`, `unusable` trong parts.ts): `checkInventory` báo "Hàng lỗi... không lắp cho
+  khách được"; `buyPost` mua phải món lỗi loại này thì cất thẳng vào kho chung (`spare.items`, switch lỗi không gộp với switch tốt),
+  notify. App Kho: viền đỏ + badge "Hàng lỗi". Giá gốc khi bán còn 1 nửa (`sourceBase`). Bán hàng lỗi: `FLAW_CAUGHT` 10% bị tố mô tả
+  sai → admin ban 3 ngày (`banMarket`). Case / PCB / plate lỗi vẫn như cũ (lắp được, −8 điểm).
+- **Đăng bán** (`data/selling.ts`, `store/sellSlice.ts`, `MyListings`):
+  - `sourceBase` = giá gốc (giá mới), `sourceValue` = giá chợ 70%. Bot trả giá quanh giá chợ (không ai trả trên giá chợ) → muốn lời phải
+    đăng cao: giá trên giá chợ tới `RICH_MAX` 1,4× giá gốc thì **đêm** (`closeSellDay`) có `RICH_BASE` 15% + 5% / bậc thợ (+5% Fs) gặp
+    đại gia chốt đúng giá, **tối đa 1 đại gia / đêm** (tránh mua Shopii bán lại kiếm tiền vô hạn).
+  - `botTurn(l, cert)`: chê khi > `PRICEY` 1,2× giá gốc (35%, > 1,4×: 60%, −5% / bậc thợ), khen thợ khi có chứng chỉ, up bài ("Up cho
+    chủ thớt", "wtx"...), hỏi han, trả giá. Tag bài `ListingTag` (Free ship / Price no offer / Lowball thoải mái / Bao test) hiện badge,
+    đổi cách bot trả giá.
+  - Bài bid (`Listing.bid`): giá khởi điểm từ 0, bước 10 / 50 / 100k, chạy `BID_MS` 60s; giá trần ẩn `bidCap` 45–125% giá chợ;
+    bot bid nhảy tới ~30% khoảng còn lại; hết giờ `settleBids` (App.tsx gọi mỗi giây khi có bài bid, `closeSellDay` cũng gọi) bán cho
+    người giữ giá, không mở tab thì giả lập bid ngầm, không ai bid thì trả món. Bid đã có người trả thì không gỡ được.
+  - Linh kiện của đơn đã nhận (chưa build), kể cả món khách gửi, bán được như đồ thường (`ListingSource` kind `job`, bỏ cờ `provided`,
+    gỡ bài thì trả lại đơn nếu ô còn trống, không thì kho chung).
+  - Gỡ bài quá `UNLIST_FREE` 3 lần / ngày (`Profile.unlists`) → admin ban chợ. `banMarket(why)` dùng chung (ăn xin, gỡ bài, hàng lỗi),
+    lý do lưu `Profile.marketBanWhy`, hiện ở màn bị ban.
+  - Chuộc phím của khách: giá ×1,1 ~ ×1,3 (`buybackPrice`).
+  - UI: bài thu gọn được (bấm tiêu đề), badge bid đếm ngược / tag / nguồn; số bài đăng là `Badge` (cả tab "Bài của tôi"); form đăng mở
+    khi bấm "Đăng bán" (OptionSelect kiểu bán + bước bid, OptionChip tag). Chợ pass ghi thêm "Ai cũng uy tín cho đến khi...".
+- Bảng tỉ lệ (`data/odds.ts`) cập nhật theo hằng số mới.

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Droplet, Keyboard, LayoutGrid, Wrench, type LucideIcon } from 'lucide-react'
+import { Droplet, Keyboard, LayoutGrid, PackageOpen, Wrench, type LucideIcon } from 'lucide-react'
 import { useGame } from '@/store'
 import {
   CATS,
@@ -29,7 +29,16 @@ import type {
   StabItem,
   SwitchItem,
 } from '@/types'
-import { Button, Heading, Muted, OptionChip, Panel, Tooltip, ViewHint } from '@/components/ui'
+import {
+  Badge,
+  Button,
+  Empty,
+  Heading,
+  OptionChip,
+  Panel,
+  Tooltip,
+  ViewHint,
+} from '@/components/ui'
 import { cn } from '@/lib/format'
 import type { ToolKind } from '@/types'
 
@@ -63,6 +72,11 @@ function ItemViewer({ it, onClose }: { it: Owned; onClose: () => void }) {
   const footer = (
     <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
       {it.tag && <b className="text-muted">{it.tag}</b>}
+      {it.flaw && (
+        <Badge solid tone="red" className="ml-0" title="Không lắp cho khách được, chỉ đăng bán lại">
+          Hàng lỗi: {it.flaw}
+        </Badge>
+      )}
       {it.detail && <b className="text-yellow">{it.detail}</b>}
       {it.using && <b className="text-green">Đang dùng</b>}
       {remainText(it) && <b className="text-yellow">{remainText(it)}</b>}
@@ -122,6 +136,8 @@ interface Owned {
   detail?: string
   /** nút trong khung xem (lấy từ kho chung, cất về kho) */
   action?: { label: string; title: string; run: () => void }
+  /** hàng pass lỗi (viền đỏ + badge "Hàng lỗi") */
+  flaw?: string
 }
 
 /** Vị trí ô người chơi tự xếp (tiện ích riêng máy): phần tử i = id món ở ô i, null = ô trống */
@@ -188,6 +204,7 @@ function partOwned(
     thumb: partThumb(cat, item),
     ...(left !== undefined ? { left } : {}),
     ...(cat === 'stab' ? { detail: stabText(stabStock(item as StabItem)) } : {}),
+    ...((item as { flaw?: string }).flaw ? { flaw: (item as { flaw: string }).flaw } : {}),
     ...extra,
   }
 }
@@ -387,15 +404,17 @@ export function OwnedItems() {
         </div>
       </div>
       {!owned.length && (
-        <Muted className="mb-2 block">
-          Kho đang trống. Mua linh kiện, dụng cụ, vật tư ở Shopii.
-        </Muted>
+        <div className="mb-2">
+          <Empty icon={<PackageOpen />}>
+            Kho đang trống. Mua linh kiện, dụng cụ, vật tư ở Shopii.
+          </Empty>
+        </div>
       )}
       <div className="grid grid-cols-4 gap-2 rounded-xl bg-black/20 p-2 @3xl:grid-cols-6 @3xl:gap-3">
         {filter !== 'all' && !shown.length && (
-          <Muted className="col-span-4 px-2 py-6 text-center">
-            Không có món nào trong mục này.
-          </Muted>
+          <div className="col-span-4 @3xl:col-span-6">
+            <Empty icon={<PackageOpen />}>Không có món nào trong mục này.</Empty>
+          </div>
         )}
         {shown.map((id, i) => {
           const it = id ? byId.get(id) : undefined
@@ -435,12 +454,25 @@ export function OwnedItems() {
                     }}
                     className={cn(
                       'group relative flex h-full w-full cursor-pointer flex-col gap-1 overflow-hidden rounded-md border-2 bg-panel p-1.5 active:cursor-grabbing',
-                      it.using ? 'border-green' : 'border-line hover:border-white/30',
+                      it.flaw
+                        ? 'border-red shadow-[0_0_0_2px_rgba(255,80,80,0.35)]'
+                        : it.using
+                          ? 'border-green'
+                          : 'border-line hover:border-white/30',
                       dragging === it.id && 'opacity-40',
                     )}
                   >
                     <Thumb it={it} />
                     <ViewHint className="top-2 right-2 bottom-auto" />
+                    {it.flaw && (
+                      <Badge
+                        solid
+                        tone="red"
+                        className="pointer-events-none absolute right-2 bottom-9 ml-0 px-1.5 text-[10px]"
+                      >
+                        Hàng lỗi
+                      </Badge>
+                    )}
                     <div className="truncate text-xs leading-tight font-bold">{it.name}</div>
                     {it.tag && (
                       <div

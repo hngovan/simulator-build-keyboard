@@ -12,6 +12,7 @@ import { MM } from '../models/Switch'
 import { useHover } from '../common/useHover'
 import { Gaskets, HotswapSockets, SiliconeRing } from './BoardDetails'
 import { KeySlot } from './KeySlot'
+import { PcbFoam } from './Foam'
 import { PcbSurface } from './PcbSurface'
 import { boardOutline } from './boardOutline'
 import { ScrewSet } from './Screw'
@@ -189,10 +190,10 @@ export function Board() {
   const stepIdx = useStepIdx()
   const b = useBuild()
   const plateMat = useGame((s) => s.inventory.plate!.material)
-  const { placePlate, wrapRing, dropInCase } = useGame.getState()
+  const { placePlate, placeFoam, wrapRing, dropInCase } = useGame.getState()
   const ref = useRef<THREE.Group>(null)
   const lifted = step === 'caseIn' && !b.inCase
-  const boardClick = step === 'plate' || step === 'ring' || step === 'caseIn'
+  const boardClick = step === 'plate' || step === 'foam' || step === 'ring' || step === 'caseIn'
   const { hover, bind } = useHover(boardClick)
   // case CAD có plate nghiêng (Alice): thả vào case thì board nâng + nghiêng theo mặt case
   const seat = b.inCase ? ctx.caseDef.seat : undefined
@@ -208,6 +209,7 @@ export function Board() {
     if (!boardClick) return
     e.stopPropagation()
     if (step === 'plate') placePlate()
+    if (step === 'foam') placeFoam()
     if (step === 'ring') wrapRing()
     if (step === 'caseIn') dropInCase()
     playClick(900)
@@ -248,6 +250,19 @@ export function Board() {
         />
       </group>
       {ctx.pcbType === 'hotswap' && <HotswapSockets />}
+      {(b.foam || step === 'foam') && (
+        <Drop y={0} from={b.foam ? 0.6 : 0}>
+          <group onPointerDown={onBoard} {...bind}>
+            <PcbFoam
+              keys={ctx.keys}
+              width={ctx.width}
+              depth={ctx.depth}
+              outline={ctx.outline}
+              ghost={!b.foam}
+            />
+          </group>
+        </Drop>
+      )}
       {b.plate ? (
         <Drop y={Y.plateBot} from={0.8}>
           <group onPointerDown={onBoard} {...bind}>

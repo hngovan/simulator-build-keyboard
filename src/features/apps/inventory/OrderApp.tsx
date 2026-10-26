@@ -3,9 +3,11 @@ import {
   CATS,
   CASES,
   MOUNTS,
+  PLATELESS_MOUNTS,
   SOUND_WISH,
   buildSound,
   checkInventory,
+  isPlateless,
   itemName,
   soundLabel,
 } from '@/data/parts'
@@ -19,6 +21,7 @@ import {
   ProgressBar,
   SoundBars,
   StepDot,
+  Toggle,
 } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
@@ -37,6 +40,7 @@ function OrderDetail({ c }: { c: OrderEntry }) {
   const checks = checkInventory(inventory, order, build ? Object.keys(build.switches).length : 0)
   const ready = checks.every((x) => x.ok)
   const caseDef = inventory.case && CASES[inventory.case.id]
+  const plateless = isPlateless(inventory.plate)
   const profile =
     inventory.switch && inventory.plate
       ? buildSound(inventory, mount, build, ctx?.keys.length)
@@ -91,8 +95,8 @@ function OrderDetail({ c }: { c: OrderEntry }) {
                 key={m}
                 big
                 active={mount === m}
-                // chỉ chọn mount cho đơn đang làm, chưa vào bàn build
-                disabled={!active || !!build}
+                // chỉ chọn mount cho đơn đang làm, chưa vào bàn build; plateless chỉ tray
+                disabled={!active || !!build || (plateless && !PLATELESS_MOUNTS.includes(m))}
                 onClick={() => s.setMount(m)}
               >
                 <b>{MOUNTS[m].name}</b>
@@ -104,6 +108,25 @@ function OrderDetail({ c }: { c: OrderEntry }) {
             Case{' '}
             {caseDef.pieces === 2 ? '2 mảnh: phải tháo vít mở case và vặn lại khi xong' : '1 mảnh'}
           </Muted>
+          {/* plateless: bỏ plate, switch hàn thẳng PCB (chỉ PCB hàn + tray mount) */}
+          {(plateless || (active && !build && !provided.plate && !order.plateMaterial)) && (
+            <div className="mt-2 flex items-center gap-2.5 rounded-xl bg-panel-2 px-2.5 py-2">
+              {active && !build ? (
+                <Toggle checked={plateless} onChange={s.setPlateless} label="Plateless" />
+              ) : (
+                <Badge solid tone="orange" className="ml-0">
+                  Plateless
+                </Badge>
+              )}
+              <div className="min-w-0 flex-1 text-sm">
+                <b>Plateless (không plate)</b>
+                <Muted className="block text-xs">
+                  Bỏ bước lắp plate, gõ mềm hơn. Bắt buộc PCB hàn + Tray mount, không dùng stab
+                  plate-mount
+                </Muted>
+              </div>
+            </div>
+          )}
         </Panel>
       )}
 

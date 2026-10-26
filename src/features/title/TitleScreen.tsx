@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useGame } from '@/store'
 import { Button } from '@/components/ui'
 import { fmt } from '@/lib/format'
-import { SolderingScene } from './SolderingScene'
+import { GuideGirl } from '@/components/art/GuideGirl'
 import { Changelog } from './Changelog'
 
 const BG =
@@ -63,42 +63,45 @@ export function TitleScreen() {
   const [log, setLog] = useState(false)
   return (
     <div className="fixed inset-0 grid place-items-center" style={{ background: BG }}>
-      <div className="px-4 text-center">
-        <SolderingScene className="mx-auto mb-2 w-[220px] max-w-[60vw] drop-shadow-[0_8px_0_rgba(0,0,0,0.4)]" />
-        <h1 className="text-[64px] leading-[0.95] text-white [text-shadow:0_6px_0_#000a] max-md:text-[40px]">
-          {/* bàn phím nhún nhảy cạnh tên game (đặt ngoài dòng chữ để tên vẫn căn giữa) */}
-          <span className="relative">
-            SIMULATOR
-            <span className="absolute -top-2 left-full ml-4 rotate-12 text-[0.8em]">
-              <span className="block animate-bob drop-shadow-[0_6px_0_rgba(0,0,0,0.4)]">⌨️</span>
+      {/* Keeb-chan đứng bên trái tên game (màn hẹp thì lên trên, nhỏ lại) */}
+      <div className="flex items-center gap-8 px-4 max-md:flex-col max-md:gap-2">
+        <GuideGirl className="w-[230px] shrink-0 animate-bob max-md:w-[120px]" />
+        <div className="text-center">
+          <h1 className="text-[64px] leading-[0.95] text-white [text-shadow:0_6px_0_#000a] max-md:text-[40px]">
+            {/* bàn phím nhún nhảy cạnh tên game (đặt ngoài dòng chữ để tên vẫn căn giữa) */}
+            <span className="relative">
+              SIMULATOR
+              <span className="absolute -top-2 left-full ml-4 rotate-12 text-[0.8em]">
+                <span className="block animate-bob drop-shadow-[0_6px_0_rgba(0,0,0,0.4)]">⌨️</span>
+              </span>
             </span>
-          </span>
-          <br />
-          <span className="text-yellow">BUILD KEYBOARD</span>
-        </h1>
-        <p className="mt-3.5 mb-7 text-lg text-muted">
-          Nhận đơn · Săn linh kiện · Lắp ráp · Giao hàng
-        </p>
-        {creating ? (
-          <NewGameForm
-            overwrite={!!saveInfo}
-            onCancel={saveInfo ? () => setCreating(false) : undefined}
-          />
-        ) : (
-          <div className="flex flex-wrap justify-center gap-4">
-            {saveInfo && (
-              <Button tone="green" size="lg" onClick={continueGame}>
-                ▶ Tiếp tục: {saveInfo.name}
-                <span className="block text-sm font-bold opacity-80">
-                  Ngày {saveInfo.day} · {fmt(saveInfo.money)}
-                </span>
+            <br />
+            <span className="text-yellow">BUILD KEYBOARD</span>
+          </h1>
+          <p className="mt-3.5 mb-7 text-lg text-muted">
+            Nhận đơn · Săn linh kiện · Lắp ráp · Giao hàng
+          </p>
+          {creating ? (
+            <NewGameForm
+              overwrite={!!saveInfo}
+              onCancel={saveInfo ? () => setCreating(false) : undefined}
+            />
+          ) : (
+            <div className="flex flex-wrap justify-center gap-4">
+              {saveInfo && (
+                <Button tone="green" size="lg" onClick={continueGame}>
+                  ▶ Tiếp tục: {saveInfo.name}
+                  <span className="block text-sm font-bold opacity-80">
+                    Ngày {saveInfo.day} · {fmt(saveInfo.money)}
+                  </span>
+                </Button>
+              )}
+              <Button tone="yellow" size="lg" onClick={() => setCreating(true)}>
+                ✦ Chơi mới
               </Button>
-            )}
-            <Button tone="yellow" size="lg" onClick={() => setCreating(true)}>
-              ✦ Chơi mới
-            </Button>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
       {/* góc dưới: phiên bản game (bấm xem lịch sử cập nhật) + link tác giả */}
       <div className="fixed inset-x-4 bottom-3 flex items-center justify-between text-xs text-muted">

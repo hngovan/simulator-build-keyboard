@@ -11,6 +11,7 @@ import type {
   LayoutId,
   Order,
   PartCategory,
+  PartItem,
   PcbItem,
   PlateItem,
   Product,
@@ -49,8 +50,6 @@ interface PlateDef extends SoundMod {
   price: number
   color: string
   metal?: boolean
-  /** plate dẻo: ngàm stab plate-mount gài không chắc (lỏng, lạch cạch) → không dùng được với stab plate-mount */
-  flex?: boolean
   clear?: boolean
   desc: string
 }
@@ -476,7 +475,23 @@ export const SWITCHES: Record<string, SwitchDef> = {
   },
 }
 
+/** "plate" plateless: không dùng plate, switch hàn thẳng vào PCB (bật ở app Chi tiết đơn, không bán ở Shopii) */
+export const PLATELESS = 'none'
+/** plateless chỉ lắp được kiểu tray (các mount khác đều kẹp / bắt vít vào plate) */
+export const PLATELESS_MOUNTS = ['tray']
+export const isPlateless = (p?: { material: string } | null) => p?.material === PLATELESS
+/** chất liệu plate bán / khách đòi được (trừ plateless) */
+export const plateIds = () => Object.keys(PLATES).filter((id) => id !== PLATELESS)
+
 export const PLATES: Record<string, PlateDef> = {
+  [PLATELESS]: {
+    name: 'Plateless (không plate)',
+    dl: -0.08,
+    dp: -0.15,
+    price: 0,
+    color: '#1d1f24',
+    desc: 'Không plate: switch hàn thẳng vào PCB, gõ mềm, flex nhiều',
+  },
   alu: {
     name: 'Nhôm (Alu)',
     dl: 0.05,
@@ -512,7 +527,6 @@ export const PLATES: Record<string, PlateDef> = {
     price: 180,
     color: '#dfe9f0',
     clear: true,
-    flex: true,
     desc: 'Mềm, flex, tiếng trầm',
   },
   pom: {
@@ -521,7 +535,6 @@ export const PLATES: Record<string, PlateDef> = {
     dp: -0.18,
     price: 200,
     color: '#f2f2ee',
-    flex: true,
     desc: 'Mềm, tiếng đục trầm',
   },
   pp: {
@@ -530,7 +543,6 @@ export const PLATES: Record<string, PlateDef> = {
     dp: -0.22,
     price: 160,
     color: '#e8e2d0',
-    flex: true,
     desc: 'Rất mềm, flex nhiều, rất trầm',
   },
   pei: {
@@ -1719,7 +1731,8 @@ function soundProfile(
     caseId,
     lubeFrac = 0,
     lubeType,
-  }: { caseId?: string; lubeFrac?: number; lubeType?: string | null } = {},
+    foam = false,
+  }: { caseId?: string; lubeFrac?: number; lubeType?: string | null; foam?: boolean } = {},
 ): SoundProfile {
   const sw = SWITCHES[switchType]
   const zero = { dl: 0, dp: 0 }
@@ -1728,6 +1741,11 @@ function soundProfile(
   const c = (caseId && CASE_MATERIALS[CASES[caseId].material]) || zero
   let loud = sw.loud + p.dl + m.dl + c.dl
   let pitch = sw.pitch + p.dp + m.dp + c.dp
+  // foam Poron giữa PCB và plate: bớt rung vang, tiếng trầm thock hơn
+  if (foam) {
+    loud -= 0.05
+    pitch -= 0.08
+  }
   // mỡ càng đặc (độ hợp switch thấp, vd BDZ / Permatex) thì tiếng càng nhũn, bị trì
   const thick =
     lubeType &&
@@ -1754,6 +1772,7 @@ export function buildSound(
     caseId: inv.case?.id,
     lubeFrac: build && nKeys ? build.lubed / nKeys : 0,
     lubeType: build?.lubeType,
+    foam: !!build?.foam,
   })
 }
 
@@ -1837,13 +1856,15 @@ export function buildCatalog(): Product[] {
       name: `Plate ${L.name}`,
       desc: 'Chất liệu plate ảnh hưởng rất nhiều tới âm thanh',
       layouts: [lay],
-      options: Object.entries(PLATES).map(([m, p]) => ({
-        label: p.name,
-        swatch: p.color,
-        price: Math.round(p.price * SIZE_MULT[lay]),
-        item: { layout: lay, material: m },
-        hint: p.desc,
-      })),
+      options: plateIds()
+        .map((m) => [m, PLATES[m]] as const)
+        .map(([m, p]) => ({
+          label: p.name,
+          swatch: p.color,
+          price: Math.round(p.price * SIZE_MULT[lay]),
+          item: { layout: lay, material: m },
+          hint: p.desc,
+        })),
     })
   }
   // mỗi loại stab: bộ TKL + bán lẻ 1 con stab 2u / 6.25u / 7u
@@ -2001,7 +2022,9 @@ export function itemName(cat: ShopCategory, item: unknown): string {
     }
     case 'plate': {
       const it = item as PlateItem
-      return `Plate ${LAYOUTS[it.layout].name} ${PLATES[it.material].name}`
+      return isPlateless(it)
+        ? `${LAYOUTS[it.layout].name} plateless (không plate)`
+        : `Plate ${LAYOUTS[it.layout].name} ${PLATES[it.material].name}`
     }
     case 'stab': {
       const it = item as StabItem
@@ -2109,11 +2132,29 @@ function keycapCheck(inv: Inventory, order: Order): InventoryCheck {
 }
 
 // Kiểm tra kho đồ có đủ và tương thích để build đơn hiện tại không
+/** hàng pass lỗi các loại này không lắp cho khách được (chỉ đăng bán lại); case / PCB / plate lỗi vẫn dùng, bị trừ điểm */
+export const FLAW_UNUSABLE: PartCategory[] = ['keycap', 'switch', 'stab']
+/** món lỗi không dùng được cho khách */
+export const unusable = (cat: PartCategory, item: PartItem | null) =>
+  FLAW_UNUSABLE.includes(cat) && !!(item as { flaw?: string } | null)?.flaw
+
 export function checkInventory(
   inv: Inventory,
   order: Order,
   installedSwitches = 0,
 ): InventoryCheck[] {
+  return checkParts(inv, order, installedSwitches).map((c) =>
+    unusable(c.cat, inv[c.cat])
+      ? {
+          cat: c.cat,
+          ok: false,
+          msg: `Hàng lỗi (${(inv[c.cat] as { flaw: string }).flaw}): không lắp cho khách được, đăng bán lại ở Hội Phím Cơ`,
+        }
+      : c,
+  )
+}
+
+function checkParts(inv: Inventory, order: Order, installedSwitches: number): InventoryCheck[] {
   const lay = LAYOUTS[order.layout]
   const { keys } = getLayout(order.layout, order.variant)
   const needStab = keys.some((k) => k.stab)
@@ -2146,19 +2187,18 @@ export function checkInventory(
     },
     {
       cat: 'plate',
-      // stab plate-mount gài thẳng vào plate: plate dẻo (PC / POM / PP) giữ ngàm không chắc
       ok:
         inv.plate?.layout === order.layout &&
-        !plateStabClash(inv) &&
-        (!order.plateMaterial || inv.plate.material === order.plateMaterial),
+        (!order.plateMaterial || inv.plate.material === order.plateMaterial) &&
+        !platelessIssue(inv),
       msg: !inv.plate
         ? 'Chưa có plate'
         : inv.plate.layout !== order.layout
           ? `Cần plate ${lay.name}`
-          : order.plateMaterial && inv.plate.material !== order.plateMaterial
-            ? `Khách cần plate ${PLATES[order.plateMaterial]?.name ?? order.plateMaterial}, đang có ${PLATES[inv.plate.material].name}`
-            : plateStabClash(inv)
-              ? `Stab plate-mount cần plate cứng (nhôm / đồng / thép / FR4 / PEI), ${PLATES[inv.plate.material].name} quá dẻo`
+          : platelessIssue(inv)
+            ? platelessIssue(inv)!
+            : order.plateMaterial && inv.plate.material !== order.plateMaterial
+              ? `Khách cần plate ${PLATES[order.plateMaterial]?.name ?? order.plateMaterial}, đang có ${PLATES[inv.plate.material].name}`
               : 'OK',
     },
     // khách đòi đúng loại stab thì phải đúng loại đó
@@ -2189,12 +2229,15 @@ export function caseModelOf(def: CaseDef, layout: LayoutId, variant: { bottom?: 
   return def.model
 }
 
-/** Stab plate-mount mà plate lại dẻo (không gài được) */
-const plateStabClash = (inv: Pick<Inventory, 'plate' | 'stab'>) =>
-  !!inv.stab &&
-  STABS[inv.stab.type]?.mount === 'plate' &&
-  !!inv.plate &&
-  !!PLATES[inv.plate.material]?.flex
+/** Plateless thiếu điều kiện: không plate thì switch chỉ đứng vững khi hàn chết vào PCB, stab gài plate không có chỗ gài */
+export function platelessIssue(inv: Pick<Inventory, 'plate' | 'pcb' | 'stab'>): string | null {
+  if (!isPlateless(inv.plate)) return null
+  if (inv.pcb && inv.pcb.type !== 'solder')
+    return 'Plateless phải dùng PCB hàn (hotswap không plate thì switch lỏng lẻo)'
+  if (inv.stab && STABS[inv.stab.type]?.mount === 'plate')
+    return 'Plateless không gài được stab plate-mount, dùng stab clip / screw-in'
+  return null
+}
 
 /** Case có hợp layout không (cùng cỡ, hoặc cỡ layout cho phép với case không có model CAD,
  * vd case 40% vừa Planck) + layout case cho phép */

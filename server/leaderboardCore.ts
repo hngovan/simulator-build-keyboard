@@ -57,12 +57,18 @@ export function parseRun(body: unknown): Run | null {
   }
 }
 
+/** tiền khởi đầu (START.money): chỉ tiền lãi so với vốn ban đầu mới được tính điểm */
+export const START_MONEY = 7500
+
 /**
- * Điểm tổng hợp xếp hạng: mỗi đơn 10, mỗi uy tín 20, mỗi ngày trụ được 5, mỗi 100k tiền 1
- * (vd 20 ngày · 30 đơn · uy tín 15 · 30.000k ≈ 100 + 300 + 300 + 300 = 1.000 điểm)
+ * Điểm tổng hợp xếp hạng: ưu tiên tiền lãi + uy tín + sao; số ngày không cộng điểm (ngồi chơi qua ngày không lên top).
+ * Mỗi 100k lãi 1, mỗi uy tín 20, mỗi sao trung bình 20, mỗi đơn 10 × (sao TB / 5) (đơn làm ẩu ít điểm).
+ * Vd 30 đơn 4★ · uy tín 15 · 30.000k ≈ 225 + 300 + 80 + 240 = 845 điểm; 40 ngày không làm gì = 0 điểm
  */
-export const runScore = (r: Pick<Run, 'done' | 'rep' | 'day' | 'money'>) =>
-  Math.round(r.done * 10 + r.rep * 20 + r.day * 5 + r.money / 100)
+export const runScore = (r: Pick<Run, 'done' | 'rep' | 'money' | 'stars'>) =>
+  Math.round(
+    (r.money - START_MONEY) / 100 + r.rep * 20 + r.stars * 20 + (r.done * 10 * r.stars) / 5,
+  )
 
 /** giá trị xếp hạng của 1 lượt theo khoá */
 export const rankValue = (r: Run, key: RankKey) => (key === 'score' ? runScore(r) : r[key])

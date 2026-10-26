@@ -41,8 +41,12 @@ export interface Profile {
   reviews: Review[]
   /** switch / stab dư từ đơn trước, dùng cho đơn sau */
   spare: Spare
-  /** bị ban khỏi chợ Hội Phím Cơ tới trước ngày này (đi ăn xin) */
+  /** bị ban khỏi chợ Hội Phím Cơ tới trước ngày này (đi ăn xin, gỡ bài quá nhiều, bán hàng lỗi bị tố) */
   marketBanUntil: number
+  /** lý do bị ban gần nhất (hiện ở chợ); bản lưu cũ không có = đi ăn xin */
+  marketBanWhy: string
+  /** số lần gỡ bài đăng bán trong ngày (quá UNLIST_FREE thì bị ban) */
+  unlists: { day: number; n: number }
   /** mã lượt chơi (gửi bảng xếp hạng server, 1 lượt 1 dòng); bản lưu cũ: rỗng */
   runId: string
   /** dấu tiến trình (`runSig`) lần cuối đã ghi lên bảng xếp hạng; khác hiện tại = chưa lưu bản mới */
@@ -94,6 +98,9 @@ interface Session {
   supplyUsed?: Record<string, number>
   /** đơn đã từ chối hôm nay (vẫn hiện hội thoại ở Mezzenger; quá DECLINE_FREE đơn thì trừ uy tín) */
   rejected?: Order[]
+  /** số đơn nhận hôm nay + id đơn đã làm hôm nay (luật qua ngày); bản lưu cũ không có */
+  acceptedToday?: number
+  worked?: string[]
 }
 
 /** 1 đơn đã đóng gói: kết quả chấm sẵn, tiền / uy tín cộng khi gửi cho khách (hoặc kết thúc ngày) */
@@ -116,7 +123,8 @@ export interface SaveData extends Profile {
 // 3: băng Urgo đếm theo miếng (1 miếng = 2 stab) thay vì theo stab
 // 4: thêm bước dán feet trước khi lắp case → build đang làm đã qua chỗ đó thì dời bước (addFeetStep)
 // 5: O-ring mount gá vòng sau lắp switch / hàn (trước đây trước bước plate) → dời stepIdx theo tên bước (moveRingStep)
-const SAVE_REV = 5
+// 6: thêm bước tuỳ chọn lót foam PCB trước bước plate → dời stepIdx theo tên bước (addFoamStep)
+const SAVE_REV = 6
 
 /**
  * Build làm dở từ bản cũ (chưa có bước `feet`): đã tới / qua chỗ chèn bước thì dời stepIdx lên 1 và coi như
@@ -129,7 +137,8 @@ function addFeetStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' 
   const b = sess.build
   if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
   const ctx = buildContext(order, sess.inventory, sess.mount)
-  const at = ctx.steps.indexOf('feet')
+  // bản cũ này chưa có bước foam (rev 6)
+  const at = ctx.steps.filter((s) => s !== 'foam').indexOf('feet')
   if (at < 0 || b.stepIdx < at || b.feet) return sess
   const feet = Object.fromEntries(ctx.feet.map((_, i) => [i, 'feetBlack']))
   return { ...sess, build: { ...b, stepIdx: b.stepIdx + 1, feet }, history: [] }
@@ -143,12 +152,29 @@ function moveRingStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build'
   const b = sess.build
   if (!order || !b || sess.mount !== 'oring' || !sess.inventory.case || !sess.inventory.pcb)
     return sess
-  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  // bản cũ này chưa có bước foam (rev 6)
+  const steps: StepId[] = buildContext(order, sess.inventory, sess.mount).steps.filter(
+    (s) => s !== 'foam',
+  )
   const old: StepId[] = steps.filter((s) => s !== 'ring')
   old.splice(old.indexOf('plate'), 0, 'ring')
   const cur = old[b.stepIdx]
   // đang ở bước gá vòng cũ (chưa đặt plate): làm tiếp từ bước plate, vòng gá sau
   const stepIdx = cur === 'ring' ? steps.indexOf('plate') : steps.indexOf(cur)
+  if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
+  return { ...sess, build: { ...b, stepIdx }, history: [] }
+}
+
+/** Build làm dở từ bản cũ (chưa có bước `foam`): tìm lại đúng bước đang làm trong danh sách mới */
+function addFoamStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
+  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  const cur = steps.filter((s) => s !== 'foam')[b.stepIdx]
+  const stepIdx = steps.indexOf(cur)
   if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
   return { ...sess, build: { ...b, stepIdx }, history: [] }
 }
@@ -184,6 +210,8 @@ export const START: Profile = {
   reviews: [],
   spare: { switches: {}, stabs: {}, items: [] },
   marketBanUntil: 0,
+  marketBanWhy: '',
+  unlists: { day: 0, n: 0 },
   runId: '',
   lbSynced: '',
   listings: [],
@@ -218,6 +246,12 @@ export function loadSave(): SaveData | null {
       session = {
         ...moveRingStep(session.order, { ...session, history: session.history ?? [] }),
         jobs: session.jobs?.map((j) => ({ ...j, session: moveRingStep(j.order, j.session) })),
+      }
+    }
+    if ((save.rev ?? 0) < 6 && session) {
+      session = {
+        ...addFoamStep(session.order, { ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: addFoamStep(j.order, j.session) })),
       }
     }
     return {
