@@ -8,7 +8,7 @@ import { BIT_LABELS, SCREW_BITS, SCREW_STEPS } from '@/data/steps'
 import type { ScrewBit, ScrewPoint, ScrewStep } from '@/types'
 import { playDrill, playScrew } from '@/sound'
 import { useHover } from '../common/useHover'
-import { BIT_SWAP_MS, BitDriver, SPIN_MS } from '../models/HandTools'
+import { BIT_SWAP_MS, BitDriver, SCREW_SPIN, SPIN_MS } from '../models/HandTools'
 import { MM } from '../models/Switch'
 
 interface ScrewProps extends ScrewPoint {
@@ -40,8 +40,6 @@ const SCREW_STYLES: Record<ScrewStep, ScrewStyle> = {
 /** thời gian ốc bay ra khỏi lỗ sau lần vặn cuối khi tháo (ms) */
 const OUT_MS = 800
 const ease = (t: number) => t * t * (3 - 2 * t)
-/** góc ốc xoay cho trọn 1 con vít: tay 3 nấc × 2.2, điện quay nhiều vòng trong 1 hơi */
-const SCREW_SPIN = { manual: 6.6, electric: 28 }
 
 /**
  * Con vít: click để vặn (tua vít tay 3 lần, tua vít điện 1 lần). Rê chuột hiện tua vít.

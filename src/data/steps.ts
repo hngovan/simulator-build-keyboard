@@ -45,7 +45,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   gasket: { title: 'Dán gasket', hint: 'Click các vị trí quanh plate để dán miếng đệm silicon' },
   ring: {
     title: 'Lắp vòng silicon',
-    hint: 'Click vào PCB để cuốn vòng O-ring quanh viền, plate sẽ đặt đè lên vòng',
+    hint: 'Switch đã giữ chặt plate: click vào board để cuốn vòng O-ring vào khe giữa PCB và plate',
   },
   topCase: {
     title: 'Úp case trên',
@@ -130,14 +130,13 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     steps.push('stabMod', 'stab')
     if (stabType === 'screw') steps.push('stabScrew')
   }
-  // O-ring mount (case 1 mảnh): vòng silicon gá vào khe giữa PCB và plate → gá trước khi đặt plate
-  if (mount === 'oring') steps.push('ring')
   steps.push('plate')
   if (stabKeys.length && stabType === 'plate') steps.push('stabMod', 'stab')
   steps.push('switchLube', 'switch')
   if (inv.pcb!.type === 'solder') steps.push('solder')
   if (['gasket', 'og'].includes(mount)) steps.push('gasket')
-  if (mount === 'og') steps.push('ring')
+  // O-ring / OG: switch (+ hàn) giữ chặt plate vào PCB rồi mới cuốn vòng silicon quanh viền
+  if (mount === 'oring' || mount === 'og') steps.push('ring')
   // top mount (case 2 mảnh): plate bắt vít vào case trên trước, rồi cả cụm thả vào case dưới (khỏi bước đậy case)
   const topMount = mount === 'top' && caseDef.pieces === 2
   // dán feet vào đáy case trước khi lắp board vào case

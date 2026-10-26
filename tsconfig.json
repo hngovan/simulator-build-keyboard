@@ -17,5 +17,5 @@
     "paths": { "@/*": ["src/*"] },
     "types": ["vite/client"]
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts", "api", "server/leaderboardCore.ts"]
 }

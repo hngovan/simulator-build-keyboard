@@ -2,14 +2,20 @@ import { useMemo, useRef, type RefObject } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
+import { TOOLS } from '@/data/parts'
 import type { ScrewBit } from '@/types'
 
 // ---------- Dụng cụ cầm tay (đầu mũi ở gốc toạ độ, thân hướng lên +y) ----------
 
-/** thời gian 1 lần vặn (ms): tay xoay 1 nấc, điện quay liền 1 hơi tới khi vít ăn hết ren */
-export const SPIN_MS = { manual: 250, electric: 700 }
+/** thời gian 1 lần vặn (ms): tay vặn 1 vòng cổ tay, điện quay liền 1 hơi tới khi vít ăn hết ren */
+export const SPIN_MS = { manual: 550, electric: 700 }
+/** góc ốc xoay cho trọn 1 con vít: tay 3 nấc × 2.2, điện quay nhiều vòng trong 1 hơi */
+export const SCREW_SPIN = { manual: 6.6, electric: 28 }
+/** tua vít tay xoay đúng bằng góc ốc mỗi nấc (không trượt so với ốc) */
+const MANUAL_TURN = SCREW_SPIN.manual / TOOLS.screw[0].clicks!
+const ease = (t: number) => t * t * (3 - 2 * t)
 
-// Hiệu ứng vặn: tay thì xoay từng nấc, điện thì quay nhanh + rung
+// Hiệu ứng vặn: tay thì nhấn xuống + vặn chậm 1 nấc theo cổ tay, điện thì motor quay nhanh + rung
 /** dir: 1 = ngược chiều kim đồng hồ nhìn từ trên (tháo vít), -1 = cùng chiều (vặn vào) */
 function useSpin(
   ref: RefObject<THREE.Group | null>,
@@ -17,27 +23,32 @@ function useSpin(
   electric: boolean,
   dir: 1 | -1 = 1,
 ) {
-  const state = useRef({ key: spinKey, t: 0, target: 0 })
+  const state = useRef({ key: spinKey, t: 0, from: 0, to: 0, at: 0 })
   useFrame((_, dt) => {
     const s = state.current
+    const g = ref.current
     if (s.key !== spinKey) {
       s.key = spinKey
       s.t = (electric ? SPIN_MS.electric : SPIN_MS.manual) / 1000
-      s.target += (dir * Math.PI) / 2
+      s.from = s.to
+      s.to += dir * MANUAL_TURN
+      s.at = performance.now()
     }
-    if (!ref.current) return
-    if (s.t > 0) {
-      s.t -= dt
-      if (electric) {
-        ref.current.rotation.y += dir * dt * 40
-        ref.current.position.x = (Math.random() - 0.5) * 0.01
-      } else {
-        ref.current.rotation.y += (s.target - ref.current.rotation.y) * Math.min(1, dt * 14)
-        ref.current.position.y = -0.03
-      }
-    } else {
-      ref.current.position.set(0, 0, 0)
+    if (!g) return
+    if (electric) {
+      if (s.t > 0) {
+        s.t -= dt
+        g.rotation.y += dir * dt * 40
+        g.position.x = (Math.random() - 0.5) * 0.01
+      } else g.position.set(0, 0, 0)
+      return
     }
+    // tay: xoay êm đúng 1 nấc cùng nhịp với ốc, nhấn xuống giữa chừng, cổ tay nghiêng nhẹ theo chiều vặn
+    const k = Math.min(1, (performance.now() - s.at) / SPIN_MS.manual)
+    const bump = Math.sin(Math.PI * k)
+    g.rotation.y = s.from + (s.to - s.from) * ease(k)
+    g.position.y = -0.03 * bump
+    g.rotation.z = dir * 0.06 * bump
   })
 }
 

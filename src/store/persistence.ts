@@ -11,6 +11,7 @@ import type {
   ToolLevels,
   Review,
   Spare,
+  StepId,
 } from '@/types'
 import type { HistoryEntry } from './buildSlice'
 import { buildContext } from '@/data/steps'
@@ -105,7 +106,8 @@ export interface SaveData extends Profile {
 // 2: bỏ jig / bàn ép switch + keycap (thay bằng chứng chỉ thợ), bàn mở 25 ô, gộp cọ lube còn 1 loại
 // 3: băng Urgo đếm theo miếng (1 miếng = 2 stab) thay vì theo stab
 // 4: thêm bước dán feet trước khi lắp case → build đang làm đã qua chỗ đó thì dời bước (addFeetStep)
-const SAVE_REV = 4
+// 5: O-ring mount gá vòng sau lắp switch / hàn (trước đây trước bước plate) → dời stepIdx theo tên bước (moveRingStep)
+const SAVE_REV = 5
 
 /**
  * Build làm dở từ bản cũ (chưa có bước `feet`): đã tới / qua chỗ chèn bước thì dời stepIdx lên 1 và coi như
@@ -122,6 +124,24 @@ function addFeetStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' 
   if (at < 0 || b.stepIdx < at || b.feet) return sess
   const feet = Object.fromEntries(ctx.feet.map((_, i) => [i, 'feetBlack']))
   return { ...sess, build: { ...b, stepIdx: b.stepIdx + 1, feet }, history: [] }
+}
+
+/** Build O-ring làm dở từ bản cũ: bước `ring` nằm trước `plate` → tìm lại đúng bước đang làm trong danh sách mới */
+function moveRingStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || !b || sess.mount !== 'oring' || !sess.inventory.case || !sess.inventory.pcb)
+    return sess
+  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  const old: StepId[] = steps.filter((s) => s !== 'ring')
+  old.splice(old.indexOf('plate'), 0, 'ring')
+  const cur = old[b.stepIdx]
+  // đang ở bước gá vòng cũ (chưa đặt plate): làm tiếp từ bước plate, vòng gá sau
+  const stepIdx = cur === 'ring' ? steps.indexOf('plate') : steps.indexOf(cur)
+  if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
+  return { ...sess, build: { ...b, stepIdx }, history: [] }
 }
 
 export const START: Profile = {
@@ -179,6 +199,12 @@ export function loadSave(): SaveData | null {
       session = {
         ...addFeetStep(session.order, { ...session, history: session.history ?? [] }),
         jobs: session.jobs?.map((j) => ({ ...j, session: addFeetStep(j.order, j.session) })),
+      }
+    }
+    if ((save.rev ?? 0) < 5 && session) {
+      session = {
+        ...moveRingStep(session.order, { ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: moveRingStep(j.order, j.session) })),
       }
     }
     return {

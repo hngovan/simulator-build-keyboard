@@ -4,7 +4,6 @@
 - Chỉ dùng Bun. Xong việc chạy `bun run typecheck`, `bun run lint`, `bun run format:check`.
 - **Lỗi lint cũ, không phải lỗi mới** (6 lỗi): `scripts/probe-stab3.mjs`, `scripts/solder-gameplay.test.ts`,
   `scripts/solder-purchase.test.ts`, `HandTools.tsx` (impure function), `store/index.ts` refs × 2.
-  Format còn báo file `docs/superpowers/plans/...` của phiên khác.
 - Có phiên / công cụ khác sửa song song cùng file (desolder, spoolHolder, failSolderKey, lubeJar thumb, SwitchKind...).
   Luôn đọc lại file trước khi sửa, không ghi đè phần của họ.
 
@@ -42,9 +41,17 @@
   (`__APP_VERSION__`, vite.config.ts). Mỗi lần commit tính năng: thêm mục + nâng version (ghi trong CLAUDE.md).
 - Ảnh demo README (2026-10-25): chụp bằng trình duyệt Orca, profile riêng "sbk-demo" (không đụng save thật), dev server 5173;
   nạp đơn / đẩy build bằng `window.__game` + `import('/src/data/parts.ts')` (mua đủ linh kiện, gán `build` tới bước keycap / lube).
-  Ảnh JPEG 1280px trong `docs/images/` (title, mezzenger, shopii-sach-phep, ban-build, ban-lube, lich-su-cap-nhat), README mục "Ảnh demo".
+  Ảnh JPEG 1280px trong `docs/images/` (title, mezzenger, shopii-sach-phep, ban-build, ban-lube), README mục "Ảnh demo".
+- Ảnh demo bản 0.1.3 (2026-10-26, "chụp ảnh các chức năng mới nhất ... bỏ ảnh lịch sử cập nhật"): Orca browser profile isolated
+  "sbk-demo" (localStorage riêng). Hàm `__demo` (scratchpad) dựng đơn + kho + build tới bước cần chụp (điền tiến độ các bước trước),
+  `__look(target, pos)` đặt camera (nới `controls.maxDistance`). Ảnh hàn: chụp mất ~5s nên quá giờ cháy → tạm làm chậm
+  `performance.now` / `Date.now` ×0.5 trong tab khi giữ chuột. Thêm top-mount, oring-mount, han-switch, dan-feet, shopii-switch;
+  xoá lich-su-cap-nhat.jpg.
 - Dọn code không dùng (2026-10-25, `bunx knip`): xoá `ToolShop.tsx` (app Tiệm Đồ Nghề đã bỏ) + `ArtCard` (chỉ ToolShop dùng),
   `SolderingWorkbench.tsx`, `SwitchSpring`, `lubed` (StationKit), re-export `Screen` / `BuyResult`; bỏ `export` thừa ở ~30 hàm / hằng chỉ
   dùng trong file. Giữ: `src/data/credits.ts` (nguồn ghi công CC BY, xem giay-phep.md), script `probe-*` / `inspect-step` / `alice-layout` /
   `convert-stab-variants` / `fetch-props` (chạy tay), test `scripts/*.test.ts`. knip báo nhầm `PriceTag` / `ChatLine` (types.ts dùng qua
   `import('...')`). Toast "mua ở Tiệm Đồ Nghề hoặc Shopii" → "mua ở Shopii → Dụng cụ".
+- README "Có gì mới" (2026-10-26, "update vào readme cho tôi"): thêm mục "Lịch sử cập nhật" (bảng mọi phiên bản: phiên bản / ngày / mảng / thay đổi) trên "Tài liệu", tóm tắt
+  mục 0.1.3 trong `src/data/changelog.ts` (thua game, bảng xếp hạng server, feet, case theo cụm phím, mount, Shopii, switch mới,
+  UI điện thoại); điền `commits: ['e14e8a0']` cho 0.1.3. Bản sau: thêm dòng phiên bản mới lên đầu bảng.

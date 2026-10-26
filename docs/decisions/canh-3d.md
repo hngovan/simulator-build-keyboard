@@ -325,6 +325,15 @@
   OG vẫn ôm cả mép. Gợi ý bước + `MOUNTS.oring.desc` + OVERVIEW cập nhật. Đã chụp góc nghiêng: vòng nằm giữa PCB và plate.
 - Bản lưu cũ đang build dở mount O-ring sẽ lệch thứ tự bước (danh sách bước đổi).
 
+### O-ring: gá vòng sau lắp switch (2026-10-26)
+
+- Yêu cầu: "O-ring phải làm sau bước gắn sw để cố định plate rồi mới gắn vòng O-ring lên"; stab screw-in lắp trước plate,
+  stab plate-mount lắp sau plate (giữ nguyên, đã đúng).
+- `buildContext`: bỏ `ring` trước `plate`, mount `oring` và `og` cùng gá vòng sau `switch` / `solder` (OG sau `gasket`).
+  Thứ tự: stab (clip / screw + `stabScrew`) → plate → (stab plate-mount) → lube → switch → (hàn) → ring → feet → caseIn.
+  Hình vòng giữ nguyên (`SiliconeRing between` nằm khe PCB–plate). Gợi ý bước + OVERVIEW sửa theo.
+- Save rev 5 (`moveRingStep` trong persistence.ts): build O-ring làm dở tìm lại bước theo tên; đang ở bước gá vòng cũ thì về bước plate.
+
 ### Lắp switch / keycap: sáng cả dãy sẽ lắp (2026-10-25)
 
 - Yêu cầu: có sách phép lắp keycap thì rê vào phải sáng đủ số ô (như hàn).

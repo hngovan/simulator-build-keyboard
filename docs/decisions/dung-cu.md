@@ -30,6 +30,10 @@
   `SPIN_MS` (HandTools: tay 250ms / điện 700ms), ốc xoay `SCREW_SPIN` (tay 6.6, điện 28 rad) + lún / trồi theo đó, tua vít giữ
   hiện (`busy`) tới khi quay xong, ốc tháo ra chỉ bay đi sau lần quay cuối. `BitDriver` điện: thân đứng yên, chỉ đầu kẹp
   (node `bit`) + đầu vít quay (trước cả cây quay như chong chóng).
+- Sửa hiệu ứng tua vít tay (2026-10-26, "hiệu ứng vặn vít thường đang bị sai, có vẻ apply hiệu ứng tua vít điện"): tay cũ giật 90°
+  trong 250ms (lerp nhanh, trông như motor) trong khi ốc xoay 2.2 rad / nấc → lệch nhau. Giờ `useSpin` (HandTools) nhánh tay:
+  `SPIN_MS.manual` 550ms, xoay đúng `MANUAL_TURN` = `SCREW_SPIN.manual` / số click (chuyển `SCREW_SPIN` từ Screw.tsx sang HandTools,
+  dùng chung) theo cùng đường cong ease với ốc, nhấn xuống + nghiêng cổ tay nhẹ giữa nhịp; nhánh điện giữ nguyên.
 - Đổi đầu vít: tua vít nằm trên bàn (`DeskTools`, Room) ẩn trong `BIT_SWAP_MS` (1,3s, cùng lúc `BitSwapPreview` hiện tua vít
   cạnh bàn), xong mới hiện lại trên bàn.
 

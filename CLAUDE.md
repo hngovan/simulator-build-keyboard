@@ -25,8 +25,9 @@ Stack: React 18 + TypeScript (strict) + Vite 6 + Tailwind v4 + React Three Fiber
 Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 
 - `bun run dev` — dev server
-- `bun run server` — server bảng xếp hạng (`server/leaderboard.ts`, Bun, lưu `server/data/leaderboard.json`, cổng
+- `bun run server` — server bảng xếp hạng local (`server/leaderboard.ts`, Bun, lưu `server/data/leaderboard.json`, cổng
   `LEADERBOARD_PORT` mặc định 8787); Vite proxy `/api` về đó, client đổi địa chỉ bằng `VITE_LEADERBOARD_URL`.
+  Bản deploy Vercel: `api/leaderboard.ts` (Vercel Function, Upstash Redis, cùng API; code chung trong `server/leaderboardCore.ts`).
 - `bun run build` — `tsc` + `vite build`
 - `bun run typecheck` / `bun run lint` / `bun run format:check` — chạy cả ba trước khi coi là xong
 - `bun run convert:solder-tools`: bút hàn 60W (GLB), trạm hàn (OBJ), giá bùi nhùi (3MF) trong

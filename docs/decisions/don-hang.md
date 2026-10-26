@@ -181,6 +181,13 @@ bấm phá sản, new game".
   `POST /api/leaderboard` (kiểm tra / kẹp số, tên ≤ 24 ký tự), lưu `server/data/leaderboard.json` (gitignore, giữ tối đa 5000 lượt),
   ghi file tuần tự, CORS mở. Vite dev proxy `/api` → 8787; bản build dùng `VITE_LEADERBOARD_URL` (mặc định `/api`). Không chống gian lận
   (game chạy ở client, số liệu client tự gửi).
+- Deploy Vercel (2026-10-26, "server lưu kết quả có cần làm gì trên Vercel ko" → chọn phương án A): Vercel không chạy được
+  `Bun.serve` + file JSON (serverless, ổ đĩa không giữ). Thêm Vercel Function `api/leaderboard.ts` (export `GET` / `POST` / `OPTIONS`,
+  cùng API) lưu Upstash Redis qua REST `/multi-exec` bằng fetch (không thêm thư viện): hash `lb:runs` (runId → JSON) + sorted set
+  `lb:z:<khoá>` cho từng khoá xếp hạng; quá KEEP thì xoá lượt ít tiền nhất; env `KV_REST_API_*` (tích hợp Vercel) hoặc
+  `UPSTASH_REDIS_REST_*`, thiếu thì 503. Kiểm tra / kẹp dữ liệu, sắp xếp, CORS tách ra `server/leaderboardCore.ts` dùng chung với
+  server Bun local. Import `../server/leaderboardCore.js` (đuôi .js cho ESM trên Node). tsconfig include thêm `api` + file core.
+  Đã thử với Upstash giả lập (ghi đè lượt, xếp hạng, 400, CORS) và `bun run server`; chưa deploy thật. README thêm mục "Deploy lên Vercel".
 - Client (`lib/leaderboardApi.ts`): gửi lỗi thì cất hàng chờ localStorage `sbk-lb-pending` (tối đa 20), mở tab "Toàn server" thì
   `flushPending()` rồi mới tải bảng. App Bảng xếp hạng: tab "Khu phố" (cũ) / "Toàn server" (`ServerBoard.tsx`, badge lý do kết thúc).
 - Cùng ngày, người dùng: "bảng xếp hạng sẽ tính server thôi ko tính chơi local => bỏ 2 tab". Xoá `data/leaderboard.ts` (9 shop giả lập)

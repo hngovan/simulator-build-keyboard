@@ -13,9 +13,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '0.1.3',
+    version: '0.1.4',
     date: '2026-10-26',
     commits: [],
+    title: 'O-ring sau lắp switch, tua vít tay, bảng xếp hạng trên Vercel',
+    items: [
+      'O-ring mount: gắn vòng silicon sau khi lắp switch (PCB hàn thì sau khi hàn), lúc switch đã giữ chặt plate; bản lưu cũ tự dời bước',
+      'Hiệu ứng tua vít thường: vặn chậm theo cổ tay, xoay đúng bằng góc con ốc, nhấn xuống khi vặn (không còn giật như tua vít điện)',
+      'Bảng xếp hạng chạy được khi deploy Vercel (Vercel Function + Upstash Redis), chạy local vẫn dùng bun run server',
+      'README: bảng lịch sử cập nhật mọi phiên bản, ảnh demo top mount / O-ring / hàn switch / dán feet / switch mới, hướng dẫn deploy Vercel',
+    ],
+  },
+  {
+    version: '0.1.3',
+    date: '2026-10-26',
+    commits: ['e14e8a0'],
     title: 'Thua game, feet cao su, case theo cụm phím, giao diện điện thoại',
     items: [
       'Thua game khi uy tín từ −10 trở xuống hoặc hết tiền nhận đơn; nút tuyên bố phá sản ở Cài đặt',
