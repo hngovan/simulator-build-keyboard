@@ -26,6 +26,8 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 <!-- prettier-ignore -->
 | Phiên bản | Ngày | Mảng | Thay đổi chính |
 | --- | --- | --- | --- |
+| **0.1.5** | 26/10/2026 | 🏆 Bảng xếp hạng | Xếp theo điểm tổng (đơn + uy tín + ngày + tiền), lọc theo từng thông số, khung loading khi tải. |
+|  |  | 🔗 Gửi link | Gửi link game lên Facebook / Messenger / Zalo / Discord hiện banner + mô tả. |
 | **0.1.4** | 26/10/2026 | 💍 O-ring mount | Vòng silicon gắn sau khi lắp switch / hàn, lúc switch đã giữ chặt plate. |
 |  |  | 🪛 Tua vít thường | Vặn chậm theo cổ tay, xoay khớp với con ốc, không còn giật như tua vít điện. |
 |  |  | 🏆 Bảng xếp hạng | Chạy trên Vercel (Vercel Function + Upstash Redis); xem mục "Deploy lên Vercel". |

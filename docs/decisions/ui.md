@@ -321,3 +321,14 @@
     mẹo chuột / phím. Cột HUD trái mobile 240 → 280px (bảng đơn bớt xuống dòng).
   - Mezzenger: 2 nút trả lời chia đều 1 hàng, nút từ chối mobile ghi "Từ chối đơn" (desktop giữ "Xin lỗi, shop không nhận được").
   - Còn lại chưa sửa (ngoài phạm vi UI 2D): camera bàn build trên điện thoại quá gần, bàn phím tràn 2 bên (`src/scene`).
+
+### Xem trước khi gửi link (Open Graph / SEO) (2026-10-26)
+
+- Yêu cầu: "hiển thị banner khi gửi link game, hiện tại gửi link chỉ hiện mỗi đường dẫn".
+- `index.html`: `<title>` + `description`, `og:*` (type / site_name / locale vi_VN / url / title / description / image + kích thước + alt),
+  `twitter:card = summary_large_image`, `canonical`, `theme-color`. Ảnh phải là URL tuyệt đối → ghi thẳng
+  `https://simulator-build-keyboard.vercel.app/` (đổi domain thì sửa cả các thẻ).
+- Ảnh `public/og-image.jpg` 1200×630: dựng bằng trang React tạm (nhân vật `SolderingScene`, chữ tiêu đề như màn hình chính,
+  ảnh demo ban-lube + han-switch nghiêng, nút "Chơi miễn phí trên web"), dựng ở 2× rồi chụp từng mảnh PNG ở trình duyệt Orca, ghép + thu nhỏ trung bình vùng (giải mã PNG bằng zlib, mã hoá `jpeg-js` q92; bản đầu chụp JPEG 1× bị mờ);
+  trang tạm đã xoá. Muốn làm lại thì dựng lại tương tự.
+- Facebook / Zalo lưu đệm bản xem trước cũ: dùng Facebook Sharing Debugger ("Scrape Again") để làm mới.
