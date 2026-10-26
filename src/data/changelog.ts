@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.9',
     date: '2026-10-26',
-    commits: [],
+    commits: ['4e41cd4'],
     title: 'Chợ lời được, bài bid, plateless + foam PCB, luật qua ngày',
     items: [
       'Đăng bán: giá trên giá chợ tới 1.4× giá gốc có thể gặp đại gia chốt trong đêm; chứng chỉ thợ +5% mỗi bậc, có người khen thợ, up bài',
