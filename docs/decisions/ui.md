@@ -389,3 +389,4 @@
   viền `border-black` đặc, bỏ `shadow`; bỏ `drop-shadow` nhân vật (cả `BenchDialog`); nút "📊 Bảng tỉ lệ" hover chỉ nhích 1px, bóng giữ 4px
   (đè riêng bằng `!`, không đổi `Button` chung).
 - Sửa (2026-10-26): nút "Bảng tỉ lệ" trong bong bóng: bóng đen 35% của `Button` trên nền kem thành vệt xám → bóng `#9cc3ff` (xanh nhạt cùng tông, cả hover / active), emoji 📊 → icon lucide `ChartColumn` trắng.
+- Sửa (2026-10-26): bảng tỉ lệ tràn khung ở dòng dài ("Test: phím không nhận · giao đi…") vì cột tỉ lệ `shrink-0` → 2 cột `min-w-0` co giãn, cột tỉ lệ `max-w-[55%]` + `break-words` xuống dòng (đã đo: dòng 3 hàng, nằm trong khung).

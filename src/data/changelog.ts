@@ -25,6 +25,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'App Đánh giá có icon "!" giải thích cách chấm sao và uy tín',
       'Hội Phím Cơ: ô trống "Nhận đơn trước…" có icon như tab Bài của tôi',
       'Nút Bảng tỉ lệ: bóng đổ xanh nhạt cùng tông thay vệt xám, icon trắng',
+      'Bảng tỉ lệ: dòng dài tự xuống dòng, không tràn khung',
     ],
   },
   {

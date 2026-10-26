@@ -31,8 +31,11 @@ export function OddsDialog({ onClose }: { onClose: () => void }) {
                     key={r.what}
                     className="flex items-start justify-between gap-3 rounded-lg bg-panel-2 px-2.5 py-1.5 text-sm"
                   >
-                    <span>{r.what}</span>
-                    <b className="shrink-0 text-right text-yellow">{r.odds}</b>
+                    {/* tỉ lệ dài (vd phím chưa hàn) xuống dòng, không tràn khung: 2 cột co giãn, cột phải tối đa ~55% */}
+                    <span className="min-w-0 flex-1">{r.what}</span>
+                    <b className="max-w-[55%] min-w-0 text-right break-words text-yellow">
+                      {r.odds}
+                    </b>
                   </div>
                 ))}
               </div>
