@@ -117,19 +117,23 @@ export function ProductImage({
           ) : (
             <PartArt category="keycap" color={swatch} />
           )}
-          {/* nhãn nổi trên ảnh: profile (vàng) + chất liệu PBT / ABS / Mix (xanh) */}
-          <span
-            className="absolute bottom-1 left-1 rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]"
-            title={profile ? `Profile keycap: ${profile.toUpperCase()}` : 'Profile keycap'}
-          >
-            {profile?.toUpperCase()}
-          </span>
-          <span
-            className="absolute right-1 bottom-1 rounded-md border-2 border-black/40 bg-blue px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-[0_2px_0_#0006]"
-            title={`Chất liệu keycap: ${KEYCAP_MATERIALS[keycapMaterialOf(cap ?? {})].name}`}
-          >
-            {KEYCAP_MATERIALS[keycapMaterialOf(cap ?? {})].name}
-          </span>
+          {/* nhãn nổi trên ảnh: profile (vàng) + chất liệu PBT / ABS / Mix (xanh);
+              khung hẹp (ảnh bài chợ) không đủ chỗ thì nhãn chất liệu lên dòng trên, không đè nhau */}
+          <div className="absolute inset-x-1 bottom-1 flex flex-wrap-reverse items-end justify-between gap-0.5">
+            <span
+              className="rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]"
+              title={profile ? `Profile keycap: ${profile.toUpperCase()}` : 'Profile keycap'}
+            >
+              {profile?.toUpperCase()}
+            </span>
+            <span
+              className="ml-auto rounded-md border-2 border-black/40 bg-blue px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-[0_2px_0_#0006]"
+              title={`Chất liệu keycap: ${KEYCAP_MATERIALS[keycapMaterialOf(cap ?? {})].name}`}
+            >
+              {/* tên ngắn (PBT / ABS / MIX) để vừa khung nhỏ, tên đủ ở tooltip */}
+              {keycapMaterialOf(cap ?? {}).toUpperCase()}
+            </span>
+          </div>
         </div>
       </ImageZoom>
     )

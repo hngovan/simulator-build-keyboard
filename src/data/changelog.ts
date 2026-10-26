@@ -13,6 +13,27 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.3',
+    date: '2026-10-26',
+    commits: [],
+    title: 'Thua game, feet cao su, case theo cụm phím, giao diện điện thoại',
+    items: [
+      'Thua game khi uy tín từ −10 trở xuống hoặc hết tiền nhận đơn; nút tuyên bố phá sản ở Cài đặt',
+      'Bảng xếp hạng server (bun run server): ghi kết quả khi thua / phá sản / chơi mới, xếp theo tiền; ví hiện gọn k → m → B',
+      'Bước mới "Dán feet cao su": case lật úp, dán 4 feet đen / trắng vào hốc CNC dưới đáy; Shopii bán vỉ 4 feet',
+      'Khối chặn theo cụm phím như case thật (TKL / full / FRL / 75 / 65), khung mỏng ở mặt trên, cao đều, bên dưới rỗng',
+      'Case mica: tấm trên cùng cắt liền 1 tấm theo từng cụm phím; case dựng bằng code thành 1 khối liền, mica cắt phẳng xếp lớp',
+      'Case 2 mảnh có lỗ vít (nhôm / PC / acrylic ở đáy, mica xuyên các tấm); case 1 mảnh chơi được tray / O-ring / OG; thêm Case TKL nhôm 1 mảnh',
+      'Shopii gộp case cùng dòng thành 1 sản phẩm, chọn chất liệu rồi màu; nhãn cỡ case trên ảnh',
+      'Đơn có thể đòi đúng 1 con switch; switch hợp tiếng khách muốn (clack / thock không ra switch silent)',
+      'Thêm nhiều switch (Otemu Silent V1 / V2, Cherry Tím / Cam, Gateron Type R / Milky / Silent Tactile, HMX Snowfall / Waverider / Su Color / Xinhai / KD200 / V2U, Wingtree, Ruben Bumblebee...), housing trong có kim tuyến',
+      'Thêm màu case tím / coffee sữa / nâu đậm, đỏ + navy cho mọi case đục',
+      'Tối ưu giao diện điện thoại: taskbar, hộp thoại, HUD bàn build, camera tự lùi theo màn dọc',
+      'Nhãn profile / chất liệu trên ảnh keycap ở Hội Phím Cơ hết đè nhau: tên chất liệu ngắn (PBT / ABS / MIX), khung hẹp thì xếp 2 dòng',
+      'Shopii: ô số lượng (− / + hoặc gõ số) cho switch, stab, vật tư, sách phép; giá nhân theo số lượng',
+    ],
+  },
+  {
     version: '0.1.2',
     date: '2026-10-25',
     commits: [],

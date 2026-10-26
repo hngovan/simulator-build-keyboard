@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import * as THREE from 'three'
-import { BLOCKER_TOP, blockerGaps, getLayout } from '@/data/layouts'
+import { BLOCKER_SKIN, BLOCKER_TOP, blockerGaps, getLayout, keyRegions } from '@/data/layouts'
 import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS, caseFits, caseModelOf } from '@/data/parts'
-import { CASE_MARGIN, CASE_WALL, Y } from '@/data/steps'
+import { CASE_MARGIN, CASE_WALL, Y, caseScrewHoles, feetPockets } from '@/data/steps'
 import { MM } from '@/scene/models/Switch'
 import { caseShellGeometry, micaStack } from '@/scene/parts/caseShell'
 import { WEIGHT_METALS, WOOD_TEX, prepWood, woodTexFor, woodUV } from '@/scene/materials'
@@ -199,13 +199,40 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
   } else {
     const W = width + 2 * (CASE_MARGIN + CASE_WALL)
     const D = depth + 2 * (CASE_MARGIN + CASE_WALL)
+    // 4 hốc feet tròn CNC lõm dưới đáy (case CAD có hốc sẵn trong model)
+    const pockets = feetPockets(undefined, width, depth, origin)
+    // case 2 mảnh: lỗ vít ở đáy (nhôm / PC / acrylic) hoặc xuyên mọi lớp (mica ghép)
+    const screwHoles = caseScrewHoles(def, width, depth)
     if (def.material === 'mica') {
       // mica: tấm cắt phẳng xếp chồng (2 lớp dưới là đáy liền), giống bàn build
-      group.add(micaStack(W, D, Y.floorBot, Y.caseTop, CASE_WALL, caseMat, 2))
+      // tấm trên mặt plate khoét theo vùng phím: khung chặn liền tấm mica trên cùng
+      group.add(
+        micaStack(
+          W,
+          D,
+          Y.floorBot,
+          Y.caseTop,
+          CASE_WALL,
+          caseMat,
+          2,
+          pockets,
+          screwHoles,
+          keyRegions(keys, width, depth),
+        ),
+      )
     } else {
       // vỏ liền 1 khối (vành + sàn đáy) như bàn build; case 2 mảnh: phần dưới (đáy riêng màu) + vành trên
       const shell = (y0: number, y1: number, mat: THREE.Material, floor?: number) => {
-        const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floor)
+        // phần có sàn (đáy) thì khoét 4 hốc feet CNC như bàn build
+        const g = caseShellGeometry(
+          W,
+          D,
+          y0,
+          y1,
+          CASE_WALL,
+          floor,
+          floor === undefined ? [] : [...pockets, ...screwHoles],
+        )
         group.add(new THREE.Mesh(def.material === 'wood' ? woodUV(g) : g, mat))
       }
       if (def.pieces === 2) {
@@ -271,11 +298,16 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
   // khối chặn liền case ở chỗ trống hàng dưới (HHKB, WKL...)
   // case CAD cao hơn: khối chặn tới BLOCKER_TOP; case dựng bằng code thì ngang mép trên case
   // case CAD nghiêng (board thấp theo mặt nêm): khối chặn thấp ngang mặt khung, không nhô giữa hàng phím
-  const blockH = (caseModel ? (def.seat?.tilt ? 0.3 : BLOCKER_TOP) : Y.caseTop) - Y.plateBot
-  for (const bl of blockerGaps(keys, width, depth, CASE_MARGIN + 0.05)) {
-    const h = bl.top !== undefined ? bl.top - Y.plateBot : blockH
+  const blockTop = caseModel ? (def.seat?.tilt ? 0.3 : BLOCKER_TOP) : Y.caseTop
+  // mica: khung chặn đã nằm trong tấm mica trên cùng
+  const blocks =
+    !caseModel && def.material === 'mica' ? [] : blockerGaps(keys, width, depth, CASE_MARGIN + 0.05)
+  for (const bl of blocks) {
+    // tấm khung mỏng ở mặt trên, bên dưới rỗng (như bàn build)
+    const t = bl.top ?? blockTop
+    const h = Math.min(BLOCKER_SKIN, t - Y.plateBot)
     const block = new THREE.Mesh(new THREE.BoxGeometry(bl.w, h, bl.d), caseMat)
-    block.position.set(bl.x, Y.plateBot + h / 2, bl.z)
+    block.position.set(bl.x, t - h / 2, bl.z)
     board.add(block)
   }
   // nghiêng bàn phím cho thấy mặt trên + cạnh trước

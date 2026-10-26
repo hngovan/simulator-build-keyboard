@@ -16,6 +16,7 @@ import { useCamLock } from './common/camLock'
 import { ROOM_BOUNDS, Room } from './Room'
 import { CuttingMat } from './common/CuttingMat'
 import { EmptyBench } from './EmptyBench'
+import { fitAspect } from './common/fitAspect'
 import { screenCenter, screenEye } from './models/computerLayout'
 
 /** Báo cảnh đã sẵn sàng khi Suspense ngoài cùng tải xong */
@@ -74,12 +75,13 @@ function CameraRig() {
   const camera = useThree((s) => s.camera)
   const scene = useThree((s) => s.scene)
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
+  const fit = useThree((s) => fitAspect(s.size.width / s.size.height))
   useEffect(() => {
     const w = ctx.width
-    camera.position.set(0, w * 0.62 + 1.5, w * 0.42 + 2.5)
+    camera.position.set(0, (w * 0.62 + 1.5) * fit, (w * 0.42 + 2.5) * fit)
     controls?.target.set(0, 0, 0)
     controls?.update()
-  }, [ctx, camKey, controls, camera])
+  }, [ctx, camKey, controls, camera, fit])
 
   // dev: mở camera + controls trong console (cùng kiểu window.__game) để đặt góc nhìn khi debug
   useEffect(() => {

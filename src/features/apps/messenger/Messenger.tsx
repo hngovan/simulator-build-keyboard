@@ -152,7 +152,11 @@ function Reply({
   children: ReactNode
 }) {
   return (
-    <Button tone={tone} className="flex items-center gap-2 [&_svg]:size-4" onClick={onClick}>
+    <Button
+      tone={tone}
+      className="flex items-center gap-2 max-md:flex-1 max-md:justify-center max-md:px-2 max-md:whitespace-nowrap [&_svg]:size-4"
+      onClick={onClick}
+    >
       {icon}
       {children}
     </Button>
@@ -292,7 +296,9 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
                   icon={<X />}
                   onClick={() => act('decline', () => declineOrder(order.id))}
                 >
-                  Xin lỗi, shop không nhận được
+                  {/* điện thoại: chữ ngắn cho 2 nút vừa 1 hàng */}
+                  <span className="max-md:hidden">Xin lỗi, shop không nhận được</span>
+                  <span className="md:hidden">Từ chối đơn</span>
                 </Reply>
               </>
             )}

@@ -13,6 +13,7 @@ import type {
   Spare,
 } from '@/types'
 import type { HistoryEntry } from './buildSlice'
+import { buildContext } from '@/data/steps'
 
 const SAVE_KEY = 'sbk-save-v3'
 
@@ -103,7 +104,25 @@ export interface SaveData extends Profile {
  */
 // 2: bỏ jig / bàn ép switch + keycap (thay bằng chứng chỉ thợ), bàn mở 25 ô, gộp cọ lube còn 1 loại
 // 3: băng Urgo đếm theo miếng (1 miếng = 2 stab) thay vì theo stab
-const SAVE_REV = 3
+// 4: thêm bước dán feet trước khi lắp case → build đang làm đã qua chỗ đó thì dời bước (addFeetStep)
+const SAVE_REV = 4
+
+/**
+ * Build làm dở từ bản cũ (chưa có bước `feet`): đã tới / qua chỗ chèn bước thì dời stepIdx lên 1 và coi như
+ * đã dán đủ feet đen; lịch sử hoàn tác cũ bỏ đi (stepIdx trong đó lệch)
+ */
+function addFeetStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
+  const ctx = buildContext(order, sess.inventory, sess.mount)
+  const at = ctx.steps.indexOf('feet')
+  if (at < 0 || b.stepIdx < at || b.feet) return sess
+  const feet = Object.fromEntries(ctx.feet.map((_, i) => [i, 'feetBlack']))
+  return { ...sess, build: { ...b, stepIdx: b.stepIdx + 1, feet }, history: [] }
+}
 
 export const START: Profile = {
   name: '',
@@ -155,9 +174,17 @@ export function loadSave(): SaveData | null {
     }
     const supplies = { ...(save.supplies ?? {}) }
     if ((save.rev ?? 0) < 3 && supplies.urgo) supplies.urgo = Math.ceil(supplies.urgo / 2)
+    let session = save.session
+    if ((save.rev ?? 0) < 4 && session) {
+      session = {
+        ...addFeetStep(session.order, { ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: addFeetStep(j.order, j.session) })),
+      }
+    }
     return {
       ...START,
       ...save,
+      session,
       rev: SAVE_REV,
       wear: save.wear ?? {},
       tools,

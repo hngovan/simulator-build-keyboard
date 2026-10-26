@@ -93,6 +93,29 @@ async function keycapScene(type: string) {
 }
 
 /** Dựng cảnh sản phẩm (hệ mm) */
+/** Vỉ 4 feet cao su bán cầu trên tấm đế (như ảnh vỉ feet bán ngoài): 1 lần mua = 4 cái */
+function createFeetStrip(color: string) {
+  const group = new THREE.Group()
+  const rubber = new THREE.MeshStandardMaterial({ color, roughness: 0.5 })
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 0.03, 0.62),
+    new THREE.MeshStandardMaterial({
+      color: color === '#1c1c1f' ? '#2a2a2e' : '#d9d7d0',
+      roughness: 0.8,
+    }),
+  )
+  group.add(base)
+  const dome = new THREE.SphereGeometry(0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2)
+  for (let i = 0; i < 4; i++) {
+    const m = new THREE.Mesh(dome, rubber)
+    m.scale.y = 0.75
+    m.position.set((i - 1.5) * 0.5, 0.015, 0)
+    group.add(m)
+  }
+  group.rotation.set(0.75, -0.35, 0.12)
+  return group
+}
+
 export async function buildScene(kind: ThumbKind, type: string) {
   const group = new THREE.Group()
   const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x = 0) => {
@@ -148,6 +171,7 @@ export async function buildScene(kind: ThumbKind, type: string) {
   }
   if (kind === 'supply') {
     if (SUPPLIES[type]?.spell) return createScroll(SUPPLIES[type].name)
+    if (SUPPLIES[type]?.feet) return createFeetStrip(SUPPLIES[type].color)
     if (type === 'urgo') {
       // hộp băng cá nhân "Band Aid Box" (Logansryche, Sketchfab, CC BY 4.0): model lệch xa gốc, căn tâm về 0
       const box = (await glbScene('/models/supplies/band-aid-box.glb')).clone(true)

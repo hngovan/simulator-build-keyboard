@@ -105,6 +105,9 @@ export interface ShopSlice {
   /** loại thiếc đang dùng ở bước hàn */
   solderPick: string
   setSolderPick: (id: string) => void
+  /** loại feet đang dán ở bước dán feet (FEET_IDS) */
+  feetPick: string
+  setFeetPick: (id: string) => void
   setMount: (mount: string) => void
   startBuild: () => void
   /**
@@ -214,6 +217,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   rejected: [],
   lubePick: { switch: 'g0', housing: 'g2', wire: 'bdz', spring: 'gpl105' },
   solderPick: 'solder6337',
+  feetPick: 'feetBlack',
 
   // ---------- đơn hàng ----------
   acceptOrder: (id) => {
@@ -649,6 +653,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   },
   setLubePick: (kind, id) => set((s) => ({ lubePick: { ...s.lubePick, [kind]: id } })),
   setSolderPick: (solderPick) => set({ solderPick }),
+  setFeetPick: (feetPick) => set({ feetPick }),
   setMount: (mount) => {
     if (!get().build) set({ mount })
   },

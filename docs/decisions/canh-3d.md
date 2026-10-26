@@ -306,6 +306,16 @@
 - `Gaskets` (BoardDetails.tsx) chỉ miếng chưa dán đầu tiên; `Board` chỉ cạnh trước vòng silicon chờ gá. Dùng chung `HintArrow`
   (StationKit, thêm prop `size`, bàn build dùng 1.6 vì camera xa hơn). Đã chụp kiểm tra Tofu60 Redux mount O-ring.
 
+### Bàn lube: hộp lắc + khay lò xo dời vào (2026-10-26)
+
+- Yêu cầu: làm đơn 101 switch thì 2 hộp lò xo sát chân màn hình PC. Bàn lube scale theo `ctx.width / 12` nên bàn full to ra,
+  hàng sau lấn ra sau. `BOX_AT.z` −4.7 → −4.4, `TRAY_AT.z` −5 → −4.7 (dời 0.7u thì cấn switch, chỉ nhích 0.3u).
+
+### Mũi tên bàn mod stab to hơn (2026-10-26)
+
+- Yêu cầu: bước mod stab "chưa có mũi tên vàng". Thực ra đã có (`hint[next]`) nhưng size 1 trong `StationTable` bị thu nhỏ
+  thêm khi bàn nới theo số stab (`k < k0`) → gần như không thấy. Giờ `size={1.8 * max(1, k0 / k)}` bù lại phần thu nhỏ.
+
 ### O-ring mount: vòng kẹp giữa PCB và plate (2026-10-25)
 
 - Yêu cầu: O-ring mount = vòng O-ring cuốn quanh, kẹp giữa PCB và plate, dùng cho case 1 mảnh.
@@ -377,3 +387,71 @@
   (góc bo theo góc ruột, không hở 4 góc) → 1 geometry. `Walls` (Case.tsx) dùng nó (case dưới kèm sàn, case trên chỉ vành); gỗ trải UV qua
   `woodUV` (tách từ `woodBoxGeometry`, materials.tsx). `buildKeyboardModel` cũng dựng vỏ liền (case 2 mảnh: phần dưới màu đáy + vành trên),
   bỏ khối đặc khi xem cả bàn phím.
+- Khối chặn 75% / 65% / full (2026-10-26, người dùng: "các block của layout 75%, 65 và tkl cũng chưa đúng"): `blockerGaps` (layouts.ts)
+  xét chỗ trống theo dải hàng dưới (tính cả phím 2u lấn xuống → hết khối chặn đè Numpad Enter ở full); khe giữa hàng từ 0.25u được lấp
+  khi ngay phía trên có phím che (khe dưới Shift phải trước cụm mũi tên 75% / 65%); khe chạy dọc cả bàn (giữa cụm TKL / full) là plate
+  thật, không lấp. TKL giữ khối quanh cụm mũi tên như cũ. Vẽ kiểm tra bằng SVG + Chrome headless.
+
+## Feet cao su + hốc CNC dưới đáy case (2026-10-26)
+
+- Người dùng: "nên cnc lõm 4 cái feet tròn ở bot để có thêm step gắn feet bot trước khi assem bước case, tuỳ case sẽ có feet đen,
+  trắng có bán trong shop; 1 lần mua là 4 cái feet" (kèm ảnh vỉ 4 feet bán cầu).
+- Hốc: `feetPockets` (steps.ts) → `ctx.feet` [{x, z, r, depth}] toạ độ cảnh. Case CAD dùng hốc dò sẵn `caseFeet.json` (mm → u);
+  case dựng bằng code: 4 hốc gần 4 góc (W/2 − 0,9, D/2 − 0,75), `FOOT_R` 0,21u (~4mm), sâu `FOOT_DEPTH` 0,07u (~1,3mm), nằm trong sàn.
+  `caseShellGeometry(..., pockets)` khoét lỗ tròn xuyên sàn (`punch`) + đĩa trần hốc (`pocketCeilings`) → hốc lõm thật (đo: giữa hốc
+  −0,83 so với đáy −0,9). Mica: tấm đáy dưới cùng cắt lỗ, tấm thứ 2 làm trần (`micaLayerGeometry(..., pockets)`).
+- Bước `feet` (types.ts `StepId`, `STEP_INFO`, `stepProgress`): chèn trước `topCase` (top mount) / `caseIn`; `autoFlip` → case lật úp;
+  `Assembly` coi như `caseOpen`: chỉ hiện case, ẩn board. `RubberFeet` (Case.tsx): hốc chưa dán có đĩa vàng (hốc kế tiếp sáng hơn,
+  rê chuột trắng), click → `placeFoot(i)`; feet đã dán = nửa cầu (`FOOT_DOME`) đen `#1c1c1f` / trắng `#efeee9` lồi ~1mm dưới đáy.
+  Trước đây feet luôn vẽ sẵn; giờ chỉ hiện feet đã dán.
+- Vật tư `feetBlack` / `feetWhite` (supplies.ts, `SupplyDef.feet`, gói 4 cái 25k), `FEET_IDS`; `feetPick` + `setFeetPick` (shopSlice);
+  `FeetPanel` (ModPanels, BenchHud) chọn loại + số còn + cảnh báo thiếu (nút mở Shopii). Shopii nhóm "Feet cao su" (shopFilters),
+  ảnh 3D vỉ 4 feet bán cầu trên tấm đế (`createFeetStrip`, modelThumb.ts). Chưa chấm điểm màu feet hợp case (chỉ gợi ý trong panel).
+- Bản lưu rev 4 (`addFeetStep`, persistence.ts): build làm dở đã tới / qua chỗ chèn bước thì stepIdx + 1, coi như đã dán đủ feet đen,
+  bỏ lịch sử hoàn tác cũ (stepIdx trong đó lệch); áp cho đơn đang làm + jobs.
+- Lắp thử kiểm tra cấn (2026-10-26, người dùng: "assem thử mạch và keycap lên test xem có bị cấn ko"): dựng build hoàn chỉnh 75 / 65 / TKL /
+  full bằng store (`window.__game`) trong Chrome headless (CDP) chụp toàn cảnh + cận cảnh, kèm kiểm tra số: khối chặn không đè ô keycap
+  nào (keycap ~0,95u) ở 6 layout. Cấn tìm thấy: vít `trayScrew` nằm dưới khối chặn (75 / 65: khe mới lấp; full: khối cạnh cụm mũi tên,
+  lỗi cũ) → `buildContext` dời vít tray bị chặn dần vào giữa (bước 0,25u) tới chỗ trống. HHKB: vít case bắt từ đáy nằm dưới khối chặn
+  (ẩn trong case, không lộ) nên giữ nguyên.
+- Camera trên điện thoại (2026-10-26, cùng yêu cầu "tối ưu ui cho điện thoại"): khoảng cách camera mặc định chỉ theo bề rộng bàn phím
+  (canh cho màn ngang) → màn dọc bàn phím tràn 2 bên. `fitAspect(aspect)` (`scene/common/fitAspect.ts`) = max(1, 1,45 / aspect), tối đa
+  3,2: `CameraRig` (Bench.tsx) và `EmptyBench` nhân vị trí camera với hệ số này (đổi tỉ lệ / xoay máy thì đặt lại). Màn ngang không đổi.
+- Khối chặn lơ lửng (2026-10-26, người dùng: "case tkl block bị treo lơ lửng", kèm ảnh TKL thật mặt case che kín vùng trên cụm mũi tên):
+  khối chặn trước dựng từ `Y.plateBot` → xem riêng vỏ case (Shopii, bước thả board) thấy khối treo giữa không. Giờ dựng từ sàn case
+  `Y.floorTop` lên mặt trên (`Blockers` trong Case.tsx + `buildKeyboardModel`); khi có board thì mạch / plate nằm lọt trong khối (khuất).
+- Hốc feet trong cửa hàng (cùng ngày, "thêm 4 cái lỗ feet tròn dưới bot luôn, trong cửa hàng ko thấy"): `buildKeyboardModel` truyền
+  `feetPockets(undefined, ...)` vào `caseShellGeometry` (phần có sàn) / `micaStack` → case dựng bằng code xem từ đáy có 4 hốc như bàn build
+  (case CAD như Eclipse 60 có hốc sẵn trong model). Đã chụp kiểm tra đáy case nhựa + mica.
+- Hốc feet nông + lỗ tròn (2026-10-26, người dùng: "lỗ feet sâu quá cho nó nông hơn xíu để lồi ra và lỗ đang không phải hình tròn hoàn
+  chỉnh", kèm ảnh case mica lật úp feet chìm trong hốc): `FOOT_DEPTH` 0,07 → 0,042u (~0,8mm); feet cao `depth + 0,08` (lồi ~1,5mm).
+  Mica trước khoét xuyên cả tấm đáy (~2,7mm) → `micaLayerGeometry` có hốc thì gộp thêm `pocketCeilings` (trần hốc trong tấm, sâu như
+  case liền khối). Lỗ đa giác do `curveSegments` 4–6 → có hốc thì 32. Vỏ liền khối: bevel lấn vào lỗ làm lỗ hẹp còn 0,175u (< feet
+  0,193u, cấn) → khoét rộng thêm `SHELL_BEVEL`. Đo lại: sâu 0,80mm cả 2 loại, bán kính lỗ 0,210 đều 72 hướng; chụp kiểm tra mica + nhựa.
+- Khối chặn theo cụm phím + mặt trong sàn phẳng (2026-10-26, người dùng: "bỏ feet ở mặt trong để mặt dưới thôi; block case tkl phải như
+  thế này", kèm ảnh CAD TKL: mặt case làm khung quanh cụm F / cụm chính / cụm nav / cụm mũi tên chữ T, che hết chỗ không có phím).
+  `blockerGaps` (layouts.ts) viết lại: lưới 1/8u, đánh dấu ô thuộc phím, gộp ô trống thành hình chữ nhật (ưu tiên dải ngang, bỏ vụn
+  < 1/4u), khối chạm mép board kéo ra `edge` ăn vào thành case. Khối hàng dưới cùng (chạm mép trước, sâu ≤ 1,3u: HHKB, WKL, khe 75 / 65)
+  cao ngang mép case như cũ; còn lại (dải giữa hàng F / hàng số, vách giữa cụm, vùng trên numpad, quanh mũi tên) `top` 0,3u, thấp hơn
+  keycap. Bỏ code riêng cho cụm mũi tên. Kiểm tra: không khối nào đè ô keycap, vít tray (dời ngang, không được thì sang khe hàng kế)
+  không nằm dưới khối, ở 75 / 65 / TKL / full / FRL / HHKB / WKL.
+  Sàn có hốc feet: 2 lớp — tấm mỏng dưới (dày = độ sâu hốc, khoét lỗ, không bevel) + tấm trên liền (trần hốc) → mặt trong phẳng
+  (đo: −0,6 ở mọi điểm), không còn vết lỗ. Mica: viền mép tấm đáy lấy theo tấm liền (không vẽ vòng tròn lỗ nhìn xuyên từ trong).
+- Khung chặn rỗng bên dưới (2026-10-26, người dùng: "bên trong phải có độ rỗng chứ sao block lại đi full từ dưới lên trên mà ko khoét
+  rỗng", kèm ảnh mặt dưới case trên CAD: khung mỏng quanh các cụm phím, bên dưới rỗng). Khối chặn giờ là tấm mỏng `BLOCKER_SKIN`
+  0,18u (~3,4mm) ở mặt trên (mặt dưới tấm ≥ `Y.plateBot`), không còn đặc từ sàn lên; không lơ lửng vì `blockerGaps` mới nối khung vào
+  thành case qua các dải (dải dưới hàng F, vách giữa cụm, khối chạm mép kéo vào thành). Áp ở `Blockers` (Case.tsx) + `buildKeyboardModel`.
+  Có board: plate (mặt trên 0) nằm dưới khung (đáy khung 0,12–0,44u tuỳ case), không chồng nhau.
+- Khung chặn cao đều (2026-10-26, người dùng: "các phần block đang không cao bằng nhau ở cụm arrow, cao như nhau hết chứ"): bỏ `top` 0,3u
+  cho khối giữa bàn → mọi khối cao ngang mép case (code: `Y.caseTop`, CAD: `BLOCKER_TOP`, CAD nghiêng 0,3), mặt khung phẳng như case thật.
+  Khung nằm ngoài ô phím nên keycap nhấn xuống không cấn.
+- Case 2 mảnh có lỗ vít + mica khung liền tấm (2026-10-26, người dùng: "case 2 mảnh thì phải có lỗ để bắt ốc ở dưới đáy, mica ghép thì có
+  thể bắt ở đáy hoặc ở trên, alu thì chỉ ở dưới đáy"; "mảnh trên cùng của mica phải liền 1 mạch với block, không có chuyện block tách
+  riêng"). `caseScrewPoints` (steps.ts, tách từ buildContext; bắt từ đáy lùi 2 vít đầu hàng vào 0,4u cho khỏi chạm hốc feet) +
+  `caseScrewHoles` (r `SCREW_HOLE_R` 0,1u): nhôm / PC / acrylic 2 mảnh → hốc đầu vít ở mặt đáy (gộp với hốc feet trong sàn 2 lớp);
+  mica → lỗ xuyên mọi tấm ở viền (`micaLayerGeometry(..., holes)`), bắt từ trên hay từ đáy đều thấy lỗ.
+  Mica: `keyRegions` (layouts.ts) dò đường bao từng vùng phím trên lưới 1/8u → các tấm nằm trên mặt plate (`micaLayerKind` 'frame', y ≥ 0)
+  khoét theo vùng phím thay cho lỗ ruột chữ nhật → khung giữa các cụm phím là 1 phần của tấm mica trên cùng, không đặt khối chặn rời
+  (Case.tsx + `buildKeyboardModel` bỏ `Blockers` khi mica). Case 2 mảnh không phải mica: khung chặn chuyển sang nhóm case trên (nhấc /
+  đậy cùng case trên, trước đây nằm ở case dưới nên lơ lửng khi mở case). Kiểm tra 23 tổ hợp case 2 mảnh × layout: vít không chạm hốc
+  feet / vùng phím, hình không lỗi; chụp mica 75 / full (khung liền tấm), đo 10 lỗ vít đáy TKL nhôm 2 mảnh lõm −0,858 (đáy −0,9).

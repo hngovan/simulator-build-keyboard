@@ -94,6 +94,8 @@ export interface BuildSlice {
   /** dùng 1 lần dụng cụ có độ bền (mỏ hàn, bùi nhùi) */
   wearTool: (kind: ToolKind) => void
   placeGasket: (i: number) => void
+  /** dán 1 feet (loại feetPick) vào hốc thứ i dưới đáy case */
+  placeFoot: (i: number) => void
   wrapRing: () => void
   dropInCase: () => void
   closeCase: () => void
@@ -114,6 +116,7 @@ export const newBuild = (): BuildState => ({
   solderFailures: {},
   gaskets: {},
   ring: false,
+  feet: {},
   inCase: false,
   closed: false,
   keycaps: {},
@@ -695,6 +698,15 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!s || s.build.gaskets[i]) return
       commit(snapshot())
       s.patchBuild({ gaskets: { ...s.build.gaskets, [i]: true } })
+    },
+    placeFoot: (i) => {
+      const s = at('feet')
+      if (!s || s.build.feet?.[i]) return
+      // chụp trước khi trừ vật tư: hoàn tác thì trả lại feet
+      const snap = snapshot()
+      if (!s.useSupply(s.feetPick, 1)) return
+      commit(snap)
+      get().patchBuild({ feet: { ...s.build.feet, [i]: s.feetPick } })
     },
     press: (id, down) => {
       const s = at('test')

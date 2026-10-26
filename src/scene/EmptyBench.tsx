@@ -5,6 +5,7 @@ import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useGame } from '@/store'
 import { Y } from '@/data/steps'
 import { CuttingMat } from './common/CuttingMat'
+import { fitAspect } from './common/fitAspect'
 import { MissingSlot } from './stations/StationKit'
 
 /** Bàn build khi chưa có đơn nào đang build: tấm lót trống + ô vàng nét đứt, bấm để chọn đơn */
@@ -13,11 +14,13 @@ export function EmptyBench() {
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
   // bấm "Góc nhìn mặc định" (camKey tăng) thì đưa camera về nhìn cả bàn
   const camKey = useGame((s) => s.camKey)
+  // màn dọc (điện thoại): lùi xa cho thấy đủ bề ngang bàn
+  const fit = useThree((s) => fitAspect(s.size.width / s.size.height))
   useEffect(() => {
-    camera.position.set(0, 19, 17)
+    camera.position.set(0, 19 * fit, 17 * fit)
     controls?.target.set(0, 0, 0)
     controls?.update()
-  }, [camera, controls, camKey])
+  }, [camera, controls, camKey, fit])
   const at = useMemo(() => new THREE.Vector3(0, 0, 0), [])
   return (
     <>

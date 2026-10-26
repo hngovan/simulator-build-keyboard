@@ -815,7 +815,7 @@ export function StabModStation() {
         ),
       )}
 
-      {!busy && next && <HintArrow at={hint[next]} />}
+      {!busy && next && <HintArrow at={hint[next]} size={1.8 * Math.max(1, k0 / k)} />}
     </StationTable>
   )
 }

@@ -32,6 +32,14 @@ import {
 } from './parts'
 
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]
+
+/** loại switch hợp với tiếng khách muốn */
+const WISH_SWITCH: Record<SoundWish, SwitchKind[]> = {
+  silent: ['Silent', 'SilentTactile', 'Linear', 'Tactile'],
+  thock: ['Linear', 'Tactile'],
+  clack: ['Linear', 'Tactile'],
+  noisy: ['Clicky', 'Linear', 'Tactile'],
+}
 const round100 = (v: number) => Math.ceil(v / 100) * 100
 
 const CUSTOMERS = [
@@ -210,13 +218,14 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
   // khách thích tiếng gốc (hay gặp với switch Cherry) thì dặn không lube
   const r = Math.random()
   const lubePref: LubePref = r < 0.4 ? 'want' : r < 0.6 ? 'none' : 'any'
-  // loại switch: khách muốn êm thì hay chọn silent (linear / tactile), ồn thì hay chọn clicky
+  // loại switch phải hợp tiếng khách muốn (WISH_SWITCH): clack / thock chỉ linear / tactile, êm thì hay silent,
+  // ồn thì hay clicky; không bao giờ đòi tiếng clack mà lại chọn switch silent
   const switchKind: SwitchKind =
     wish === 'silent' && Math.random() < 0.7
       ? pick(['Silent', 'SilentTactile'] as SwitchKind[])
       : wish === 'noisy' && Math.random() < 0.6
         ? 'Clicky'
-        : pick(['Linear', 'Tactile', 'Clicky', 'Silent', 'SilentTactile'] as SwitchKind[])
+        : pick(WISH_SWITCH[wish])
   // ~35% khách đòi đúng 1 con switch cụ thể (vd Cherry MX Đen), còn lại đúng loại là được
   const switchType =
     Math.random() < 0.35

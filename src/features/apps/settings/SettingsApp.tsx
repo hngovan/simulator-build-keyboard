@@ -12,7 +12,7 @@ function ConfirmBankrupt({ onCancel, onConfirm }: { onCancel: () => void; onConf
       className="fixed inset-0 z-[3500] grid animate-fade-in place-items-center bg-black/60 p-4"
       onPointerDown={(e) => e.target === e.currentTarget && onCancel()}
     >
-      <HudCard className="flex w-[460px] max-w-full flex-col gap-3">
+      <HudCard className="flex w-[min(460px,100%)] flex-col gap-3">
         <h3 className="font-head text-xl font-extrabold text-yellow">🏳️ Tuyên bố phá sản?</h3>
         <Alert tone="yellow" title="99% người chơi dừng lại ngay trước khi thắng lớn">
           Đơn ngon có thể tới ngay ngày mai. Phá sản là xoá bản lưu, kết quả hiện tại được ghi lên

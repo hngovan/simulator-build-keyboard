@@ -1,21 +1,26 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { RoundedBox, useGLTF } from '@react-three/drei'
-import { DoubleSide, EdgesGeometry } from 'three'
+import { DoubleSide, EdgesGeometry, SphereGeometry } from 'three'
 import type * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
-import { CASE_MARGIN, CASE_WALL, Y } from '@/data/steps'
-import { BLOCKER_TOP, blockerGaps } from '@/data/layouts'
-import type { Key, StepId } from '@/types'
+import { CASE_MARGIN, CASE_WALL, Y, caseScrewHoles } from '@/data/steps'
+import { BLOCKER_SKIN, BLOCKER_TOP, blockerGaps, keyRegions } from '@/data/layouts'
+import type { FootPocket, Key, StepId } from '@/types'
 import { playClick } from '@/sound'
 import { lerpTo } from '../common/anim'
 import { useHover } from '../common/useHover'
 import { CaseMaterial, WEIGHT_METALS, woodBoxGeometry, woodUV } from '../materials'
 import { ScrewSet } from './Screw'
-import { caseShellGeometry, micaEdgeMaterial, micaLayerGeometry, micaStackPlan } from './caseShell'
+import {
+  caseShellGeometry,
+  micaEdgeMaterial,
+  micaLayerGeometry,
+  micaLayerKind,
+  micaStackPlan,
+} from './caseShell'
 import { caseModelOf } from '@/data/parts'
 import { MM } from '../models/Switch'
-import CASE_FEET from '@/data/caseFeet.json'
 
 interface ShellProps {
   W: number
@@ -62,13 +67,22 @@ function CaseBox({
 
 /**
  * Vỏ case liền 1 khối (không phải 4 thanh + tấm đáy ghép): vành bo góc khoét ruột từ y0 tới y1,
- * `floorTop`: kèm sàn đáy liền. Gỗ trải UV vân theo toạ độ thật
+ * `floorTop`: kèm sàn đáy liền, `pockets`: hốc feet CNC lõm ở mặt đáy. Gỗ trải UV vân theo toạ độ thật
  */
-function Walls({ W, D, y0, y1, mat, wood, floorTop }: ShellProps & { floorTop?: number }) {
+function Walls({
+  W,
+  D,
+  y0,
+  y1,
+  mat,
+  wood,
+  floorTop,
+  pockets,
+}: ShellProps & { floorTop?: number; pockets?: FootPocket[] }) {
   const geometry = useMemo(() => {
-    const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floorTop)
+    const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floorTop, pockets)
     return wood ? woodUV(g) : g
-  }, [W, D, y0, y1, floorTop, wood])
+  }, [W, D, y0, y1, floorTop, wood, pockets])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
@@ -79,21 +93,45 @@ function Walls({ W, D, y0, y1, mat, wood, floorTop }: ShellProps & { floorTop?: 
 
 /**
  * Case mica: nhiều tấm mica cắt phẳng xếp chồng (mỗi lớp 1 tấm viền liền bo góc ngoài, khoét ruột), khe nhỏ
- * giữa các lớp + viền mép cắt trắng mờ. floor: 2 lớp dưới là tấm đáy liền
+ * giữa các lớp + viền mép cắt trắng mờ. floor: 2 lớp dưới là tấm đáy liền (tấm dưới cùng cắt lỗ feet `pockets`)
  */
-function Layers({ W, D, y0, y1, mat, floor }: ShellProps & { floor?: boolean }) {
+function Layers({
+  W,
+  D,
+  y0,
+  y1,
+  mat,
+  floor,
+  pockets,
+  holes,
+  cutouts,
+}: ShellProps & {
+  floor?: boolean
+  pockets?: FootPocket[]
+  /** lỗ vít xuyên mọi lớp (case mica 2 mảnh) */
+  holes?: FootPocket[]
+  /** vùng phím khoét ở tấm trên mặt plate: khung chặn liền 1 tấm với mặt case */
+  cutouts?: [number, number][][]
+}) {
   const { n, step } = micaStackPlan(y0, y1)
   const geo = useMemo(() => {
     const { h } = micaStackPlan(y0, y1)
-    const ring = micaLayerGeometry(W, D, h, CASE_WALL)
-    const solid = micaLayerGeometry(W, D, h, CASE_WALL, true)
+    const ring = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes)
+    const solid = micaLayerGeometry(W, D, h, CASE_WALL, true, [], holes)
+    const base = micaLayerGeometry(W, D, h, CASE_WALL, true, pockets, holes)
+    const frame = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes, cutouts)
     return {
       ring,
       solid,
+      base,
+      frame,
       ringEdges: new EdgesGeometry(ring, 30),
       solidEdges: new EdgesGeometry(solid, 30),
+      // viền tấm đáy lấy theo tấm liền: không vẽ vòng tròn lỗ feet (mica trong, nhìn từ trong case vẫn thấy)
+      baseEdges: new EdgesGeometry(solid, 30),
+      frameEdges: new EdgesGeometry(frame, 30),
     }
-  }, [W, D, y0, y1])
+  }, [W, D, y0, y1, pockets, holes, cutouts])
   useEffect(
     () => () => {
       for (const g of Object.values(geo)) g.dispose()
@@ -101,16 +139,13 @@ function Layers({ W, D, y0, y1, mat, floor }: ShellProps & { floor?: boolean }) 
     [geo],
   )
   return Array.from({ length: n }, (_, i) => {
-    const solid = floor && i < 2
+    const kind = micaLayerKind(i, y0 + i * step, floor ? 2 : 0)
     return (
       <group key={i} position-y={y0 + i * step}>
-        <mesh geometry={solid ? geo.solid : geo.ring} castShadow receiveShadow>
+        <mesh geometry={geo[kind]} castShadow receiveShadow>
           {mat}
         </mesh>
-        <lineSegments
-          geometry={solid ? geo.solidEdges : geo.ringEdges}
-          material={micaEdgeMaterial}
-        />
+        <lineSegments geometry={geo[`${kind}Edges`]} material={micaEdgeMaterial} />
       </group>
     )
   })
@@ -140,64 +175,83 @@ function Blockers({
     () => blockerGaps(keys, width, depth, CASE_MARGIN + 0.05),
     [keys, width, depth],
   )
-  // khối vuông cạnh từ mặt plate lên ngang mép case, ăn nhẹ vào thành trong (0.2u từ mép phím) →
-  // liền với thành case mà không lòi ra ngoài case CAD mỏng (Bakeneko...)
-  const h = top - Y.plateBot
-  return blocks.map((b, i) => (
-    <CaseBox
-      key={i}
-      w={b.w}
-      h={b.top !== undefined ? b.top - Y.plateBot : h}
-      d={b.d}
-      radius={0}
-      position={[b.x, Y.plateBot + (b.top !== undefined ? b.top - Y.plateBot : h) / 2, b.z]}
-      mat={mat}
-      wood={wood}
-    />
-  ))
+  // tấm khung mỏng ở mặt trên case (BLOCKER_SKIN), bên dưới rỗng; nối vào thành case qua các dải nên không lơ lửng,
+  // ăn nhẹ vào thành trong → liền với thành case mà không lòi ra ngoài case CAD mỏng (Bakeneko...)
+  return blocks.map((b, i) => {
+    const t = b.top ?? top
+    const h = Math.min(BLOCKER_SKIN, t - Y.plateBot)
+    return (
+      <CaseBox
+        key={i}
+        w={b.w}
+        h={h}
+        d={b.d}
+        radius={0}
+        position={[b.x, t - h / 2, b.z]}
+        mat={mat}
+        wood={wood}
+      />
+    )
+  })
 }
 
-const FEET_MAT = <meshStandardMaterial color="#111" roughness={1} />
+/** màu feet theo loại vật tư */
+const FOOT_COLOR: Record<string, string> = { feetBlack: '#1c1c1f', feetWhite: '#efeee9' }
+/** feet bán cầu: nửa cầu úp xuống (đỉnh y = 0, đáy cầu y = −1) */
+const FOOT_DOME = new SphereGeometry(1, 20, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)
 
 /**
- * Feet cao su: case CAD có hốc dán feet (`caseFeet.json`, `node scripts/probe-case-feet.mjs`) thì dán đúng vào hốc,
- * lồi ra 1mm dưới đáy; case dựng bằng code / case CAD không dò được hốc thì đặt 4 góc
+ * Feet cao su dán vào hốc dưới đáy case (`ctx.feet`: case CAD = hốc dò sẵn `caseFeet.json`, case dựng bằng code =
+ * 4 hốc CNC). Feet bán cầu đen / trắng theo loại đã dán (`build.feet`), lồi ra ~1,5mm dưới đáy.
+ * Bước `feet` (case lật úp): hốc chưa dán có vòng vàng, click để dán 1 cái loại đang chọn
  */
-function RubberFeet({
-  W,
-  D,
-  model,
-  origin,
-}: {
-  W: number
-  D: number
-  model?: string
-  origin: [number, number]
-}) {
-  const pockets = model ? (CASE_FEET as Record<string, number[][]>)[model] : undefined
-  if (pockets)
+function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
+  const step = useStep()
+  const feet = useBuild().feet ?? {}
+  const placeFoot = useGame((s) => s.placeFoot)
+  const [hover, setHover] = useState<number | null>(null)
+  const active = step === 'feet'
+  const next = active ? pockets.findIndex((_, i) => !feet[i]) : -1
+  return pockets.map((p, i) => {
+    const kind = feet[i]
+    const lit = hover === i || next === i
     return (
-      <group position={[-origin[0], Y.floorBot, -origin[1]]} scale={MM}>
-        {/* [x, z, bán kính, độ sâu trần hốc] (mm, hệ toạ độ model case) */}
-        {pockets.map(([x, z, r, depth], i) => (
-          <mesh key={i} position={[x, (depth - 1) / 2, z]}>
-            <cylinderGeometry args={[r * 0.92, r * 0.92, depth + 1, 24]} />
-            {FEET_MAT}
+      <group key={i} position={[p.x, Y.floorBot, p.z]}>
+        {kind && (
+          <mesh
+            geometry={FOOT_DOME}
+            position-y={p.depth}
+            scale={[p.r * 0.92, p.depth + 0.08, p.r * 0.92]}
+            castShadow
+          >
+            <meshStandardMaterial color={FOOT_COLOR[kind] ?? '#1c1c1f'} roughness={0.55} />
           </mesh>
-        ))}
+        )}
+        {active && !kind && (
+          <mesh
+            rotation-x={Math.PI / 2}
+            position-y={-0.006}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+              placeFoot(i)
+              playClick(500)
+            }}
+            onPointerOver={(e) => (e.stopPropagation(), setHover(i))}
+            onPointerOut={() => setHover((h) => (h === i ? null : h))}
+          >
+            <circleGeometry args={[p.r * 1.3, 32]} />
+            <meshBasicMaterial
+              color={hover === i ? '#ffffff' : '#ffcc2e'}
+              transparent
+              opacity={lit ? 0.75 : 0.35}
+              side={DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
       </group>
     )
-  return [
-    [-1, -1],
-    [1, -1],
-    [-1, 1],
-    [1, 1],
-  ].map(([sx, sz], i) => (
-    <mesh key={i} position={[sx * (W / 2 - 0.7), Y.floorBot - 0.02, sz * (D / 2 - 0.5)]}>
-      <cylinderGeometry args={[0.22, 0.22, 0.04, 16]} />
-      {FEET_MAT}
-    </mesh>
-  ))
+  })
 }
 
 /**
@@ -260,6 +314,17 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const wood = caseDef.material === 'wood'
   const W = ctx.width + 2 * (CASE_MARGIN + CASE_WALL)
   const D = ctx.depth + 2 * (CASE_MARGIN + CASE_WALL)
+  // case 2 mảnh: lỗ vít ở đáy (nhôm / PC / acrylic) hoặc xuyên mọi lớp (mica ghép)
+  const screwHoles = useMemo(() => caseScrewHoles(caseDef, ctx.width, ctx.depth), [ctx, caseDef])
+  const floorPockets = useMemo(
+    () => (mica ? ctx.feet : [...ctx.feet, ...screwHoles]),
+    [ctx, mica, screwHoles],
+  )
+  // mica: tấm trên mặt plate khoét theo vùng phím → khung chặn liền tấm (không đặt khối chặn rời)
+  const cutouts = useMemo(
+    () => (mica ? keyRegions(ctx.keys, ctx.width, ctx.depth) : []),
+    [ctx, mica],
+  )
   const at = (name: StepId) => ctx.steps.indexOf(name)
   const topMount = at('topCase') >= 0
   const showTop =
@@ -322,7 +387,17 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               />
             </CaseModel>
           ) : mica ? (
-            <Layers W={W} D={D} y0={Y.floorBot} y1={wallTop} mat={mat(bottom.hover)} floor />
+            <Layers
+              W={W}
+              D={D}
+              y0={Y.floorBot}
+              y1={wallTop}
+              mat={mat(bottom.hover)}
+              floor
+              pockets={ctx.feet}
+              holes={screwHoles}
+              cutouts={cutouts}
+            />
           ) : (
             <Walls
               W={W}
@@ -330,20 +405,24 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               y0={Y.floorBot}
               y1={wallTop}
               floorTop={Y.floorTop}
+              pockets={floorPockets}
               mat={bottomMat(bottom.hover)}
               wood={wood && !lower}
             />
           )}
-          <RubberFeet W={W} D={D} model={model} origin={ctx.origin} />
-          {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên */}
-          <Blockers
-            keys={ctx.keys}
-            width={ctx.width}
-            depth={ctx.depth}
-            mat={mat(bottom.hover)}
-            wood={wood}
-            top={model ? BLOCKER_TOP : Y.caseTop}
-          />
+          <RubberFeet pockets={ctx.feet} />
+          {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên.
+              Case 2 mảnh: khung chặn thuộc case trên (đi cùng case trên); mica: khung nằm trong tấm mica trên */}
+          {!two && (
+            <Blockers
+              keys={ctx.keys}
+              width={ctx.width}
+              depth={ctx.depth}
+              mat={mat(bottom.hover)}
+              wood={wood}
+              top={model ? BLOCKER_TOP : Y.caseTop}
+            />
+          )}
         </group>
       )}
       {showTop && (
@@ -356,9 +435,27 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
           {...top.bind}
         >
           {mica ? (
-            <Layers W={W} D={D} y0={Y.split} y1={Y.caseTop} mat={mat(top.hover)} />
+            <Layers
+              W={W}
+              D={D}
+              y0={Y.split}
+              y1={Y.caseTop}
+              mat={mat(top.hover)}
+              holes={screwHoles}
+              cutouts={cutouts}
+            />
           ) : (
-            <Walls W={W} D={D} y0={Y.split} y1={Y.caseTop} mat={mat(top.hover)} wood={wood} />
+            <>
+              <Walls W={W} D={D} y0={Y.split} y1={Y.caseTop} mat={mat(top.hover)} wood={wood} />
+              <Blockers
+                keys={ctx.keys}
+                width={ctx.width}
+                depth={ctx.depth}
+                mat={mat(top.hover)}
+                wood={wood}
+                top={Y.caseTop}
+              />
+            </>
           )}
           {/* top mount: vít plate bắt vào mép dưới vách case trên, đi cùng case trên */}
           {topMount && stepIdx >= at('topScrew') && <ScrewSet step="topScrew" y={Y.split} flip />}

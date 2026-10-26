@@ -16,7 +16,7 @@ import { OrderSpec } from '@/components/game/OrderSpec'
 import { StatusChips } from '@/components/game/StatusChips'
 import type { ScrewStep, StepId, ToolKind } from '@/types'
 import { StepList } from './StepList'
-import { LubePanel, SolderPanel, StabModPanel } from './ModPanels'
+import { FeetPanel, LubePanel, SolderPanel, StabModPanel } from './ModPanels'
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
 import { CamModeButton, ResetCamButton } from './CamModeButton'
@@ -56,7 +56,7 @@ function ConfirmDeliver({ onCancel, onConfirm }: { onCancel: () => void; onConfi
       className="fixed inset-0 z-[30] grid animate-fade-in place-items-center bg-black/55 p-4"
       onPointerDown={(e) => e.target === e.currentTarget && onCancel()}
     >
-      <HudCard className="flex w-[460px] max-w-full flex-col gap-3">
+      <HudCard className="flex w-[min(460px,100%)] flex-col gap-3">
         <h3 className="font-head text-xl font-extrabold text-yellow">
           📮 Giao bàn phím chưa xong?
         </h3>
@@ -173,11 +173,14 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   // thu gọn: chỉ còn tiêu đề + tiến độ + nút bước sau (nhớ trạng thái như các panel HUD)
   const [open, toggle] = useOpen('objective')
   return (
-    <div className="fixed bottom-3 left-1/2 z-[5] flex max-w-[calc(100%-24px)] -translate-x-1/2 flex-col items-center gap-1">
+    // điện thoại: thẻ trải hết bề ngang (không bị bóp làm tên bước xuống nhiều dòng)
+    <div className="fixed bottom-3 left-1/2 z-[5] flex max-w-[calc(100%-24px)] -translate-x-1/2 flex-col items-center gap-1 max-md:w-[calc(100%-24px)]">
       <div
         className={cn(
-          'flex items-center rounded-2xl border-[3px] border-yellow bg-[rgba(14,16,24,0.92)] shadow-[0_6px_0_#0006]',
-          open ? 'flex-col gap-2 px-5 py-3' : 'gap-3 py-1.5 pr-1.5 pl-4',
+          'flex items-center rounded-2xl border-[3px] border-yellow bg-[rgba(14,16,24,0.92)] shadow-[0_6px_0_#0006] max-md:w-full',
+          open
+            ? 'flex-col gap-2 px-5 py-3 max-md:px-3 max-md:py-2'
+            : 'gap-3 py-1.5 pr-1.5 pl-4 max-md:justify-between',
         )}
       >
         <button
@@ -185,7 +188,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
           onClick={toggle}
           aria-expanded={open}
           title={open ? 'Thu gọn hướng dẫn' : 'Mở hướng dẫn'}
-          className="flex items-center gap-2 font-head text-xl font-extrabold text-yellow transition-opacity hover:opacity-85"
+          className="flex items-center gap-2 font-head text-xl font-extrabold text-yellow transition-opacity hover:opacity-85 max-md:text-lg max-md:whitespace-nowrap"
         >
           <span>
             {info.title}{' '}
@@ -197,7 +200,11 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
           </span>
           <span className={cn('text-xs transition-transform', !open && '-rotate-90')}>▼</span>
         </button>
-        {open && <span className="max-w-[640px] text-center text-base leading-snug">{hint}</span>}
+        {open && (
+          <span className="max-w-[640px] text-center text-base leading-snug max-md:text-sm">
+            {hint}
+          </span>
+        )}
         {/* dụng cụ đang dùng + nút bước sau: cùng cỡ, đứng cạnh nhau (thu gọn thì chỉ còn nút) */}
         <div className="flex flex-wrap items-center justify-center gap-2.5">
           {open && tool && !tool.none && (
@@ -211,7 +218,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
             <Button
               tone={finished || ahead ? 'green' : 'blue'}
               size="sm"
-              className="inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm"
+              className="inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm max-md:min-w-[140px]"
               onClick={s.nextStep}
               disabled={busy || (!finished && !optional && !ahead)}
               title={finished || optional || ahead ? undefined : 'Làm xong bước này trước'}
@@ -225,7 +232,8 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
           )}
         </div>
       </div>
-      <span className={cn('text-xs text-muted', !open && 'hidden')}>
+      {/* mẹo chuột / phím: điện thoại không dùng được nên ẩn */}
+      <span className={cn('text-xs text-muted max-md:hidden', !open && 'hidden')}>
         {s.camMode === 'pan'
           ? '✋ Chuột trái: kéo khung nhìn · Chuột phải: xoay 360° · Cuộn: zoom · H: đổi chế độ'
           : 'Chuột trái: thao tác / xoay 360° · Chuột phải hoặc Shift + kéo: di chuyển · Cuộn: zoom · H: bàn tay'}
@@ -250,6 +258,8 @@ export function BenchHud() {
       <LubePanel />
     ) : step === 'solder' ? (
       <SolderPanel />
+    ) : step === 'feet' ? (
+      <FeetPanel />
     ) : step === 'test' ? (
       <SoundMeter />
     ) : null
@@ -258,7 +268,7 @@ export function BenchHud() {
     <>
       <TopBar canFlip={canFlip} isFlipped={isFlipped} />
       {/* 2 cột HUD: mỗi thẻ bấm tiêu đề để thu gọn / mở, thân cuộn riêng */}
-      <div className="fixed top-16 left-3 z-[5] flex max-h-[calc(100vh-160px)] w-[300px] flex-col gap-2 text-sm max-md:top-[116px] max-md:max-h-[calc(100dvh-300px)] max-md:w-[min(240px,calc(100vw-24px))] max-md:text-[13px] [&_.text-base]:text-lg [&_.text-xs]:text-sm">
+      <div className="fixed top-16 left-3 z-[5] flex max-h-[calc(100vh-160px)] w-[300px] flex-col gap-2 text-sm max-md:top-[116px] max-md:max-h-[calc(100dvh-300px)] max-md:w-[min(280px,calc(100vw-24px))] max-md:text-[13px] [&_.text-base]:text-lg [&_.text-xs]:text-sm">
         <HudPanel id="order" title={`Đơn của ${order.customer}`} className="shrink-0">
           <OrderSpec order={order} compact />
         </HudPanel>

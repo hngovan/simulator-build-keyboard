@@ -12,7 +12,7 @@ export function GameOverDialog() {
   const info = END_TEXT[over.reason]
   return (
     <div className="fixed inset-0 z-[4000] grid animate-fade-in place-items-center bg-black/70 p-4">
-      <HudCard className="flex w-[460px] max-w-full flex-col gap-3">
+      <HudCard className="flex w-[min(460px,100%)] flex-col gap-3">
         <h3 className="font-head text-2xl font-extrabold text-yellow">{info.title}</h3>
         <Alert title="Game over">{info.text}</Alert>
         <KeyValueTable

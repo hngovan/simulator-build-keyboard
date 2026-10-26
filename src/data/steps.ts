@@ -1,6 +1,7 @@
 import type {
   BuildContext,
   BuildState,
+  FootPocket,
   Inventory,
   Key,
   Order,
@@ -10,8 +11,9 @@ import type {
   ScrewStep,
   StepId,
 } from '@/types'
-import { getLayout } from './layouts'
-import { CASES, STABS } from './parts'
+import { blockerGaps, getLayout } from './layouts'
+import { CASES, STABS, caseModelOf } from './parts'
+import CASE_FEET from './caseFeet.json'
 import { stabModRules } from './mods'
 import stabModel from './stabModel.json'
 
@@ -52,6 +54,10 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   topScrew: {
     title: 'Bắt vít plate vào case trên',
     hint: 'Board đã lật: vặn các vít từ dưới lên, giữ plate vào case trên',
+  },
+  feet: {
+    title: 'Dán feet cao su',
+    hint: 'Case đã lật úp: click từng hốc tròn dưới đáy để dán feet (mỗi hốc 1 cái, chọn feet đen / trắng ở bảng bên)',
   },
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
   trayScrew: { title: 'Bắt vít tray mount', hint: 'Vặn các vít giữ PCB vào standoff đáy case' },
@@ -134,33 +140,42 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   if (mount === 'og') steps.push('ring')
   // top mount (case 2 mảnh): plate bắt vít vào case trên trước, rồi cả cụm thả vào case dưới (khỏi bước đậy case)
   const topMount = mount === 'top' && caseDef.pieces === 2
+  // dán feet vào đáy case trước khi lắp board vào case
+  steps.push('feet')
   if (topMount) steps.push('topCase', 'topScrew')
   steps.push('caseIn')
   if (mount === 'tray') steps.push('trayScrew')
   if (caseDef.pieces === 2) steps.push(...(topMount ? [] : (['caseClose'] as const)), 'caseScrew')
   steps.push('keycap', 'test')
 
-  // Vít case: mica xếp lớp bắt từ trên xuyên qua viền, case nhôm/PC 2 mảnh bắt từ đáy
   const screwSide = caseDef.screwSide ?? 'bottom'
-  const outerZ = screwSide === 'top' ? depth / 2 + CASE_MARGIN + CASE_WALL / 2 : depth / 2 - 0.4
-  const nCase = width > 16 ? 5 : 3
-  const caseScrews: Point[] = []
-  for (let i = 0; i < nCase; i++) {
-    const x = (i / (nCase - 1) - 0.5) * (width - 1)
-    caseScrews.push({ x, z: -outerZ }, { x, z: outerZ })
-  }
+  const caseScrews = caseScrewPoints(width, depth, screwSide)
 
   // Vít tray: nằm ở khe giữa các hàng phím
   const rowYs = [...new Set(keys.map((k) => k.y))].sort((a, b) => a - b)
   const gapZ = (i: number) => rowYs[Math.min(rowYs.length - 1, Math.max(1, i))] - depth / 2
   const mid = Math.floor(rowYs.length / 2)
-  const trayScrews = [
+  const trayRaw = [
     { x: -width * 0.36, z: gapZ(1) },
     { x: width * 0.36, z: gapZ(1) },
     { x: 0.5, z: gapZ(mid) },
     { x: -width * 0.3, z: gapZ(rowYs.length - 1) },
     { x: width * 0.3, z: gapZ(rowYs.length - 1) },
   ]
+  // vít tray không được nằm dưới khối chặn liền case (khe 75% / 65%, quanh cụm mũi tên): dời dần vào giữa tới chỗ trống
+  const blocks = blockerGaps(keys, width, depth, CASE_MARGIN + 0.05)
+  const blocked = (x: number, z: number) =>
+    blocks.some((b) => Math.abs(x - b.x) < b.w / 2 + 0.15 && Math.abs(z - b.z) < b.d / 2 + 0.15)
+  const trayScrews = trayRaw.map((p) => {
+    // dời ngang dần vào giữa; dải chắn chạy hết bề ngang (giữa hàng F và hàng số) thì dời sang khe hàng kế tiếp
+    for (let dz = 0; dz <= 3; dz++) {
+      const z = p.z + dz * (p.z < 0 ? 1 : -1) * 0.5
+      let x = p.x
+      for (let i = 0; i < 40 && blocked(x, z); i++) x -= Math.sign(x || 1) * 0.25
+      if (!blocked(x, z)) return { ...p, x, z }
+    }
+    return p
+  })
 
   // vít screw-in bắt vào lỗ nhỏ của stab
   const stabScrews = stabKeys.flatMap((k) =>
@@ -192,6 +207,8 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     { x: f * width, z: gz },
   ])
 
+  const feet = feetPockets(caseModelOf(caseDef, order.layout, order.variant), width, depth, origin)
+
   const ctx: BuildContext = {
     layout: order.layout,
     variant: order.variant,
@@ -208,12 +225,92 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     steps,
     screws,
     gaskets,
+    feet,
     screwSide,
     pcbType: inv.pcb!.type,
   }
   cache.set(ck, ctx)
   return ctx
 }
+
+/**
+ * Vít ghép case 2 mảnh: mica xếp lớp bắt xuyên qua viền (lỗ xuyên mọi lớp, bắt từ trên hoặc từ đáy đều được),
+ * case nhôm / PC / acrylic 2 mảnh bắt từ đáy lên case trên (lỗ ở đáy)
+ */
+export function caseScrewPoints(
+  width: number,
+  depth: number,
+  screwSide: 'top' | 'bottom',
+): Point[] {
+  const outerZ = screwSide === 'top' ? depth / 2 + CASE_MARGIN + CASE_WALL / 2 : depth / 2 - 0.4
+  const n = width > 16 ? 5 : 3
+  const out: Point[] = []
+  for (let i = 0; i < n; i++) {
+    // bắt từ đáy: 2 vít đầu hàng lùi vào thêm cho khỏi chạm hốc feet ở 4 góc
+    const x = (i / (n - 1) - 0.5) * (width - (screwSide === 'top' ? 1 : 1.8))
+    out.push({ x, z: -outerZ }, { x, z: outerZ })
+  }
+  return out
+}
+
+/** lỗ bắt vít case ở đáy / xuyên lớp mica (u, ~M2.5 + đầu vít) */
+export const SCREW_HOLE_R = 0.1
+
+/**
+ * Lỗ vít case 2 mảnh để khoét vào vỏ: bắt từ đáy → hốc đầu vít ở mặt đáy (sâu như hốc feet);
+ * mica bắt từ trên → lỗ xuyên viền mọi lớp (dùng chung danh sách, sâu không dùng)
+ */
+export function caseScrewHoles(
+  caseDef: { pieces: 1 | 2; screwSide?: 'top' | 'bottom' },
+  width: number,
+  depth: number,
+): FootPocket[] {
+  if (caseDef.pieces !== 2) return []
+  return caseScrewPoints(width, depth, caseDef.screwSide ?? 'bottom').map((p) => ({
+    ...p,
+    r: SCREW_HOLE_R,
+    depth: FOOT_DEPTH,
+  }))
+}
+
+/** 1u = 19.05mm */
+const MM = 1 / 19.05
+/**
+ * Hốc feet dưới đáy case (u, toạ độ cảnh): case CAD lấy hốc dò sẵn trong model (`caseFeet.json`, mm);
+ * case dựng bằng code: 4 hốc tròn CNC gần 4 góc, nằm trong sàn đáy (không ăn vào thành)
+ */
+export function feetPockets(
+  model: string | undefined,
+  width: number,
+  depth: number,
+  origin: [number, number],
+): FootPocket[] {
+  const pockets = model ? (CASE_FEET as Record<string, number[][]>)[model] : undefined
+  if (pockets)
+    return pockets.map(([x, z, r, d]) => ({
+      x: x * MM - origin[0],
+      z: z * MM - origin[1],
+      r: r * MM,
+      depth: d * MM,
+    }))
+  const W = width + 2 * (CASE_MARGIN + CASE_WALL)
+  const D = depth + 2 * (CASE_MARGIN + CASE_WALL)
+  return [
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
+  ].map(([sx, sz]) => ({
+    x: sx * (W / 2 - 0.9),
+    z: sz * (D / 2 - 0.75),
+    r: FOOT_R,
+    depth: FOOT_DEPTH,
+  }))
+}
+/** bán kính hốc feet case dựng bằng code (u, ~4mm) */
+export const FOOT_R = 0.21
+/** độ sâu hốc feet CNC (u, ~0,8mm): nông để feet bán cầu lồi hẳn ra dưới đáy */
+export const FOOT_DEPTH = 0.042
 
 // Khoảng cách từ tâm phím tới 2 chân stab
 export const stabSpan = (k: Key) => {
@@ -349,6 +446,8 @@ export function stepProgress(
       return [count(b.gaskets), ctx.gaskets.length]
     case 'ring':
       return [b.ring ? 1 : 0, 1]
+    case 'feet':
+      return [count(b.feet ?? {}), ctx.feet.length]
     case 'caseIn':
       return [b.inCase ? 1 : 0, 1]
     case 'caseClose':
@@ -374,6 +473,7 @@ export const NO_FLIP_STEPS: StepId[] = [
 
 // Các bước tự lật bàn phím để thao tác ở mặt đáy
 export function autoFlip(step: StepId, ctx: BuildContext) {
-  if (step === 'solder' || step === 'stabScrew' || step === 'topScrew') return true
+  if (step === 'solder' || step === 'stabScrew' || step === 'topScrew' || step === 'feet')
+    return true
   return (step === 'caseOpen' || step === 'caseScrew') && ctx.screwSide === 'bottom'
 }

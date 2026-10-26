@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Badge, Button, OptionChip, OptionSelect, SoundBars } from '@/components/ui'
+import { Badge, Button, OptionChip, OptionSelect, QtyInput, SoundBars } from '@/components/ui'
 import { stabStock } from '@/data/parts'
 import { fmt } from '@/lib/format'
 import type { Product, ProductOption, StabItem, ToolItem } from '@/types'
@@ -8,7 +8,7 @@ import { useGame } from '@/store'
 
 interface Props {
   product: Product
-  onBuy: (product: Product, option: ProductOption) => void
+  onBuy: (product: Product, option: ProductOption, qty: number) => void
 }
 
 /** cỡ stab hiện thành nhãn trên ảnh */
@@ -17,9 +17,13 @@ const STAB_SIZES = [
   ['long', '6.25u'],
   ['long7', '7u'],
 ] as const
+/** món mua nhiều lần được cộng dồn (switch / stab / vật tư / sách phép): có ô số lượng */
+const STACKABLE: Product['cat'][] = ['switch', 'stab', 'supply', 'spell']
 /** Thẻ sản phẩm: chọn option (màu / chất liệu / số lượng) rồi mua */
 export function ProductCard({ product, onBuy }: Props) {
   const [sel, setSel] = useState(0)
+  const [qty, setQty] = useState(1)
+  const stackable = STACKABLE.includes(product.cat)
   const opt = product.options[sel] ?? product.options[0]
   // option 2 cấp (case: chất liệu → màu): chỉ hiện các option cùng nhóm đang chọn
   const groups = [...new Set(product.options.flatMap((o) => (o.group ? [o.group] : [])))]
@@ -121,9 +125,22 @@ export function ProductCard({ product, onBuy }: Props) {
           note: fmt(o.price),
         }))}
       />
+      {stackable && (
+        <div className="flex items-center justify-between text-sm font-bold text-muted">
+          Số lượng
+          <QtyInput value={qty} onChange={setQty} />
+        </div>
+      )}
       <div className="mt-auto flex items-center justify-between">
-        <span className="font-head text-lg font-extrabold text-[#ff8c5a]">{fmt(opt.price)}</span>
-        <Button tone="orange" size="sm" disabled={equipped} onClick={() => onBuy(product, opt)}>
+        <span className="font-head text-lg font-extrabold text-[#ff8c5a]">
+          {fmt(opt.price * (stackable ? qty : 1))}
+        </span>
+        <Button
+          tone="orange"
+          size="sm"
+          disabled={equipped}
+          onClick={() => onBuy(product, opt, stackable ? qty : 1)}
+        >
           {equipped ? 'Đang dùng' : canEquip ? 'Dùng máy này' : 'Mua ngay'}
         </Button>
       </div>

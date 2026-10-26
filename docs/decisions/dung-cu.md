@@ -25,6 +25,13 @@
   Node `bit` (mũi + đầu kẹp) quay khi vặn, `body` đứng yên.
 - Dùng ở: `ElectricScrewdriver` (HandTools, lúc vặn vít + đổi đầu vít), hộp đồ nghề trong Room (nằm nghiêng,
   scale 3.6 / M), ảnh Shopii (`tool === 'screw'` trong modelThumb).
+- Sửa hiệu ứng vặn (2026-10-26): tua vít điện 1 click là xong nên vít hết tương tác ngay → mất hover → tua vít ẩn sau 350ms,
+  ốc nhảy thẳng tới cuối và chỉ xoay 2.2 rad, gần như không thấy gì. Giờ (`Screw.tsx`): tiến độ hiển thị chạy dần trong
+  `SPIN_MS` (HandTools: tay 250ms / điện 700ms), ốc xoay `SCREW_SPIN` (tay 6.6, điện 28 rad) + lún / trồi theo đó, tua vít giữ
+  hiện (`busy`) tới khi quay xong, ốc tháo ra chỉ bay đi sau lần quay cuối. `BitDriver` điện: thân đứng yên, chỉ đầu kẹp
+  (node `bit`) + đầu vít quay (trước cả cây quay như chong chóng).
+- Đổi đầu vít: tua vít nằm trên bàn (`DeskTools`, Room) ẩn trong `BIT_SWAP_MS` (1,3s, cùng lúc `BitSwapPreview` hiện tua vít
+  cạnh bàn), xong mới hiện lại trên bàn.
 
 ### Lube switch — mở switch trước
 

@@ -14,7 +14,9 @@ export function Assembly() {
   const stepIdx = useStepIdx()
   const viewFlip = useGame((s) => s.viewFlip)
   const ref = useRef<THREE.Group>(null)
-  const showCase = step === 'caseOpen' || stepIdx >= ctx.steps.indexOf('caseIn')
+  // mở case / dán feet: chỉ có case trên bàn (board để riêng), dán feet thì case lật úp
+  const caseOnly = step === 'caseOpen' || step === 'feet'
+  const showCase = caseOnly || stepIdx >= ctx.steps.indexOf('caseIn')
   const topEarly = ctx.steps.includes('topCase') && stepIdx >= ctx.steps.indexOf('topCase')
   // Auto-flipped work steps must still let the player flip back to inspect the top.
   const flipped = NO_FLIP_STEPS.includes(step) ? false : autoFlip(step, ctx) ? !viewFlip : viewFlip
@@ -32,7 +34,7 @@ export function Assembly() {
         // top mount: case trên úp lên plate (bắt vít) trước khi có case dưới
         topEarly && <Case topOnly />
       )}
-      {step !== 'caseOpen' && <Board />}
+      {!caseOnly && <Board />}
     </group>
   )
 }

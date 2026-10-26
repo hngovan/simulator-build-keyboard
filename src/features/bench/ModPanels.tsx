@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useGame, useBuild, useCtx } from '@/store'
 import { STABS, SWITCHES, TOOLS } from '@/data/parts'
 import {
+  FEET_IDS,
   JOINTS_PER_KEY,
   LUBE_IDS,
   SOLDER_IDS,
@@ -400,6 +401,54 @@ export function SolderPanel() {
           Mỗi phím dùng {JOINTS_PER_KEY} mối hàn · cần {(total - good) * JOINTS_PER_KEY} mối nữa
         </Muted>
       </HudSection>
+    </HudPanel>
+  )
+}
+
+/** Panel bước dán feet: chọn feet đen / trắng (số còn trong kho), tiến độ, hết feet thì mở Shopii */
+export function FeetPanel() {
+  const ctx = useCtx()
+  const build = useBuild()
+  const supplies = useGame((s) => s.supplies)
+  const pick = useGame((s) => s.feetPick)
+  const setFeetPick = useGame((s) => s.setFeetPick)
+  const openShop = useGame((s) => s.openShop)
+  const done = Object.keys(build.feet ?? {}).length
+  const total = ctx.feet.length
+  const left = total - done
+  const have = FEET_IDS.reduce((a, id) => a + (supplies[id] ?? 0), 0)
+  return (
+    <HudPanel id="feet" title="🦶 Dán feet cao su">
+      <ProgressBar value={total ? done / total : 1} tone="green" />
+      <div className="text-xs">
+        Đã dán {done}/{total} feet
+      </div>
+      <HudSection id="feet.pick" title="Loại feet">
+        <div className="flex flex-wrap gap-1">
+          {FEET_IDS.map((id) => (
+            <OptionChip
+              key={id}
+              active={pick === id}
+              swatch={SUPPLIES[id].color}
+              onClick={() => setFeetPick(id)}
+            >
+              {SUPPLIES[id].name.replace('Feet cao su ', 'Feet ')} ({supplies[id] ?? 0})
+            </OptionChip>
+          ))}
+        </div>
+        <Muted>Case tối màu hợp feet đen, case sáng màu hợp feet trắng. 1 lần mua = 4 cái.</Muted>
+      </HudSection>
+      {left > 0 && (supplies[pick] ?? 0) < left && (
+        <Alert
+          tone="yellow"
+          title={`Còn thiếu feet: cần ${left}, ${SUPPLIES[pick].name.toLowerCase()} còn ${supplies[pick] ?? 0}`}
+        >
+          {have >= left && <Muted>Loại kia còn đủ, đổi loại để dán tiếp.</Muted>}
+          <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
+            Mua feet ở Shopii
+          </Button>
+        </Alert>
+      )}
     </HudPanel>
   )
 }

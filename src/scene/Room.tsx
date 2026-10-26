@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import * as THREE from 'three'
@@ -8,7 +9,7 @@ import type { Key } from '@/types'
 import { useGame } from '@/store'
 import { MM } from './models/Switch'
 import { DIPLOMA_URL, createDiploma } from './models/diplomaModel'
-import { ElectricScrewdriver } from './models/HandTools'
+import { BIT_SWAP_MS, ElectricScrewdriver } from './models/HandTools'
 import { Monitor, PcTower } from './models/Computer'
 import { MONITOR_AT, MONITOR_ROT } from './models/computerLayout'
 import { DisplayKeyboard } from './models/ShelfDisplay'
@@ -342,6 +343,12 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
   const screwdriver = useGLTF(MODELS.screwdriver).scene
   // mặt tì vô hình ngang mặt bàn cho RestOn bắn tia xuống
   const floor = useRef<THREE.Group>(null)
+  // đang đổi đầu vít: tua vít được cầm lên (BitSwapPreview), xong mới đặt lại xuống bàn
+  const held = useRef<THREE.Group>(null)
+  useFrame(() => {
+    const t = performance.now() - useGame.getState().bitSwapAt
+    if (held.current) held.current.visible = !(t >= 0 && t < BIT_SWAP_MS)
+  })
   useMemo(
     () =>
       screwdriver.traverse((o) => {
@@ -358,7 +365,7 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
   if (!screwStep) return null
   return (
     <group {...props}>
-      <group scale={M}>
+      <group ref={held} scale={M}>
         <group ref={floor}>
           <mesh visible={false} rotation-x={-Math.PI / 2}>
             <planeGeometry args={[0.6, 0.4]} />

@@ -261,6 +261,8 @@ export type StepId =
   | 'solder'
   | 'gasket'
   | 'ring'
+  /** dán 4 feet cao su vào hốc CNC dưới đáy case (trước khi lắp board vào case) */
+  | 'feet'
   /** top mount: úp case trên lên plate rồi vặn vít plate vào case trên */
   | 'topCase'
   | 'topScrew'
@@ -306,6 +308,8 @@ export interface BuildState {
   tipDirty?: boolean
   gaskets: Record<number, true>
   ring: boolean
+  /** feet đã dán: số hốc → loại feet (id vật tư); bản lưu cũ không có */
+  feet?: Record<number, string>
   inCase: boolean
   closed: boolean
   keycaps: Record<string, true>
@@ -350,8 +354,17 @@ export interface BuildContext {
   steps: StepId[]
   screws: Record<ScrewStep, ScrewPoint[]>
   gaskets: Point[]
+  /** hốc feet dưới đáy case (u, toạ độ cảnh): tâm x, z + bán kính r */
+  feet: FootPocket[]
   screwSide: 'top' | 'bottom'
   pcbType: string
+}
+export interface FootPocket {
+  x: number
+  z: number
+  r: number
+  /** độ sâu hốc tính từ mặt đáy (u) */
+  depth: number
 }
 
 // ---------- định nghĩa linh kiện ----------

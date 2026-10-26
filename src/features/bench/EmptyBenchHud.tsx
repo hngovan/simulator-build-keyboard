@@ -34,7 +34,7 @@ export function OrderPicker() {
       onPointerDown={(e) => e.target === e.currentTarget && close()}
     >
       {/* giống cửa sổ app Danh sách đơn ở máy tính, chỉ có nút đóng */}
-      <div className="flex max-h-[80vh] w-[680px] max-w-full flex-col overflow-hidden rounded-2xl border-[3px] border-black/40 bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]">
+      <div className="flex max-h-[80vh] w-[min(680px,100%)] flex-col overflow-hidden rounded-2xl border-[3px] border-black/40 bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]">
         <TitleBar title={APPS.order.title} color={APPS.order.color}>
           <TitleButton close aria-label="Đóng danh sách đơn" title="Đóng" onClick={close}>
             <X />
@@ -136,7 +136,7 @@ export function EmptyBenchHud() {
   const s = useGame()
   return (
     <>
-      <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between [&>*]:pointer-events-auto">
+      <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
         <div className="flex gap-2">
           <IconButton tone="blue" icon={<Monitor />} label="Về máy tính" onClick={s.zoomToPC} />
           <ResetCamButton />

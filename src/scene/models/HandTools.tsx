@@ -6,6 +6,9 @@ import type { ScrewBit } from '@/types'
 
 // ---------- Dụng cụ cầm tay (đầu mũi ở gốc toạ độ, thân hướng lên +y) ----------
 
+/** thời gian 1 lần vặn (ms): tay xoay 1 nấc, điện quay liền 1 hơi tới khi vít ăn hết ren */
+export const SPIN_MS = { manual: 250, electric: 700 }
+
 // Hiệu ứng vặn: tay thì xoay từng nấc, điện thì quay nhanh + rung
 /** dir: 1 = ngược chiều kim đồng hồ nhìn từ trên (tháo vít), -1 = cùng chiều (vặn vào) */
 function useSpin(
@@ -19,7 +22,7 @@ function useSpin(
     const s = state.current
     if (s.key !== spinKey) {
       s.key = spinKey
-      s.t = electric ? 0.4 : 0.25
+      s.t = (electric ? SPIN_MS.electric : SPIN_MS.manual) / 1000
       s.target += (dir * Math.PI) / 2
     }
     if (!ref.current) return
@@ -78,9 +81,9 @@ function ManualScrewdriver({ spinKey }: { spinKey: number }) {
 const ELECTRIC_SCREWDRIVER_GLB = '/models/tools/electric-screwdriver.glb'
 useGLTF.preload(ELECTRIC_SCREWDRIVER_GLB)
 
-export function ElectricScrewdriver({ spinKey }: { spinKey: number }) {
+export function ElectricScrewdriver({ spinKey, dir }: { spinKey: number; dir?: 1 | -1 }) {
   const ref = useRef<THREE.Group>(null)
-  useSpin(ref, spinKey, true)
+  useSpin(ref, spinKey, true, dir)
   const { scene } = useGLTF(ELECTRIC_SCREWDRIVER_GLB)
   const { bit, body } = useMemo(() => {
     const pick = (name: string) => {
@@ -251,6 +254,8 @@ function DriverBit({ bit }: { bit: ScrewBit }) {
 }
 
 const SWAP_DUR = 0.9
+/** tua vít hiện ra cạnh bàn bao lâu mỗi lần đổi đầu vít (ms) */
+export const BIT_SWAP_MS = 1300
 
 /**
  * Tua vít (tay / điện) gắn đầu vít đang chọn. Vừa thay đầu (swapAt) thì chạy hiệu ứng:
@@ -299,17 +304,32 @@ export function BitDriver({
       body.current.position.y =
         BIT_LEN + (active && into >= 1 ? Math.sin((t - 0.85) * 40) * 0.01 : 0)
   })
-  return (
-    <group ref={spin}>
-      <group ref={body} position-y={BIT_LEN}>
-        {electric ? <ElectricScrewdriver spinKey={0} /> : <ManualScrewdriver spinKey={0} />}
-      </group>
+  const bits = (
+    <>
       <group ref={newBit}>
         <DriverBit bit={bit} />
       </group>
       <group ref={oldBit} visible={false}>
         <DriverBit bit={prevBit} />
       </group>
+    </>
+  )
+  // tua vít tay: cả cây xoay theo tay · tua vít điện: thân đứng yên, chỉ đầu kẹp + đầu vít quay
+  if (electric)
+    return (
+      <group>
+        <group ref={body} position-y={BIT_LEN}>
+          <ElectricScrewdriver spinKey={spinKey} dir={dir} />
+        </group>
+        <group ref={spin}>{bits}</group>
+      </group>
+    )
+  return (
+    <group ref={spin}>
+      <group ref={body} position-y={BIT_LEN}>
+        <ManualScrewdriver spinKey={0} />
+      </group>
+      {bits}
     </group>
   )
 }

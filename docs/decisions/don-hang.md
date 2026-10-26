@@ -278,3 +278,18 @@ bấm phá sản, new game".
   tin khách, OrderSpec (dòng Case / Plate / Stab), highlight; Shopii "Chỉ hiện đồ hợp đơn": case / stab đúng con, plate chỉ còn option đúng
   chất liệu, case chỉ còn màu khách đòi, switch theo `switchOk`.
 - Sách phép: `SPELL_PACKS` 100 lần 450k / 200 lần 800k / 500 lần 1.800k cho cả 6 loại (bỏ chữ "Dùng 200 lần" trong mô tả).
+
+## Switch hợp tiếng khách muốn (2026-10-26)
+
+- Người dùng: "làm sao clack giòn, cao, sáng lại chơi switch silent được vô lý, clack chỉ có linear, tactile; ồn ào thì có clack, to, rõ".
+  `WISH_SWITCH` (orders.ts): silent → Silent / SilentTactile (70%) hoặc Linear / Tactile; thock + clack → chỉ Linear / Tactile; noisy →
+  Clicky (60%) hoặc Linear / Tactile. Không còn đơn "clack" / "thock" / "ồn" đòi switch silent. `SOUND_WISH.noisy` đổi thành
+  "Ồn ào, clack to rõ" / "Gõ phải kêu clack thật to, rõ từng phím cho đã tai". Thử 300 đợt đơn: không còn cặp vô lý.
+
+## Mount theo số mảnh case (2026-10-26)
+
+- Người dùng: "case TKL thì chỉ có option 2 mảnh và mica ghép → không chơi được O-ring mount; case 1 mảnh thì có thể có nhiều".
+  Case 1 mảnh dựng bằng code (plastic60, wood60, plastic40, tklTray, fullTray, case65Plastic, case75Plastic, case75Alu, frlAlu) thêm
+  mount `oring` + `og` (đều cần case 1 mảnh, `buildContext` chèn bước `ring`). Thêm `tklAlu` "Case TKL nhôm 1 mảnh" (anod, 1.800k,
+  tray / oring / og) vào dòng "Case TKL" (`CASE_LINES`: Nhựa ABS / Nhôm 1 mảnh / Acrylic 2 mảnh / Nhôm 2 mảnh). Case CAD giữ mount theo
+  thiết kế thật. Case 2 mảnh vẫn gasket / top (nhôm, PC, acrylic) hoặc sandwich (mica).

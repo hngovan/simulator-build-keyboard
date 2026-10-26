@@ -55,15 +55,19 @@ export function Taskbar() {
     }
   }
   return (
-    // mobile: 2 hàng (chip trạng thái trên, icon app cuộn ngang dưới), cao theo --taskbar-h
+    // mobile: 2 hàng (chip trạng thái trên, icon app chia đều vừa 1 hàng dưới), cao theo --taskbar-h
     <div className="absolute inset-x-0 bottom-0 z-[100] grid h-(--taskbar-h) grid-cols-[1fr_auto_1fr] items-center gap-2 border-t-2 border-black/50 bg-[rgba(14,16,24,0.92)] px-2.5 backdrop-blur-md max-md:flex max-md:flex-col max-md:justify-center max-md:gap-1.5 max-md:px-2">
       <span className="justify-self-start rounded-xl bg-yellow px-3.5 py-2 font-head text-base font-extrabold text-[#3a2b00] shadow-[0_3px_0_#0006] max-md:hidden">
         ⌨ KeebOS
       </span>
-      <div className="flex items-center justify-center gap-2 max-md:order-2 max-md:w-full max-md:justify-start max-md:overflow-x-auto max-md:pb-0.5 max-md:[scrollbar-width:none]">
+      <div className="flex items-center justify-center gap-2 max-md:order-2 max-md:w-full max-md:gap-1 max-md:overflow-x-auto max-md:pb-0.5 max-md:[scrollbar-width:none]">
         {order.map((id) => (
           // rê chuột hiện tooltip tên app phía trên icon (cùng kiểu tooltip thanh menu bàn build)
-          <span key={id} className="group/tip relative inline-flex">
+          // mobile: icon co đều cho đủ mọi app trên 1 hàng (tối thiểu 34px, không bị cắt mất icon cuối)
+          <span
+            key={id}
+            className="group/tip relative inline-flex max-md:max-w-[42px] max-md:min-w-[34px] max-md:flex-1"
+          >
             <button
               aria-label={APPS[id].title}
               draggable
@@ -78,7 +82,7 @@ export function Taskbar() {
               onDrop={(e) => e.preventDefault()}
               onDragEnd={save}
               className={cn(
-                'relative grid size-[42px] shrink-0 cursor-grab place-items-center rounded-xl bg-panel-2 transition-[transform,background-color] duration-150 hover:-translate-y-0.5 hover:bg-[#34405a] active:cursor-grabbing',
+                'relative grid size-[42px] shrink-0 cursor-grab place-items-center rounded-xl bg-panel-2 transition-[transform,background-color] duration-150 hover:-translate-y-0.5 hover:bg-[#34405a] active:cursor-grabbing max-md:aspect-square max-md:size-auto max-md:w-full',
                 windows.includes(id) &&
                   'after:absolute after:inset-x-3.5 after:bottom-[3px] after:h-[3px] after:rounded after:bg-yellow',
                 dragging === id && 'opacity-40',

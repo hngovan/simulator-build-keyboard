@@ -151,6 +151,7 @@ tự thường gặp; `stabScrew` nằm trước `plate` với stab screw-in, c�
 | `solder`     | Giữ chuột trên chân, nhả trong vùng xanh; tránh giữ quá lâu            | PCB hàn (không phải hotswap) |
 | `gasket`     | Click các vị trí quanh plate để dán gasket                             | Mount gasket / OG            |
 | `ring`       | Click PCB cuốn vòng O-ring (trước plate, kẹp giữa PCB và plate)        | Mount O-ring / OG            |
+| `feet`       | Case tự lật úp, click 4 hốc dưới đáy để dán feet cao su (đen / trắng)  | Luôn có, trước khi lắp case  |
 | `caseIn`     | Click case để thả board vào                                            | Luôn có                      |
 | `topCase`    | Úp case trên xuống plate                                               | Top mount (case 2 mảnh)      |
 | `topScrew`   | Board tự lật, vặn vít từ dưới giữ plate vào case trên                  | Top mount (case 2 mảnh)      |

@@ -9,6 +9,7 @@ import {
   buildCatalog,
   caseFits,
   keycapMaterialOf,
+  stabStock,
   switchOk,
 } from '@/data/parts'
 import { cn } from '@/lib/format'
@@ -21,7 +22,9 @@ import type {
   PartItem,
   Product,
   ShopCategory,
+  StabItem,
   SupplyItem,
+  SwitchItem,
   ToolItem,
 } from '@/types'
 import { ProductCard } from './ProductCard'
@@ -155,14 +158,15 @@ export function Shopii() {
             // bật / tắt lọc thì số option đổi → chọn lại từ đầu
             key={`${p.id}:${match}`}
             product={p}
-            onBuy={(p, o) => {
+            onBuy={(p, o, qty) => {
+              const price = o.price * qty
               if (p.cat === 'supply' || p.cat === 'spell') {
                 const it = o.item as SupplyItem
-                buySupply(it.id, it.n, o.price)
+                buySupply(it.id, it.n * qty, price)
               } else if (p.cat === 'tool' || p.cat === 'cert') {
                 const it = o.item as ToolItem
                 buyTool(it.kind, it.level, o.price)
-              } else buy(p.cat as PartCategory, o.item as PartItem, o.price)
+              } else buy(p.cat as PartCategory, multiply(p.cat, o.item as PartItem, qty), price)
             }}
           />
         ))}
@@ -177,4 +181,23 @@ export function Shopii() {
       </div>
     </div>
   )
+}
+
+/** nhân số lượng món mua (switch: số con, stab: số stab từng cỡ); món khác mua 1 */
+function multiply(cat: Product['cat'], item: PartItem, qty: number): PartItem {
+  if (qty === 1) return item
+  if (cat === 'switch') {
+    const sw = item as SwitchItem
+    return { ...sw, count: sw.count * qty }
+  }
+  if (cat === 'stab') {
+    const st = stabStock(item as StabItem)
+    return {
+      ...(item as StabItem),
+      short: st.short * qty,
+      long: st.long * qty,
+      long7: st.long7 * qty,
+    }
+  }
+  return item
 }

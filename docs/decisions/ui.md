@@ -300,3 +300,24 @@
   đổi tên `cattoRF` → "Catto RF", `rfBruh` → "RF Bruh", `dualityHorns` → "Duality Horns", `aliceAlu` → "Blossom" (bỏ cỡ trong ngoặc).
   Mọi sản phẩm case Shopii có `badge` = cỡ (`FF_BADGE` trong parts.ts: 40% / 60% / TKL / Full...) ở góc ảnh như nhãn loại switch.
   Tên dòng case chung ("Case 60%"...) giữ cỡ trong tên vì không có tên riêng nào khác để phân biệt.
+- Nhãn ảnh keycap đè nhau ở chợ (2026-10-26, người dùng: "ở trong chợ phím cơ hiển thị badge bị đè lên nhau vì khung quá nhỏ"):
+  `ProductImage` nhánh keycap gom nhãn profile + chất liệu vào 1 hàng flex `flex-wrap-reverse` ở đáy ảnh (thay 2 nhãn neo
+  cứng 2 góc): khung 90px của bài chợ không đủ chỗ thì nhãn chất liệu lên dòng trên, bên phải. Nhãn chất liệu dùng tên ngắn
+  PBT / ABS / MIX (tên đủ "Mix PBT + ABS" ở tooltip) vì tên dài bị gãy dòng che kín ảnh. Không ẩn nhãn vì vẫn vừa.
+- Ô số lượng Shopii (2026-10-26, người dùng: "không có ô để tăng giảm số lượng or nhập số lượng để mua ?"): component mới
+  `QtyInput` (`components/ui`, nút − / + kiểu `Button` + ô gõ số, kẹp 1–99). `ProductCard` chỉ hiện cho món cộng dồn được
+  (`STACKABLE`: switch / stab / vật tư / sách phép), giá hiện = giá option × số lượng; `onBuy(product, opt, qty)`.
+  Shopii nhân trong 1 lần mua: vật tư / phép `buySupply(id, n × qty)`, switch `count × qty`, stab nhân từng cỡ dây (`multiply`).
+  Case / PCB / plate / keycap / dụng cụ / chứng chỉ mỗi đơn chỉ cần 1 nên không có ô.
+- Tối ưu điện thoại (2026-10-26, người dùng: "tối ưu lại ui dùng cho màn hình điện thoại"). Chụp 390×844 + 1280×800 bằng Chrome headless
+  (CDP, gọi `window.__game`) trước / sau khi sửa. Đã sửa:
+  - Taskbar (`desktop/Taskbar.tsx`): trước cuộn ngang, icon cuối (Cài đặt) bị cắt → mobile icon co đều `flex-1` (34–42px, `aspect-square`)
+    đủ mọi app trên 1 hàng.
+  - Hộp thoại kiểu `w-[Npx] max-w-full` trong lưới `place-items-center` bị tràn (cột lưới giãn theo N px nên max-w-full vô dụng) → đổi thành
+    `w-[min(Npx,100%)]`: `OrderPicker` (EmptyBenchHud, Danh sách đơn tràn mép phải), `ConfirmDeliver` (BenchHud), `ConfirmBankrupt`
+    (SettingsApp), `GameOverDialog`.
+  - Bàn build trống: thanh trên thêm `max-md:flex-wrap` như bàn build có đơn (chip "Ngày" bị cắt).
+  - Thẻ mục tiêu dưới đáy (`Objective`, BenchHud): mobile trải hết bề ngang, tên bước 1 dòng (trước bị bóp 3 dòng), hint chữ nhỏ hơn, ẩn
+    mẹo chuột / phím. Cột HUD trái mobile 240 → 280px (bảng đơn bớt xuống dòng).
+  - Mezzenger: 2 nút trả lời chia đều 1 hàng, nút từ chối mobile ghi "Từ chối đơn" (desktop giữ "Xin lỗi, shop không nhận được").
+  - Còn lại chưa sửa (ngoài phạm vi UI 2D): camera bàn build trên điện thoại quá gần, bàn phím tràn 2 bên (`src/scene`).

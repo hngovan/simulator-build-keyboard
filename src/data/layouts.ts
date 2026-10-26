@@ -534,58 +534,122 @@ export function getLayout(layoutId: LayoutId, variant: Variant = {}): LayoutGeom
 }
 
 /**
- * Khối chặn liền case ở chỗ trống ≥ 0.75u hàng dưới cùng (2 đầu HHKB, giữa Ctrl / Alt của WKL...).
- * Khối kéo ra tới thành trước case, chỗ trống ở đầu / cuối hàng kéo vào tới thành bên (edge = phần ăn vào
- * thành case, u) để liền 1 khối với case, không có đường cắt. Trả về tâm x, z và kích thước w × d (u, quanh gốc).
- * Layout có phím xoay (Alice) không tính
+ * Khối chặn liền case: mặt case che kín mọi chỗ trên board không có phím (như case thật: khung quanh từng cụm phím —
+ * khe giữa hàng F và hàng số, giữa cụm chính / cụm nav / cụm mũi tên TKL, 2 đầu HHKB, giữa Ctrl / Alt WKL, khe trước
+ * mũi tên 75%...). Dò theo lưới 1/8u: ô nào không thuộc phím nào thì trống, gộp ô trống thành hình chữ nhật (ưu tiên
+ * dải ngang). Khối chạm mép board kéo ra `edge` (u, ăn vào thành case) để liền 1 khối với case, không có đường cắt.
+ * Mọi khối cao bằng nhau (ngang mép case, mặt khung phẳng như case thật). Trả về tâm x, z và kích thước w × d
+ * (u, quanh gốc). Layout có phím xoay (Alice) không tính
  */
 export function blockerGaps(keys: Key[], width: number, depth: number, edge: number) {
   if (keys.some((k) => k.rot)) return []
-  const y = Math.max(...keys.map((k) => k.y))
-  const row = keys.filter((k) => k.y === y).sort((a, b) => a.x - b.x)
-  if (!row.length) return []
-  const back = row[0].cz - 0.5
-  const front = depth / 2 + edge
+  const S = 0.125
+  const nx = Math.round(width / S)
+  const nz = Math.round(depth / S)
+  const free = Array.from({ length: nz }, () => new Array<boolean>(nx).fill(true))
+  for (const k of keys) {
+    const x0 = Math.max(0, Math.round((k.cx - k.w / 2 + width / 2) / S))
+    const x1 = Math.min(nx, Math.round((k.cx + k.w / 2 + width / 2) / S))
+    const z0 = Math.max(0, Math.round((k.cz - k.h / 2 + depth / 2) / S))
+    const z1 = Math.min(nz, Math.round((k.cz + k.h / 2 + depth / 2) / S))
+    for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) free[z][x] = false
+  }
   /** top: mặt trên riêng (u), không có thì theo mép case */
   const out: { x: number; z: number; w: number; d: number; top?: number }[] = []
-  let at = 0
-  for (const k of [...row, { x: width, w: 0 }]) {
-    if (k.x - at >= 0.75) {
-      const x0 = (at <= 0 ? -edge : at) - width / 2
-      const x1 = (k.x >= width ? width + edge : k.x) - width / 2
-      out.push({ x: (x0 + x1) / 2, z: (back + front) / 2, w: x1 - x0, d: front - back })
+  for (let z = 0; z < nz; z++)
+    for (let x = 0; x < nx; x++) {
+      if (!free[z][x]) continue
+      // dải ngang dài nhất từ ô này, rồi kéo xuống các hàng ô còn trống đủ cả dải
+      let x1 = x
+      while (x1 < nx && free[z][x1]) x1++
+      let z1 = z + 1
+      while (z1 < nz && free[z1].slice(x, x1).every(Boolean)) z1++
+      for (let zz = z; zz < z1; zz++) for (let xx = x; xx < x1; xx++) free[zz][xx] = false
+      // vụn nhỏ hơn 1/4u cả 2 chiều (lệch làm tròn) thì bỏ
+      if ((x1 - x) * S < 0.24 && (z1 - z) * S < 0.24) continue
+      const l = x === 0 ? -edge : x * S
+      const r = x1 === nx ? width + edge : x1 * S
+      const t = z === 0 ? -edge : z * S
+      const b = z1 === nz ? depth + edge : z1 * S
+      out.push({
+        x: (l + r) / 2 - width / 2,
+        z: (t + b) / 2 - depth / 2,
+        w: r - l,
+        d: b - t,
+      })
     }
-    at = Math.max(at, k.x + k.w)
-  }
-  // TKL / full: khoảng trống giữa cụm Ins–PgDn và cụm mũi tên (mặt case thật che kín, không lộ plate)
-  const up = keys.find((k) => k.code === 'ArrowUp')
-  if (up) {
-    const above = keys.filter(
-      (k) => k.cz < up.cz && Math.abs(k.cx - up.cx) <= 1.01 && k.cz > up.cz - 3,
-    )
-    const top = above.length ? Math.max(...above.map((k) => k.cz + k.h / 2)) : up.cz - 0.5
-    const [x0, x1] = [up.cx - 1.5, up.cx + 1.5]
-    // chỉ lấp chỗ thật sự trống (75% / 65% mũi tên sát Shift thì không có khoảng trống)
-    const free = (l: number, r: number, t: number, b: number) =>
-      !keys.some(
-        (k) =>
-          k.cx - k.w / 2 < r - 0.01 &&
-          k.cx + k.w / 2 > l + 0.01 &&
-          k.cz - k.h / 2 < b - 0.01 &&
-          k.cz + k.h / 2 > t + 0.01,
-      )
-    const rect = (l: number, r: number, t: number, b: number) =>
-      r - l > 0.01 &&
-      b - t > 0.01 &&
-      free(l, r, t, b) &&
-      // thấp hơn mặt keycap (keycap đứng từ 0.36u) để không nhô lên giữa cụm phím
-      out.push({ x: (l + r) / 2, z: (t + b) / 2, w: r - l, d: b - t, top: 0.3 })
-    rect(x0, x1, top, up.cz - 0.5)
-    rect(x0, up.cx - 0.5, up.cz - 0.5, up.cz + 0.5)
-    rect(up.cx + 0.5, x1, up.cz - 0.5, up.cz + 0.5)
-  }
   return out
 }
+
+/**
+ * Đường bao các vùng phím (cụm F, cụm chính, cụm nav, cụm mũi tên...) trên lưới 1/8u: mỗi vùng ô phím liền nhau → 1 vòng
+ * đa giác vuông góc [x, z] (u, quanh gốc). Dùng khoét tấm mica trên cùng của case mica ghép (khung chặn liền 1 tấm với mặt
+ * case). Layout có phím xoay (Alice) trả về rỗng
+ */
+export function keyRegions(keys: Key[], width: number, depth: number): [number, number][][] {
+  if (keys.some((k) => k.rot)) return []
+  const S = 0.125
+  const nx = Math.round(width / S)
+  const nz = Math.round(depth / S)
+  const occ = Array.from({ length: nz }, () => new Array<boolean>(nx).fill(false))
+  for (const k of keys) {
+    const x0 = Math.max(0, Math.round((k.cx - k.w / 2 + width / 2) / S))
+    const x1 = Math.min(nx, Math.round((k.cx + k.w / 2 + width / 2) / S))
+    const z0 = Math.max(0, Math.round((k.cz - k.h / 2 + depth / 2) / S))
+    const z1 = Math.min(nz, Math.round((k.cz + k.h / 2 + depth / 2) / S))
+    for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) occ[z][x] = true
+  }
+  const at = (x: number, z: number) => x >= 0 && z >= 0 && x < nx && z < nz && occ[z][x]
+  // cạnh biên có hướng (ô phím luôn nằm bên trái khi đi theo cạnh) → nối thành vòng
+  const next = new Map<string, [number, number][]>()
+  const add = (a: [number, number], b: [number, number]) => {
+    const k = `${a[0]},${a[1]}`
+    next.set(k, [...(next.get(k) ?? []), b])
+  }
+  for (let z = 0; z < nz; z++)
+    for (let x = 0; x < nx; x++) {
+      if (!occ[z][x]) continue
+      if (!at(x, z - 1)) add([x + 1, z], [x, z])
+      if (!at(x - 1, z)) add([x, z], [x, z + 1])
+      if (!at(x, z + 1)) add([x, z + 1], [x + 1, z + 1])
+      if (!at(x + 1, z)) add([x + 1, z + 1], [x + 1, z])
+    }
+  const loops: [number, number][][] = []
+  for (const [start] of next) {
+    while (next.get(start)?.length) {
+      const loop: [number, number][] = []
+      let cur = start.split(',').map(Number) as [number, number]
+      do {
+        loop.push(cur)
+        const key = `${cur[0]},${cur[1]}`
+        const list = next.get(key)!
+        cur = list.pop()!
+        if (!list.length) next.delete(key)
+      } while (`${cur[0]},${cur[1]}` !== start && loop.length < 100000)
+      // bỏ điểm giữa đoạn thẳng
+      const simple = loop.filter((p, i) => {
+        const a = loop[(i + loop.length - 1) % loop.length]
+        const b = loop[(i + 1) % loop.length]
+        return !((a[0] === p[0] && p[0] === b[0]) || (a[1] === p[1] && p[1] === b[1]))
+      })
+      // chỉ lấy viền ngoài vùng phím (trục z hướng xuống: diện tích âm), bỏ viền chỗ trống bị phím bao quanh
+      let area = 0
+      for (let i = 0; i < simple.length; i++) {
+        const [x0, z0] = simple[i]
+        const [x1, z1] = simple[(i + 1) % simple.length]
+        area += x0 * z1 - x1 * z0
+      }
+      if (area < 0) loops.push(simple.map(([x, z]) => [x * S - width / 2, z * S - depth / 2]))
+    }
+  }
+  return loops
+}
+
+/**
+ * Bề dày lớp khung chặn (u, ~3,4mm): khối chặn là tấm mỏng ở mặt trên case (như mặt dưới case thật: khung mỏng quanh
+ * các cụm phím, bên dưới rỗng), nối vào thành case qua các dải — không phải khối đặc từ sàn lên
+ */
+export const BLOCKER_SKIN = 0.18
 
 /** Cao độ mặt trên khối chặn (u, mặt plate = 0): ngang mép case, thấp hơn mặt keycap một chút */
 export const BLOCKER_TOP = 0.62

@@ -24,7 +24,12 @@ export interface SupplyDef {
   solder?: { speed: number; shine: number; slow?: number; burnChance?: number }
   /** sách phép (mục Shopii "Sách phép"): số switch cộng thêm mỗi lần mở / mỗi mẻ lube, mỗi lần dùng trừ 1 */
   spell?: number
+  /** feet cao su dán đáy case (bước `feet`): 1 vỉ 4 cái */
+  feet?: true
 }
+
+/** feet cao su dán đáy case: id vật tư theo màu (chọn ở bảng bước dán feet) */
+export const FEET_IDS = ['feetBlack', 'feetWhite'] as const
 
 /** gói sách phép: 100 / 200 / 500 lần (gói lớn rẻ hơn mỗi lần) */
 const SPELL_PACKS: [number, number][] = [
@@ -58,6 +63,22 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     packs: [[1000, 160]],
     desc: 'Thiếc xịn nhất: chảy cực nhanh, mối hàn bóng đẹp như hàn máy',
     solder: { speed: 0.6, shine: 1 },
+  },
+  feetBlack: {
+    name: 'Feet cao su đen',
+    unit: 'cái',
+    color: '#1c1c1f',
+    packs: [[4, 25]],
+    desc: 'Vỉ 4 feet bán cầu dán đáy case, chống trượt, hợp case tối màu. 1 lần mua = 4 cái',
+    feet: true,
+  },
+  feetWhite: {
+    name: 'Feet cao su trắng',
+    unit: 'cái',
+    color: '#f1f0ec',
+    packs: [[4, 25]],
+    desc: 'Vỉ 4 feet bán cầu dán đáy case, chống trượt, hợp case sáng màu. 1 lần mua = 4 cái',
+    feet: true,
   },
   urgo: {
     name: 'Băng keo cá nhân Urgo',

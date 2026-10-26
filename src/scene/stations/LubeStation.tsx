@@ -49,11 +49,12 @@ const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)
 const { body, cavity } = SWITCH_CAD
 // hàng sau: đồ nghề + hộp lò xo; phần còn lại của bàn bày các switch đã mở (bấm vào để lube)
 // hộp lắc + khay lò xo ở hàng sau (trước nằm sát mép trước, che chi tiết switch)
-const BOX_AT = v(-1.2, TABLE, -4.7) // hộp lắc lò xo (sát mép sau)
+// dời vào 0.3u so với mép sau: bàn full (k lớn) trước đó chạm chân màn hình PC
+const BOX_AT = v(-1.2, TABLE, -4.4) // hộp lắc lò xo (hàng sau)
 /** hộp nhựa đựng cả mẻ lò xo (u bàn) */
 // dài 3.75u (trước 7.5u, người dùng thấy dài quá); lò xo rải trong hộp tự co theo BOX.w
 const BOX = { w: 3.75, d: 2.4, h: 1.5 }
-const TRAY_AT = v(-5.6, TABLE, -5)
+const TRAY_AT = v(-5.6, TABLE, -4.7)
 const TRAY = { w: 1.9, d: 1.45, h: 0.32 }
 const LUBE_MODEL = '/models/lube'
 const BOX_SCALE: [number, number, number] = [BOX.w / 80, BOX.h / 15.5, BOX.d / 62.4]
