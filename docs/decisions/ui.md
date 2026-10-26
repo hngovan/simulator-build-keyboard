@@ -348,3 +348,26 @@
   Hiểu rồi / Thu nhỏ / Tắt hướng dẫn; bật lại + xem lại mẹo ở Cài đặt (`GuidePanel`).
 
 - Sửa (2026-10-26): bỏ hẳn tuỳ chọn tắt hướng dẫn (người dùng: "tắt rồi mở lại kiểu gì, bỏ option tắt đi"): bỏ `guideOff` / `setGuideOff`, bong bóng chỉ còn Thu nhỏ / Hiểu rồi, Cài đặt còn nút "Keeb-chan nhắc lại mẹo từ đầu".
+
+### Keeb-chan hội thoại ở bàn build, ô trống "Bài của tôi", tab Hội Phím Cơ dính trên (2026-10-26)
+
+- Người dùng: "nhân vật 2d hướng dẫn build phím sẽ có hội thoại hướng dẫn build khi vào bàn build... góc bên phải or trên cùng"
+  (ảnh mẫu: khung thoại tối, tên nhân vật, "▼ Nhấn để tiếp tục"). `features/guide/BenchDialog.tsx` + `benchLines.ts`: lần đầu vào bàn
+  (`INTRO`, `guideSeen` `bench:intro`) và lần đầu gặp mỗi bước (`STEP_LINES[step]`, `step:<id>`) hiện hội thoại nhiều câu; chữ chạy
+  từng ký tự, bấm = hiện hết / câu sau. Không có "Bỏ qua" (người dùng: "ko có nút bỏ qua, chỉ có nút thu nhỏ lại"):
+  "Thu nhỏ" hoặc bấm nhân vật → avatar tròn chấm đỏ góc phải dưới, bấm mở lại đúng câu đang dở; sang tình huống mới thì tự mở lại. Giữa trên màn hình (dưới thanh nút), khung thoại + Keeb-chan bên phải
+  (người dùng: "đoạn hội thoại phải nằm ở góc trên màn hình chính giữa"); bước vặn vít hạ xuống `top-[136px]` tránh `BitPicker` giữa trên. `GuideNpc` giờ chỉ ở máy tính; bỏ mẹo `bench` / `solder` / `test`
+  trong `TIPS` (gộp vào hội thoại bước). Cài đặt "nhắc lại mẹo từ đầu" xoá `guideSeen` nên hội thoại bàn build cũng hiện lại.
+- Bàn trống (chưa build) cũng có hội thoại (người dùng: "chưa nhận đơn nào cũng phải có hộp thoại keeb chan hướng dẫn chứ"):
+  `benchTopics(step, hasOrder)` chọn đoạn theo tình huống: chưa có đơn / job → `bench:empty` (về máy tính, Mezzenger nhận đơn, quay lại
+  bấm ô vàng); có đơn → `bench:pick` (bấm ô vàng chọn đơn). Ẩn khi đang mở `benchPicker` và khi cảnh 3D đang tải (`useSceneLoading` chưa `ready` / còn `pending`, người dùng:
+  "chưa load cảnh màn build xong đã hiển thị cuộc hội thoại rồi"). Đổi tình huống thì đọc lại từ câu đầu.
+- "Bài của tôi" (`MyListings`): ô trống = icon + chữ ở giữa (`Empty`): "Chưa có bài đăng nào" (Newspaper), "Kho trống" (PackageOpen).
+- `GroupFeed`: 2 tab "Chợ pass" / "Bài của tôi" `sticky` trên cùng thân cửa sổ (bù padding `-mx/-mt` + nền `bg-panel`), không cuộn theo.
+- Sửa tiếp (2026-10-26, "bấm hiểu rồi cũng bị mất, chỉ cho option thu nhỏ"): bong bóng máy tính (`GuideNpc`) bỏ nút "Hiểu rồi", Keeb-chan luôn ở góc;
+  `currentTip` không lọc `guideSeen` nữa, nói mẹo đầu tiên hợp tình huống, không có thì câu chung `IDLE`. Thu nhỏ nhớ theo id mẹo (`smallAt`),
+  mẹo đổi thì bong bóng tự mở. `guideSeen` vẫn giữ cho hội thoại bàn build (`BenchDialog`, phiên khác làm).
+- Sửa tiếp (2026-10-26): bong bóng dùng `TitleBar` của cửa sổ app (màu hồng, kéo thả để dời Keeb-chan, offset không lưu) + nút — (`TitleButton`);
+  đuôi nhọn chỉ về nhân vật như bong bóng chat (span xoay 45° nằm ngoài khung overflow-hidden). Bấm vào nhân vật để ẩn / hiện bong bóng
+  (bỏ kiểu thu thành avatar tròn), đang ẩn thì chấm đỏ báo có mẹo.
+- Sửa tiếp (2026-10-26): thanh tiêu đề bong bóng gọn lại (chữ 14px, cao ~32px, nút — `size-6`; dùng `!` vì `cn` chỉ nối chuỗi, không gộp class trùng của `TitleBar`), bỏ đuôi nhọn.

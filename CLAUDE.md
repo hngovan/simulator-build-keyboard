@@ -168,7 +168,7 @@ vào `window.__r3f` để debug trong console.
 - Shopii gộp case cùng dòng (`CASE_LINES`): 1 sản phẩm, chọn chất liệu (`ProductOption.group`) rồi màu; id case giữ riêng.
 - Ảnh đơn / case Shopii / cửa sổ xem 3D dùng chung `buildKeyboardModel` (`features/apps/messenger/orderThumb.ts`).
 - Hội Phím Cơ: bài pass viết bằng thuật ngữ chợ phím che tình trạng thật (`data/market.ts`); inbox người bán (xin hình, check var,
-  xin bớt, lowball, tự nhập giá `'offer'` popup, đi ăn xin `'beg'` → 5% được free, còn lại ban chợ 3 ngày `marketBanUntil`...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
+  xin bớt, lowball, tự nhập giá `'offer'` popup, đi ăn xin `'beg'` → 10% được free, 70% người bán chặn, 20% ban chợ 3 ngày `marketBanUntil`...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
 - Nhạc nền: xoay ngẫu nhiên `public/audio/bgm.mp3` / `bgm-2.mp3` / `bgm-3.mp3` (không lặp bài vừa nghe), không tải được thì loop tổng hợp (`src/sound.ts`).
 - Tiền linh kiện: giao xong khách trả đủ `budget` (`reimburse`), mua rẻ hơn thì phần dư là lãi, lố thì shop chịu.
 - Stab đếm theo cỡ dây: `short` 2u, `long` 6.25u, `long7` 7u (`StabCount`, `stabStock` / `stabNeed` / `stabText` trong parts.ts).
@@ -186,7 +186,8 @@ vào `window.__r3f` để debug trong console.
 - Test phím: PCB hàn còn phím chưa hàn / cháy thì bấm không ăn (`deadKey`, `build.testFaults` → StepList sáng "!" bước hàn để quay lại sửa);
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
-- NPC hướng dẫn Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`): mẹo theo tình huống (`TIPS`), `guideSeen` / `guideOff` trong Profile.
+- NPC hướng dẫn Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`): mẹo theo tình huống ở máy tính (`TIPS`), bàn build là hội thoại
+  theo bước / bàn trống (`BenchDialog`, `benchTopics`, câu thoại `benchLines.ts`, chưa đọc thì hiện), `guideSeen` trong Profile.
 - Esc mở / đóng Cài đặt (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup). Cài đặt trên cùng: Phá sản + Lưu tiến trình
   (`saveRun` = gửi bảng xếp hạng lý do `'save'`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`

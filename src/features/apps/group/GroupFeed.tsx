@@ -25,7 +25,8 @@ export function GroupFeed() {
     )
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex flex-wrap gap-1">
+      {/* 2 tab dính trên cùng khi cuộn (bù padding thân cửa sổ để nền phủ kín mép) */}
+      <div className="sticky -top-3.5 z-10 -mx-3.5 -mt-3.5 flex flex-wrap gap-1 bg-panel px-3.5 pt-3.5 pb-2 max-md:-top-2.5 max-md:-mx-2.5 max-md:-mt-2.5 max-md:px-2.5 max-md:pt-2.5">
         <OptionChip active={tab === 'feed'} onClick={() => setTab('feed')}>
           Chợ pass
         </OptionChip>

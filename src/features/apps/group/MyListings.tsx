@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Newspaper, PackageOpen } from 'lucide-react'
 import { useGame } from '@/store'
 import { Alert, Avatar, Badge, Button, Heading, Muted } from '@/components/ui'
 import { fmt } from '@/lib/format'
@@ -173,16 +174,26 @@ export function MyListings() {
       <Heading info="Đồ trong kho chung hoặc phím của khách đã đóng gói chưa gửi. Bán phím của khách thì 95% bị lộ">
         Bài đang đăng ({listings.length})
       </Heading>
-      {!has && <Muted>Chưa đăng bài nào.</Muted>}
+      {!has && <Empty icon={<Newspaper />}>Chưa có bài đăng nào</Empty>}
       {listings.map((l) => (
         <ListingCard key={l.id} l={l} />
       ))}
 
       <Heading>Đăng bán món mới</Heading>
-      {!sources.length && <Muted>Kho chung trống, chưa có món nào để bán.</Muted>}
+      {!sources.length && <Empty icon={<PackageOpen />}>Kho trống</Empty>}
       {sources.map((x) => (
         <SourceRow key={x.key} src={x.src} index={x.index} />
       ))}
+    </div>
+  )
+}
+
+/** ô trống: icon + chữ ở giữa */
+function Empty({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 rounded-xl bg-panel-2 py-6 text-sm font-bold text-muted [&_svg]:size-8 [&_svg]:opacity-70">
+      {icon}
+      {children}
     </div>
   )
 }

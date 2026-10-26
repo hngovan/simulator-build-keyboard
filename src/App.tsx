@@ -7,6 +7,7 @@ import { GlobalTooltip } from '@/components/ui/GlobalTooltip'
 import { ReviewPops } from '@/features/apps/reviews/ReviewPops'
 import { GameOverDialog } from '@/features/gameover/GameOverDialog'
 import { GuideNpc } from '@/features/guide/GuideNpc'
+import { BenchDialog } from '@/features/guide/BenchDialog'
 import { TitleScreen } from '@/features/title/TitleScreen'
 import { Desktop } from '@/features/desktop/Desktop'
 import { BenchHud } from '@/features/bench/BenchHud'
@@ -38,6 +39,7 @@ export default function App() {
         <>
           <Bench />
           {!zooming && (hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
+          {!zooming && <BenchDialog />}
           <ShelfViewer />
           <BenchLoader />
         </>

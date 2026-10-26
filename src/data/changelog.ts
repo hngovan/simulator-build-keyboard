@@ -13,9 +13,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.7',
+    date: '2026-10-26',
+    commits: [],
+    title: 'Keeb-chan gọn hơn, hội thoại ở bàn build, chợ dễ thở hơn',
+    items: [
+      'Keeb-chan luôn ở góc máy tính: bấm vào nhân vật để ẩn / hiện lời nhắc, thanh tiêu đề như cửa sổ app (kéo để dời, nút thu nhỏ)',
+      'Lời nhắc đổi theo tình huống, không còn nút "Hiểu rồi" làm Keeb-chan biến mất',
+      'Bàn build: Keeb-chan nói chuyện hướng dẫn từng bước kiểu game nhập vai',
+      'Hội Phím Cơ: 2 tab dính trên cùng khi cuộn; lowball thành công ~30%',
+      'Đi ăn xin: 10% được cho free, 70% bị người bán chặn, 20% bị ban chợ 3 ngày',
+    ],
+  },
+  {
     version: '0.1.6',
     date: '2026-10-26',
-    commits: ['c6ab620'],
+    commits: ['c6ab620', '0c18d7d'],
     title: 'Đăng bán ở chợ, Keeb-chan hướng dẫn, lưu tiến trình, lỗi khi không test',
     items: [
       'Hội Phím Cơ thêm tab "Bài của tôi": đăng bán đồ trong kho hoặc phím của khách, bot hỏi han và trả giá',

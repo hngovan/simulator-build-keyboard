@@ -26,9 +26,11 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 <!-- prettier-ignore -->
 | Phiên bản | Ngày | Mảng | Thay đổi chính |
 | --- | --- | --- | --- |
+| **0.1.7** | 26/10/2026 | 🎀 Keeb-chan | Luôn ở góc màn hình, bấm nhân vật để ẩn / hiện lời nhắc, thanh tiêu đề như cửa sổ app (kéo để dời); ở bàn build hướng dẫn từng bước. |
+|  |  | 🤝 Hội Phím Cơ | Tab dính trên cùng khi cuộn; lowball thành công ~30%; đi ăn xin 10% được free, 70% bị chặn, 20% bị ban chợ. |
 | **0.1.6** | 26/10/2026 | 🛒 Đăng bán ở chợ | Tab "Bài của tôi" ở Hội Phím Cơ: bán đồ trong kho hoặc phím của khách (dễ bị lộ, chuộc lại được). |
 |  |  | 🧪 Test phím | Phím chưa hàn không ăn, bước hàn sáng "!" để quay lại; giao khi chưa test hết có thể bị báo lỗi nút. |
-|  |  | 🎀 Keeb-chan | NPC hướng dẫn nhắc mẹo theo tình huống. |
+|  |  | 🎀 Keeb-chan | NPC hướng dẫn nhắc mẹo theo tình huống; ở bàn build có hội thoại hướng dẫn từng bước. |
 |  |  | 💾 Lưu tiến trình | Esc mở Cài đặt, nút Lưu ghi bảng xếp hạng; đóng tab tự gửi. |
 | **0.1.5** | 26/10/2026 | 🏆 Bảng xếp hạng | Xếp theo điểm tổng (đơn + uy tín + ngày + tiền), lọc theo từng thông số, khung loading khi tải. |
 |  |  | 🔗 Gửi link | Gửi link game lên Facebook / Messenger / Zalo / Discord hiện banner + mô tả. |

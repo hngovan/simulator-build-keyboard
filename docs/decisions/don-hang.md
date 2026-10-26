@@ -142,6 +142,9 @@
 - 2026-10-26, người dùng: "sửa lại tỉ lệ ăn xin 5% thành công còn lại ko thành công thì bị ban khỏi chợ" → bỏ `BEG_BAN` và nhánh
   block / chọc: `BEG_GIFT` 5% được tặng, 95% còn lại người bán đáp (`BEG_REPLIES`) + admin ban `BAN_DAYS` ngày (`deal.ban`, chặn luôn).
 
+- 2026-10-26, người dùng: "tăng tỉ lệ lowball thành công lên 30%" → nút lowball (trả 70% giá) ở bài thường: không bị block (75%)
+  thì `LOWBALL_OK.normal` 0,4 nhận giá (trước 0,3) → tổng 30% (trước 22,5%). Bài "lowball thoải mái" giữ ~52%, price no offer vẫn block.
+
 ### Kho chung cho mọi linh kiện (2026-10-25, thay mục "Đồ dư từ đơn trước")
 
 - Người dùng: "sao lại là Đồ dư từ đơn trước?? tự động pcb build dư or mua dư bỏ vào chứ; mua sw sau khi đổi qua đơn khác thì bị biến mất"
@@ -324,3 +327,5 @@ bấm phá sản, new game".
 - Mua dụng cụ / vật tư (`buyTool` / `buySupply`) không cộng `spent`, chỉ `buy` linh kiện mới tính vào budget đơn (đã thử trong game:
   mua cọ + Urgo, `spent` vẫn 0).
 - Sửa (2026-10-26): mở Hội Phím Cơ bị văng "reading 'name'" với bản lưu thật — kho chung có món mà id không còn trong danh mục. `useSources` (MyListings) lọc `readable()` (thử `sourceTitle` / `sourceValue`, lỗi thì bỏ món đó).
+- 2026-10-26, người dùng: "tỉ lệ ăn xin thành công lên 10%, fail ăn block 70%, còn ăn ban 20%" → `BEG_GIFT` 0,1 + `BEG_BLOCK` 0,7
+  (người bán chặn inbox, không ban chợ), phần còn lại 20% bị admin ban 3 ngày như cũ (trước: 5% free, 95% ban).

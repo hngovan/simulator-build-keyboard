@@ -1,7 +1,8 @@
 import { checkInventory } from '@/data/parts'
 import type { GameState } from '@/store'
 
-// Gợi ý của NPC hướng dẫn: mỗi mẹo hiện 1 lần (bấm "Hiểu rồi" thì không hiện lại), lấy mẹo đầu tiên đúng tình huống
+// Gợi ý của NPC hướng dẫn ở máy tính (bàn build dùng hội thoại `benchLines.ts`): Keeb-chan luôn ở góc màn hình,
+// nói mẹo đầu tiên đúng tình huống (đổi theo tiến độ), không có mẹo nào hợp thì nói câu chung `IDLE`
 export interface Tip {
   id: string
   /** đúng tình huống thì hiện */
@@ -9,7 +10,6 @@ export interface Tip {
   text: string
 }
 
-const step = (s: GameState) => (s.build && s.ctx ? s.ctx.steps[s.build.stepIdx] : undefined)
 const ready = (s: GameState) =>
   !!s.order && !s.build && !s.result && checkInventory(s.inventory, s.order).every((c) => c.ok)
 
@@ -30,21 +30,6 @@ export const TIPS: Tip[] = [
     text: 'Đủ đồ rồi! Bấm "Bàn build" góc phải màn hình để bắt đầu lắp nào ⌨️',
   },
   {
-    id: 'bench',
-    when: (s) => s.screen === 'bench' && !!s.build && s.build.stepIdx <= 1,
-    text: 'Làm theo danh sách bước bên trái, mũi tên vàng chỉ chỗ cần bấm. Bấm vào bước đã làm để quay lại sửa.',
-  },
-  {
-    id: 'solder',
-    when: (s) => s.screen === 'bench' && step(s) === 'solder',
-    text: 'Giữ chuột lên chân switch, nhả khi thanh nhiệt vào vùng xanh. Hàn cháy thì lau mũi hàn vào bùi nhùi rồi hàn lại.',
-  },
-  {
-    id: 'test',
-    when: (s) => s.screen === 'bench' && step(s) === 'test',
-    text: 'Test hết phím trước khi giao nhé! Bỏ sót là khách có thể báo lỗi nút, bị đánh giá thấp đó 😣',
-  },
-  {
     id: 'ship',
     when: (s) => s.screen === 'pc' && s.packed.some((p) => !p.shipped),
     text: 'Phím đóng gói xong rồi! Vào Mezzenger gửi cho khách để nhận tiền công nha.',
@@ -56,6 +41,12 @@ export const TIPS: Tip[] = [
   },
 ]
 
-/** mẹo đang hiện (null = không có mẹo hợp tình huống) */
-export const currentTip = (s: GameState) =>
-  TIPS.find((t) => !s.guideSeen.includes(t.id) && t.when(s)) ?? null
+/** câu chung khi không có mẹo nào hợp tình huống */
+const IDLE: Tip = {
+  id: 'idle',
+  when: () => true,
+  text: 'Mình ở đây nếu bạn cần nhé! Nhận thêm đơn ở Mezzenger, hết việc thì bấm "Kết thúc ngày".',
+}
+
+/** mẹo đang nói (luôn có, chỉ ở màn hình máy tính) */
+export const currentTip = (s: GameState) => TIPS.find((t) => t.when(s)) ?? IDLE
