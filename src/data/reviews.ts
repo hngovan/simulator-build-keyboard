@@ -32,7 +32,7 @@ const TEXTS = {
   ],
   cancel: ['Ôm đơn rồi để đó, quá hạn cả tuần. Huỷ!', 'Thợ không có tâm, nhận đơn xong bỏ xó'],
   defect: [
-    'Nhận phím về bấm nút {keys} không ăn, shop có test trước khi giao không vậy 😤',
+    'Nhận phím về bấm nút {keys} không nhận tín hiệu, shop có test trước khi giao không vậy 😤',
     'Nút {keys} chết ngắc, làm ăn ẩu quá',
     'Vừa gõ thử đã lỗi nút {keys}, thất vọng ghê',
   ],

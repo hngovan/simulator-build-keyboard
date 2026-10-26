@@ -13,9 +13,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: '0.1.7',
+    version: '0.1.8',
     date: '2026-10-26',
     commits: [],
+    title: 'Bảng tỉ lệ trong game, chuộc phím +1 uy tín',
+    items: [
+      'Keeb-chan có nút "📊 Bảng tỉ lệ": tỉ lệ ở chợ, bán phím của khách, hàn / test, đơn hàng (README có bảng giống hệt)',
+      'Chuộc lại phím của khách được +1 uy tín (trước +2)',
+      'Phím chưa hàn / hàn cháy: báo "không nhận tín hiệu" lúc test, khách nhận phím cũng báo đúng như vậy',
+      'Bài pass: rê chuột lên badge "Fs" để xem nghĩa (free ship)',
+      'App Đánh giá có icon "!" giải thích cách chấm sao và uy tín',
+      'Hội Phím Cơ: ô trống "Nhận đơn trước…" có icon như tab Bài của tôi',
+    ],
+  },
+  {
+    version: '0.1.7',
+    date: '2026-10-26',
+    commits: ['7454f6c'],
     title: 'Keeb-chan gọn hơn, hội thoại ở bàn build, chợ dễ thở hơn',
     items: [
       'Keeb-chan luôn ở góc máy tính: bấm vào nhân vật để ẩn / hiện lời nhắc, thanh tiêu đề như cửa sổ app (kéo để dời, nút thu nhỏ)',

@@ -26,6 +26,7 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 <!-- prettier-ignore -->
 | Phiên bản | Ngày | Mảng | Thay đổi chính |
 | --- | --- | --- | --- |
+| **0.1.8** | 26/10/2026 | 📊 Bảng tỉ lệ | Keeb-chan mở bảng tỉ lệ trong game (xem mục "Bảng tỉ lệ trong game"); chuộc phím khách +1 uy tín; app Đánh giá giải thích cách chấm sao. |
 | **0.1.7** | 26/10/2026 | 🎀 Keeb-chan | Luôn ở góc màn hình, bấm nhân vật để ẩn / hiện lời nhắc, thanh tiêu đề như cửa sổ app (kéo để dời); ở bàn build hướng dẫn từng bước. |
 |  |  | 🤝 Hội Phím Cơ | Tab dính trên cùng khi cuộn; lowball thành công ~30%; đi ăn xin 10% được free, 70% bị chặn, 20% bị ban chợ. |
 | **0.1.6** | 26/10/2026 | 🛒 Đăng bán ở chợ | Tab "Bài của tôi" ở Hội Phím Cơ: bán đồ trong kho hoặc phím của khách (dễ bị lộ, chuộc lại được). |
@@ -60,6 +61,39 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 |  | 23/10/2026 | 🖥️ Desktop | Cải thiện desktop giả lập và cài đặt âm thanh. |
 
 Chi tiết từng mục: [src/data/changelog.ts](src/data/changelog.ts) (hoặc bấm số phiên bản trong game).
+
+## Bảng tỉ lệ trong game
+
+Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phải màn hình máy tính). Số liệu lấy từ `src/data/odds.ts`.
+
+<!-- prettier-ignore -->
+| Mảng | Tình huống | Tỉ lệ |
+| --- | --- | --- |
+| **🤝 Mua hàng pass ở Hội Phím Cơ** | Người bán liêm (mô tả đúng tình trạng) | 60% |
+|  | Người bán bùng tiền | 8% người liêm · 30% người không liêm |
+|  | Check var lục được bài tố người bùng | 70% |
+|  | Hàng lỗi: case / plate / PCB | 45% / 35% / 35% |
+|  | Hàng lỗi: keycap / switch / stab | 55% / 40% / 40% |
+|  | Bài "Price no offer" · "Fs" (free ship) · "câm điếc" | 25% · 35% · 30% |
+|  | Hỏi han bài "câm điếc" bị chặn (mỗi câu) | 30% |
+|  | Xin lộc bài "Price no offer" bị chặn | 40% |
+|  | Chốt nhanh được bớt 100–200k | 65% |
+|  | Lowball (trả 70%) bài thường | 25% bị chặn · 30% được |
+|  | Lowball bài "Lowball thoải mái" | 5% bị chặn · 52% được |
+|  | Lowball bài "Price no offer" | 100% bị chặn |
+|  | Đi ăn xin | 10% được free · 70% bị chặn · 20% ban chợ 3 ngày |
+| **💸 Tự đăng bán / bán phím của khách** | Bán phím của khách mà khách không phát hiện | 5% |
+|  | Bị lộ | 95% · −1 uy tín |
+|  | Chuộc lại phím (giá ×1.3 giá đã bán) | 30% bị từ chối · được thì +1 uy tín, giữ 3 ngày |
+|  | Đăng giá > 1,4× giá chợ: bị chê | 50% mỗi lượt bot ghé |
+| **🔧 Lắp ráp & giao hàng** | Thiếc đểu cháy chân dù nhả đúng vùng xanh | 15% |
+|  | Giao khi chưa test hết phím: khách báo 1 nút lỗi | 5% |
+|  | Còn switch chưa hàn / hàn cháy | Test: phím không nhận · giao đi: khách báo nút không nhận tín hiệu (100%, tối đa 2 sao) |
+| **📨 Đơn hàng** | Đơn kit (khách gửi sẵn vài món) | ~50% |
+|  | Yêu cầu đúng loại switch (1 mẫu cụ thể) | 35% |
+|  | Đòi đích danh case / stab / plate | 30% mỗi món |
+|  | Đòi chất liệu keycap | 80% |
+|  | Muốn lube · cấm lube · tuỳ shop | 40% · 20% · 40% |
 
 ## Tài liệu
 

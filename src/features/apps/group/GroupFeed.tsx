@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useGame } from '@/store'
-import { Alert, OptionChip } from '@/components/ui'
+import { ClipboardList } from 'lucide-react'
+import { Alert, Empty, OptionChip } from '@/components/ui'
 import { PostCard } from './PostCard'
 import { MyListings } from './MyListings'
 
@@ -38,9 +39,7 @@ export function GroupFeed() {
       {tab === 'mine' ? (
         <MyListings />
       ) : !order ? (
-        <div className="p-8 text-center text-muted">
-          Nhận đơn trước để xem các bài pass đồ phù hợp nhé.
-        </div>
+        <Empty icon={<ClipboardList />}>Nhận đơn trước để xem các bài pass đồ phù hợp nhé.</Empty>
       ) : (
         <>
           <Alert tone="yellow" title="Hàng pass rẻ hơn 20–40% nhưng mô tả toàn thuật ngữ chợ">

@@ -84,7 +84,7 @@ export function BenchDialog() {
         onClick={() => setSmall(true)}
         className="pointer-events-auto shrink-0 cursor-pointer transition-transform hover:-translate-y-0.5"
       >
-        <GuideGirl className="w-[96px] animate-bob drop-shadow-[0_6px_0_rgba(0,0,0,0.35)] max-md:w-16" />
+        <GuideGirl className="w-[96px] animate-bob max-md:w-16" />
       </button>
     </div>
   )

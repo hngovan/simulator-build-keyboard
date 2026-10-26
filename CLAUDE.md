@@ -182,7 +182,7 @@ vào `window.__r3f` để debug trong console.
   Tiền gọn theo cỡ `fmtMoney` (< 10.000k giữ k, ≥ 10.000k → m, ≥ 100.000k → B; `lib/format.ts`) ở bảng xếp hạng + ví; giá Shopii vẫn `fmt` (k).
 - Shop tự đăng bán ở Hội Phím Cơ (tab "Bài của tôi", `apps/group/MyListings`, `data/selling.ts`, `store/sellSlice.ts`): đồ kho chung
   hoặc phím của khách (đơn đóng gói chưa gửi); bot hỏi / trả giá (`botTurn`), bấm giá để bán. Bán phím của khách: 5% (`STEAL_OK`) khách quên,
-  còn lại −1 uy tín + `stolen` (chuộc lại `buyBack` giá ×1.3, 30% không cho chuộc, chuộc được +2 uy tín, quá 3 ngày mất). `listings` / `stolen` trong Profile.
+  còn lại −1 uy tín + `stolen` (chuộc lại `buyBack` giá ×1.3, 30% không cho chuộc, chuộc được +1 uy tín, quá 3 ngày mất). `listings` / `stolen` trong Profile.
 - Test phím: PCB hàn còn phím chưa hàn / cháy thì bấm không ăn (`deadKey`, `build.testFaults` → StepList sáng "!" bước hàn để quay lại sửa);
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).

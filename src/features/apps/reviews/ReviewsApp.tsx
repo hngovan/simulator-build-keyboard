@@ -1,9 +1,13 @@
 import { useState } from 'react'
+import { CircleAlert } from 'lucide-react'
 import { useGame } from '@/store'
 import { Badge, Muted, OptionChip } from '@/components/ui'
 import { ReviewCard, Stars } from './ReviewCard'
 
 const FILTERS = { all: 'Tất cả', good: '4–5 sao', bad: '1–2 sao' } as const
+/** cách chấm sao (khớp `scoreDelivery` trong store/scoring.ts + `shipRep` trong data/reviews.ts) */
+const HOW_SCORED =
+  'Điểm giao hàng /100: âm thanh, màu keycap / case, mount, build, mối hàn, stab, lube, test phím, ngân sách; nút lỗi −15, linh kiện lỗi −8. Sao: ≥90 = 5★, ≥75 = 4★, ≥55 = 3★, ≥35 = 2★, khách báo lỗi nút tối đa 2★. Uy tín +(sao − 3), trễ mỗi ngày −1'
 
 // Đánh giá của khách: sao trung bình + danh sách mới nhất trước
 export function ReviewsApp() {
@@ -30,7 +34,7 @@ export function ReviewsApp() {
           </div>
         </div>
       </div>
-      <div className="flex gap-1.5">
+      <div className="flex items-center gap-1.5">
         {Object.entries(FILTERS).map(([k, label]) => (
           <OptionChip
             key={k}
@@ -41,6 +45,13 @@ export function ReviewsApp() {
             {label}
           </OptionChip>
         ))}
+        <span
+          title={HOW_SCORED}
+          aria-label={HOW_SCORED}
+          className="ml-auto shrink-0 cursor-help text-yellow"
+        >
+          <CircleAlert className="size-5" strokeWidth={2.5} />
+        </span>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
         {list.map((r) => (

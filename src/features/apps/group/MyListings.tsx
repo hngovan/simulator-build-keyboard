@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { Newspaper, PackageOpen } from 'lucide-react'
 import { useGame } from '@/store'
-import { Alert, Avatar, Badge, Button, Heading, Muted } from '@/components/ui'
+import { Alert, Avatar, Badge, Button, Empty, Heading, Muted } from '@/components/ui'
 import { fmt } from '@/lib/format'
 import {
   BUYBACK_DAYS,
@@ -184,16 +184,6 @@ export function MyListings() {
       {sources.map((x) => (
         <SourceRow key={x.key} src={x.src} index={x.index} />
       ))}
-    </div>
-  )
-}
-
-/** ô trống: icon + chữ ở giữa */
-function Empty({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <div className="flex flex-col items-center gap-1.5 rounded-xl bg-panel-2 py-6 text-sm font-bold text-muted [&_svg]:size-8 [&_svg]:opacity-70">
-      {icon}
-      {children}
     </div>
   )
 }

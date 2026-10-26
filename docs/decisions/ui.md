@@ -371,3 +371,20 @@
   đuôi nhọn chỉ về nhân vật như bong bóng chat (span xoay 45° nằm ngoài khung overflow-hidden). Bấm vào nhân vật để ẩn / hiện bong bóng
   (bỏ kiểu thu thành avatar tròn), đang ẩn thì chấm đỏ báo có mẹo.
 - Sửa tiếp (2026-10-26): thanh tiêu đề bong bóng gọn lại (chữ 14px, cao ~32px, nút — `size-6`; dùng `!` vì `cn` chỉ nối chuỗi, không gộp class trùng của `TitleBar`), bỏ đuôi nhọn.
+
+### App "Đánh giá": icon "!" giải thích cách chấm (2026-10-26)
+
+- Người dùng: "ở bảng đánh giá flex gap-1.5 bên góc phải thêm dấu chấm than vàng giải thích cách chấm điểm". `ReviewsApp`: hàng chip lọc
+  thêm `CircleAlert` vàng `ml-auto` (giống `Heading info`), tooltip `HOW_SCORED` tóm tắt `scoreDelivery` (mục chấm /100, nút lỗi −15,
+  linh kiện lỗi −8, ngưỡng sao 90/75/55/35, lỗi nút tối đa 2★) + `shipRep` (uy tín sao − 3, trễ −1 / ngày). Đổi cách chấm thì sửa cả chuỗi này.
+
+### Bảng tỉ lệ (2026-10-26)
+
+- Yêu cầu: "tổng hợp 1 table tỉ lệ trong game vào README, đưa vào hướng dẫn cho Keeb-chan". `src/data/odds.ts` (`ODDS`: nhóm chợ / bán phím
+  khách / lắp ráp & giao / đơn hàng) lấy thẳng hằng số (`BEG_GIFT`, `LOWBALL_*`, `MUTE_BLOCK` export từ market.ts, `STEAL_OK`..., `UNTESTED_FAIL`,
+  `burnChance` thiếc đểu); món code ghi số trực tiếp thì chép số. Bong bóng Keeb-chan có nút "📊 Bảng tỉ lệ" → `OddsDialog`. README mục
+  "Bảng tỉ lệ trong game" in ra từ `ODDS` (đổi tỉ lệ thì in lại bảng).
+- Ô trống "Nhận đơn trước để xem các bài pass…" (tab Chợ pass) dùng `Empty` (icon + chữ) như tab Bài của tôi; `Empty` chuyển sang `components/ui`.
+- Keeb-chan (người dùng: "nên để viền đen hết... ko cần đổ bóng, button bảng tỉ lệ độ bóng khi hover vào to quá"): bong bóng `GuideNpc`
+  viền `border-black` đặc, bỏ `shadow`; bỏ `drop-shadow` nhân vật (cả `BenchDialog`); nút "📊 Bảng tỉ lệ" hover chỉ nhích 1px, bóng giữ 4px
+  (đè riêng bằng `!`, không đổi `Button` chung).

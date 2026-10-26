@@ -158,7 +158,7 @@ export function scoreDelivery({
     defects = [label(untested[Math.floor(rng() * untested.length)])]
   if (defects.length)
     checks.push({
-      label: `Khách báo lỗi nút: ${defects.slice(0, 6).join(', ')}${defects.length > 6 ? ` (+${defects.length - 6})` : ''}`,
+      label: `Khách báo nút không nhận tín hiệu: ${defects.slice(0, 6).join(', ')}${defects.length > 6 ? ` (+${defects.length - 6})` : ''}`,
       pts: 0,
       got: -15,
     })

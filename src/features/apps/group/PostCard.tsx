@@ -53,6 +53,7 @@ export function PostCard({ post }: { post: GroupPost }) {
                         : 'yellow'
                 }
                 className="ml-0"
+                title={t === 'Fs' ? 'Fs = free ship, người bán chịu phí ship' : undefined}
               >
                 {t}
               </Badge>

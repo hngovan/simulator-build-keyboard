@@ -34,8 +34,8 @@ export const STEAL_OK = 0.05
 export const BUYBACK_REFUSE = 0.3
 /** chuộc lại đắt hơn giá đã bán */
 export const BUYBACK_MARKUP = 1.3
-/** chuộc được phím trả khách thì cộng uy tín (bù −1 lúc bị lộ, thêm +1 vì biết sửa sai) */
-export const BUYBACK_REP = 2
+/** chuộc được phím trả khách thì +1 uy tín (gỡ lại đúng phần bị trừ lúc lộ) */
+export const BUYBACK_REP = 1
 /** người mua giữ phím bao nhiêu ngày, quá thì bán đi mất */
 export const BUYBACK_DAYS = 3
 /** số dòng bình luận tối đa mỗi bài */

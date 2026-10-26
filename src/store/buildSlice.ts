@@ -718,7 +718,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         if (down) {
           const k = s.ctx.keys.find((x) => x.id === id)
           s.toast(
-            `⚠️ Phím ${k?.label || (k && k.w >= 4 ? 'Space' : id)} không ăn: chân chưa hàn hoặc hàn cháy`,
+            `⚠️ Phím ${k?.label || (k && k.w >= 4 ? 'Space' : id)} không nhận: switch chưa hàn hoặc hàn cháy`,
             'bad',
           )
         }

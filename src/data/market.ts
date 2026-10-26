@@ -42,8 +42,8 @@ export type InboxAction =
 /** số lần được tự trả giá với 1 người bán */
 export const OFFER_MAX = 3
 /** đi ăn xin: 10% được cho free, 70% người bán chặn, 20% còn lại bị admin ban khỏi chợ; số ngày bị ban */
-const BEG_GIFT = 0.1
-const BEG_BLOCK = 0.7
+export const BEG_GIFT = 0.1
+export const BEG_BLOCK = 0.7
 export const BAN_DAYS = 3
 
 export interface ChatLine {
@@ -408,11 +408,11 @@ export function negotiate(post: GroupPost, action: InboxAction, amount = 0): Gro
 }
 
 /** tỉ lệ người bán block khi lowball: price no offer chắc chắn, bình thường 25%, lowball thoải mái vẫn 5% */
-const LOWBALL_BLOCK: Record<PriceTag, number> = { firm: 1, normal: 0.25, lowball: 0.05 }
+export const LOWBALL_BLOCK: Record<PriceTag, number> = { firm: 1, normal: 0.25, lowball: 0.05 }
 /** không bị block thì tỉ lệ người bán nhận giá lowball: bài thường 0,4 → tổng 30% thành công, lowball thoải mái ~52% */
-const LOWBALL_OK: Record<PriceTag, number> = { firm: 0, normal: 0.4, lowball: 0.55 }
+export const LOWBALL_OK: Record<PriceTag, number> = { firm: 0, normal: 0.4, lowball: 0.55 }
 /** bài ghi "nhanh gọn cho người câm điếc": mỗi câu hỏi han (không phải xin stk luôn) có tỉ lệ ăn block */
-const MUTE_BLOCK = 0.3
+export const MUTE_BLOCK = 0.3
 
 /** câu năn nỉ xin free + người bán đáp lại */
 const BEG_LINES = [

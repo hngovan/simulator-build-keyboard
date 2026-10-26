@@ -1,10 +1,11 @@
 import { useRef, useState } from 'react'
 import { useGame } from '@/store'
 import { Minus } from 'lucide-react'
-import { TitleBar, TitleButton } from '@/components/ui'
+import { Button, TitleBar, TitleButton } from '@/components/ui'
 import { GuideGirl } from '@/components/art/GuideGirl'
 import { cn } from '@/lib/format'
 import { currentTip } from './tips'
+import { OddsDialog } from './OddsDialog'
 
 /**
  * NPC hướng dẫn Keeb-chan: góc dưới màn hình, bong bóng thoại theo tình huống (`TIPS`).
@@ -21,6 +22,7 @@ export function GuideNpc() {
   // kéo thanh tiêu đề để dời Keeb-chan (lệch so với góc mặc định, không lưu)
   const [off, setOff] = useState({ x: 0, y: 0 })
   const drag = useRef<{ x: number; y: number } | null>(null)
+  const [odds, setOdds] = useState(false)
   if (screen !== 'pc') return null
   // góc phải trên taskbar (bàn build: hội thoại `BenchDialog`)
   const side = 'right-3 bottom-[calc(var(--taskbar-h)+10px)]'
@@ -40,7 +42,7 @@ export function GuideNpc() {
         onClick={() => setSmall(!small)}
         className="pointer-events-auto relative shrink-0 cursor-pointer transition-transform hover:-translate-y-1"
       >
-        <GuideGirl className="w-[104px] animate-bob drop-shadow-[0_6px_0_rgba(0,0,0,0.35)] max-md:w-20" />
+        <GuideGirl className="w-[104px] animate-bob max-md:w-20" />
         {small && (
           <span className="absolute top-3 right-2 size-3.5 animate-pulse rounded-full border-2 border-white bg-red" />
         )}
@@ -48,7 +50,7 @@ export function GuideNpc() {
       <div
         className={cn('pointer-events-auto relative mb-10 w-[min(300px,70vw)]', small && 'hidden')}
       >
-        <div className="relative flex flex-col overflow-hidden rounded-2xl border-[3px] border-black/40 bg-[#fffaf0] text-sm font-bold text-[#2b2630] shadow-[0_4px_0_#0006]">
+        <div className="relative flex flex-col overflow-hidden rounded-2xl border-[3px] border-black bg-[#fffaf0] text-sm font-bold text-[#2b2630]">
           {/* thanh tiêu đề như cửa sổ app: kéo để dời, nút thu nhỏ bên phải */}
           <TitleBar
             title="Keeb-chan"
@@ -74,9 +76,22 @@ export function GuideNpc() {
               <Minus />
             </TitleButton>
           </TitleBar>
-          <p className="px-3 py-2.5 leading-snug">{tip.text}</p>
+          <p className="px-3 pt-2.5 leading-snug">{tip.text}</p>
+          {/* bảng tỉ lệ (chợ, bán phím khách, hàn, test, đơn hàng) */}
+          <div className="flex justify-end px-3 pt-1.5 pb-2.5">
+            {/* nút nhỏ trong bong bóng: bóng hover của Button (6px) quá to → giữ 4px, nhích lên 1px */}
+            <Button
+              size="sm"
+              tone="blue"
+              className="enabled:hover:!translate-y-[-1px] enabled:hover:!shadow-[0_4px_0_rgba(0,0,0,0.35),inset_0_2px_0_rgba(255,255,255,0.3)]"
+              onClick={() => setOdds(true)}
+            >
+              📊 Bảng tỉ lệ
+            </Button>
+          </div>
         </div>
       </div>
+      {odds && <OddsDialog onClose={() => setOdds(false)} />}
     </div>
   )
 }

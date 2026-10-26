@@ -36,11 +36,14 @@ export function Badge({
   solid,
   children,
   className,
+  title,
 }: {
   tone?: BadgeTone
   solid?: boolean
   children: ReactNode
   className?: string
+  /** tooltip 1 dòng (GlobalTooltip vẽ) */
+  title?: string
 }) {
   return (
     <span
@@ -54,6 +57,7 @@ export function Badge({
           : BADGE_TONES[tone],
         className,
       )}
+      title={title}
     >
       {children}
     </span>

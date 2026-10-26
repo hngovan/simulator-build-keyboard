@@ -329,3 +329,6 @@ bấm phá sản, new game".
 - Sửa (2026-10-26): mở Hội Phím Cơ bị văng "reading 'name'" với bản lưu thật — kho chung có món mà id không còn trong danh mục. `useSources` (MyListings) lọc `readable()` (thử `sourceTitle` / `sourceValue`, lỗi thì bỏ món đó).
 - 2026-10-26, người dùng: "tỉ lệ ăn xin thành công lên 10%, fail ăn block 70%, còn ăn ban 20%" → `BEG_GIFT` 0,1 + `BEG_BLOCK` 0,7
   (người bán chặn inbox, không ban chợ), phần còn lại 20% bị admin ban 3 ngày như cũ (trước: 5% free, 95% ban).
+- 2026-10-26, người dùng: chuộc lại phím đúng ra chỉ +1 uy tín → `BUYBACK_REP` 2 → 1 (gỡ lại đúng phần −1 lúc lộ). Bảng tỉ lệ:
+  "Đòi đúng 1 con switch" → "Yêu cầu đúng loại switch"; phím chưa hàn = "không nhận tín hiệu" (toast test, nhãn chấm điểm, đánh giá khách);
+  "Fs" ghi rõ free ship (bảng tỉ lệ + tooltip badge ở bài pass).

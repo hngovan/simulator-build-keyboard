@@ -46,7 +46,7 @@ export function StepList() {
             disabled={!go}
             title={
               alert
-                ? 'Test thấy phím không ăn: bấm để quay lại hàn, hoặc cứ thế giao cho khách'
+                ? 'Test thấy phím không nhận: bấm để quay lại hàn, hoặc cứ thế giao cho khách'
                 : canBack
                   ? 'Lùi về bước này'
                   : canAhead
