@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.10',
     date: '2026-10-26',
-    commits: [],
+    commits: ['6431fdb'],
     title: 'Bán đồ trong đơn đang build, kéo Keeb-chan, Fast bid',
     items: [
       'Bán được đồ của đơn đang build nếu chưa lắp: switch còn lẻ, keycap chưa gắn; case / PCB / plate / stab đã lên bàn thì không',
