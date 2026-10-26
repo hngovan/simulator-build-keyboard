@@ -3,11 +3,12 @@
 
 /** số lượt trả về mỗi lần xem bảng */
 export const TOP = 50
-/** số lượt giữ lại (bỏ bớt lượt ít tiền nhất) */
+/** số lượt giữ lại (bỏ bớt lượt điểm tổng thấp nhất) */
 export const KEEP = 5000
 
 export const REASONS = ['rep', 'money', 'bankrupt', 'newgame'] as const
-export const KEYS = ['rep', 'done', 'money', 'stars', 'day'] as const
+/** score = điểm tổng hợp (`runScore`), các khoá còn lại là trường của lượt chơi */
+export const KEYS = ['score', 'rep', 'done', 'money', 'stars', 'day'] as const
 export type RankKey = (typeof KEYS)[number]
 
 export interface Run {
@@ -55,12 +56,22 @@ export function parseRun(body: unknown): Run | null {
   }
 }
 
-/** khoá xếp hạng trong query (?key=...), sai thì theo tiền */
-export const rankKey = (v: string | null): RankKey => KEYS.find((k) => k === v) ?? 'money'
+/**
+ * Điểm tổng hợp xếp hạng: mỗi đơn 10, mỗi uy tín 20, mỗi ngày trụ được 5, mỗi 100k tiền 1
+ * (vd 20 ngày · 30 đơn · uy tín 15 · 30.000k ≈ 100 + 300 + 300 + 300 = 1.000 điểm)
+ */
+export const runScore = (r: Pick<Run, 'done' | 'rep' | 'day' | 'money'>) =>
+  Math.round(r.done * 10 + r.rep * 20 + r.day * 5 + r.money / 100)
+
+/** giá trị xếp hạng của 1 lượt theo khoá */
+export const rankValue = (r: Run, key: RankKey) => (key === 'score' ? runScore(r) : r[key])
+
+/** khoá xếp hạng trong query (?key=...), sai thì theo điểm tổng */
+export const rankKey = (v: string | null): RankKey => KEYS.find((k) => k === v) ?? 'score'
 
 /** xếp giảm dần theo khoá, bằng nhau thì ai lên bảng trước đứng trước */
 export const sortRuns = (runs: Run[], key: RankKey) =>
-  [...runs].sort((a, b) => b[key] - a[key] || a.at - b.at)
+  [...runs].sort((a, b) => rankValue(b, key) - rankValue(a, key) || a.at - b.at)
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

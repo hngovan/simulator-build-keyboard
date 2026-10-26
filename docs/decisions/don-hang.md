@@ -181,6 +181,12 @@ bấm phá sản, new game".
   `POST /api/leaderboard` (kiểm tra / kẹp số, tên ≤ 24 ký tự), lưu `server/data/leaderboard.json` (gitignore, giữ tối đa 5000 lượt),
   ghi file tuần tự, CORS mở. Vite dev proxy `/api` → 8787; bản build dùng `VITE_LEADERBOARD_URL` (mặc định `/api`). Không chống gian lận
   (game chạy ở client, số liệu client tự gửi).
+- Xếp hạng tổng hợp (2026-10-26, "bảng xếp hạng phải đánh giá dựa trên số đơn + uy tín + số ngày + số tiền và filter được theo các thông số"):
+  `runScore` (leaderboardCore) = đơn × 10 + uy tín × 20 + ngày × 5 + tiền(k) / 100 (vd 20 ngày · 30 đơn · uy tín 15 · 30.000k ≈ 1.000 điểm).
+  Khoá `score` thêm vào `KEYS` (mặc định của GET, POST trả hạng + cắt KEEP theo điểm tổng; Redis có `lb:z:score`). App: chip `OptionChip`
+  Tổng điểm / Tiền / Số đơn / Uy tín / Số ngày (đổi chip thì tải lại), cột phải hiện giá trị theo chip, badge thêm tiền; badge `gap-1`;
+  sao chỉ hiện khi có đánh giá (badge vàng), chưa có thì ẩn hẳn. Đang tải: `LoadingRows` khung xương `animate-pulse` thay chữ.
+  Tên trùng không sao: mỗi lượt là 1 dòng theo `runId`, dòng của mình đánh dấu "Bạn".
 - Deploy Vercel (2026-10-26, "server lưu kết quả có cần làm gì trên Vercel ko" → chọn phương án A): Vercel không chạy được
   `Bun.serve` + file JSON (serverless, ổ đĩa không giữ). Thêm Vercel Function `api/leaderboard.ts` (export `GET` / `POST` / `OPTIONS`,
   cùng API) lưu Upstash Redis qua REST `/multi-exec` bằng fetch (không thêm thư viện): hash `lb:runs` (runId → JSON) + sorted set

@@ -51,9 +51,9 @@ Bun.serve({
       if (!run) return json({ error: 'bad run' }, 400)
       // 1 lượt chơi chỉ giữ 1 dòng (gửi lại thì ghi đè)
       runs = [...runs.filter((r) => r.runId !== run.runId), run]
-      if (runs.length > KEEP) runs = sortRuns(runs, 'money').slice(0, KEEP)
+      if (runs.length > KEEP) runs = sortRuns(runs, 'score').slice(0, KEEP)
       await persist()
-      const rank = sortRuns(runs, 'money').findIndex((r) => r.runId === run.runId)
+      const rank = sortRuns(runs, 'score').findIndex((r) => r.runId === run.runId)
       return json({ ok: true, rank: rank + 1, total: runs.length })
     }
 

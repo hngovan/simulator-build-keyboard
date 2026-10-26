@@ -33,7 +33,7 @@ export function GameOverDialog() {
           <div className="text-center text-[13px] text-ink/75">
             {sent === 'sending'
               ? 'Đang gửi kết quả lên bảng xếp hạng...'
-              : `Đã ghi lên bảng xếp hạng: hạng ${sent.rank} / ${sent.total} theo tiền.`}
+              : `Đã ghi lên bảng xếp hạng: hạng ${sent.rank} / ${sent.total} theo điểm tổng.`}
           </div>
         )}
         <Button tone="green" size="lg" onClick={close}>

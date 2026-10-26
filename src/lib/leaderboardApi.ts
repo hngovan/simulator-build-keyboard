@@ -2,7 +2,9 @@
 // Gửi lỗi (mất mạng, server tắt) thì cất vào hàng chờ, lần mở bảng xếp hạng sau gửi lại.
 
 export type RunEndReason = 'rep' | 'money' | 'bankrupt' | 'newgame'
-export type ServerRankKey = 'rep' | 'done' | 'money' | 'stars' | 'day'
+import type { RankKey } from '../../server/leaderboardCore'
+export type ServerRankKey = RankKey
+export { runScore } from '../../server/leaderboardCore'
 
 export interface RunEntry {
   runId: string
@@ -47,7 +49,7 @@ async function post(entry: RunEntry) {
   return (await res.json()) as { rank: number; total: number }
 }
 
-/** gửi kết quả 1 lượt chơi; trả hạng theo tiền, lỗi thì cất hàng chờ và trả null */
+/** gửi kết quả 1 lượt chơi; trả hạng theo điểm tổng, lỗi thì cất hàng chờ và trả null */
 export async function submitRun(entry: RunEntry) {
   try {
     return await post(entry)

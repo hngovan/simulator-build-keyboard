@@ -22,6 +22,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Hiệu ứng tua vít thường: vặn chậm theo cổ tay, xoay đúng bằng góc con ốc, nhấn xuống khi vặn (không còn giật như tua vít điện)',
       'Bảng xếp hạng chạy được khi deploy Vercel (Vercel Function + Upstash Redis), chạy local vẫn dùng bun run server',
       'Popup thua game: gửi kết quả lỗi thì hiện khung cảnh báo đỏ; API bảng xếp hạng tìm biến môi trường Upstash cả khi có tiền tố',
+      'Bảng xếp hạng xếp theo điểm tổng (số đơn + uy tín + số ngày + tiền), lọc theo từng thông số; khung loading khi đang tải; chỉ hiện sao khi có đánh giá',
       'README: bảng lịch sử cập nhật mọi phiên bản, ảnh demo top mount / O-ring / hàn switch / dán feet / switch mới, hướng dẫn deploy Vercel',
     ],
   },

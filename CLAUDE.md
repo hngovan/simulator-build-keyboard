@@ -178,7 +178,7 @@ vào `window.__r3f` để debug trong console.
   `fillActive` → `fillFromStock` tự lấy món hợp yêu cầu (`checkInventory`). App Kho hiện đồ đơn đang làm + đơn đang chờ (tên khách)
   - kho chung trong cùng lưới (`useParts` trong OwnedItems), bấm ô để lấy / cất.
 - App "Bảng xếp hạng" (`apps/leaderboard/LeaderboardApp`, `lib/leaderboardApi.ts`): chỉ tính server (bỏ shop đối thủ giả lập),
-  lượt chơi đã kết thúc của mọi người + lượt đang chơi chèn vào, xếp theo tiền; gửi lỗi thì cất hàng chờ `sbk-lb-pending`.
+  lượt chơi đã kết thúc của mọi người + lượt đang chơi chèn vào, xếp theo điểm tổng (`runScore`: đơn ×10 + uy tín ×20 + ngày ×5 + tiền / 100k), chip lọc theo tiền / đơn / uy tín / ngày (`server/leaderboardCore.ts`); gửi lỗi thì cất hàng chờ `sbk-lb-pending`.
   Tiền gọn theo cỡ `fmtMoney` (< 10.000k giữ k, ≥ 10.000k → m, ≥ 100.000k → B; `lib/format.ts`) ở bảng xếp hạng + ví; giá Shopii vẫn `fmt` (k).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
   (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Tự phá sản ở Cài đặt; chơi mới đè save cũng gửi lượt cũ.

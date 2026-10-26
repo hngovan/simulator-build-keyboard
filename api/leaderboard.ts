@@ -1,7 +1,7 @@
 // Vercel Function bảng xếp hạng (`/api/leaderboard`), cùng API với server Bun chạy local (`server/leaderboard.ts`).
 // Lưu ở Upstash Redis (Vercel → Storage / Marketplace → Upstash Redis, tự gắn biến môi trường):
 //   lb:runs        hash runId → JSON 1 lượt chơi
-//   lb:z:<khoá>    sorted set runId theo từng khoá xếp hạng (rep / done / money / stars / day)
+//   lb:z:<khoá>    sorted set runId theo từng khoá xếp hạng (score = điểm tổng / rep / done / money / stars / day)
 // Gọi REST API của Upstash bằng fetch, không cần thư viện.
 import {
   KEEP,
@@ -11,6 +11,7 @@ import {
   parseRun,
   preflight,
   rankKey,
+  rankValue,
   sortRuns,
   type Run,
 } from '../server/leaderboardCore.js'
@@ -80,19 +81,19 @@ async function submit(run: Run) {
   // 1 lượt chơi chỉ giữ 1 dòng (gửi lại thì ghi đè cả hash lẫn điểm)
   await redis([
     ['HSET', RUNS, run.runId, JSON.stringify(run)],
-    ...KEYS.map((k): Cmd => ['ZADD', zkey(k), run[k], run.runId]),
+    ...KEYS.map((k): Cmd => ['ZADD', zkey(k), rankValue(run, k), run.runId]),
   ])
-  // quá KEEP lượt thì bỏ bớt lượt ít tiền nhất
-  const [count] = await redis([['ZCARD', zkey('money')]])
+  // quá KEEP lượt thì bỏ bớt lượt điểm tổng thấp nhất
+  const [count] = await redis([['ZCARD', zkey('score')]])
   const extra = Number(count) - KEEP
   if (extra > 0) {
-    const [drop] = await redis([['ZRANGE', zkey('money'), 0, extra - 1]])
+    const [drop] = await redis([['ZRANGE', zkey('score'), 0, extra - 1]])
     const ids = drop as string[]
     if (ids.length)
       await redis([['HDEL', RUNS, ...ids], ...KEYS.map((k): Cmd => ['ZREM', zkey(k), ...ids])])
   }
   const [rank, total] = await redis([
-    ['ZREVRANK', zkey('money'), run.runId],
+    ['ZREVRANK', zkey('score'), run.runId],
     ['HLEN', RUNS],
   ])
   return { ok: true, rank: Number(rank) + 1, total: Number(total) }

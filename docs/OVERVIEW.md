@@ -114,7 +114,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/com
    chọn mount, dự đoán âm thanh, ngân sách; nhận đơn / đổi đơn / ra bàn build.
 7. **Hội Phím Cơ VN**: bài pass đồ của người chơi khác. Hàng rẻ hơn 20–40% nhưng có khoảng 20% khả
    năng bị seller bùng tiền. Inbox: tự nhập giá trả (popup, 3 lần), "Đi ăn xin" xin free (hiếm được, 10% bị ban chợ 3 ngày).
-8. **Bảng xếp hạng**: bảng server, xếp theo tiền các lượt chơi đã kết thúc (thua / phá sản / chơi lại) + lượt đang chơi.
+8. **Bảng xếp hạng**: bảng server, xếp theo điểm tổng (đơn + uy tín + ngày + tiền, lọc theo từng thông số) các lượt chơi đã kết thúc (thua / phá sản / chơi lại) + lượt đang chơi.
 9. **Cài đặt**: tắt âm thanh, chỉnh âm lượng nhạc nền / hiệu ứng, xem ghi công, về màn hình title.
    Tiến trình được lưu tự động.
 
