@@ -388,3 +388,4 @@
 - Keeb-chan (người dùng: "nên để viền đen hết... ko cần đổ bóng, button bảng tỉ lệ độ bóng khi hover vào to quá"): bong bóng `GuideNpc`
   viền `border-black` đặc, bỏ `shadow`; bỏ `drop-shadow` nhân vật (cả `BenchDialog`); nút "📊 Bảng tỉ lệ" hover chỉ nhích 1px, bóng giữ 4px
   (đè riêng bằng `!`, không đổi `Button` chung).
+- Sửa (2026-10-26): nút "Bảng tỉ lệ" trong bong bóng: bóng đen 35% của `Button` trên nền kem thành vệt xám → bóng `#9cc3ff` (xanh nhạt cùng tông, cả hover / active), emoji 📊 → icon lucide `ChartColumn` trắng.

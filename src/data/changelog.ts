@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.8',
     date: '2026-10-26',
-    commits: [],
+    commits: ['0d5e99b'],
     title: 'Bảng tỉ lệ trong game, chuộc phím +1 uy tín',
     items: [
       'Keeb-chan có nút "📊 Bảng tỉ lệ": tỉ lệ ở chợ, bán phím của khách, hàn / test, đơn hàng (README có bảng giống hệt)',
@@ -24,6 +24,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Bài pass: rê chuột lên badge "Fs" để xem nghĩa (free ship)',
       'App Đánh giá có icon "!" giải thích cách chấm sao và uy tín',
       'Hội Phím Cơ: ô trống "Nhận đơn trước…" có icon như tab Bài của tôi',
+      'Nút Bảng tỉ lệ: bóng đổ xanh nhạt cùng tông thay vệt xám, icon trắng',
     ],
   },
   {

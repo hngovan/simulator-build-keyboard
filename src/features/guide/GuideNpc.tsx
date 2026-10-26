@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useGame } from '@/store'
-import { Minus } from 'lucide-react'
+import { ChartColumn, Minus } from 'lucide-react'
 import { Button, TitleBar, TitleButton } from '@/components/ui'
 import { GuideGirl } from '@/components/art/GuideGirl'
 import { cn } from '@/lib/format'
@@ -79,14 +79,16 @@ export function GuideNpc() {
           <p className="px-3 pt-2.5 leading-snug">{tip.text}</p>
           {/* bảng tỉ lệ (chợ, bán phím khách, hàn, test, đơn hàng) */}
           <div className="flex justify-end px-3 pt-1.5 pb-2.5">
-            {/* nút nhỏ trong bong bóng: bóng hover của Button (6px) quá to → giữ 4px, nhích lên 1px */}
+            {/* nút nhỏ trong bong bóng: bóng hover của Button (6px) quá to → giữ 4px, nhích lên 1px;
+                nền bong bóng sáng nên bóng đen 35% thành vệt xám → bóng cùng tông xanh, nhạt hơn */}
             <Button
               size="sm"
               tone="blue"
-              className="enabled:hover:!translate-y-[-1px] enabled:hover:!shadow-[0_4px_0_rgba(0,0,0,0.35),inset_0_2px_0_rgba(255,255,255,0.3)]"
+              className="inline-flex items-center gap-1.5 !shadow-[0_4px_0_#9cc3ff,inset_0_2px_0_rgba(255,255,255,0.25)] enabled:hover:!translate-y-[-1px] enabled:hover:!shadow-[0_4px_0_#9cc3ff,inset_0_2px_0_rgba(255,255,255,0.3)] enabled:active:!shadow-[0_1px_0_#9cc3ff] [&_svg]:size-4"
               onClick={() => setOdds(true)}
             >
-              📊 Bảng tỉ lệ
+              <ChartColumn strokeWidth={2.5} />
+              Bảng tỉ lệ
             </Button>
           </div>
         </div>
