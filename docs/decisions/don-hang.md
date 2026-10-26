@@ -365,3 +365,13 @@ bấm phá sản, new game".
   - UI: bài thu gọn được (bấm tiêu đề), badge bid đếm ngược / tag / nguồn; số bài đăng là `Badge` (cả tab "Bài của tôi"); form đăng mở
     khi bấm "Đăng bán" (OptionSelect kiểu bán + bước bid, OptionChip tag). Chợ pass ghi thêm "Ai cũng uy tín cho đến khi...".
 - Bảng tỉ lệ (`data/odds.ts`) cập nhật theo hằng số mới.
+
+### Bán đồ trong đơn đang build + nút Đăng bán ở Kho (2026-10-26)
+
+- Người dùng: "tại sao đồ trong kho không bán được, đồ của khách vẫn bán được trừ khi đã assem ở bàn build". Trước đây đơn đã vào
+  bàn build là khoá hết linh kiện. Giờ `jobPartFree(cat, item, build)` (selling.ts): chưa build → mọi món (kể cả đồ khách gửi);
+  đã build → chỉ switch lẻ còn lại (chưa cắm) và keycap khi chưa gắn phím nào; case / PCB / plate / stab đã nằm trên bàn thì chặn.
+  Dùng ở `useSources` (MyListings), `postListing` + `restore` (sellSlice: gỡ bài thì switch cộng dồn lại vào đơn).
+- App Kho: món bán được có nút "Đăng bán" (`Owned.sell`) → `openSell()` mở Hội Phím Cơ tab "Bài của tôi"
+  (tab Hội Phím Cơ giờ ở store: `groupTab` / `setGroupTab`, metaSlice).
+- Đổi tên "Bid 1 phút" → **Fast bid** (UI, toast, bảng tỉ lệ, README, changelog).

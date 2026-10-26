@@ -186,7 +186,7 @@ vào `window.__r3f` để debug trong console.
   linh kiện đơn đã nhận chưa build (kind `job`, kể cả đồ khách gửi) hoặc phím của khách (đơn đóng gói chưa gửi). Giá gốc `sourceBase` /
   giá chợ `sourceValue` (70%); bot hỏi / up bài / khen thợ / chê / trả giá (`botTurn(l, cert)`), bấm giá để bán; giá trên giá chợ tới
   `RICH_MAX` 1.4× giá gốc thì đêm có đại gia chốt (`richChance`, tối đa 1 / đêm, +5% / bậc thợ). Tag bài `ListingTag` (Free ship...).
-  Bài bid (`Listing.bid`, 60s, khởi điểm từ 0, `settleBids` gọi mỗi giây ở App.tsx). Gỡ bài > `UNLIST_FREE` 3 lần / ngày → `banMarket`.
+  Fast bid (`Listing.bid`, 60s, khởi điểm từ 0, `settleBids` gọi mỗi giây ở App.tsx). Gỡ bài > `UNLIST_FREE` 3 lần / ngày → `banMarket`.
   Bán phím của khách: 5% (`STEAL_OK`) khách quên, còn lại −1 uy tín + `stolen` (chuộc lại `buyBack` giá ×1.1~1.3, 30% không cho
   chuộc, chuộc được +1 uy tín, quá 3 ngày mất). `listings` / `stolen` / `unlists` / `marketBanWhy` trong Profile.
 - Hàng pass lỗi keycap / switch / stab (`FLAW_UNUSABLE`): mua về vào thẳng kho chung (viền đỏ + badge "Hàng lỗi" ở app Kho),

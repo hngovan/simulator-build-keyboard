@@ -13,6 +13,7 @@ import {
   stabTotal,
 } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
+import { jobPartFree } from '@/data/selling'
 import { SupplyArt, ToolArt } from '@/components/art/ToolArt'
 import { PartArt } from '@/components/art/PartArt'
 import { useModelThumb, type ThumbKind } from '@/features/apps/shop/modelThumb'
@@ -80,6 +81,19 @@ function ItemViewer({ it, onClose }: { it: Owned; onClose: () => void }) {
       {it.detail && <b className="text-yellow">{it.detail}</b>}
       {it.using && <b className="text-green">Đang dùng</b>}
       {remainText(it) && <b className="text-yellow">{remainText(it)}</b>}
+      {it.sell && (
+        <Button
+          size="sm"
+          tone="blue"
+          title="Mở Hội Phím Cơ → Bài của tôi để đăng bán"
+          onClick={() => {
+            useGame.getState().openSell()
+            onClose()
+          }}
+        >
+          Đăng bán
+        </Button>
+      )}
       {it.action && (
         <Button
           size="sm"
@@ -138,6 +152,8 @@ interface Owned {
   action?: { label: string; title: string; run: () => void }
   /** hàng pass lỗi (viền đỏ + badge "Hàng lỗi") */
   flaw?: string
+  /** đăng bán được ở Hội Phím Cơ (kho chung, đồ đơn đã nhận chưa assem) */
+  sell?: boolean
 }
 
 /** Vị trí ô người chơi tự xếp (tiện ích riêng máy): phần tử i = id món ở ô i, null = ô trống */
@@ -218,6 +234,7 @@ function useParts(): Owned[] {
   const provided = useGame((s) => s.provided)
   const order = useGame((s) => s.order)
   const result = useGame((s) => s.result)
+  const build = useGame((s) => s.build)
   const jobs = useGame((s) => s.jobs)
   const spare = useGame((s) => s.spare)
   const { takeStock, releasePart } = useGame.getState()
@@ -230,6 +247,7 @@ function useParts(): Owned[] {
       partOwned(`part:${cat}`, cat, item, provided[cat] ? `${CATS[cat]} · khách gửi` : CATS[cat], {
         tag: order ? `Đơn ${order.customer}` : undefined,
         using: true,
+        sell: !!order && !result && jobPartFree(cat, item, build),
       }),
     )
   }
@@ -241,6 +259,7 @@ function useParts(): Owned[] {
       list.push(
         partOwned(`part:job:${j.order.id}:${cat}`, cat, item, CATS[cat], {
           tag: `Đơn ${j.order.customer}`,
+          sell: jobPartFree(cat, item, j.session.build),
           action: free
             ? {
                 label: 'Cất về kho chung',
@@ -261,6 +280,7 @@ function useParts(): Owned[] {
       list.push(
         partOwned(`part:stock:switch:${type}`, 'switch', { type, count: n }, CATS.switch, {
           tag: 'Kho chung',
+          sell: true,
           action: take(`switch:${type}`),
         }),
       )
@@ -269,6 +289,7 @@ function useParts(): Owned[] {
       list.push(
         partOwned(`part:stock:stab:${type}`, 'stab', { type, ...st }, CATS.stab, {
           tag: 'Kho chung',
+          sell: true,
           action: take(`stab:${type}`),
         }),
       )
@@ -276,6 +297,7 @@ function useParts(): Owned[] {
     list.push(
       partOwned(`part:stock:item:${i}:${x.cat}`, x.cat, x.item, CATS[x.cat], {
         tag: 'Kho chung',
+        sell: true,
         action: take(`item:${i}`),
       }),
     ),

@@ -17,6 +17,7 @@ import { CATS } from '@/data/parts'
 import {
   BID_STEPS,
   BUYBACK_DAYS,
+  jobPartFree,
   LISTING_TAGS,
   RICH_MAX,
   UNLIST_FREE,
@@ -33,7 +34,7 @@ import type { PartCategory } from '@/types'
 /** bot ghé bài của mình mỗi bao lâu (ms) khi đang mở tab */
 const BOT_MS = 3500
 const TAG_IDS = Object.keys(LISTING_TAGS) as ListingTag[]
-const MODES = [{ label: 'Giá cố định' }, { label: 'Bid 1 phút' }]
+const MODES = [{ label: 'Giá cố định' }, { label: 'Fast bid' }]
 
 /** món đọc được tên + giá (bản lưu cũ có thể còn món mà id đã đổi / bỏ khỏi danh mục) */
 const readable = (src: ListingSource) => {
@@ -60,17 +61,19 @@ function useSources(): Source[] {
   const build = useGame((s) => s.build)
   const result = useGame((s) => s.result)
   const jobs = useGame((s) => s.jobs)
-  // linh kiện của 1 đơn đã nhận: bán thoải mái như đồ thường (đã bắt đầu build thì không)
+  // linh kiện của 1 đơn đã nhận (kể cả đồ khách gửi): bán thoải mái như đồ thường, trừ món đã assem ở bàn build
   const jobParts = (
     id: string,
     customer: string,
     inv: typeof inventory,
     prov: typeof provided,
+    b: typeof build,
   ): Source[] =>
     (Object.keys(CATS) as PartCategory[]).flatMap((cat) => {
       const item = inv[cat]
       if (!item || (cat === 'plate' && (item as { material: string }).material === 'none'))
         return []
+      if (!jobPartFree(cat, item, b)) return []
       const src = { kind: 'job', orderId: id, customer, cat, item, provided: !!prov[cat] } as const
       return [{ key: `job:${id}:${cat}`, src }]
     })
@@ -78,12 +81,16 @@ function useSources(): Source[] {
     ...packed
       .filter((p) => !p.shipped)
       .map((p) => ({ key: `c:${p.order.id}`, src: { kind: 'customer', packed: p } as const })),
-    ...(order && !build && !result ? jobParts(order.id, order.customer, inventory, provided) : []),
-    ...jobs
-      .filter((j) => !j.session.build)
-      .flatMap((j) =>
-        jobParts(j.order.id, j.order.customer, j.session.inventory, j.session.provided),
+    ...(order && !result ? jobParts(order.id, order.customer, inventory, provided, build) : []),
+    ...jobs.flatMap((j) =>
+      jobParts(
+        j.order.id,
+        j.order.customer,
+        j.session.inventory,
+        j.session.provided,
+        j.session.build,
       ),
+    ),
     ...Object.entries(spare.switches)
       .filter(([, n]) => n > 0)
       .map(([type, count]) => ({
@@ -239,7 +246,7 @@ function SourceRow({ src, index }: { src: ListingSource; index?: number }) {
           </div>
           <Muted>
             {bid
-              ? 'Bid chạy 1 phút, giá khởi điểm từ 0đ: may thì lời, ế thì lỗ.'
+              ? 'Fast bid chạy 1 phút, giá khởi điểm từ 0đ: may thì lời, ế thì lỗ.'
               : `Đăng tới ${RICH_MAX}× giá gốc (${fmt(Math.round(base * RICH_MAX))}) vẫn có thể gặp đại gia chốt trong đêm; chứng chỉ thợ +5% mỗi bậc.`}
             {sourceFlaw(src) && ' Hàng lỗi: bán đi có thể bị tố mô tả sai, admin ban chợ.'}
           </Muted>
@@ -250,7 +257,7 @@ function SourceRow({ src, index }: { src: ListingSource; index?: number }) {
             onClick={post}
             className="self-end"
           >
-            {bid ? 'Mở bid' : 'Đăng bài'}
+            {bid ? 'Mở fast bid' : 'Đăng bài'}
           </Button>
         </div>
       )}
@@ -297,7 +304,7 @@ function ListingCard({ l }: { l: Listing }) {
           <span className="flex flex-wrap items-center gap-1">
             {l.bid && (
               <Badge solid tone="orange" className="ml-0">
-                <Gavel className="size-3" /> {left > 0 ? `Bid · còn ${left}s` : 'Hết giờ'}
+                <Gavel className="size-3" /> {left > 0 ? `Fast bid · còn ${left}s` : 'Hết giờ'}
               </Badge>
             )}
             <SourceBadges src={l.src} />

@@ -9,6 +9,7 @@ import {
   UNLIST_FREE,
   bidCap,
   bidTurn,
+  jobPartFree,
   botTurn,
   buybackPrice,
   buybackReply,
@@ -24,6 +25,7 @@ import {
 import { BAN_DAYS } from '@/data/market'
 import { addPart, without } from './spare'
 import type { GameState } from '.'
+import type { SwitchItem } from '@/types'
 
 // Shop tự đăng bán ở Hội Phím Cơ (đồ kho chung / linh kiện đơn đã nhận / phím của khách) + chuộc lại phím khách bị lộ.
 // listings / stolen / unlists lưu trong Profile (xem persistence.ts)
@@ -69,15 +71,23 @@ function restore(s: GameState, src: ListingSource): Partial<GameState> {
     case 'customer':
       return { packed: [...s.packed, { ...src.packed, shipped: false }] }
     case 'job': {
-      const back = { [src.cat]: src.item }
       const prov = src.provided ? { [src.cat]: true as const } : {}
-      if (s.order?.id === src.orderId && !s.result && !s.build && !s.inventory[src.cat])
-        return {
-          inventory: { ...s.inventory, ...back },
-          provided: { ...s.provided, ...prov },
-        }
+      // trả lại đơn: ô còn trống thì đặt lại; switch cùng loại (đơn đang build còn switch lẻ) thì cộng dồn
+      const merge = (inv: GameState['inventory']) => {
+        const cur = inv[src.cat] as SwitchItem | null
+        if (!cur) return { ...inv, [src.cat]: src.item }
+        const sw = src.item as SwitchItem
+        if (src.cat === 'switch' && cur.type === sw.type && !cur.flaw && !sw.flaw)
+          return { ...inv, switch: { ...cur, count: cur.count + sw.count } }
+        return null
+      }
+      const back = (build: GameState['build'], inv: GameState['inventory']) =>
+        jobPartFree(src.cat, src.item, build) ? merge(inv) : null
+      const own = s.order?.id === src.orderId && !s.result ? back(s.build, s.inventory) : null
+      if (own) return { inventory: own, provided: { ...s.provided, ...prov } }
       const job = s.jobs.find((j) => j.order.id === src.orderId)
-      if (job && !job.session.build && !job.session.inventory[src.cat])
+      const jobInv = job && back(job.session.build, job.session.inventory)
+      if (job && jobInv)
         return {
           jobs: s.jobs.map((j) =>
             j === job
@@ -85,7 +95,7 @@ function restore(s: GameState, src: ListingSource): Partial<GameState> {
                   ...j,
                   session: {
                     ...j.session,
-                    inventory: { ...j.session.inventory, ...back },
+                    inventory: jobInv,
                     provided: { ...j.session.provided, ...prov },
                   },
                 }
@@ -162,7 +172,7 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
           }
           break
         case 'job': {
-          // đã bắt đầu build thì linh kiện nằm trên bàn rồi, không bán được
+          // món đã assem ở bàn build (case / PCB / plate / stab, keycap đã gắn) thì không bán được
           const drop = <
             T extends { inventory: GameState['inventory']; provided: GameState['provided'] },
           >(
@@ -173,12 +183,16 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
             return { ...x, inventory: { ...x.inventory, [src.cat]: null }, provided }
           }
           if (s.order?.id === src.orderId) {
-            if (s.build || s.result || s.inventory[src.cat] !== src.item) return
+            if (s.result || s.inventory[src.cat] !== src.item) return
+            if (!jobPartFree(src.cat, src.item, s.build))
+              return s.toast('Món này đã lắp trên bàn build rồi, không bán được', 'bad')
             const { inventory, provided } = drop(s)
             patch = { inventory, provided }
           } else {
             const job = s.jobs.find((j) => j.order.id === src.orderId)
-            if (!job || job.session.build || job.session.inventory[src.cat] !== src.item) return
+            if (!job || job.session.inventory[src.cat] !== src.item) return
+            if (!jobPartFree(src.cat, src.item, job.session.build))
+              return s.toast('Món này đã lắp trên bàn build rồi, không bán được', 'bad')
             patch = {
               jobs: s.jobs.map((j) => (j === job ? { ...j, session: drop(j.session) } : j)),
             }
@@ -208,7 +222,7 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
       set({ ...patch, listings: [listing, ...s.listings] })
       s.toast(
         bid
-          ? `🔨 Đã mở bid: ${listing.title} · khởi điểm ${price}k, bước ${opts.bidStep}k`
+          ? `🔨 Đã mở fast bid: ${listing.title} · khởi điểm ${price}k, bước ${opts.bidStep}k`
           : `📣 Đã đăng bán: ${listing.title} · ${price}k`,
         'good',
       )
@@ -217,7 +231,7 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
       const s = get()
       const l = s.listings.find((x) => x.id === id)
       if (!l) return
-      if (l.bid?.top) return s.toast('Bài bid đã có người trả giá, không gỡ được', 'bad')
+      if (l.bid?.top) return s.toast('Fast bid đã có người trả giá, không gỡ được', 'bad')
       const n = (s.unlists.day === s.day ? s.unlists.n : 0) + 1
       set({
         ...restore(s, l.src),
@@ -266,11 +280,11 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
             amount: b.start + b.step * Math.floor(Math.random() * (steps + 1)),
           }
         }
-        if (top) completeSale(l, top.name, top.amount, '🔨 Hết giờ bid! ')
+        if (top) completeSale(l, top.name, top.amount, '🔨 Hết giờ fast bid! ')
         else {
           const s = get()
           set({ ...restore(s, l.src), listings: s.listings.filter((x) => x.id !== l.id) })
-          s.toast(`🔨 Bài bid ${l.title} không ai trả, món về lại chỗ cũ`, 'info')
+          s.toast(`🔨 Fast bid ${l.title} không ai trả, món về lại chỗ cũ`, 'info')
         }
       }
     },

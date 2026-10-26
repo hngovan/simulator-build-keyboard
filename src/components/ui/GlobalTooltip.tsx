@@ -25,6 +25,8 @@ export function GlobalTooltip() {
       setTip(null)
     }
     const over = (e: PointerEvent) => {
+      // đang giữ chuột (kéo Keeb-chan, kéo cửa sổ, kéo đồ trong kho...) thì không hiện tooltip
+      if (e.buttons) return hide()
       const el = (e.target as Element | null)?.closest?.<HTMLElement>('[title], [data-tip]')
       if (!el || el === current) return
       // title mới (React đổi prop) thì cập nhật lại data-tip

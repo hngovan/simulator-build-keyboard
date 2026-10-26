@@ -1,6 +1,6 @@
 // Shop tự đăng bán ở Hội Phím Cơ: đồ trong kho chung, linh kiện của đơn đã nhận (chưa build) hoặc phím của khách
 // (đơn đã đóng gói chưa gửi). Bài giá cố định: bot vào bình luận hỏi han, up bài, trả giá; đăng cao hơn giá gốc
-// tới RICH_MAX lần thì đêm có thể gặp đại gia chốt đúng giá. Bài bid: chạy BID_MS, ai trả cao nhất thì mua.
+// tới RICH_MAX lần thì đêm có thể gặp đại gia chốt đúng giá. Fast bid: chạy BID_MS, ai trả cao nhất thì mua.
 // Phím của khách bán đi thì 5% khách quên, còn lại bị lộ (−1 uy tín), inbox chuộc lại được (có người không cho chuộc).
 import {
   CASES,
@@ -19,6 +19,7 @@ import {
 import { LAYOUTS } from './layouts'
 import type { PackedOrder } from '@/store/persistence'
 import type {
+  BuildState,
   CaseItem,
   KeycapItem,
   PartCategory,
@@ -163,6 +164,17 @@ function newPrice(cat: PartCategory, item: PartItem): number {
       return p * 0.16 * c.short + p * 0.3 * (c.long + c.long7)
     }
   }
+}
+
+/**
+ * Món trong kho của 1 đơn đã nhận còn đem bán được không: chưa vào bàn build thì món nào cũng bán được (kể cả đồ khách gửi);
+ * đã vào bàn build thì case / PCB / plate / stab đã nằm trên bàn (đã assem), chỉ còn switch lẻ chưa cắm và keycap chưa gắn phím nào
+ */
+export function jobPartFree(cat: PartCategory, item: PartItem, build: BuildState | null) {
+  if (!build) return true
+  if (cat === 'switch') return (item as SwitchItem).count > 0
+  if (cat === 'keycap') return !Object.keys(build.keycaps).length
+  return false
 }
 
 /** loại + món của nguồn đăng bán (phím của khách: null) */

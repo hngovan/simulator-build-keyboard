@@ -396,5 +396,14 @@
 
 - Người dùng đưa ảnh "Chibi Typewriter Girl with Mechanical Hat.png": thu nhỏ 420px WebP có alpha bằng ffmpeg →
   `public/art/keeb-chan.webp` (42KB). `GuideGirl` giờ chỉ là `<img>` (bỏ SVG vẽ tay), dùng ở GuideNpc / BenchDialog.
-- Màn tiêu đề: bỏ `SolderingScene` (thợ giơ bút hàn, đã xoá file), Keeb-chan đứng bên trái tên game (màn hẹp thì lên trên, 120px), nhún nhảy.
+- Màn tiêu đề: bỏ `SolderingScene` (thợ giơ bút hàn, đã xoá file). Keeb-chan nằm `absolute` bên trái khối chữ (`right-full`, màn hẹp
+  thì `bottom-full` phía trên, 110px), nhún nhảy — người dùng muốn tên game + form luôn chính giữa màn hình, không bị đẩy lệch.
 - App Kho trống / lọc không có món: `Empty` có icon như Hội Phím Cơ.
+
+## Keeb-chan kéo bằng nhân vật, không ra khỏi màn hình (2026-10-26)
+
+- Người dùng: "cầm modal (bong bóng) kéo được ra hết khỏi màn hình là sai, phải cầm linh vật mới kéo được"; "đang kéo thì không show tooltip".
+- `GuideNpc`: bỏ kéo ở thanh tiêu đề bong bóng; cầm nhân vật kéo (lệch > 4px mới tính là kéo, không thì là bấm ẩn / hiện bong bóng).
+  `clampOff` giữ cả cụm trong màn hình (cách mép 8px; góc mặc định là giới hạn phải / dưới nên không đè taskbar); bong bóng hiện
+  lại (mẹo mới / bấm) hoặc đổi cỡ cửa sổ thì kéo lại vào trong (rAF trong effect, không setState đồng bộ).
+- `GlobalTooltip`: đang giữ chuột (`e.buttons`) thì không hiện tooltip — áp dụng cho mọi thao tác kéo (Keeb-chan, cửa sổ, ô kho).

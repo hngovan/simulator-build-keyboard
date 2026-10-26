@@ -63,9 +63,11 @@ export function TitleScreen() {
   const [log, setLog] = useState(false)
   return (
     <div className="fixed inset-0 grid place-items-center" style={{ background: BG }}>
-      {/* Keeb-chan đứng bên trái tên game (màn hẹp thì lên trên, nhỏ lại) */}
-      <div className="flex items-center gap-8 px-4 max-md:flex-col max-md:gap-2">
-        <GuideGirl className="w-[230px] shrink-0 animate-bob max-md:w-[120px]" />
+      {/* Keeb-chan nằm absolute bên trái khối chữ (màn hẹp thì phía trên) để tên game + form luôn chính giữa màn hình */}
+      <div className="relative px-4">
+        <div className="pointer-events-none absolute top-1/2 right-full -translate-y-1/2 max-md:top-auto max-md:right-auto max-md:bottom-full max-md:left-1/2 max-md:-translate-x-1/2 max-md:translate-y-0">
+          <GuideGirl className="w-[230px] max-w-none animate-bob max-md:w-[110px]" />
+        </div>
         <div className="text-center">
           <h1 className="text-[64px] leading-[0.95] text-white [text-shadow:0_6px_0_#000a] max-md:text-[40px]">
             {/* bàn phím nhún nhảy cạnh tên game (đặt ngoài dòng chữ để tên vẫn căn giữa) */}

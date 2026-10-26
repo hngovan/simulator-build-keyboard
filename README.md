@@ -22,7 +22,7 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 | ![Shopii switch](docs/images/shopii-switch.jpg)    | ![Lót foam](docs/images/lot-foam.jpg)                |
 | **Plateless: switch cắm thẳng PCB hàn (0.1.9)**    | **Case mica: ốc xuyên tới tấm đáy (0.1.9)**          |
 | ![Plateless](docs/images/plateless.jpg)            | ![Ốc case mica](docs/images/oc-mica.jpg)             |
-| **Kho: hàng lỗi viền đỏ, chỉ bán lại (0.1.9)**     | **Hội Phím Cơ: tự đăng bán, bài bid 1 phút (0.1.9)** |
+| **Kho: hàng lỗi viền đỏ, chỉ bán lại (0.1.9)**     | **Hội Phím Cơ: tự đăng bán, fast bid (0.1.9)**       |
 | ![Kho hàng lỗi](docs/images/kho.jpg)               | ![Đăng bán ở chợ](docs/images/cho.jpg)               |
 
 ## Lịch sử cập nhật
@@ -30,7 +30,8 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 <!-- prettier-ignore -->
 | Phiên bản | Ngày | Mảng | Thay đổi chính |
 | --- | --- | --- | --- |
-| **0.1.9** | 26/10/2026 | 🛒 Chợ & luật chơi | Đăng bán lời được (đại gia chốt đêm, chứng chỉ thợ +5% / bậc), bài bid 1 phút, tag Free ship, bán đồ trong đơn; hàng lỗi keycap / switch / stab chỉ bán lại; gỡ bài > 3 lần / ngày bị ban; qua ngày phải nhận ≥ 1 đơn, nhận không làm đền 20% công; điểm xếp hạng bỏ ngày. |
+| **0.1.10** | 26/10/2026 | 🛒 Chợ & Keeb-chan | Bán đồ trong đơn đang build (switch lẻ, keycap chưa gắn), nút Đăng bán ở Kho; kéo Keeb-chan bằng nhân vật, không ra khỏi màn hình; tên game luôn chính giữa; Bid 1 phút → Fast bid. |
+| **0.1.9** | 26/10/2026 | 🛒 Chợ & luật chơi | Đăng bán lời được (đại gia chốt đêm, chứng chỉ thợ +5% / bậc), fast bid 1 phút, tag Free ship, bán đồ trong đơn; hàng lỗi keycap / switch / stab chỉ bán lại; gỡ bài > 3 lần / ngày bị ban; qua ngày phải nhận ≥ 1 đơn, nhận không làm đền 20% công; điểm xếp hạng bỏ ngày. |
 |  |  | ⌨️ Build | Plateless (PCB hàn + tray), foam Poron lót PCB (thock hơn), stab plate-mount dùng mọi plate, ốc case mica dài tới tấm đáy; Keeb-chan + màn tiêu đề dùng ảnh mới. |
 | **0.1.8** | 26/10/2026 | 📊 Bảng tỉ lệ | Keeb-chan mở bảng tỉ lệ trong game (xem mục "Bảng tỉ lệ trong game"); chuộc phím khách +1 uy tín; app Đánh giá giải thích cách chấm sao. |
 | **0.1.7** | 26/10/2026 | 🎀 Keeb-chan | Luôn ở góc màn hình, bấm nhân vật để ẩn / hiện lời nhắc, thanh tiêu đề như cửa sổ app (kéo để dời); ở bàn build hướng dẫn từng bước. |
@@ -93,7 +94,7 @@ Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phả
 |  | Chuộc lại phím (giá ×1.1 ~ ×1.3 giá đã bán) | 30% bị từ chối · được thì +1 uy tín, giữ 3 ngày |
 |  | Đăng trên giá chợ tới 1.4× giá gốc: đại gia chốt trong đêm (tối đa 1 đại gia / đêm) | 15% · +5% mỗi bậc thợ · +5% nếu Free ship |
 |  | Đăng > 1.2× giá gốc: bị chê (có chứng chỉ thì bớt chê, có người khen) | 35% (> 1.4×: 60%) mỗi lượt bot ghé · −5% mỗi bậc thợ |
-|  | Bài bid 1 phút: giá chốt | ~45% → 125% giá chợ (có thể lời / lỗ) |
+|  | Fast bid (1 phút): giá chốt | ~45% → 125% giá chợ (có thể lời / lỗ) |
 |  | Bán hàng lỗi bị tố mô tả sai sự thật | 10% · admin ban chợ 3 ngày |
 |  | Gỡ bài quá 3 lần / ngày | Admin ban chợ 3 ngày |
 | **🔧 Lắp ráp & giao hàng** | Thiếc đểu cháy chân dù nhả đúng vùng xanh | 15% |
@@ -126,7 +127,7 @@ Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phả
 - Tiền nhận gồm budget linh kiện (mua rẻ hơn thì phần dư vào túi) + tiền công theo điểm; lố ngân sách thì shop chịu phần lố và bị trừ điểm.
 - Kho chung của shop: mọi linh kiện mua dư / bị thay / thừa sau khi giao đều nằm trong Kho, nhận hoặc chuyển đơn thì tự lấy món hợp yêu cầu, chỉ cần mua phần thiếu.
 - **Test hết phím trước khi giao**: phím chưa hàn sẽ không ăn và khách báo lỗi nút; bỏ sót test thì 5% khách gặp nút lỗi (đánh giá thấp).
-- Hội Phím Cơ → **Bài của tôi**: tự đăng bán đồ trong kho, đồ trong đơn chưa build hoặc… phím của khách (95% bị lộ, −1 uy tín; chuộc lại trên chợ thì gỡ được uy tín). Đăng giá cố định (giá cao tới 1.4× giá gốc vẫn có thể gặp đại gia chốt trong đêm) hoặc bid 1 phút. Gỡ bài quá 3 lần / ngày bị admin ban.
+- Hội Phím Cơ → **Bài của tôi**: tự đăng bán đồ trong kho, đồ trong đơn chưa build hoặc… phím của khách (95% bị lộ, −1 uy tín; chuộc lại trên chợ thì gỡ được uy tín). Đăng giá cố định (giá cao tới 1.4× giá gốc vẫn có thể gặp đại gia chốt trong đêm) hoặc fast bid 1 phút. Gỡ bài quá 3 lần / ngày bị admin ban.
 - Hàng pass lỗi keycap / switch / stab (viền đỏ trong Kho) không lắp cho khách được, chỉ đăng bán lại.
 - **Esc** mở Cài đặt: nút xanh **Lưu tiến trình** ghi lên bảng xếp hạng (đóng tab cũng tự gửi). Keeb-chan hướng dẫn mẹo chơi, tắt / bật ở Cài đặt.
 - Giữ đơn trong hạn để tránh mất uy tín; đơn chờ trễ quá 3 ngày sẽ bị khách huỷ. Dụng cụ có độ bền và chứng chỉ thợ giúp lắp / lube nhanh hơn.

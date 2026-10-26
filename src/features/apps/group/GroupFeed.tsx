@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useGame } from '@/store'
 import { ClipboardList } from 'lucide-react'
 import { Alert, Badge, Empty, OptionChip } from '@/components/ui'
@@ -15,7 +14,8 @@ export function GroupFeed() {
   const banWhy = useGame((s) => s.marketBanWhy)
   const mine = useGame((s) => s.listings.length)
   const openStolen = useGame((s) => s.stolen.some((x) => x.status === 'open'))
-  const [tab, setTab] = useState<'feed' | 'mine'>(openStolen ? 'mine' : 'feed')
+  const tab = useGame((s) => (openStolen ? 'mine' : s.groupTab))
+  const setTab = useGame((s) => s.setGroupTab)
   // bị admin ban (ăn xin, gỡ bài quá nhiều, bán hàng lỗi bị tố): không xem / mua / đăng được tới hết ngày banUntil - 1
   if (day < banUntil)
     return (

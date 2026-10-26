@@ -13,13 +13,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.10',
+    date: '2026-10-26',
+    commits: [],
+    title: 'Bán đồ trong đơn đang build, kéo Keeb-chan, Fast bid',
+    items: [
+      'Bán được đồ của đơn đang build nếu chưa lắp: switch còn lẻ, keycap chưa gắn; case / PCB / plate / stab đã lên bàn thì không',
+      'App Kho: nút Đăng bán mở thẳng Hội Phím Cơ → Bài của tôi',
+      'Keeb-chan: cầm nhân vật mới kéo được, không kéo ra khỏi màn hình; đang kéo thì không hiện tooltip',
+      'Màn tiêu đề: tên game luôn chính giữa, Keeb-chan đứng bên cạnh',
+      'Bid 1 phút đổi tên thành Fast bid',
+    ],
+  },
+  {
     version: '0.1.9',
     date: '2026-10-26',
     commits: ['4e41cd4'],
-    title: 'Chợ lời được, bài bid, plateless + foam PCB, luật qua ngày',
+    title: 'Chợ lời được, fast bid, plateless + foam PCB, luật qua ngày',
     items: [
       'Đăng bán: giá trên giá chợ tới 1.4× giá gốc có thể gặp đại gia chốt trong đêm; chứng chỉ thợ +5% mỗi bậc, có người khen thợ, up bài',
-      'Bài bid 1 phút (giá khởi điểm từ 0, chọn bước giá): may thì lời, ế thì lỗ',
+      'Fast bid 1 phút (giá khởi điểm từ 0, chọn bước giá): may thì lời, ế thì lỗ',
       'Bài đăng có tag Free ship / Price no offer / Lowball thoải mái / Bao test, thu gọn được; số bài hiện bằng badge',
       'Bán được linh kiện trong đơn đã nhận (kể cả đồ khách gửi) như đồ thường',
       'Hàng pass lỗi keycap / switch / stab: viền đỏ + badge trong Kho, không lắp cho khách, chỉ bán lại (giá ½, 10% bị tố → ban chợ)',

@@ -45,6 +45,11 @@ export interface MetaSlice extends Profile {
   camMode: 'orbit' | 'pan'
   /** mục Shopii đang xem (ô đồ còn thiếu trên bàn mod mở thẳng tới mục cần mua) */
   shopCat: ShopCategory
+  /** tab đang mở ở Hội Phím Cơ (chợ pass / bài của tôi) */
+  groupTab: 'feed' | 'mine'
+  setGroupTab: (tab: 'feed' | 'mine') => void
+  /** mở Hội Phím Cơ ở tab "Bài của tôi" để đăng bán (nút Đăng bán trong app Kho) */
+  openSell: () => void
   /** bảng chọn đơn ở bàn build trống đang mở (không lưu) */
   benchPicker: boolean
   /** đơn vừa chọn ở bảng chọn đơn nhưng còn thiếu linh kiện (giữ qua lúc đổi HUD, không lưu) */
@@ -183,6 +188,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   pcZoom: false,
   camMode: 'orbit',
   shopCat: 'case',
+  groupTab: 'feed',
   benchPicker: false,
   benchShort: null,
   gameOver: null,
@@ -291,6 +297,11 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       windows: [...s.windows.filter((w) => w !== id), id],
       minimized: s.minimized.filter((w) => w !== id),
     })),
+  setGroupTab: (groupTab) => set({ groupTab }),
+  openSell: () => {
+    set({ screen: 'pc', groupTab: 'mine' })
+    get().openApp('group')
+  },
   openShop: (cat) => {
     set({ screen: 'pc', shopCat: cat })
     get().openApp('shopii')
