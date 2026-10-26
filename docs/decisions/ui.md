@@ -407,3 +407,62 @@
   `clampOff` giữ cả cụm trong màn hình (cách mép 8px; góc mặc định là giới hạn phải / dưới nên không đè taskbar); bong bóng hiện
   lại (mẹo mới / bấm) hoặc đổi cỡ cửa sổ thì kéo lại vào trong (rAF trong effect, không setState đồng bộ).
 - `GlobalTooltip`: đang giữ chuột (`e.buttons`) thì không hiện tooltip — áp dụng cho mọi thao tác kéo (Keeb-chan, cửa sổ, ô kho).
+
+## Badge ml-0, Keeb-chan thu nhỏ ở bàn build (2026-10-26)
+
+- "Badge đầu tiên ở Hội Phím Cơ luôn có ml-1.5": `cn` chỉ nối chuỗi nên `className="ml-0"` không đè được `ml-1.5` mặc định của `Badge`.
+  Sửa gốc trong `Badge`: className có `ml-*` thì bỏ `ml-1.5` mặc định (mọi chỗ dùng `ml-0` giờ mới đúng).
+- Avatar Keeb-chan thu nhỏ (BenchDialog): chấm đỏ bị `overflow-hidden` của nút cắt mất → cắt tròn ở lớp `span` bên trong, chấm đỏ
+  (`-top-1 -right-1`, viền trắng) nằm ngoài lớp cắt; bỏ `mt-6` (ảnh mới không cần đẩy xuống).
+
+## Keeb-chan: case mica là nhiều lớp, không phải 2 mảnh (2026-10-27)
+
+- Người dùng: "case alice này ko phải là 2 mảnh mà nhiều mảnh ghép lại với nhau sửa lại hướng dẫn của keeb-chan cho đúng".
+- `benchTopics(step, hasOrder, mica)` (benchLines.ts): case mica dùng `MICA_LINES` cho `caseOpen` / `caseClose` / `caseScrew`
+  (nhiều tấm mica chồng, vít xuyên mọi lớp), id riêng `step:<bước>:mica`; `BenchDialog` lấy `mica` từ `ctx.caseDef.material`.
+  Gợi ý bước `STEP_INFO` (steps.ts) đổi câu chung: "Case ghép (2 mảnh / mica nhiều lớp)", "khoá các mảnh / lớp case".
+
+## Phím Q lật xem đáy (2026-10-27)
+
+- Người dùng: "lệch đáy phím tắt là q" (= nút vàng "Lật xem đáy"). `TopBar` (BenchHud.tsx) `useBenchKey('KeyQ', toggleFlip)` khi
+  `canFlip` (cùng điều kiện như R / Space: không lúc test phím / đang gõ / giữ phím); tooltip "(Q)" + dòng hướng dẫn chuột "Q: lật đáy".
+
+## Phím tắt bàn build (2026-10-27)
+
+- Người dùng: "góc nhìn mặc định từ R → Space, xoay từ H → R"; "danh sách đơn là phím M". Hook chung `useBenchKey`
+  (`features/bench/useBenchKey.ts`, tách từ CamModeButton; bỏ qua khi đang gõ / bước test, `preventDefault` để Space không bấm nút
+  đang focus / cuộn trang): R đổi xoay ↔ kéo khung nhìn, Space về góc nhìn mặc định (CamModeButton), M mở / đóng Danh sách đơn
+  (`OrderPicker` trong EmptyBenchHud, dùng cả bàn trống lẫn đang build; đang chạy hoạt cảnh mod stab / lube thì không mở).
+  Tooltip nút + dòng mẹo dưới khung hướng dẫn đổi theo.
+
+## Bỏ mũi tên ở nút mod stab (2026-10-27)
+
+- Người dùng: "mũi tên icon bỏ qua mod xoá đi". `StabModPanel` (ModPanels.tsx): "Bỏ qua mod →" / "Xong, đi lắp stab →" bỏ "→".
+  Nút lube ("Bỏ qua lube →") và "Bỏ qua →" ở BenchHud vẫn giữ (chưa được yêu cầu).
+
+## Mod stab theo đúng mẫu stab (2026-10-27)
+
+- Người dùng: "Stab khít: dán băng vào sẽ bị nhũn => đổi lại lỗ stem rộng quá nên cần dán băng vào hạn chế độ dao động của wire trong
+  stem" + "tx-ap ko cần holee mod nhưng ở menu hướng dẫn lại có bước holee mod và clip chân stem".
+- `stabModRules` (mods.ts) lý do Holee: stab cần (Cherry, `feet`) = "Lỗ stem rộng: dán băng để wire bớt dao động trong stem"; stab khít
+  = "lỗ stem vừa wire, không cần dán băng".
+- `StabModPanel` chỉ liệt kê mod `needed` (lỡ làm rồi vẫn hiện); cảnh báo thiếu kìm cắt chỉ khi stab phải clip. Gợi ý bước (BenchHud
+  `Objective`) dùng `stabModHint(model)` (chỉ mod cần, thứ tự mũi tên vàng) thay câu cố định trong `STEP_INFO.stabMod`. Câu Keeb-chan
+  bước stabMod nói rõ Cherry vs stab đời mới.
+
+## Keeb-chan mặc định thu nhỏ (2026-10-27)
+
+- Người dùng: "hướng dẫn Keeb-chan mặc định vào build sẽ ẩn đi, muốn xem thì bấm để show lên, tương tự ở màn hình máy tính".
+- `BenchDialog`: `small` mặc định `true` (avatar tròn góc phải dưới + chấm đỏ), bấm mới hiện khung thoại; đổi bước / tình huống
+  không tự mở lại nữa (chỉ đọc lại từ câu đầu). Tooltip avatar: "Keeb-chan có hướng dẫn, bấm để xem".
+- `GuideNpc` (máy tính): bong bóng mặc định ẩn, bấm nhân vật mới hiện; chấm đỏ chỉ khi có mẹo chưa xem (`readTip`: mẹo đã mở bong
+  bóng xem, đang mở mà mẹo đổi thì tính là đã xem). Bỏ tự mở bong bóng khi mẹo đổi.
+
+## Phép mở / lube switch (2026-10-27)
+
+- Người dùng: bỏ icon 📜, font bold, dạng "Phép lube switch: 20/mẻ (còn 788 lần)". Có thử đưa vào `Alert` xanh rồi người dùng bảo
+  "thôi bỏ alert đi trả lại như cũ" → giữ dòng chữ `text-xs font-bold text-green`, `Alert` không có tông xanh. Dòng nhận xét độ hợp
+  mỡ (`LubePicker`) in đậm, đặt trên các ô chọn.
+- Hết switch ở bảng lube: Alert "Hết switch" + nút "Mua ở Shopii" (`openShop('switch')`, chỉ chữ).
+- 2026-10-27, "bỏ icon trong btn bước tiếp theo": nút sang bước ở khung hướng dẫn (Objective, BenchHud) bỏ "→" ở mọi trạng thái
+  ("Bước tiếp theo" / "Bỏ qua" / "Bỏ dở, còn N phím"). Nút ở bảng lube (ModPanels: "Bỏ qua lube →", "Xong, đi lắp switch →") chưa đổi.

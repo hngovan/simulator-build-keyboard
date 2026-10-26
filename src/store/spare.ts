@@ -8,7 +8,16 @@ import {
   switchOk,
 } from '@/data/parts'
 import { getLayout } from '@/data/layouts'
-import type { Inventory, Key, Order, PartCategory, PartItem, Spare, StabItem } from '@/types'
+import type {
+  Inventory,
+  Key,
+  Order,
+  PartCategory,
+  PartItem,
+  Spare,
+  StabItem,
+  SwitchItem,
+} from '@/types'
 
 // Kho chung của shop: linh kiện chưa gắn với đơn nào (mua dư, bị thay, thừa sau khi giao, đơn bị huỷ).
 // Đơn nào được làm (nhận / chuyển sang) thì tự lấy món hợp yêu cầu từ kho chung (`fillFromStock`)
@@ -20,11 +29,24 @@ export function addPart(spare: Spare, cat: PartCategory, item: PartItem | null):
     return spare
   // switch lỗi để riêng từng lô (không gộp với switch tốt)
   if (cat === 'switch' && !(item as { flaw?: string }).flaw) {
-    const sw = item as { type: string; count: number }
+    const sw = item as SwitchItem
     if (sw.count <= 0) return spare
+    // giữ tiền đã trả (nếu có) theo loại để lấy ra lại vẫn tính đúng "Đã chi"
+    const had = spare.switchPaid?.[sw.type]
     return {
       ...spare,
       switches: { ...spare.switches, [sw.type]: (spare.switches[sw.type] ?? 0) + sw.count },
+      ...(sw.paid
+        ? {
+            switchPaid: {
+              ...spare.switchPaid,
+              [sw.type]: {
+                paid: (had?.paid ?? 0) + sw.paid,
+                n: (had?.n ?? 0) + (sw.paidN ?? sw.count),
+              },
+            },
+          }
+        : {}),
     }
   }
   if (cat === 'stab' && !(item as StabItem).flaw) {
@@ -37,9 +59,35 @@ export function addPart(spare: Spare, cat: PartCategory, item: PartItem | null):
   return { ...spare, items: [...spare.items, { cat, item }] }
 }
 
+/** Bỏ hẳn 1 loại switch khỏi kho chung (cả tiền đã trả) */
+export function dropSwitch(spare: Spare, type: string): Spare {
+  return {
+    ...spare,
+    switches: without(spare.switches, type),
+    ...(spare.switchPaid?.[type] ? { switchPaid: without(spare.switchPaid, type) } : {}),
+  }
+}
+
+/** Lấy hết switch loại `type` trong kho chung (kèm tiền đã trả), gộp vào `cur` nếu cùng loại */
+export function takeSwitches(spare: Spare, type: string, cur?: SwitchItem | null) {
+  const n = spare.switches[type] ?? 0
+  const p = spare.switchPaid?.[type]
+  const same = cur?.type === type ? cur : null
+  const item: SwitchItem = { ...same, type, count: (same?.count ?? 0) + n }
+  if (p) {
+    item.paid = (same?.paid ?? 0) + p.paid
+    item.paidN = (same?.paidN ?? 0) + p.n
+  }
+  return { spare: dropSwitch(spare, type), item, n }
+}
+
 /** Sau khi giao: switch còn lại + stab thừa so với layout vào kho chung (stab khách gửi thì trả khách) */
 export function leftoverSpare(spare: Spare, inv: Inventory, keys: Key[], stabProvided: boolean) {
-  let out = addPart(spare, 'switch', inv.switch)
+  let out = addPart(
+    spare,
+    'switch',
+    inv.switch && { type: inv.switch.type, count: inv.switch.count },
+  )
   if (inv.stab && !stabProvided) {
     const have = stabStock(inv.stab)
     const need = stabNeed(keys)
@@ -94,10 +142,11 @@ export function fillFromStock(
     ([t, n]) => n > 0 && (next.switch ? next.switch.type === t : switchOk(t, order)),
   )
   if (swTypes.length) {
-    const [type, n] = swTypes.sort((a, b) => b[1] - a[1])[0]
-    next.switch = { type, count: (next.switch?.count ?? 0) + n }
-    sp = { ...sp, switches: without(sp.switches, type) }
-    taken.push(`${n} switch`)
+    const [type] = swTypes.sort((a, b) => b[1] - a[1])[0]
+    const r = takeSwitches(sp, type, next.switch)
+    next.switch = r.item
+    sp = r.spare
+    taken.push(`${r.n} switch`)
   }
   // stab: chỉ khi layout cần stab và khách không gửi
   const needStab = getLayout(order.layout, order.variant).keys.some((k) => k.stab)
@@ -114,7 +163,7 @@ export function fillFromStock(
       )[0]
       const add = stabStock(entry)
       const have = stabStock(next.stab ?? { short: 0, long: 0, long7: 0 })
-      next.stab = { type, ...addStab(have, add) }
+      next.stab = { ...next.stab, type, ...addStab(have, add) }
       sp = { ...sp, stabs: without(sp.stabs, type) }
       taken.push(`${stabTotal(add)} stab`)
     }

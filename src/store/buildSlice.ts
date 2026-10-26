@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import { SCREW_STEPS, STEP_INFO, stabUnits, stepProgress } from '@/data/steps'
-import { SWITCHES, TOOLS } from '@/data/parts'
+import { SCREW_FULL, SWITCHES, TOOLS, TRAY_COLORS, partSpent, screwLevel } from '@/data/parts'
 import {
   JOINTS_PER_KEY,
   SPELL_ASSEM,
@@ -69,6 +69,10 @@ export interface BuildSlice {
   /** performance.now() lúc vừa thay đầu vít, để chạy hiệu ứng thay đầu */
   bitSwapAt: number
   setScrewBit: (bit: ScrewBit) => void
+  /** đổi khay đựng ốc sang màu kế tiếp (`TRAY_COLORS`) */
+  nextTrayColor: () => void
+  /** đổi tua vít đang dùng (tay / điện), chỉ trong số đã có */
+  setScrewPick: (level: number) => void
   /** performance.now() lần cuối bấm phím ở bước test (hoặc lúc vào bước): để nhắc phím chưa test */
   testIdleFrom: number
   unbox: () => void
@@ -138,8 +142,6 @@ export const newBuild = (): BuildState => ({
   springLube: null,
   lubeDone: false,
 })
-
-const screwClicks = (s: GameState) => TOOLS.screw[s.tools.screw].clicks!
 
 /** Trạng thái chụp lại trước 1 thao tác */
 export interface HistoryEntry {
@@ -228,7 +230,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     const s = at(step)
     // đã làm xong (đang chờ bấm bước tiếp theo) thì click lại không ghi thêm
     if (!s) return
-    const [done, total] = stepProgress(step, s.build, s.ctx, screwClicks(s))
+    const [done, total] = stepProgress(step, s.build, s.ctx, SCREW_FULL)
     if (done >= total) return
     commit(snap)
     get().patchBuild(patch)
@@ -247,6 +249,18 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     prevScrewBit: 'phillips',
     bitSwapAt: 0,
     testIdleFrom: 0,
+    setScrewPick: (level) => {
+      const s = get()
+      if (level > s.tools.screw || level === screwLevel(s.tools, s.screwPick)) return
+      set({ screwPick: level })
+      s.toast(`🔧 Đổi sang ${TOOLS.screw[level].name}`)
+    },
+    nextTrayColor: () => {
+      const ids = Object.keys(TRAY_COLORS)
+      const next = ids[(ids.indexOf(get().trayColor) + 1) % ids.length]
+      set({ trayColor: next })
+      get().toast(`Khay đựng ốc: màu ${TRAY_COLORS[next].name}`)
+    },
     setScrewBit: (bit) => {
       const cur = get().screwBit
       if (cur !== bit) set({ screwBit: bit, prevScrewBit: cur, bitSwapAt: performance.now() })
@@ -317,7 +331,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       // đang ở bước cũ (đã quay lại, chưa làm gì mới): đi tiếp theo nhánh đã làm
       if (s.future.length > 1) return s.forwardToStep(s.build.stepIdx + 1)
       const optional = step === 'stabMod' || step === 'switchLube' || step === 'foam'
-      const [done, total] = stepProgress(step, s.build, s.ctx, screwClicks(s))
+      const [done, total] = stepProgress(step, s.build, s.ctx, SCREW_FULL)
       // hàn dở (đã hàn ít nhất 1 phím) vẫn cho đi tiếp: phím chưa hàn / cháy sẽ lộ ra lúc test hoặc khách báo lỗi
       const soft = step === 'solder' && done > 0
       if (!optional && !soft && done < total) return
@@ -346,7 +360,12 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     },
     wrapRing: once('ring', { ring: true }),
     dropInCase: once('caseIn', { inCase: true }),
-    closeCase: once('caseClose', { closed: true }),
+    // đậy case chỉ 1 thao tác: đậy xong tự sang bước vặn vít (không bắt bấm "Bước tiếp theo")
+    closeCase: () => {
+      once('caseClose', { closed: true })()
+      const s = get()
+      if (s.build?.closed && s.ctx?.steps[s.build.stepIdx] === 'caseClose') get().nextStep()
+    },
     placeTopCase: once('topCase', { closed: true }),
 
     turnScrew: (id) => {
@@ -360,9 +379,11 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       )
         return
       const cur = s.build.screws[id] ?? 0
-      if (cur >= screwClicks(s)) return
+      if (cur >= SCREW_FULL) return
       commit(snapshot())
-      s.patchBuild({ screws: { ...s.build.screws, [id]: cur + 1 } })
+      // tua vít tay mỗi click 1 nấc, tua vít điện 1 click là đủ
+      const step1 = SCREW_FULL / TOOLS.screw[screwLevel(s.tools, s.screwPick)].clicks!
+      s.patchBuild({ screws: { ...s.build.screws, [id]: Math.min(SCREW_FULL, cur + step1) } })
     },
     installStab: (id) => {
       const s = at('stab')
@@ -469,7 +490,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (TOOLS.brush[s.tools.brush].none)
         return (s.toast('Cần cọ lube — mua ở Shopii → Dụng cụ', 'bad'), 0)
       const type = s.lubePick.switch
-      const sw = SWITCHES[s.inventory.switch!.type]
+      if (!s.inventory.switch) return (s.toast('Hết switch! Về máy tính mua thêm', 'bad'), 0)
+      const sw = SWITCHES[s.inventory.switch.type]
       const [fit, note] = lubeUseFit(type, sw.feel)
       if (!fit) return (s.toast(`Không dùng ${type} cho switch được`, 'bad'), 0)
       if (s.build.lubeType && s.build.lubeType !== type)
@@ -555,7 +577,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       let targets = installTargets(s.ctx.keys, (k) => !!s.build[field][k], id, n)
       if (!targets.includes(id)) return 0
       if (kind === 'switch') {
-        const inv = s.inventory.switch!
+        const inv = s.inventory.switch
+        if (!inv) return (s.toast('Hết switch! Về máy tính mua thêm', 'bad'), 0)
         targets = targets.slice(0, inv.count)
         if (!targets.length) return (s.toast('Hết switch! Về máy tính mua thêm', 'bad'), 0)
         commit(snap)
@@ -756,14 +779,16 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     deliver: () => {
       const s = get()
       if (!s.order || !s.build || !s.ctx) return
+      if (!s.inventory.switch)
+        return s.toast('Đơn này đang thiếu switch, mua thêm rồi hãy giao', 'bad')
       const result = scoreDelivery({
         order: s.order,
         inventory: s.inventory,
         build: s.build,
         ctx: s.ctx,
         mount: s.mount,
-        spent: s.spent,
-        screwClicks: screwClicks(s),
+        spent: partSpent(s.inventory, s.order, s.spent),
+        screwClicks: SCREW_FULL,
         brushLevel: s.tools.brush,
       })
       // giao trễ hạn: mỗi ngày trễ trừ 1 uy tín
@@ -783,16 +808,15 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         mount: null,
         screen: 'pc',
         windows: ['messenger'],
+        // mở thẳng hội thoại của khách này (nút "Gửi hàng cho khách")
+        messengerPick: s.order.id,
         build: null,
         ctx: null,
         history: [],
         future: [],
         supplyUsed: {},
       })
-      s.toast(
-        `📦 Đã đóng gói đơn ${s.order.customer} (${'★'.repeat(result.stars)}) — vào Mezzenger gửi cho khách`,
-        'good',
-      )
+      s.toast(`📦 Đã đóng gói đơn ${s.order.customer} — vào Mezzenger gửi cho khách`, 'good')
       get().save()
     },
   }

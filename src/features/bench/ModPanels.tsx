@@ -56,6 +56,10 @@ function LubePicker({
   const [fit, note] = lubeUseFit(value, use)
   return (
     <div className="flex flex-col gap-1">
+      {/* nhận xét độ hợp của mỡ đang chọn: đặt trên đầu, đọc trước khi chọn */}
+      <span className={cn('text-xs font-bold', fitTone(fit))}>
+        {SUPPLIES[value].name}: {note}
+      </span>
       <div className="flex flex-wrap gap-1">
         {ids.map((id) => (
           <OptionChip
@@ -68,9 +72,6 @@ function LubePicker({
           </OptionChip>
         ))}
       </div>
-      <span className={cn('text-xs', fitTone(fit))}>
-        {SUPPLIES[value].name}: {note}
-      </span>
     </div>
   )
 }
@@ -151,7 +152,7 @@ export function StabModPanel() {
       title={`🛠 Mod stab (${n} stab)`}
       footer={
         <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
-          {mods.wired ? 'Xong, đi lắp stab →' : 'Bỏ qua mod →'}
+          {mods.wired ? 'Xong, đi lắp stab' : 'Bỏ qua mod'}
         </Button>
       }
     >
@@ -164,17 +165,21 @@ export function StabModPanel() {
         {m.name}: {m.desc}
       </Muted>
       <HudSection id="stabMod.steps" title="Các bước mod">
-        {rules.map((r, i) => (
-          <ModRow
-            key={r.kind}
-            index={i + 1}
-            name={r.label}
-            state={mods[r.kind] ? 'done' : !r.needed ? 'skip' : r.kind === next ? 'cur' : 'todo'}
-            req={r.reason ?? ''}
-            onDo={r.allowed && !busy ? () => modStab(r.kind) : undefined}
-          />
-        ))}
-        <ToolWarn kinds={['brush', 'clipper']} />
+        {/* chỉ liệt kê mod stab này cần (TX / Staebies khít, chân clip sẵn: không có bước clip / Holee); lỡ làm rồi thì vẫn hiện */}
+        {rules
+          .filter((r) => r.needed || mods[r.kind])
+          .map((r, i) => (
+            <ModRow
+              key={r.kind}
+              index={i + 1}
+              name={r.label}
+              state={mods[r.kind] ? 'done' : !r.needed ? 'skip' : r.kind === next ? 'cur' : 'todo'}
+              req={r.reason ?? ''}
+              onDo={r.allowed && !busy ? () => modStab(r.kind) : undefined}
+            />
+          ))}
+        {/* kìm cắt chỉ cần khi phải clip chân stem */}
+        <ToolWarn kinds={m.feet ? ['brush', 'clipper'] : ['brush']} />
       </HudSection>
       <HudSection id="stabMod.housing" title="Housing + slider">
         <LubePicker slot="housing" use="housing" disabled={!!mods.housing} />
@@ -210,13 +215,34 @@ export function LubePanel() {
   const lubeSpell = useGame((s) => spellBonus(s.supplies, SPELL_LUBE))
   const perOpen = spellRun(TOOLS.cert[certLv].n!, openSpell)
   const perLube = spellRun(TOOLS.cert[certLv].n!, lubeSpell)
-  const swType = useGame((s) => s.inventory.switch!.type)
+  // save cũ: switch của đơn đang build bị bán mất cả loại (null) → coi như hết switch, không vỡ bảng
+  const swType = useGame((s) => s.inventory.switch?.type)
   const pref = useGame((s) => s.order!.lubePref)
   const finishOptional = useGame((s) => s.finishOptional)
   const busy = useGame((s) => !!s.lubeAnim)
-  const sw = SWITCHES[swType]
+  const sw = swType ? SWITCHES[swType] : undefined
   const total = ctx.keys.length
   const opened = build.opened ?? build.lubed
+  if (!sw)
+    return (
+      <HudPanel
+        id="switchLube"
+        title="🧴 Lube switch"
+        footer={
+          <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
+            Bỏ qua lube →
+          </Button>
+        }
+      >
+        <Alert title="Hết switch">
+          Switch của đơn đã bán hết, mua thêm để lube
+          {/* mở Shopii đúng mục switch (như nút mua dụng cụ ở ToolWarn) */}
+          <Button size="sm" tone="red" onClick={() => useGame.getState().openShop('switch')}>
+            Mua ở Shopii
+          </Button>
+        </Alert>
+      </HudPanel>
+    )
   return (
     <HudPanel
       id="switchLube"
@@ -251,7 +277,7 @@ export function LubePanel() {
       >
         <div className="text-xs">{`Click switch trên đồ mở để tách housing, stem và lò xo, mỗi lần ${perOpen} con`}</div>
         {openLeft > 0 && (
-          <div className="text-xs text-green">{`📜 Phép mở switch: ${perOpen} con / lần, còn ${openLeft} lần`}</div>
+          <div className="text-xs font-bold text-green">{`Phép mở switch: ${perOpen}/lần (còn ${openLeft} lần)`}</div>
         )}
         <ProgressBar value={opened / total} tone="green" className="mt-1" />
       </HudSection>
@@ -270,7 +296,7 @@ export function LubePanel() {
           <div className="text-xs">{`Đã mở chờ lube: ${opened - build.lubed} · ${perLube} con / mẻ (theo bậc thợ${lubeSpell ? ' + phép' : ''})`}</div>
         )}
         {lubeLeft > 0 && (
-          <div className="text-xs text-green">{`📜 Phép lube switch: ${perLube} con / mẻ, còn ${lubeLeft} lần`}</div>
+          <div className="text-xs font-bold text-green">{`Phép lube switch: ${perLube}/mẻ (còn ${lubeLeft} lần)`}</div>
         )}
         <LubePicker slot="switch" use={sw.feel} disabled={!!build.lubeType} />
         <ProgressBar value={build.lubed / total} tone="green" className="mt-1" />
@@ -426,7 +452,8 @@ export function FeetPanel() {
       </div>
       <HudSection id="feet.pick" title="Loại feet">
         <div className="flex flex-wrap gap-1">
-          {FEET_IDS.map((id) => (
+          {/* nhiều màu: chỉ hiện màu đang có trong kho + màu đang chọn */}
+          {FEET_IDS.filter((id) => id === pick || (supplies[id] ?? 0) > 0).map((id) => (
             <OptionChip
               key={id}
               active={pick === id}
@@ -437,14 +464,14 @@ export function FeetPanel() {
             </OptionChip>
           ))}
         </div>
-        <Muted>Case tối màu hợp feet đen, case sáng màu hợp feet trắng. 1 lần mua = 4 cái.</Muted>
+        <Muted>Chọn màu feet hợp màu case (mua thêm màu khác ở Shopii). 1 lần mua = 4 cái.</Muted>
       </HudSection>
       {left > 0 && (supplies[pick] ?? 0) < left && (
         <Alert
           tone="yellow"
           title={`Còn thiếu feet: cần ${left}, ${SUPPLIES[pick].name.toLowerCase()} còn ${supplies[pick] ?? 0}`}
         >
-          {have >= left && <Muted>Loại kia còn đủ, đổi loại để dán tiếp.</Muted>}
+          {have >= left && <Muted>Màu khác còn đủ, đổi màu để dán tiếp.</Muted>}
           <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
             Mua feet ở Shopii
           </Button>

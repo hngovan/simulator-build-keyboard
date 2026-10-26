@@ -5,11 +5,14 @@ import {
   MOUNTS,
   PLATELESS_MOUNTS,
   SOUND_WISH,
+  SWITCHES,
   buildSound,
   checkInventory,
   isPlateless,
   itemName,
+  partSpent,
   soundLabel,
+  switchOk,
 } from '@/data/parts'
 import {
   Badge,
@@ -17,6 +20,7 @@ import {
   Heading,
   Muted,
   OptionChip,
+  OptionSelect,
   Panel,
   ProgressBar,
   SoundBars,
@@ -27,6 +31,45 @@ import { cn, fmt } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
 import { OrderCard, useOrderEntries, type OrderEntry } from '@/components/game/OrderCard'
 import { buildContext } from '@/data/steps'
+import type { BuildState, Inventory } from '@/types'
+
+/**
+ * Chọn loại switch dùng cho đơn đang làm (khách không đòi đích danh 1 loại): các loại đang có (đơn + kho chung) hợp loại
+ * khách cần (`switchOk`). Đổi = lấy loại kia từ kho chung (`takeStock`), loại đang dùng cất lại kho. Đã cắm switch thì khoá
+ */
+function SwitchPick({
+  order,
+  current,
+  build,
+}: {
+  order: OrderEntry['order']
+  current: Inventory['switch']
+  build: BuildState | null
+}) {
+  const spare = useGame((s) => s.spare.switches)
+  const takeStock = useGame((s) => s.takeStock)
+  if (order.switchType || (build && Object.keys(build.switches).length)) return null
+  const types = [
+    ...(current && !current.flaw ? [current.type] : []),
+    ...Object.keys(spare).filter(
+      (t) => spare[t] > 0 && t !== current?.type && SWITCHES[t] && switchOk(t, order),
+    ),
+  ]
+  if (types.length < 2 && current) return null
+  if (!types.length) return null
+  const count = (t: string) => (t === current?.type ? current.count : 0) + (spare[t] ?? 0)
+  return (
+    <div className="mt-1 flex items-center gap-2 text-xs text-muted">
+      Chọn loại:
+      <OptionSelect
+        className="min-w-0 flex-1"
+        value={Math.max(0, types.indexOf(current?.type ?? ''))}
+        options={types.map((t) => ({ label: SWITCHES[t].name, note: `${count(t)} con` }))}
+        onChange={(i) => types[i] !== current?.type && takeStock(`switch:${types[i]}`)}
+      />
+    </div>
+  )
+}
 
 /** Chi tiết 1 đơn: yêu cầu khách, đối chiếu linh kiện (✓ như bàn build), mount, âm thanh, ngân sách */
 function OrderDetail({ c }: { c: OrderEntry }) {
@@ -35,7 +78,9 @@ function OrderDetail({ c }: { c: OrderEntry }) {
   // đơn mới chưa nhận: chỉ có yêu cầu của khách
   if (!c.session) return <OrderSpec order={order} compact />
   const active = kind === 'active'
-  const { inventory, provided, mount, build, spent } = c.session
+  const { inventory, provided, mount, build } = c.session
+  // chỉ tính linh kiện trong ô đối chiếu (mua dư / món bị thay / dụng cụ / vật tư không tính)
+  const spent = partSpent(inventory, order, c.session.spent)
   const ctx = active ? s.ctx : mount ? buildContext(order, inventory, mount) : null
   const checks = checkInventory(inventory, order, build ? Object.keys(build.switches).length : 0)
   const ready = checks.every((x) => x.ok)
@@ -77,6 +122,9 @@ function OrderDetail({ c }: { c: OrderEntry }) {
                     </Badge>
                   )}
                   {!x.ok && <div className="text-red">{x.msg}</div>}
+                  {x.cat === 'switch' && active && !provided.switch && (
+                    <SwitchPick order={order} current={inventory.switch} build={build} />
+                  )}
                 </td>
               </tr>
             ))}

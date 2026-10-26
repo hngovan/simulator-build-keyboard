@@ -61,6 +61,7 @@ export type ToolKind =
   | 'solder'
   | 'desolder'
   | 'spoolHolder'
+  | 'screwTray'
   | 'tipCleaner'
   | 'cert'
   | 'clipper'
@@ -69,25 +70,31 @@ export type ToolKind =
 export type ToolLevels = Record<ToolKind, number>
 
 // ---------- món đồ trong kho ----------
-export interface CaseItem {
+/** giá shop đã trả cho món (mua ở Shopii / chợ); không có = khách gửi / lấy kho chung */
+export interface Paid {
+  paid?: number
+  /** switch / stab: số con đã trả tiền (mua dư thì chỉ tính phần layout cần) */
+  paidN?: number
+}
+export interface CaseItem extends Paid {
   id: string
   color: string
   /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
   flaw?: string
 }
-export interface PcbItem {
+export interface PcbItem extends Paid {
   layout: LayoutId
   type: string
   /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
   flaw?: string
 }
-export interface PlateItem {
+export interface PlateItem extends Paid {
   layout: LayoutId
   material: string
   /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
   flaw?: string
 }
-export interface StabItem {
+export interface StabItem extends Paid {
   type: string
   /** số stab ngắn (2u–2.75u) đang có; bản lưu cũ không có = 1 bộ tiêu chuẩn */
   short?: number
@@ -98,7 +105,7 @@ export interface StabItem {
   /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
   flaw?: string
 }
-export interface SwitchItem {
+export interface SwitchItem extends Paid {
   type: string
   count: number
   /** hàng pass lỗi: không lắp cho khách được, chỉ đăng bán lại */
@@ -106,7 +113,7 @@ export interface SwitchItem {
 }
 /** chất liệu keycap: PBT / ABS / mix PBT + ABS */
 export type KeycapMaterial = 'pbt' | 'abs' | 'mix'
-export interface KeycapItem {
+export interface KeycapItem extends Paid {
   kit: string
   color: string
   /** bản lưu cũ không có = PBT */
@@ -136,6 +143,8 @@ export type PartItem = NonNullable<Inventory[PartCategory]>
 export interface Spare {
   /** loại switch → số con */
   switches: Record<string, number>
+  /** tiền đã trả cho switch đang nằm kho chung (mua dư cho đơn đang làm): lấy ra đơn thì tính lại vào "Đã chi" */
+  switchPaid?: Record<string, { paid: number; n: number }>
   /** loại stab → số stab ngắn / dài */
   stabs: Record<string, import('./data/parts').StabCount>
   /** case / PCB / plate / keycap (và stab lỗi): từng món riêng */

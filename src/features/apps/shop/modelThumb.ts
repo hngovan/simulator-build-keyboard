@@ -15,6 +15,7 @@ import { Y } from '@/data/steps'
 import { boardOutline, outlinePlane, outlineSlab } from '@/scene/parts/boardOutline'
 import { makePcbTexture } from '@/scene/parts/PcbSurface'
 import { createSolderSpool, createSpoolHolder } from '@/scene/models/solderSpool'
+import { createScrewTray } from '@/scene/models/screwTrayModel'
 import { DIPLOMA_URL, createDiploma } from '@/scene/models/diplomaModel'
 import { createScroll } from '@/scene/models/scrollModel'
 
@@ -116,6 +117,16 @@ function createFeetStrip(color: string) {
   return group
 }
 
+/** Tấm foam Poron nguyên (chưa cắt lỗ): hộp đen mỏng, 1 tấm dùng cho mọi layout */
+function createFoamSheet(color: string) {
+  const sheet = new THREE.Mesh(
+    new THREE.BoxGeometry(2.6, 0.06, 1),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.95 }),
+  )
+  sheet.rotation.set(0.7, -0.35, 0.08)
+  return sheet
+}
+
 export async function buildScene(kind: ThumbKind, type: string) {
   const group = new THREE.Group()
   const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x = 0) => {
@@ -172,6 +183,7 @@ export async function buildScene(kind: ThumbKind, type: string) {
   if (kind === 'supply') {
     if (SUPPLIES[type]?.spell) return createScroll(SUPPLIES[type].name)
     if (SUPPLIES[type]?.feet) return createFeetStrip(SUPPLIES[type].color)
+    if (SUPPLIES[type]?.pcbFoam) return createFoamSheet(SUPPLIES[type].color)
     if (type === 'urgo') {
       // hộp băng cá nhân "Band Aid Box" (Logansryche, Sketchfab, CC BY 4.0): model lệch xa gốc, căn tâm về 0
       const box = (await glbScene('/models/supplies/band-aid-box.glb')).clone(true)
@@ -192,6 +204,13 @@ export async function buildScene(kind: ThumbKind, type: string) {
   if (kind === 'tool') {
     const [tool, levelText] = type.split(':')
     if (tool === 'spoolHolder') return createSpoolHolder()
+    if (tool === 'screwTray') {
+      // khay mới mua: trống, nghiêng cho thấy lòng chảo + rãnh
+      const tray = createScrewTray()
+      tray.rotation.set(0.7, 0.5, 0)
+      tray.scale.setScalar(0.7)
+      return tray
+    }
     if (tool === 'cert')
       return createDiploma(
         await glbScene(DIPLOMA_URL),

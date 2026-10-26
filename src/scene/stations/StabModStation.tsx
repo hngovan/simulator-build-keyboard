@@ -662,7 +662,8 @@ export function StabModStation() {
     housing: [L0.hx[0], TABLE + CAD.housingTop * U + 0.6, L0.hz],
     assembled: [L0.stand[0].x, STEM_TOP_Y + 0.3, L0.hz],
     wire: [L0.cx, TABLE + 0.6, L0.wireLie.z + 0.6],
-    wired: [L0.cx, TABLE + 1.1, L0.hz + 0.6],
+    // lắp wire: chỉ vào thanh wire đang nằm trên bàn (bấm wire mới lắp), không chỉ chỗ ngàm giữa 2 housing
+    wired: [L0.cx, TABLE + 0.6, L0.wireLie.z + 0.6],
   }
 
   return (

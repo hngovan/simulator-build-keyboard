@@ -2,15 +2,13 @@ import { Button, Panel, ScoreRow, Muted } from '@/components/ui'
 import { fmt } from '@/lib/format'
 import type { DeliveryResult } from '@/types'
 
-/** Kết quả chấm điểm sau khi giao hàng */
+/** Bảng điểm chấm của đơn đã đóng gói (chưa có sao: sao hiện khi khách nhận hàng và đánh giá) */
 /** onNext: nút kết thúc ngày (bỏ trống khi hiện trong danh sách đơn đã đóng gói) */
 export function ResultCard({ result, onNext }: { result: DeliveryResult; onNext?: () => void }) {
   return (
     <Panel>
-      <div className="text-[34px] text-yellow [text-shadow:0_3px_0_#0006]">
-        {'★'.repeat(result.stars)}
-        <span className="text-[#4a5263]">{'★'.repeat(5 - result.stars)}</span>
-      </div>
+      {/* chưa hiện sao: khách nhận hàng mới đánh giá (thông báo + app Đánh giá) */}
+      <Muted className="mb-1.5 block">Số sao do khách chấm khi nhận hàng</Muted>
       {result.checks.map((c) => (
         <ScoreRow
           key={c.label}

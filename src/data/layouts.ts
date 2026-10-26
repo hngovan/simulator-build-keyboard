@@ -1,4 +1,5 @@
 import type { Key, LayoutGeometry, LayoutId, FormFactor, Variant, VariantKey } from '@/types'
+import polygonClipping, { type Polygon } from 'polygon-clipping'
 import { ALICE_KEYS, ALICE_OUTLINE } from './aliceKeys'
 
 // Mỗi hàng: { x, y, items } — item là số (khoảng trống, đơn vị u) hoặc [nhãn, rộng, KeyboardEvent.code, cao]
@@ -582,12 +583,35 @@ export function blockerGaps(keys: Key[], width: number, depth: number, edge: num
 }
 
 /**
+ * Vùng phím của layout có phím xoay (Alice, như khung trên Blossom): hợp các ô phím (w × h, xoay theo `rot`) nới 0,01u
+ * cho ô sát nhau dính liền; mỗi vùng lấy viền ngoài (chỗ trống bị phím bao quanh cũng khoét như `keyRegions`)
+ */
+function rotatedRegions(keys: Key[]): [number, number][][] {
+  const G = 0.01
+  const rects = keys.map((k): Polygon => {
+    const c = Math.cos(k.rot)
+    const s = Math.sin(k.rot)
+    const hx = k.w / 2 + G
+    const hz = k.h / 2 + G
+    const pt = (dx: number, dz: number): [number, number] => [
+      k.cx + dx * c + dz * s,
+      k.cz - dx * s + dz * c,
+    ]
+    return [[pt(-hx, -hz), pt(hx, -hz), pt(hx, hz), pt(-hx, hz), pt(-hx, -hz)]]
+  })
+  const [first, ...rest] = rects
+  if (!first) return []
+  // viền ngoài polygon-clipping lặp lại điểm đầu ở cuối → bỏ
+  return polygonClipping.union(first, ...rest).map(([outer]) => outer.slice(0, -1))
+}
+
+/**
  * Đường bao các vùng phím (cụm F, cụm chính, cụm nav, cụm mũi tên...) trên lưới 1/8u: mỗi vùng ô phím liền nhau → 1 vòng
  * đa giác vuông góc [x, z] (u, quanh gốc). Dùng khoét tấm mica trên cùng của case mica ghép (khung chặn liền 1 tấm với mặt
- * case). Layout có phím xoay (Alice) trả về rỗng
+ * case). Layout có phím xoay (Alice): gộp các ô phím xoay thành vùng (`rotatedRegions`)
  */
 export function keyRegions(keys: Key[], width: number, depth: number): [number, number][][] {
-  if (keys.some((k) => k.rot)) return []
+  if (keys.some((k) => k.rot)) return rotatedRegions(keys)
   const S = 0.125
   const nx = Math.round(width / S)
   const nz = Math.round(depth / S)

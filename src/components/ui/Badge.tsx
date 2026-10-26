@@ -48,7 +48,9 @@ export function Badge({
   return (
     <span
       className={cn(
-        'ml-1.5 inline-flex items-center gap-1 font-extrabold whitespace-nowrap',
+        // cn chỉ nối chuỗi (không gộp class trùng): truyền ml-* (vd ml-0) thì bỏ lề trái mặc định, không thì ml-1.5 luôn thắng
+        !/(^|\s)ml-/.test(className ?? '') && 'ml-1.5',
+        'inline-flex items-center gap-1 font-extrabold whitespace-nowrap',
         solid
           ? 'rounded-lg px-2.5 py-0.5 font-head text-xs shadow-[0_3px_0_rgba(0,0,0,0.35),inset_0_2px_0_rgba(255,255,255,0.25)]'
           : 'rounded-full px-2 py-0.5 text-[11px] ring-1 ring-inset',

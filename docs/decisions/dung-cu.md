@@ -77,3 +77,51 @@
   `spellRun(certN, bonus)` trong supplies.ts — thợ lõ (n = 1) có phép = 10, middle / senior cộng dồn (15 / 20). Áp cho mở
   (`openSwitch`), lube (`lubeBatch`), lắp switch / keycap (`installRun`), ModPanels + LubeStation (số đồ mở). Phép hàn / rã hàn
   vẫn đúng 10 phím.
+
+## Mũi tên bàn lube: mở hết switch rồi mới chỉ lube (2026-10-26)
+
+- Người dùng: "chưa mở hết sw đã có mũi tên vàng chỉ vào sw để bấm lube". `hint` trong `LubeStation`: trước đây đủ 1 mẻ là chỉ lube.
+  Giờ thứ tự: còn switch chưa mở (và có đồ mở) → chỉ đồ mở; mở hết → chỉ con chưa lube đầu tiên; lube xong → hộp lò xo.
+  Không có đồ mở thì vẫn chỉ lube các con đã mở. Bỏ biến `batch` không dùng nữa.
+
+## Đổi tua vít tay / điện thoải mái + tua vít tay vẽ bằng code (2026-10-26)
+
+- Người dùng: "đoạn bắt vít cho đổi dụng cụ thoải mái, không nhất thiết dùng loại xịn nhất; viền vàng bấm vào để swap".
+  `Profile.screwPick` (null = loại xịn nhất đã mua), `screwLevel(tools, pick)` (parts.ts), `setScrewPick` (buildSlice).
+  Đổi được ở 2 chỗ: ô dụng cụ trên khung hướng dẫn (viền vàng, "⇄") và cây tua vít còn lại bày cạnh trên bàn (`DeskTools` trong
+  Room.tsx, `Clickable` viền vàng khi rê).
+- Tiến độ vít tính theo nấc tua vít tay `SCREW_FULL` = 3: tay mỗi click +1, điện 1 click = đầy → đổi giữa chừng không lệch.
+  `stepProgress` / chấm điểm / StepList / OrderCard dùng `SCREW_FULL` (bỏ `TOOLS.screw[tools.screw].clicks`). Save rev 7
+  (`fillScrews`): bản cũ có tua vít điện thì vít ≥ 1 click thành đầy.
+- "Tua vít thường vặn lỗi, đầu tua vít không đúng → tự vẽ model": bỏ model Poly Haven (lưỡi dẹt cố định, không khớp đầu vít đang chọn).
+  `ManualScrewdriver` (HandTools.tsx) vẽ bằng code: đầu kẹp lục giác (đầu vít `DriverBit` theo loại đang chọn cắm vào), thân thép,
+  cán nhựa đỏ 6 rãnh + đệm cao su đen; người dùng muốn cán dài hơn → cán 0,66 (tổng ~1,35u). Bàn build cũng dùng model này
+  (bỏ `MODELS.screwdriver`). File `public/models/room/screwdriver-lite.glb` + script `convert:screwdriver-lite` giữ lại, không còn dùng.
+
+## Khay đựng ốc (2026-10-27)
+
+- Người dùng: "vít sau khi vặn ra khỏi case sẽ bỏ trên 1 cái khay... tự vẽ model rồi nhét vào bán trong shopii với giá 500k => không
+  tăng chỉ số gì... ko mua thì bỏ lộn xộn trên bàn" (ảnh mẫu khay nhôm giọt nước Deadline Studio); sau đó: rãnh phải lõm thật, khay nhiều
+  màu đổi được sau khi mua, dời ra góc sau bên trái thảm (đang chồng lên case), khay ban đầu trống + ốc đúng cỡ / độ dài ốc trên case.
+- Tool `screwTray` (types.ts `ToolKind`, `TOOLS.screwTray` 500k, nhóm Shopii "Lắp ráp", START.tools, `TOOL_KINDS`). Không tăng chỉ số.
+- Model three thuần `scene/models/screwTrayModel.ts` (`createScrewTray(color)`): giọt nước (cung R + tiếp tuyến tới cung bo mũi), lòng
+  chảo Lathe + đáy phẳng, lỗ treo ở mũi, 3 rãnh viên thuốc khoét xuyên thân + đáy rãnh ở sâu `SLOT_D` (rãnh nằm gọn giữa vành: chạm lỗ
+  lòng chảo / mép ngoài thì tam giác hoá vỡ). `bowlY(r)` = cao độ mặt lòng chảo. Ảnh Shopii: khay trống (modelThumb).
+- Màu: `TRAY_COLORS` (parts.ts: bạc / đen / nâu / đỏ / xanh dương / vàng đồng / tím), `Profile.trayColor` (snapshot + SAVED_KEYS),
+  bấm khay trên bàn (`Clickable`) → `nextTrayColor` (buildSlice) đổi màu kế tiếp + toast.
+- Cảnh `scene/parts/ScrewTray.tsx` (Bench `Workbench` cạnh `Assembly`): ở [−width/2 + 1,5, mặt thảm, −depth/2 − 4] (góc sau trái).
+  Số ốc = ốc `caseOpen` đã tháo hết − ốc `caseScrew` đã bắt lại. Ốc vẽ bằng `LooseScrew` (Screw.tsx): cùng GLB + cỡ + thân ren dài
+  (case mica vít trên: `Y.caseTop − Y.floorBot − 0,06` như `ScrewSet`) với ốc bước tháo, nằm ngang tì đầu ốc (`HEAD_R`), `screwLength`.
+  Có khay: xếp song song, đầu so le, hàng ngoài nâng theo `bowlY`; không khay: vương ngẫu nhiên (cố định theo thứ tự) quanh chỗ đó.
+- Sửa (2026-10-27, người dùng: "chưa tháo vít xong mà khay ốc đã tăng số lượng... bấm tháo ốc cái đã tăng lên rồi"): tua vít điện 1 click là
+  đủ nấc ngay nên khay đếm liền. `ScrewTray` giữ `landed`: ốc chỉ vào khay sau `SPIN_MS` + `OUT_MS` (Screw.tsx export) = lúc hoạt cảnh
+  quay + ốc bay ra khỏi lỗ xong; ốc đã tháo sẵn lúc vào bàn có luôn, hoàn tác bỏ ra ngay (hẹn giờ 0, không setState trong effect).
+
+## Feet cao su nhiều màu, gộp 1 sản phẩm (2026-10-27)
+
+- Người dùng: "feet chỉ khác mỗi màu sắc vì vậy đưa vào chung thêm option là được, thêm nhiều màu feet khác nhau".
+- supplies.ts: `FEET_COLORS` (đen / trắng / xám / trong / đỏ / xanh dương / xanh lá / hồng / vàng / tím) → `feetDefs()` sinh vật tư
+  `feet*` (vỉ 4 cái 25k), `FEET_IDS` lấy từ đó (id cũ feetBlack / feetWhite giữ nguyên, save cũ không vỡ).
+- Shopii (`shopProducts`, parts.ts): bỏ feet khỏi vòng vật tư, thêm 1 sản phẩm `sup-feet` "Feet cao su", option = màu ("Đen · 4 cái").
+  Ảnh sản phẩm vật tư theo option đang chọn (ProductImage `type` = id vật tư của option) → feet đổi màu theo option.
+- Cảnh: màu feet = `SUPPLIES[id].color` (bỏ bảng `FOOT_COLOR` trong Case.tsx). `FeetPanel` chỉ hiện màu đang có trong kho + màu đang chọn.

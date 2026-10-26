@@ -7,9 +7,10 @@ import { OrderSpec } from '@/components/game/OrderSpec'
 import { OrderCard, useOrderEntries, type OrderEntry } from '@/components/game/OrderCard'
 import { StatusChips } from '@/components/game/StatusChips'
 import { CamModeButton, ResetCamButton } from './CamModeButton'
+import { useBenchKey } from './useBenchKey'
 
 /**
- * Danh sách đơn (mở khi bấm ô vàng trên bàn trống, hoặc nút "Danh sách đơn" khi đang build):
+ * Danh sách đơn (mở khi bấm ô vàng trên bàn trống, nút "Danh sách đơn" khi đang build, hoặc phím M):
  * đơn đang làm / đã nhận / đơn mới. Đổi sang đơn khác thì bản build đang dở được cất lại nguyên trạng
  */
 export function OrderPicker() {
@@ -19,6 +20,13 @@ export function OrderPicker() {
   // đơn vừa chọn nhưng còn thiếu linh kiện (ở store: đổi đơn lúc đang build thì HUD đổi sang bàn trống)
   const short = s.benchShort
   const setShort = (benchShort: typeof short) => useGame.setState({ benchShort })
+  // phím M: mở / đóng danh sách đơn (đang chạy hoạt cảnh mod stab / lube thì không mở)
+  useBenchKey('KeyM', () => {
+    const g = useGame.getState()
+    if (g.benchPicker) {
+      useGame.setState({ benchPicker: false, benchShort: null })
+    } else if (!g.stabAnim && !g.lubeAnim) useGame.setState({ benchPicker: true })
+  })
   if (!open) return null
   const pick = (c: OrderEntry) => {
     const missing = s.buildOrder(c.order.id)

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { ChevronDown, Clock } from 'lucide-react'
 import { useGame } from '@/store'
-import { CATS, TOOLS, checkInventory } from '@/data/parts'
+import { CATS, SCREW_FULL, checkInventory } from '@/data/parts'
 import { buildContext, buildPercent } from '@/data/steps'
 import { LAYOUTS } from '@/data/layouts'
 import { Badge, ProgressBar, StepDot, progressTone } from '@/components/ui'
@@ -53,7 +53,7 @@ export function useOrderEntries(): OrderEntry[] {
 
 /** % tiến độ build của 1 đơn (chưa vào bàn build = 0) */
 function useProgress(c: OrderEntry) {
-  const clicks = useGame((s) => TOOLS.screw[s.tools.screw].clicks!)
+  const clicks = SCREW_FULL
   const ctxNow = useGame((s) => s.ctx)
   const b = c.session?.build
   if (!b) return 0

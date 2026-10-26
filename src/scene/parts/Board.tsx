@@ -169,15 +169,17 @@ function AlicePlate({
   clear: boolean
   ghost?: boolean
 }) {
-  const { nodes } = useGLTF(ALICE_PLATE) as unknown as { nodes: Record<string, THREE.Mesh> }
+  const { scene } = useGLTF(ALICE_PLATE)
+  // lấy mesh đầu tiên trong GLB (tên node 'alice-plate' lúc load có thể không phải mesh → geometry rỗng, plate không hiện)
+  const geometry = useMemo(() => {
+    let g: THREE.BufferGeometry | undefined
+    scene.traverse((o) => {
+      if (!g && (o as THREE.Mesh).isMesh) g = (o as THREE.Mesh).geometry
+    })
+    return g
+  }, [scene])
   return (
-    <mesh
-      geometry={nodes['alice-plate'].geometry}
-      castShadow
-      receiveShadow
-      position-y={ghost ? 1 : 0}
-      scale={MM}
-    >
+    <mesh geometry={geometry} castShadow receiveShadow position-y={ghost ? 1 : 0} scale={MM}>
       <PlateMaterial color={color} metal={metal} clear={clear} ghost={ghost} />
     </mesh>
   )

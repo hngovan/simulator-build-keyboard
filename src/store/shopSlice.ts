@@ -6,7 +6,9 @@ import {
   CATS,
   PLATELESS,
   PLATELESS_MOUNTS,
+  SWITCHES,
   TOOLS,
+  switchOk,
   checkInventory,
   isPlateless,
   itemName,
@@ -18,6 +20,7 @@ import {
 } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import type {
+  Paid,
   CaseItem,
   DeliveryResult,
   GroupPost,
@@ -44,7 +47,7 @@ import {
 import { certBonus } from '@/data/reputation'
 import { FLAW_TEXT, dealFloor, negotiate, type InboxAction } from '@/data/market'
 import type { Job, JobSession, PackedOrder } from './persistence'
-import { addPart, fillFromStock, stashAll, without } from './spare'
+import { addPart, fillFromStock, stashAll, takeSwitches, without } from './spare'
 
 type BuyResult = 'ok' | 'scam' | 'fail'
 export interface LubePick {
@@ -398,30 +401,50 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (s.build && KIT_PARTS.includes(cat as (typeof KIT_PARTS)[number]))
       return fail('Đã bắt đầu build, không thay được món này nữa')
     const sw = item as SwitchItem
-    if (
+    // đơn đã có switch dùng được (hợp yêu cầu / đã cắm lên board) mà mua loại khác: không tự thay switch của đơn,
+    // lô mới vào kho chung (giữ tiền đã trả) — chọn loại dùng cho đơn ở app Chi tiết đơn
+    const curSw = s.inventory.switch
+    const swToSpare =
       cat === 'switch' &&
-      s.inventory.switch &&
-      s.inventory.switch.type !== sw.type &&
-      s.build &&
-      Object.keys(s.build.switches).length
-    )
-      return fail('Board đã cắm switch loại khác, không trộn được')
+      !!curSw &&
+      curSw.type !== sw.type &&
+      ((!curSw.flaw && curSw.count > 0 && switchOk(curSw.type, s.order)) ||
+        (!!s.build && Object.keys(s.build.switches).length > 0))
     if (s.money < price) return fail('Không đủ tiền!')
     set({ money: s.money - price })
     if (Math.random() < scamRate) {
       s.toast(`😱 Seller bùng hàng! Mất trắng ${price}k`, 'bad')
       return 'scam'
     }
-    let value: PartItem = item
+    if (swToSpare) {
+      set({
+        spare: addPart(s.spare, 'switch', { ...sw, paid: price, paidN: sw.count }),
+        spent: s.spent + price,
+      })
+      s.toast(
+        `📦 Đã nhận: ${itemName(cat, item)} → cất vào kho chung (đơn đang dùng ${SWITCHES[curSw!.type]?.name ?? curSw!.type}, đổi ở Chi tiết đơn)`,
+        'good',
+      )
+      return 'ok'
+    }
+    // ghi giá đã trả lên món (gộp cùng loại thì cộng dồn) → "Đã chi linh kiện" (`partSpent`)
+    const units =
+      cat === 'switch' ? sw.count : cat === 'stab' ? stabTotal(stabStock(item as StabItem)) : 1
+    const cur = s.inventory[cat] as Paid | null
+    const paid = (merge: boolean): Paid => ({
+      paid: (merge ? (cur?.paid ?? 0) : 0) + price,
+      paidN: (merge ? (cur?.paidN ?? 0) : 0) + units,
+    })
+    let value: PartItem = { ...item, ...paid(false) }
     let spare = s.spare
     if (cat === 'switch' && s.inventory.switch?.type === sw.type)
-      value = { ...sw, count: s.inventory.switch.count + sw.count }
+      value = { ...sw, count: s.inventory.switch.count + sw.count, ...paid(true) }
     // stab cùng loại thì cộng dồn (bộ + lẻ), khác loại thì thay bộ cũ
     const st = item as StabItem
     if (cat === 'stab' && s.inventory.stab?.type === st.type) {
       const have = stabStock(s.inventory.stab)
       const add = stabStock(st)
-      value = { type: st.type, ...addStab(have, add) }
+      value = { type: st.type, ...addStab(have, add), ...paid(true) }
     }
     // đã có món khác loại (mua thay): món cũ (đã trả tiền) cất vào kho chung, không mất
     const old = s.inventory[cat]
@@ -432,9 +455,10 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     // switch / stab cùng loại trong kho chung tự gộp vào
     let fromSpare = 0
     if (cat === 'switch' && spare.switches[sw.type]) {
-      fromSpare = spare.switches[sw.type]
-      value = { ...(value as SwitchItem), count: (value as SwitchItem).count + fromSpare }
-      spare = { ...spare, switches: without(spare.switches, sw.type) }
+      const r = takeSwitches(spare, sw.type, value as SwitchItem)
+      fromSpare = r.n
+      value = r.item
+      spare = r.spare
     }
     if (cat === 'stab' && !st.flaw && spare.stabs[st.type]) {
       const extra = spare.stabs[st.type]
@@ -467,8 +491,9 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (kind === 'switch') {
       if (!spare.switches[id]) return
       cat = 'switch'
-      item = { type: id, count: spare.switches[id] }
-      spare = { ...spare, switches: without(spare.switches, id) }
+      const r = takeSwitches(spare, id)
+      item = r.item
+      spare = r.spare
     } else if (kind === 'stab') {
       if (!spare.stabs[id]) return
       cat = 'stab'
@@ -494,13 +519,13 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       return s.toast('Board đã cắm switch loại khác, không trộn được', 'bad')
     if (same && cat === 'switch')
       item = {
-        ...(item as SwitchItem),
+        ...(cur as SwitchItem),
         count: (item as SwitchItem).count + (cur as SwitchItem).count,
       }
     else if (same) {
       const x = stabStock(cur as StabItem)
       const y = stabStock(item as StabItem)
-      item = { type: (item as StabItem).type, ...addStab(x, y) }
+      item = { ...(cur as StabItem), ...addStab(x, y) }
     } else spare = addPart(spare, cat, cur)
     set({
       spare,

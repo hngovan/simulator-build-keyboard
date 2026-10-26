@@ -26,15 +26,21 @@ function clampOff(el: HTMLElement | null, x: number, y: number, cur: Off): Off {
  * NPC hướng dẫn Keeb-chan: góc dưới màn hình, bong bóng thoại theo tình huống (`TIPS`).
  * Luôn đứng ở góc; bấm vào nhân vật (hoặc nút — trên thanh tiêu đề) để ẩn / hiện bong bóng, đang ẩn thì chấm đỏ báo có mẹo.
  * Cầm nhân vật kéo để dời cả cụm (bong bóng đi theo), luôn giữ trong màn hình, không đè taskbar.
- * Mẹo mới (tình huống đổi) thì bong bóng tự hiện lại
+ * Mặc định thu nhỏ (chỉ còn nhân vật), bấm mới hiện bong bóng; mẹo mới chưa xem thì chấm đỏ trên nhân vật
  */
 export function GuideNpc() {
   const tip = useGame(currentTip)
   const screen = useGame((s) => s.screen)
-  // thu nhỏ theo từng mẹo: tình huống đổi (mẹo khác) thì bong bóng tự mở ra
-  const [smallAt, setSmallAt] = useState<string | null>(null)
-  const small = smallAt === tip.id
-  const setSmall = (v: boolean) => setSmallAt(v ? tip.id : null)
+  // mặc định ẩn bong bóng, bấm nhân vật mới hiện; mẹo đã mở xem rồi thì tắt chấm đỏ
+  const [small, setSmallState] = useState(true)
+  const [readTip, setReadTip] = useState<string | null>(null)
+  const setSmall = (v: boolean) => {
+    setSmallState(v)
+    if (!v) setReadTip(tip.id)
+  }
+  // đang mở bong bóng mà đổi mẹo thì coi như đã xem mẹo mới
+  if (!small && readTip !== tip.id) setReadTip(tip.id)
+  const unread = small && readTip !== tip.id
   // cầm nhân vật kéo để dời Keeb-chan (lệch so với góc mặc định, không lưu)
   const [off, setOff] = useState<Off>({ x: 0, y: 0 })
   const drag = useRef<{ x: number; y: number; sx: number; sy: number; moved: boolean } | null>(null)
@@ -62,7 +68,13 @@ export function GuideNpc() {
       {/* bấm nhân vật để ẩn / hiện bong bóng, cầm kéo (lệch > 4px) để dời */}
       <button
         type="button"
-        title={small ? 'Keeb-chan có mẹo cho bạn · kéo để dời' : 'Ẩn bong bóng · kéo để dời'}
+        title={
+          small
+            ? unread
+              ? 'Keeb-chan có mẹo mới · kéo để dời'
+              : 'Xem mẹo của Keeb-chan · kéo để dời'
+            : 'Ẩn bong bóng · kéo để dời'
+        }
         aria-label={small ? 'Hiện mẹo của Keeb-chan' : 'Ẩn bong bóng Keeb-chan'}
         onPointerDown={(e) => {
           drag.current = {
@@ -90,7 +102,7 @@ export function GuideNpc() {
         className="pointer-events-auto relative shrink-0 cursor-grab touch-none transition-transform hover:-translate-y-1 active:cursor-grabbing"
       >
         <GuideGirl className="w-[104px] animate-bob max-md:w-20" />
-        {small && (
+        {unread && (
           <span className="absolute top-3 right-2 size-3.5 animate-pulse rounded-full border-2 border-white bg-red" />
         )}
       </button>

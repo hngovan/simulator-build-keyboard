@@ -4,12 +4,13 @@ import { useGLTF, useTexture } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import * as THREE from 'three'
 import { SCREW_STEPS, Y } from '@/data/steps'
-import { KEYCAP_COLORS, TOOLS } from '@/data/parts'
+import { KEYCAP_COLORS, TOOLS, screwLevel } from '@/data/parts'
 import type { Key } from '@/types'
 import { useGame } from '@/store'
 import { MM } from './models/Switch'
 import { DIPLOMA_URL, createDiploma } from './models/diplomaModel'
-import { BIT_SWAP_MS, ElectricScrewdriver } from './models/HandTools'
+import { BIT_SWAP_MS, ElectricScrewdriver, ManualScrewdriver } from './models/HandTools'
+import { Clickable } from './stations/StationKit'
 import { Monitor, PcTower } from './models/Computer'
 import { MONITOR_AT, MONITOR_ROT } from './models/computerLayout'
 import { DisplayKeyboard } from './models/ShelfDisplay'
@@ -21,8 +22,6 @@ const MODELS = {
   desk: `${DIR}/wooden_table_02.glb`,
   plant: `${DIR}/potted_plant_04.glb`,
   shelf: `${DIR}/Shelf_01.glb`,
-  // bản nhẹ không texture (`bun run convert:screwdriver-lite`)
-  screwdriver: `${DIR}/screwdriver-lite.glb`,
   chair: `${DIR}/painted_wooden_chair_01.glb`,
   picture: `${DIR}/hanging_picture_frame_01.glb`,
   clock: `${DIR}/wall_clock.glb`,
@@ -338,9 +337,11 @@ function ShelfToolBox(props: JSX.IntrinsicElements['group']) {
   )
 }
 
-/** Tua vít (điện nếu đã mua, không thì tay) nằm thẳng trên mặt bàn, chỉ ở bước vặn / tháo vít */
+/**
+ * Tua vít đang dùng nằm thẳng trên mặt bàn, chỉ ở bước vặn / tháo vít. Đã mua tua vít điện thì bày thêm cây còn lại
+ * bên cạnh: rê chuột viền vàng, bấm để đổi sang dùng cây đó (`setScrewPick`)
+ */
 function DeskTools(props: JSX.IntrinsicElements['group']) {
-  const screwdriver = useGLTF(MODELS.screwdriver).scene
   // mặt tì vô hình ngang mặt bàn cho RestOn bắn tia xuống
   const floor = useRef<THREE.Group>(null)
   // đang đổi đầu vít: tua vít được cầm lên (BitSwapPreview), xong mới đặt lại xuống bàn
@@ -349,14 +350,9 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
     const t = performance.now() - useGame.getState().bitSwapAt
     if (held.current) held.current.visible = !(t >= 0 && t < BIT_SWAP_MS)
   })
-  useMemo(
-    () =>
-      screwdriver.traverse((o) => {
-        if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true
-      }),
-    [screwdriver],
-  )
-  const electric = useGame((s) => s.tools.screw > 0)
+  const owned = useGame((s) => s.tools.screw)
+  const level = useGame((s) => screwLevel(s.tools, s.screwPick))
+  const electric = level > 0
   // tua vít chỉ bày ở bước vặn / tháo vít; kìm cắt chỉ dùng ở bàn mod stab (có kìm riêng) nên không bày trên bàn
   const screwStep = useGame((s) => {
     const step = s.build && s.ctx?.steps[s.build.stepIdx]
@@ -380,10 +376,33 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
               </group>
             </group>
           ) : (
-            <primitive object={screwdriver} rotation={[0, 0, Math.PI / 2]} />
+            // tua vít tay vẽ bằng code, nằm ngang trên bàn, mũi chĩa sang trái
+            <group rotation-z={-Math.PI / 2} scale={3.6 / M}>
+              <ManualScrewdriver />
+            </group>
           )}
         </RestOn>
       </group>
+      {owned > 0 && (
+        // cây tua vít còn lại: bấm để đổi sang dùng
+        <group scale={M}>
+          <RestOn key={electric ? 'spare-m' : 'spare-e'} surface={floor} at={[0.12, 0.07]}>
+            <Clickable active onAct={() => useGame.getState().setScrewPick(electric ? 0 : owned)}>
+              {electric ? (
+                <group rotation-z={-Math.PI / 2} scale={3.6 / M}>
+                  <ManualScrewdriver />
+                </group>
+              ) : (
+                <group rotation-y={Math.PI / 2} scale={3.6 / M}>
+                  <group rotation-x={-Math.PI / 2}>
+                    <ElectricScrewdriver spinKey={0} />
+                  </group>
+                </group>
+              )}
+            </Clickable>
+          </RestOn>
+        </group>
+      )}
     </group>
   )
 }

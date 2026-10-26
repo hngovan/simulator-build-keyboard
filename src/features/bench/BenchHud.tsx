@@ -8,7 +8,7 @@ import {
   STEP_INFO,
   stepProgress,
 } from '@/data/steps'
-import { TOOLS } from '@/data/parts'
+import { SCREW_FULL, TOOLS, screwLevel } from '@/data/parts'
 import { FlipVertical2, ListOrdered, Monitor, PackageCheck, Undo2 } from 'lucide-react'
 import { Alert, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
 import { cn } from '@/lib/format'
@@ -20,6 +20,8 @@ import { FeetPanel, FoamPanel, LubePanel, SolderPanel, StabModPanel } from './Mo
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
 import { CamModeButton, ResetCamButton } from './CamModeButton'
+import { useBenchKey } from './useBenchKey'
+import { stabModHint } from '@/data/mods'
 import { OrderPicker } from './EmptyBenchHud'
 
 // Dụng cụ đang dùng ở mỗi bước (hiện ở thanh nhiệm vụ)
@@ -40,7 +42,7 @@ const STEP_TOOL: Partial<Record<StepId, ToolKind>> = {
 function useBuildComplete() {
   const ctx = useCtx()
   const build = useBuild()
-  const clicks = useGame((s) => TOOLS.screw[s.tools.screw].clicks!)
+  const clicks = SCREW_FULL
   return ctx.steps
     .filter((st) => !OPTIONAL_STEPS.includes(st))
     .every((st) => {
@@ -77,6 +79,8 @@ function ConfirmDeliver({ onCancel, onConfirm }: { onCancel: () => void; onConfi
   )
 }
 
+const noop = () => {}
+
 function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }) {
   const started = useBuild().stepIdx > 0
   const complete = useBuildComplete()
@@ -84,7 +88,9 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
   const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
   const canUndo = useGame((s) => s.history.length > 0 && !s.stabAnim)
   const { zoomToPC, toggleFlip, deliver, undo } = useGame.getState()
-  // Ctrl+Z để hoàn tác (phím H đổi kéo / xoay nằm trong CamModeButton)
+  // phím Q lật xem đáy / lật lại mặt trên (như nút vàng)
+  useBenchKey('KeyQ', canFlip ? toggleFlip : noop)
+  // Ctrl+Z để hoàn tác (phím R đổi kéo / xoay, Space về góc nhìn mặc định: CamModeButton)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = useGame.getState()
@@ -104,7 +110,7 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
         <IconButton
           tone="yellow"
           icon={<FlipVertical2 />}
-          label={isFlipped ? 'Lật lại mặt trên' : 'Lật xem đáy'}
+          label={isFlipped ? 'Lật lại mặt trên (Q)' : 'Lật xem đáy (Q)'}
           onClick={toggleFlip}
           disabled={!canFlip}
         />
@@ -120,7 +126,7 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
         <IconButton
           tone="blue"
           icon={<ListOrdered />}
-          label="Danh sách đơn"
+          label="Danh sách đơn (M)"
           onClick={() => useGame.setState({ benchPicker: true })}
           disabled={busy}
         />
@@ -151,7 +157,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const build = useBuild()
   const s = useGame()
   const info = STEP_INFO[step]
-  const [done, total] = stepProgress(step, build, ctx, TOOLS.screw[s.tools.screw].clicks!)
+  const [done, total] = stepProgress(step, build, ctx, SCREW_FULL)
   const finished = done >= total
   const optional = step === 'stabMod' || step === 'switchLube' || step === 'foam'
   // hàn dở vẫn đi tiếp được (nút đỏ cảnh báo), khớp nextStep
@@ -161,7 +167,12 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   // đang đứng ở bước cũ (đã lùi về): đi tiếp theo các bước đã làm
   const ahead = s.future.length > 1
   const toolKind = STEP_TOOL[step]
-  const tool = toolKind && TOOLS[toolKind][s.tools[toolKind]]
+  // tua vít: loại đang chọn dùng (có thể là loại thường dù đã mua tua vít điện)
+  const toolLv =
+    toolKind === 'screw' ? screwLevel(s.tools, s.screwPick) : toolKind && s.tools[toolKind]
+  const tool = toolKind && TOOLS[toolKind][toolLv as number]
+  // đã có tua vít điện: bấm ô dụng cụ để đổi qua lại tay / điện
+  const swapTo = toolKind === 'screw' && s.tools.screw > 0 ? (toolLv ? 0 : s.tools.screw) : null
   const isFlipped = canFlip && (autoFlip(step, ctx) ? !s.viewFlip : s.viewFlip)
   const hint =
     step === 'switch' && !s.inventory.switch?.count
@@ -171,7 +182,11 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
         ? isFlipped
           ? 'Đang xem mặt đáy — bấm "Lật lại mặt trên" để thao tác.'
           : 'Đang xem mặt trên — bấm "Lật xem đáy" để thao tác.'
-        : info.hint
+        : step === 'stabMod' && s.inventory.stab
+          ? stabModHint(s.inventory.stab.type)
+          : step === 'caseIn' && build.inCase && ctx.steps[build.stepIdx + 1] === 'caseClose'
+            ? 'Board đã vào case: click vào case trên để đậy lại'
+            : info.hint
   // thu gọn: chỉ còn tiêu đề + tiến độ + nút bước sau (nhớ trạng thái như các panel HUD)
   const [open, toggle] = useOpen('objective')
   return (
@@ -209,11 +224,24 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
         )}
         {/* dụng cụ đang dùng + nút bước sau: cùng cỡ, đứng cạnh nhau (thu gọn thì chỉ còn nút) */}
         <div className="flex flex-wrap items-center justify-center gap-2.5">
-          {open && tool && !tool.none && (
-            <span className="inline-flex h-9 min-w-[180px] items-center justify-center gap-1.5 rounded-[10px] bg-panel-2 px-4 font-head text-sm font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.35)]">
-              🔧 {tool.name}
-            </span>
-          )}
+          {open &&
+            tool &&
+            !tool.none &&
+            (swapTo !== null ? (
+              // đổi tua vít: viền vàng = bấm được
+              <button
+                type="button"
+                title={`Đổi sang ${TOOLS.screw[swapTo].name}`}
+                onClick={() => s.setScrewPick(swapTo)}
+                className="inline-flex h-9 min-w-[180px] items-center justify-center gap-1.5 rounded-[10px] border-2 border-yellow bg-panel-2 px-4 font-head text-sm font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.35)] transition-transform hover:-translate-y-0.5"
+              >
+                🔧 {tool.name} ⇄
+              </button>
+            ) : (
+              <span className="inline-flex h-9 min-w-[180px] items-center justify-center gap-1.5 rounded-[10px] bg-panel-2 px-4 font-head text-sm font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.35)]">
+                🔧 {tool.name}
+              </span>
+            ))}
           {/* mọi bước đều phải bấm mới sang bước sau; bước tuỳ chọn thì bỏ qua được */}
           {/* bước mở hộp: click thùng là tự sang bước sau, không cần nút */}
           {!last && step !== 'unbox' && (
@@ -232,11 +260,11 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
               }
             >
               {finished || ahead
-                ? 'Bước tiếp theo →'
+                ? 'Bước tiếp theo'
                 : optional
-                  ? 'Bỏ qua →'
+                  ? 'Bỏ qua'
                   : soft
-                    ? `Bỏ dở, còn ${total - done} phím →`
+                    ? `Bỏ dở, còn ${total - done} phím`
                     : `Còn ${total - done} nữa`}
             </Button>
           )}
@@ -245,9 +273,43 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
       {/* mẹo chuột / phím: điện thoại không dùng được nên ẩn */}
       <span className={cn('text-xs text-muted max-md:hidden', !open && 'hidden')}>
         {s.camMode === 'pan'
-          ? '✋ Chuột trái: kéo khung nhìn · Chuột phải: xoay 360° · Cuộn: zoom · H: đổi chế độ'
-          : 'Chuột trái: thao tác / xoay 360° · Chuột phải hoặc Shift + kéo: di chuyển · Cuộn: zoom · H: bàn tay'}
+          ? '✋ Chuột trái: kéo khung nhìn · Chuột phải: xoay 360° · Cuộn: zoom · R: đổi chế độ · Q: lật đáy · Space: góc mặc định'
+          : 'Chuột trái: thao tác / xoay 360° · Chuột phải hoặc Shift + kéo: di chuyển · Cuộn: zoom · R: bàn tay · Q: lật đáy · Space: góc mặc định'}
       </span>
+    </div>
+  )
+}
+
+/**
+ * Test hết phím (và build đã xong các bước bắt buộc): báo phím xong rồi, bấm OK thì đóng gói đơn và mở hội thoại
+ * Mezzenger của khách để gửi hàng. "Để sau" thì ẩn tới khi đổi đơn
+ */
+function TestDone() {
+  const ctx = useCtx()
+  const build = useBuild()
+  const order = useGame((s) => s.order)
+  const complete = useBuildComplete()
+  const [closed, setClosed] = useState<string | null>(null)
+  const step = ctx.steps[build.stepIdx]
+  const [tested, total] = stepProgress('test', build, ctx, 0)
+  if (!order || step !== 'test' || tested < total || !complete || closed === order.id) return null
+  return (
+    <div className="fixed inset-0 z-[30] grid animate-fade-in place-items-center bg-black/55 p-4">
+      <HudCard className="flex w-[min(460px,100%)] flex-col gap-3">
+        <h3 className="font-head text-xl font-extrabold text-yellow">🎉 Phím đã xong rồi!</h3>
+        <p className="text-base leading-snug">
+          <b className="text-green">
+            Test đủ {total}/{total} phím, mọi phím đều nhận.
+          </b>{' '}
+          Bàn phím của {order.customer} đã build xong, đóng gói rồi nhắn khách để gửi hàng thôi!
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button onClick={() => setClosed(order.id)}>Để sau</Button>
+          <Button tone="green" onClick={() => useGame.getState().deliver()}>
+            OK, gửi khách
+          </Button>
+        </div>
+      </HudCard>
     </div>
   )
 }
@@ -295,6 +357,7 @@ export function BenchHud() {
       <Objective step={step} canFlip={canFlip} />
       {step in SCREW_STEPS && <BitPicker step={step as ScrewStep} />}
       <OrderPicker />
+      <TestDone />
     </>
   )
 }

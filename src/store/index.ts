@@ -51,6 +51,8 @@ const SAVED_KEYS = [
   'supplies',
   'audio',
   'screwBit',
+  'screwPick',
+  'trayColor',
   'wear',
   'reviews',
   'spare',

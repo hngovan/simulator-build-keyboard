@@ -21,7 +21,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   unbox: { title: 'Mở hộp hàng', hint: 'Click vào thùng hàng để mở' },
   caseOpen: {
     title: 'Tháo vít mở case',
-    hint: 'Case 2 mảnh: click từng con vít để tháo, nhấc case trên ra',
+    hint: 'Case ghép (2 mảnh / mica nhiều lớp): click từng con vít để tháo, nhấc phần trên ra',
   },
   stabMod: {
     title: 'Mod stab (tuỳ chọn)',
@@ -66,7 +66,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
   trayScrew: { title: 'Bắt vít tray mount', hint: 'Vặn các vít giữ PCB vào standoff đáy case' },
   caseClose: { title: 'Đậy case trên', hint: 'Click vào case trên để đậy lại' },
-  caseScrew: { title: 'Vặn vít đóng case', hint: 'Vặn các vít để khoá 2 mảnh case' },
+  caseScrew: { title: 'Vặn vít đóng case', hint: 'Vặn các vít để khoá các mảnh / lớp case lại' },
   keycap: {
     title: 'Lắp keycap',
     hint: 'Click vào switch để cắm keycap (số cái mỗi lần theo bậc thợ + phép lắp keycap)',

@@ -15,6 +15,7 @@ import type {
 } from '@/types'
 import type { HistoryEntry } from './buildSlice'
 import { buildContext } from '@/data/steps'
+import { SCREW_FULL } from '@/data/parts'
 import type { Listing, Stolen } from '@/data/selling'
 
 const SAVE_KEY = 'sbk-save-v3'
@@ -33,6 +34,10 @@ export interface Profile {
   audio: AudioSettings
   /** đầu vít đang lắp trên tua vít (giữ nguyên khi thoát vào lại) */
   screwBit: ScrewBit
+  /** tua vít đang chọn dùng (bậc trong TOOLS.screw); null = loại xịn nhất đã mua */
+  screwPick: number | null
+  /** màu khay đựng ốc (`TRAY_COLORS`), bấm khay trên bàn để đổi */
+  trayColor: string
   /** phiên bản dữ liệu lưu, để nâng cấp bản lưu cũ */
   rev: number
   /** số lần đã dùng dụng cụ có độ bền (mỏ hàn, bùi nhùi); đủ ToolDef.life thì hỏng */
@@ -124,7 +129,8 @@ export interface SaveData extends Profile {
 // 4: thêm bước dán feet trước khi lắp case → build đang làm đã qua chỗ đó thì dời bước (addFeetStep)
 // 5: O-ring mount gá vòng sau lắp switch / hàn (trước đây trước bước plate) → dời stepIdx theo tên bước (moveRingStep)
 // 6: thêm bước tuỳ chọn lót foam PCB trước bước plate → dời stepIdx theo tên bước (addFoamStep)
-const SAVE_REV = 6
+// 7: tiến độ vít tính theo tua vít tay (SCREW_FULL); bản cũ dùng tua vít điện (1 click = xong) → vít ≥ 1 thành đầy (fillScrews)
+const SAVE_REV = 7
 
 /**
  * Build làm dở từ bản cũ (chưa có bước `feet`): đã tới / qua chỗ chèn bước thì dời stepIdx lên 1 và coi như
@@ -179,6 +185,16 @@ function addFoamStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' 
   return { ...sess, build: { ...b, stepIdx }, history: [] }
 }
 
+/** Bản cũ có tua vít điện: vít đã vặn (≥ 1 click) là xong → đổi sang mức đầy SCREW_FULL; lịch sử hoàn tác bỏ đi */
+function fillScrews<S extends Pick<JobSession, 'build' | 'history'>>(sess: S): S {
+  const b = sess.build
+  if (!b) return sess
+  const screws = Object.fromEntries(
+    Object.entries(b.screws).map(([id, n]) => [id, n >= 1 ? SCREW_FULL : n]),
+  )
+  return { ...sess, build: { ...b, screws }, history: [] }
+}
+
 export const START: Profile = {
   name: '',
   // = đơn ngày 1 đắt nhất (ngân sách linh kiện tối đa 6.100k, ứng trước, giao xong mới hoàn)
@@ -197,6 +213,7 @@ export const START: Profile = {
     solder: 0,
     desolder: 0,
     spoolHolder: 0,
+    screwTray: 0,
     tipCleaner: 0,
     cert: 0,
     clipper: 0,
@@ -204,6 +221,8 @@ export const START: Profile = {
     opener: 0,
   },
   screwBit: 'phillips',
+  screwPick: null,
+  trayColor: 'silver',
   rev: SAVE_REV,
   wear: {},
   solderOwned: {},
@@ -252,6 +271,12 @@ export function loadSave(): SaveData | null {
       session = {
         ...addFoamStep(session.order, { ...session, history: session.history ?? [] }),
         jobs: session.jobs?.map((j) => ({ ...j, session: addFoamStep(j.order, j.session) })),
+      }
+    }
+    if ((save.rev ?? 0) < 7 && session && tools.screw > 0) {
+      session = {
+        ...fillScrews({ ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: fillScrews(j.session) })),
       }
     }
     return {

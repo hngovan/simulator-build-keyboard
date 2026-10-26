@@ -478,5 +478,56 @@
   (ModPanels) báo còn bao nhiêu tấm. Âm: `soundProfile` foam −0,05 loud / −0,08 pitch (thock hơn). Cảnh 3D `scene/parts/Foam.tsx`:
   tấm đen dày 0,1u trên mặt PCB, viền theo `boardOutline`, mỗi phím 1 lỗ (phím − 0,2u), phím ≥ 4u (space) để liền tấm, chỉ khoét lỗ
   switch giữa + 2 khe stab — giống ảnh mẫu, tự sinh cho mọi layout. Save rev 6 (`addFoamStep`): build cũ dời stepIdx theo tên bước.
+- **Ảnh Shopii / Kho của foam** (2026-10-26, người dùng: "foam lót pcb sao lại hình cuộn thiếc"): vật tư không có model riêng rơi về
+  `createSolderSpool`. Thêm `createFoamSheet` (modelThumb.ts, nhánh `pcbFoam`): tấm Poron đen chữ nhật nguyên, chưa cắt lỗ (nhẹ,
+  không dựng lỗ theo layout). Chọn bán **tấm nguyên dùng mọi layout** thay vì cắt sẵn (cắt sẵn phải bán riêng từng layout); lót lên
+  PCB ở bàn build vẫn hiện tấm đã cắt lỗ switch + khe stab (`Foam.tsx`). Sửa `desc` cho khớp.
+- **Plate hở trên foam** (2026-10-26, người dùng: "đặt plate lên foam sao lại bị hở... phải sát foam"): foam dày 0,1u nhưng khe
+  `Y.pcbTop` → `Y.plateBot` là 0,18u → hở 0,08u. `FOAM_T` = `Y.plateBot − Y.pcbTop − 0,004` (lấp kín khe, plate tì sát foam).
+- **Standoff tray mount** (2026-10-26, người dùng: "case traymount nhưng không có lỗ ren để bắt vít ở trong case => lỗ ren bắt vít
+  traymount luôn luôn nằm ở bot case"): `TrayStandoffs` (Case.tsx) khi `ctx.mount === 'tray'`: trụ đồng lục giác r 0,1u + lỗ ren tối ở đỉnh
+  đúng chỗ `ctx.screws.trayScrew`, đỉnh = mặt dưới PCB (tính theo `seat` rise / tilt / dz / dx như Board), chân = sàn: case dựng bằng code
+  `Y.floorTop` (mica: mặt trên 2 tấm đáy, `micaStackPlan`); case CAD (`CadStandoffs`) bắn tia từ mặt dưới PCB xuống model GLB tìm sàn,
+  trúng trụ có sẵn sát PCB (< 0,03u) / không trúng thì bỏ. Liền nhóm case dưới (lật theo bước feet). Chụp kiểm plastic60 + eclipse60
+  (playwright, scratchpad `pw/tray.mjs`). Chưa làm: vị trí vít tray vẫn sinh theo khe hàng phím, chưa khớp lỗ vít riêng trong CAD.
+- **Khung chặn case mica Alice** (2026-10-27, người dùng: "case mica alice chưa có block... tham khảo case blossom"): `keyRegions`
+  (layouts.ts) với phím xoay trước trả rỗng → tấm mica trên cùng khoét trống cả ruột. Thêm `rotatedRegions`: hợp các ô phím xoay
+  (w × h theo `rot`, nới 0,01u cho ô sát nhau dính liền) bằng `polygon-clipping` (chuyển từ devDependencies sang dependencies),
+  lấy viền ngoài mỗi vùng → khung chặn giữa 2 nửa xoay ±12° + quanh cụm mũi tên như Blossom. Chụp so aliceMica / aliceAlu.
+- **Hoạt cảnh thay đầu vít** (2026-10-27, người dùng: "action thay đầu vít đang đưa quá gần khung hình mặc định đưa ra xa"):
+  `BitSwapPreview` (Screw.tsx) từ mép trước bàn (z = depth/2 + 1, y + 1,4, scale 2,4: to, sát khung hình) → trên board
+  [0, y + 0,9, 1,2], scale 1,5. Chụp kiểm bằng cách giữ `bitSwapAt` = now − 900ms (swiftshader chậm, 1,3s không kịp khung hình).
+- **Mũi tên bước lắp wire** (2026-10-27, người dùng: "mũi tên hướng dẫn đến bước gắn thanh wire vào thì phải chỉ thanh wire chứ sao chỉ
+  ở giữa 2 housing"): `hint.wired` (StabModStation) từ [cx, +1,1, hz + 0,6] (ngàm giữa 2 housing) → chỗ wire nằm trên bàn
+  [cx, +0,6, wireLie.z + 0,6] như bước phết mỡ wire.
+- **Vít stab ngắn còn 2/3** (2026-10-27, người dùng: "vít vặn lỗ stab hơi cao rồi cho ngắn đi còn 2/3"): model button M3×8 (9,65mm,
+  1 mesh, đỉnh đầu y = 0) lòi quá cao qua PCB. `Screw` thêm prop `short` → `shortenScrew` (Screw.tsx): clone hình học, ép phần thân
+  dưới đầu ốc theo y để cả con còn `short` × dài (đầu ốc giữ nguyên); `ScrewSet` truyền 2/3 cho `stabScrew` (~6,4mm).
+- **Rãnh đầu vít lõm** (2026-10-27, người dùng: "đầu vít chữ thập model đang sai... phần màu đen phải lõm vào"): trước vẽ 2 hộp đen
+  nổi trên đĩa. `BitRecess` (Screw.tsx): mặt đầu ốc phẳng (đĩa r 0,064, `ShapeGeometry` khoét lỗ rãnh) + thành rãnh (Extrude chỉ vẽ
+  mặt hông, nhóm 0 ẩn) + đáy rãnh tối; hình rãnh `recessShape`: chữ thập / sao Torx 6 cánh / rãnh dẹt (cache theo đầu vít, vật liệu dùng
+  chung). Đầu lục giác vẫn dùng model GLB.
+- **Thả board xong bấm case trên để đậy** (2026-10-27, người dùng: "ở bước thả board vào case có thể tương tác bằng cách bấm vào thì sẽ thả
+  top case vào hiện tại phải bấm button bước tiếp theo mới được"): Case.tsx `closeNext` (bước `caseIn`, `inCase`, bước sau `caseClose`):
+  case trên hiện lơ lửng (như lúc chờ đậy), bấm → `nextStep()` + `closeCase()`. Gợi ý bước (BenchHud) đổi "click vào case trên để đậy lại".
+  Tiếp ("đậy nắp case trên rồi mà step đậy nắp case trên ko qua bước vặn vít"): `closeCase` (buildSlice) đậy xong tự `nextStep()`
+  sang `caseScrew` (bước 1 thao tác, ngoại lệ của luật không tự chuyển bước).
+- **Ốc đóng case cùng kiểu ốc mở case** (2026-10-27, người dùng: "lúc mở case là dùng vít đầu lục giác có mũ, đến lúc vặn vít thành lục giác
+  nhưng đầu trụ"): `SCREW_STYLES.caseScrew` (Screw.tsx) `socket` → `countersunk` như `caseOpen` (cùng 1 bộ ốc tháo ra rồi vặn lại).
+- **Ốc chưa tra = khung nét đứt** (2026-10-27, người dùng: "đến lúc vặn vào thì tôi thấy vít đã để sẵn rồi, đáng lẽ phải là nét đứt tượng
+  trưng cho vít chưa được bỏ vào bấm thì mới được tra vào để vặn"): `Screw` chế độ `tighten` + `turns === 0` → không vẽ model, vẽ
+  `ScrewGhost` (LineDashed vàng: 2 vòng đáy / đỉnh đầu ốc `HEAD_R` / `HEAD_H` + 6 cạnh đứng) ở miệng lỗ; vòng vàng "bấm đây" hạ xuống miệng
+  lỗ. Bấm lần đầu thì ốc hiện ra ở trên rồi vặn xuống như cũ. Áp dụng mọi bước vặn vào (caseScrew / topScrew / trayScrew / stabScrew).
+- Sửa lỗi kèm: vật liệu `BitRecess` dùng chung module → ốc bay ra chỉnh opacity làm mờ lây mọi con; giờ tạo riêng mỗi con (`useMemo`).
 - **Ốc case mica** (người dùng: "ốc case mica ghép đang bị ngắn"): `Screw` có `shaft` (thân ren dài thêm); `ScrewSet` bước
   `caseScrew` / `caseOpen` của case mica vít từ trên → thân dài tới cách mặt đáy 0,06u (xuyên mọi lớp tới tấm đáy).
+- Ren ốc mica (2026-10-27, "ren ốc dài từ trên xuống dưới mới đúng, hiện chỉ có 1 nửa ren"; "ren vừa thêm nhỏ hơn vít gốc";
+  "màu lệch so với vít gốc"; "tách lớp rõ 2 vật liệu, không làm giống nhau được à"): thân dài trước là trụ trơn, ren chỉ ở đoạn
+  model. Lần 1 vẽ LatheGeometry vòng tròn cỡ M2 → sai cỡ với ốc M3 (bước tháo vít case dùng countersunk M3×10), màu tự đặt khác model,
+  vòng tròn song song + tô bóng mượt lộ rõ chỗ ghép. Giờ: `threadGeometry(style, bottom)` (Screw.tsx) vẽ **ren xoắn thật** theo số đo
+  model (gltf-transform: Ø ngoài / chân ren, bước, pha đỉnh ren `y0`, đáy model `end` — bảng `THREADS`, ren phải), cùng hệ toạ độ mm
+  với model (scale MM), bắt đầu chồng 0,4mm lên đuôi model (che chỗ vát), mũi vát vào tâm; dùng **chính vật liệu của model**
+  (`modelMat`, bản clone riêng mỗi con nên mờ dần cùng lúc khi ốc bay ra).
+- Mũi tên vàng ở bước vặn / tháo vít (2026-10-27, "bước tháo vít case chưa có hướng dẫn mũi tên"): `ScrewSet` chọn con chưa xong
+  gần giữa board nhất (|x| nhỏ nhất, giữa khung hình, không bị khung HUD 2 bên che), `Screw` prop `hint` → `HintArrow` trên đầu ốc
+  (ẩn khi rê chuột / đang vặn). Áp dụng mọi bước vít (caseOpen / stabScrew / topScrew / trayScrew / caseScrew).

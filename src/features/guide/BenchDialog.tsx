@@ -9,7 +9,8 @@ import { benchTopics } from './benchLines'
 /**
  * Hội thoại Keeb-chan ở bàn build kiểu game nhập vai: giữa trên màn hình, khung thoại + nhân vật bên phải,
  * chữ chạy từng ký tự; bấm khung = hiện hết câu / sang câu sau, hết câu thì ghi `guideSeen` (không hiện lại).
- * Không bỏ qua được, chỉ thu nhỏ (nút "Thu nhỏ" / bấm nhân vật) thành avatar tròn góc phải dưới, bấm để nói tiếp câu đang dở.
+ * Mặc định thu nhỏ thành avatar tròn góc phải dưới (chấm đỏ = có hướng dẫn chưa đọc), bấm mới hiện khung thoại; "Thu nhỏ" /
+ * bấm nhân vật để ẩn lại. Đổi tình huống (bước mới) vẫn giữ thu nhỏ, chỉ hiện chấm đỏ.
  * Bàn trống (chưa build) cũng nói: chưa có đơn → đi nhận đơn, có đơn → bấm ô vàng chọn đơn
  */
 export function BenchDialog() {
@@ -20,17 +21,17 @@ export function BenchDialog() {
   const picker = useGame((s) => s.benchPicker)
   // cảnh 3D đang tải (vào bàn lần đầu / bước mới cần model): chờ `BenchLoader` xong mới nói
   const loading = useSceneLoading((s) => !s.ready || s.pending > 0)
-  const topics = benchTopics(step, hasOrder).filter((t) => !seen.includes(t.id))
+  const mica = useGame((s) => s.ctx?.caseDef.material === 'mica')
+  const topics = benchTopics(step, hasOrder, mica).filter((t) => !seen.includes(t.id))
   const lines = topics.flatMap((t) => t.lines)
   const topic = topics.map((t) => t.id).join('|')
   const [idx, setIdx] = useState(0)
-  const [small, setSmall] = useState(false)
+  const [small, setSmall] = useState(true)
   const [prevTopic, setPrevTopic] = useState(topic)
-  // đổi tình huống (bước / nhận đơn) thì mở lại, đọc từ câu đầu của hội thoại mới
+  // đổi tình huống (bước / nhận đơn) thì đọc từ câu đầu của hội thoại mới (vẫn giữ thu nhỏ / mở như cũ)
   if (prevTopic !== topic) {
     setPrevTopic(topic)
     setIdx(0)
-    setSmall(false)
   }
   if (!lines.length || picker || loading) return null
   const finish = () => {
@@ -45,15 +46,18 @@ export function BenchDialog() {
     return (
       <button
         type="button"
-        title="Keeb-chan đang hướng dẫn dở"
+        title="Keeb-chan có hướng dẫn, bấm để xem"
         onClick={() => setSmall(false)}
         className={cn(
           // góc phải dưới (giữa dưới là bảng bước, điện thoại bảng bước trải ngang nên nhích lên)
-          'fixed right-3 bottom-3 z-[9] grid size-16 place-items-center overflow-hidden rounded-full border-[3px] border-yellow bg-panel shadow-[0_4px_0_#0006] hover:-translate-y-0.5 max-md:bottom-32',
+          'fixed right-3 bottom-3 z-[9] size-16 rounded-full border-[3px] border-yellow bg-panel shadow-[0_4px_0_#0006] hover:-translate-y-0.5 max-md:bottom-32',
         )}
       >
-        <GuideGirl className="mt-6 w-16" />
-        <span className="absolute top-0.5 right-1 size-3 animate-pulse rounded-full bg-red" />
+        {/* cắt ảnh tròn ở lớp trong; chấm đỏ nằm ngoài lớp cắt nên lòi ra mép nút */}
+        <span className="block size-full overflow-hidden rounded-full">
+          <GuideGirl className="w-full" />
+        </span>
+        <span className="absolute top-0 right-0 size-3.5 animate-pulse rounded-full border-2 border-white bg-red" />
       </button>
     )
   return (

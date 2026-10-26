@@ -11,6 +11,7 @@ import { ShippingBox } from './parts/ShippingBox'
 import { StabModStation } from './stations/StabModStation'
 import { LubeStation } from './stations/LubeStation'
 import { SolderKit } from './stations/SolderKit'
+import { ScrewTray } from './parts/ScrewTray'
 import { useSceneLoading } from './common/loadingStore'
 import { useCamLock } from './common/camLock'
 import { ROOM_BOUNDS, Room } from './Room'
@@ -50,9 +51,16 @@ function Workbench() {
       <>
         <Assembly />
         <SolderKit />
+        <ScrewTray />
       </>
     )
-  return <Assembly />
+  // ốc case đã tháo: nằm trong khay đựng ốc (nếu có) / vương trên bàn
+  return (
+    <>
+      <Assembly />
+      <ScrewTray />
+    </>
+  )
 }
 
 declare global {

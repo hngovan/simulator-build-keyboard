@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { RoundedBox, useGLTF } from '@react-three/drei'
-import { DoubleSide, EdgesGeometry, SphereGeometry } from 'three'
+import {
+  CylinderGeometry,
+  DoubleSide,
+  EdgesGeometry,
+  Mesh,
+  Raycaster,
+  SphereGeometry,
+  Vector3,
+} from 'three'
 import type * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import { CASE_MARGIN, CASE_WALL, Y, caseScrewHoles } from '@/data/steps'
@@ -20,6 +28,7 @@ import {
   micaStackPlan,
 } from './caseShell'
 import { caseModelOf } from '@/data/parts'
+import { SUPPLIES } from '@/data/supplies'
 import { MM } from '../models/Switch'
 
 interface ShellProps {
@@ -196,13 +205,12 @@ function Blockers({
 }
 
 /** màu feet theo loại vật tư */
-const FOOT_COLOR: Record<string, string> = { feetBlack: '#1c1c1f', feetWhite: '#efeee9' }
 /** feet bán cầu: nửa cầu úp xuống (đỉnh y = 0, đáy cầu y = −1) */
 const FOOT_DOME = new SphereGeometry(1, 20, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)
 
 /**
  * Feet cao su dán vào hốc dưới đáy case (`ctx.feet`: case CAD = hốc dò sẵn `caseFeet.json`, case dựng bằng code =
- * 4 hốc CNC). Feet bán cầu đen / trắng theo loại đã dán (`build.feet`), lồi ra ~1,5mm dưới đáy.
+ * 4 hốc CNC). Feet bán cầu theo màu đã dán (`build.feet`, màu = `SUPPLIES[id].color`), lồi ra ~1,5mm dưới đáy.
  * Bước `feet` (case lật úp): hốc chưa dán có vòng vàng, click để dán 1 cái loại đang chọn
  */
 function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
@@ -224,7 +232,7 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
             scale={[p.r * 0.92, p.depth + 0.08, p.r * 0.92]}
             castShadow
           >
-            <meshStandardMaterial color={FOOT_COLOR[kind] ?? '#1c1c1f'} roughness={0.55} />
+            <meshStandardMaterial color={SUPPLIES[kind]?.color ?? '#1c1c1f'} roughness={0.55} />
           </mesh>
         )}
         {active && !kind && (
@@ -252,6 +260,84 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
       </group>
     )
   })
+}
+
+/** standoff tray mount: trụ đồng M2 (u), lỗ ren tối ở đỉnh */
+const STANDOFF_R = 0.1
+const STANDOFF_HOLE = new CylinderGeometry(0.045, 0.045, 0.004, 16)
+/** case CAD có sẵn trụ ngay dưới PCB (khe < ngưỡng) thì không thêm standoff */
+const STANDOFF_MIN = 0.03
+
+/**
+ * Standoff tray mount liền đáy case dưới, đúng chỗ vít tray (`ctx.screws.trayScrew`): đỉnh tì mặt dưới PCB
+ * (theo `seat` nâng / nghiêng board khi vào case), chân xuống sàn. Case dựng bằng code: sàn `Y.floorTop`;
+ * case CAD: bắn tia từ mặt dưới PCB xuống model tìm sàn (trúng trụ có sẵn sát PCB thì bỏ qua)
+ */
+function TrayStandoffs({
+  nodes,
+  origin,
+  floorY = Y.floorTop,
+}: {
+  nodes: Record<string, THREE.Mesh> | null
+  origin: [number, number]
+  /** mặt sàn case dựng bằng code (mica: mặt trên 2 tấm đáy) */
+  floorY?: number
+}) {
+  const ctx = useCtx()
+  const posts = useMemo(() => {
+    const seat = ctx.caseDef.seat
+    const t = seat?.tilt ?? 0
+    // điểm mặt dưới PCB (toạ độ board) → toạ độ case: xoay quanh x theo tilt rồi dời theo seat
+    const top = (x: number, z: number) =>
+      new Vector3(
+        x + (seat?.dx ?? 0),
+        Y.pcbBot * Math.cos(t) - z * Math.sin(t) + (seat?.rise ?? 0),
+        Y.pcbBot * Math.sin(t) + z * Math.cos(t) + (seat?.dz ?? 0),
+      )
+    const meshes = nodes
+      ? Object.values(nodes)
+          .filter((n) => n.isMesh)
+          .map((n) => {
+            const m = new Mesh(n.geometry)
+            m.position.set(-origin[0], Y.floorBot, -origin[1])
+            m.scale.setScalar(MM)
+            m.updateMatrixWorld(true)
+            return m
+          })
+      : null
+    const ray = new Raycaster()
+    return ctx.screws.trayScrew.flatMap((p) => {
+      const a = top(p.x, p.z)
+      let floor = floorY
+      if (meshes) {
+        ray.set(new Vector3(a.x, a.y - 0.001, a.z), new Vector3(0, -1, 0))
+        const hit = ray.intersectObjects(meshes, false)[0]
+        if (!hit || hit.distance < STANDOFF_MIN) return []
+        floor = a.y - hit.distance
+      }
+      const h = a.y - floor
+      return h > 0 ? [{ id: p.id, x: a.x, z: a.z, y: floor + h / 2, h }] : []
+    })
+  }, [ctx, nodes, origin, floorY])
+  return posts.map((p) => (
+    <group key={p.id} position={[p.x, p.y, p.z]}>
+      <mesh castShadow receiveShadow>
+        <cylinderGeometry args={[STANDOFF_R, STANDOFF_R, p.h, 6]} />
+        <meshStandardMaterial color="#c9a54a" metalness={0.85} roughness={0.32} />
+      </mesh>
+      <mesh geometry={STANDOFF_HOLE} position-y={p.h / 2}>
+        <meshStandardMaterial color="#2b2418" metalness={0.4} roughness={0.7} />
+      </mesh>
+    </group>
+  ))
+}
+
+/** standoff tray của case CAD: dò sàn theo model GLB */
+function CadStandoffs({ model, origin }: { model: string; origin: [number, number] }) {
+  const { nodes } = useGLTF(`/models/cases/${model}.glb`) as unknown as {
+    nodes: Record<string, THREE.Mesh>
+  }
+  return <TrayStandoffs nodes={nodes} origin={origin} />
 }
 
 /**
@@ -303,7 +389,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const step = useStep()
   const stepIdx = useStepIdx()
   const { closed, inCase } = useBuild()
-  const { dropInCase, closeCase, placeTopCase } = useGame.getState()
+  const { dropInCase, closeCase, placeTopCase, nextStep } = useGame.getState()
   const topRef = useRef<THREE.Group>(null)
   const { caseDef, screwSide } = ctx
   const order = useGame((s) => s.order)
@@ -327,10 +413,15 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   )
   const at = (name: StepId) => ctx.steps.indexOf(name)
   const topMount = at('topCase') >= 0
+  // board đã thả vào case (bước caseIn xong, bước sau là đậy case): case trên hiện lơ lửng luôn, bấm là sang bước + đậy
+  const closeNext = step === 'caseIn' && inCase && ctx.steps[stepIdx + 1] === 'caseClose'
   const showTop =
     two &&
-    (step === 'caseOpen' || stepIdx >= at('caseClose') || (topMount && stepIdx >= at('topCase')))
-  const placing = (step === 'caseClose' || step === 'topCase') && !closed
+    (step === 'caseOpen' ||
+      closeNext ||
+      stepIdx >= at('caseClose') ||
+      (topMount && stepIdx >= at('topCase')))
+  const placing = ((step === 'caseClose' || step === 'topCase') && !closed) || closeNext
   // case trên chờ đậy / úp lơ lửng; top mount: case trên đã bắt vít vào plate nên nhấc lên cùng board khi thả vào case
   const topY = placing || (topMount && step === 'caseIn' && !inCase) ? 2.6 : 0
   const bottom = useHover(step === 'caseIn')
@@ -411,6 +502,18 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
             />
           )}
           <RubberFeet pockets={ctx.feet} />
+          {ctx.mount === 'tray' &&
+            (model ? (
+              <CadStandoffs model={model} origin={ctx.origin} />
+            ) : (
+              <TrayStandoffs
+                nodes={null}
+                origin={ctx.origin}
+                floorY={
+                  mica ? Y.floorBot + 2 * micaStackPlan(Y.floorBot, wallTop).step : Y.floorTop
+                }
+              />
+            ))}
           {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên.
               Case 2 mảnh: khung chặn thuộc case trên (đi cùng case trên); mica: khung nằm trong tấm mica trên */}
           {!two && (
@@ -430,7 +533,14 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
           ref={topRef}
           position-y={topY}
           onPointerDown={
-            topMount ? onClick('topCase', placeTopCase) : onClick('caseClose', closeCase)
+            topMount
+              ? onClick('topCase', placeTopCase)
+              : closeNext
+                ? onClick('caseIn', () => {
+                    nextStep()
+                    useGame.getState().closeCase()
+                  })
+                : onClick('caseClose', closeCase)
           }
           {...top.bind}
         >

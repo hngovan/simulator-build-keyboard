@@ -82,7 +82,10 @@ export const ODDS: OddsGroup[] = [
         what: `Đăng > ${PRICEY}× giá gốc: bị chê (có chứng chỉ thì bớt chê, có người khen)`,
         odds: `35% (> ${RICH_MAX}×: 60%) mỗi lượt bot ghé · −${pct(RICH_CERT)} mỗi bậc thợ`,
       },
-      { what: 'Fast bid (1 phút): giá chốt', odds: '~45% → 125% giá chợ (có thể lời / lỗ)' },
+      {
+        what: 'Fast bid (1 phút): giá chốt',
+        odds: '~45% → 125% giá chợ (có thể lời / lỗ) · khởi điểm ≤ giá sàn (45% giá chợ) chắc chắn có người bid',
+      },
       {
         what: 'Bán hàng lỗi bị tố mô tả sai sự thật',
         odds: `${pct(FLAW_CAUGHT)} · admin ban chợ ${BAN_DAYS} ngày`,

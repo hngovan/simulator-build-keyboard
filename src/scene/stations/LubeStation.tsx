@@ -595,7 +595,7 @@ function SpringShaker({
 export function LubeStation() {
   const ctx = useCtx()
   const build = useBuild()
-  const type = useGame((s) => s.inventory.switch!.type)
+  const type = useGame((s) => s.inventory.switch?.type)
   const pick = useGame((s) => s.lubePick)
   const anim = useGame((s) => s.lubeAnim)
   const { lubeBatch, lubeSprings, openSwitch } = useGame.getState()
@@ -629,18 +629,17 @@ export function LubeStation() {
     build.lubed < total && anim?.kind !== 'switch' && (supplies[pick.switch] ?? 0) <= 0
   const noOil = !build.springLube && anim?.kind !== 'spring' && (supplies[pick.spring] ?? 0) < total
 
-  // mũi tên vàng chỉ việc tiếp theo: đủ 1 mẻ (hoặc đã mở hết) thì lube, chưa thì mở tiếp, cuối cùng lắc lò xo
+  // mũi tên vàng chỉ việc tiếp theo: mở hết switch trước (chưa có đồ mở thì lube luôn con đã mở), rồi lube từng mẻ, cuối cùng lắc lò xo
   const canLube = !busy && opened > build.lubed && build.lubed < total
   // số con 1 mẻ lube thật (giống lubeBatch): còn giới hạn bởi số con chờ lube + mỡ còn lại
   const lubeN = Math.min(opener.n ?? 1, certN, opened - build.lubed, supplies[pick.switch] ?? 0)
-  const batch = Math.min(opener.n ?? 1, certN)
   const left = opened - build.lubed
   const hint: [number, number, number] | null = busy
     ? null
-    : build.lubed < total && left > 0 && (left >= batch || opened >= total) && !noGrease && !noBrush
-      ? [nextAt.x, nextAt.y + (SWITCH_CAD.stemTop + RAISE + 1) * U * grid.size, nextAt.z]
-      : opened < total && !noOpener
-        ? [openerAt[0].x, TABLE + 30 * U, openerAt[0].z]
+    : opened < total && !noOpener
+      ? [openerAt[0].x, TABLE + 30 * U, openerAt[0].z]
+      : build.lubed < total && left > 0 && !noGrease && !noBrush
+        ? [nextAt.x, nextAt.y + (SWITCH_CAD.stemTop + RAISE + 1) * U * grid.size, nextAt.z]
         : opened >= total && !build.springLube && !noOil
           ? [BOX_AT.x, TABLE + BOX.h + 0.2, BOX_AT.z]
           : null
@@ -658,6 +657,8 @@ export function LubeStation() {
     }
   }, [anim])
 
+  // save cũ: switch của đơn bị bán mất cả loại → không bày bàn lube (bảng bên báo hết switch)
+  if (!type) return null
   return (
     <StationTable k={k} w={14} d={12.5}>
       {/* switch nguyên trên đồ mở: click để tách housing, stem và lò xo */}

@@ -94,7 +94,7 @@ Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phả
 |  | Chuộc lại phím (giá ×1.1 ~ ×1.3 giá đã bán) | 30% bị từ chối · được thì +1 uy tín, giữ 3 ngày |
 |  | Đăng trên giá chợ tới 1.4× giá gốc: đại gia chốt trong đêm (tối đa 1 đại gia / đêm) | 15% · +5% mỗi bậc thợ · +5% nếu Free ship |
 |  | Đăng > 1.2× giá gốc: bị chê (có chứng chỉ thì bớt chê, có người khen) | 35% (> 1.4×: 60%) mỗi lượt bot ghé · −5% mỗi bậc thợ |
-|  | Fast bid (1 phút): giá chốt | ~45% → 125% giá chợ (có thể lời / lỗ) |
+|  | Fast bid (1 phút): giá chốt | ~45% → 125% giá chợ (có thể lời / lỗ) · khởi điểm ≤ giá sàn (45% giá chợ) chắc chắn có người bid |
 |  | Bán hàng lỗi bị tố mô tả sai sự thật | 10% · admin ban chợ 3 ngày |
 |  | Gỡ bài quá 3 lần / ngày | Admin ban chợ 3 ngày |
 | **🔧 Lắp ráp & giao hàng** | Thiếc đểu cháy chân dù nhả đúng vùng xanh | 15% |

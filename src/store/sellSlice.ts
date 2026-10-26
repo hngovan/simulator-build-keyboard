@@ -23,7 +23,7 @@ import {
   type Stolen,
 } from '@/data/selling'
 import { BAN_DAYS } from '@/data/market'
-import { addPart, without } from './spare'
+import { addPart, dropSwitch, without } from './spare'
 import type { GameState } from '.'
 import type { SwitchItem } from '@/types'
 
@@ -44,6 +44,8 @@ export interface SellSlice {
   unlist: (id: string) => void
   /** 1 bot ghé 1 bài ngẫu nhiên (hỏi han / up / trả giá / bid), gọi định kỳ khi đang xem tab bài của mình */
   botVisit: () => void
+  /** mỗi bài fast bid đang chạy: bot ghé ngẫu nhiên (bid / bình luận); App gọi mỗi giây, kể cả khi không mở tab chợ */
+  bidVisit: () => void
   /** bài bid hết giờ: bán cho người trả cao nhất (không ai bid thì trả món về) */
   settleBids: () => void
   /** bán cho người trả giá ở dòng bình luận `line` */
@@ -161,7 +163,7 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
           patch = { spare: { ...s.spare, items: s.spare.items.filter((_, i) => i !== index) } }
           break
         case 'switch':
-          patch = { spare: { ...s.spare, switches: without(s.spare.switches, src.type) } }
+          patch = { spare: dropSwitch(s.spare, src.type) }
           break
         case 'stab':
           patch = { spare: { ...s.spare, stabs: without(s.spare.stabs, src.type) } }
@@ -174,13 +176,20 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
         case 'job': {
           // món đã assem ở bàn build (case / PCB / plate / stab, keycap đã gắn) thì không bán được
           const drop = <
-            T extends { inventory: GameState['inventory']; provided: GameState['provided'] },
+            T extends {
+              inventory: GameState['inventory']
+              provided: GameState['provided']
+              build: GameState['build']
+            },
           >(
             x: T,
           ): T => {
             const provided = { ...x.provided }
             delete provided[src.cat]
-            return { ...x, inventory: { ...x.inventory, [src.cat]: null }, provided }
+            // đơn đã vào build: bán hết switch thì giữ loại (về 0 con) — switch đã cắm trên board, bàn lube, chấm điểm vẫn cần loại
+            const left =
+              src.cat === 'switch' && x.build ? { ...(src.item as SwitchItem), count: 0 } : null
+            return { ...x, inventory: { ...x.inventory, [src.cat]: left }, provided }
           }
           if (s.order?.id === src.orderId) {
             if (s.result || s.inventory[src.cat] !== src.item) return
@@ -247,24 +256,26 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
     },
     botVisit: () => {
       const s = get()
-      const open = s.listings.filter((l) => !l.bid || Date.now() < l.bid.endsAt)
+      // fast bid có lượt ghé riêng (bidVisit)
+      const open = s.listings.filter((l) => !l.bid)
       if (!open.length) return
       const l = open[Math.floor(Math.random() * open.length)]
-      if (l.bid) {
-        const t = bidTurn(l)
-        if (!t) return
-        set({
-          listings: s.listings.map((x) =>
-            x === l
-              ? { ...x, log: [...x.log, t.line].slice(-24), bid: { ...l.bid!, top: t.top } }
-              : x,
-          ),
-        })
-        return
-      }
       const line = botTurn(l, certOf(s))
       if (!line) return
       set({ listings: s.listings.map((x) => (x === l ? { ...x, log: [...x.log, line] } : x)) })
+    },
+    bidVisit: () => {
+      const s = get()
+      let changed = false
+      const listings = s.listings.map((l) => {
+        // ~1 lượt ghé mỗi 3 giây mỗi bài
+        if (!l.bid || Math.random() > 0.35) return l
+        const t = bidTurn(l)
+        if (!t) return l
+        changed = true
+        return { ...l, log: [...l.log, t.line], bid: t.top ? { ...l.bid, top: t.top } : l.bid }
+      })
+      if (changed) set({ listings })
     },
     settleBids: () => {
       const now = Date.now()

@@ -247,7 +247,8 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
         {packed && (
           <>
             <ChatBubble from="out">
-              {MSG.done} ({'★'.repeat(packed.result.stars)})
+              {/* chưa hiện sao: sao chỉ có khi khách nhận hàng và đánh giá */}
+              {MSG.done}
             </ChatBubble>
             {pickup ? (
               <ChatBubble from="in">Ui nhanh vậy! Mình tự qua shop lấy nhé 🛵</ChatBubble>
@@ -351,9 +352,11 @@ export function Messenger() {
     ...jobs.map((j) => ({ kind: 'accepted' as const, order: j.order, active: false })),
     ...rejected.map((o, i) => ({ kind: 'rejected' as const, order: o, angry: i >= DECLINE_FREE })),
   ]
-  const [pick, setPick] = useState<string | null>(null)
-  // cửa sổ hẹp: chỉ hiện 1 cột — danh sách hoặc khung chat
-  const [chatOpen, setChatOpen] = useState(false)
+  // hội thoại đang mở lưu ở store: đóng gói đơn xong thì bàn build mở thẳng hội thoại đơn đó
+  const pick = useGame((s) => s.messengerPick)
+  const setPick = useGame((s) => s.setMessengerPick)
+  // cửa sổ hẹp: chỉ hiện 1 cột — danh sách hoặc khung chat (vừa được mở thẳng 1 hội thoại thì vào khung chat luôn)
+  const [chatOpen, setChatOpen] = useState(() => !!pick)
   // hội thoại đang mở (vừa gửi hàng thì nhảy sang hội thoại đầu tiên)
   const current = threads.find((t) => t.order.id === pick) ?? threads[0]
 

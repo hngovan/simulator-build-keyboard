@@ -7,13 +7,18 @@ export interface Topic {
   lines: string[]
 }
 
-/** các đoạn hội thoại hợp tình huống (lọc đã đọc ở `BenchDialog`): `step` = bước đang làm, không có = bàn trống */
-export const benchTopics = (step: StepId | undefined, hasOrder: boolean): Topic[] =>
+/**
+ * các đoạn hội thoại hợp tình huống (lọc đã đọc ở `BenchDialog`): `step` = bước đang làm, không có = bàn trống;
+ * `mica` = case mica xếp nhiều lớp (bước mở / đóng case nói theo `MICA_LINES`)
+ */
+export const benchTopics = (step: StepId | undefined, hasOrder: boolean, mica = false): Topic[] =>
   !step
     ? [hasOrder ? { id: 'bench:pick', lines: PICK } : { id: 'bench:empty', lines: EMPTY }]
     : [
         { id: 'bench:intro', lines: INTRO },
-        { id: `step:${step}`, lines: STEP_LINES[step] },
+        mica && MICA_LINES[step]
+          ? { id: `step:${step}:mica`, lines: MICA_LINES[step] }
+          : { id: `step:${step}`, lines: STEP_LINES[step] },
       ]
 
 const EMPTY = [
@@ -33,6 +38,16 @@ const INTRO = [
   'Ở dưới là việc cần làm ngay bây giờ, mũi tên vàng chỉ chỗ cần bấm. Lỡ tay thì Ctrl + Z hoàn tác nhé!',
 ]
 
+/** case mica: nhiều tấm mica cắt laser chồng lên nhau, vít xuyên qua mọi lớp (không phải case 2 mảnh) */
+const MICA_LINES: Partial<Record<StepId, string[]>> = {
+  caseOpen: [
+    'Case mica này là nhiều tấm mica cắt laser chồng lên nhau, vít xuyên qua hết các lớp giữ chúng lại.',
+    'Chọn đúng đầu vít rồi click từng con vít. Tháo hết là nhấc được mấy lớp trên ra để thả board vào.',
+  ],
+  caseClose: ['Xếp các lớp mica phía trên lại lên board nào. Click vào phần case trên nhé.'],
+  caseScrew: ['Vặn vít xuyên qua các lớp mica cho chặt là cả chồng mica liền thành case rồi 💪'],
+}
+
 const STEP_LINES: Record<StepId, string[]> = {
   unbox: ['Hàng về rồi! Click vào thùng hàng để mở hộp, xem khách gửi gì nào 📦'],
   caseOpen: [
@@ -41,7 +56,7 @@ const STEP_LINES: Record<StepId, string[]> = {
   ],
   stabMod: [
     'Mod stab là bước tuỳ chọn, nhưng làm thì phím dài êm hẳn, hết lạch cạch đó!',
-    'Cứ theo mũi tên vàng: cắt chân stem, dán băng Urgo, phết mỡ housing + slider, rồi tới wire.',
+    'Cứ theo mũi tên vàng: stab Cherry thì cắt chân stem, dán băng Urgo; stab đời mới (TX, Staebies...) khít sẵn, chỉ cần phết mỡ housing + slider rồi tới wire.',
     'Vội thì bấm "Bỏ qua" cũng được, khách khó tính có thể chê tiếng stab thôi 😅',
   ],
   stab: [

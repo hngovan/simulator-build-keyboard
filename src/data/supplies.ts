@@ -26,15 +26,44 @@ export interface SupplyDef {
   spell?: number
   /** feet cao su dán đáy case (bước `feet`): 1 vỉ 4 cái */
   feet?: true
-  /** tấm foam Poron lót giữa PCB và plate (bước `foam`), cắt sẵn theo layout */
+  /** tấm foam Poron lót giữa PCB và plate (bước `foam`): bán tấm nguyên, lót thì cắt theo layout */
   pcbFoam?: true
 }
 
 /** foam Poron lót PCB – plate: 1 tấm / bàn phím */
 export const FOAM_ID = 'foamPoron'
 
-/** feet cao su dán đáy case: id vật tư theo màu (chọn ở bảng bước dán feet) */
-export const FEET_IDS = ['feetBlack', 'feetWhite'] as const
+/** feet cao su dán đáy case: id vật tư theo màu (chọn ở bảng bước dán feet, Shopii gộp 1 sản phẩm) */
+const FEET_COLORS: [id: string, name: string, color: string][] = [
+  ['feetBlack', 'đen', '#1c1c1f'],
+  ['feetWhite', 'trắng', '#f1f0ec'],
+  ['feetGray', 'xám', '#6f7378'],
+  ['feetClear', 'trong', '#d6dde0'],
+  ['feetRed', 'đỏ', '#b3262c'],
+  ['feetBlue', 'xanh dương', '#2d55a6'],
+  ['feetGreen', 'xanh lá', '#3f8f5a'],
+  ['feetPink', 'hồng', '#e79ab6'],
+  ['feetYellow', 'vàng', '#e2b93b'],
+  ['feetPurple', 'tím', '#6b4a9c'],
+]
+export const FEET_IDS = FEET_COLORS.map(([id]) => id)
+
+/** Vỉ 4 feet bán cầu mỗi màu, cùng giá */
+function feetDefs(): Record<string, SupplyDef> {
+  return Object.fromEntries(
+    FEET_COLORS.map(([id, name, color]) => [
+      id,
+      {
+        name: `Feet cao su ${name}`,
+        unit: 'cái',
+        color,
+        packs: [[4, 25]],
+        desc: 'Vỉ 4 feet bán cầu dán đáy case, chống trượt, nhiều màu cho hợp màu case. 1 lần mua = 4 cái',
+        feet: true,
+      },
+    ]),
+  )
+}
 
 /** gói sách phép: 100 / 200 / 500 lần (gói lớn rẻ hơn mỗi lần) */
 const SPELL_PACKS: [number, number][] = [
@@ -69,22 +98,8 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     desc: 'Thiếc xịn nhất: chảy cực nhanh, mối hàn bóng đẹp như hàn máy',
     solder: { speed: 0.6, shine: 1 },
   },
-  feetBlack: {
-    name: 'Feet cao su đen',
-    unit: 'cái',
-    color: '#1c1c1f',
-    packs: [[4, 25]],
-    desc: 'Vỉ 4 feet bán cầu dán đáy case, chống trượt, hợp case tối màu. 1 lần mua = 4 cái',
-    feet: true,
-  },
-  feetWhite: {
-    name: 'Feet cao su trắng',
-    unit: 'cái',
-    color: '#f1f0ec',
-    packs: [[4, 25]],
-    desc: 'Vỉ 4 feet bán cầu dán đáy case, chống trượt, hợp case sáng màu. 1 lần mua = 4 cái',
-    feet: true,
-  },
+  // feet cao su: chỉ khác màu → Shopii gộp 1 sản phẩm, chọn màu bằng option (`FEET_IDS`)
+  ...feetDefs(),
   foamPoron: {
     name: 'Foam Poron lót PCB (đen)',
     unit: 'tấm',
@@ -93,7 +108,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
       [1, 60],
       [5, 250],
     ],
-    desc: 'Tấm Poron đen cắt sẵn lỗ switch theo layout, lót giữa PCB và plate: giảm rung, tiếng thock trầm hơn',
+    desc: 'Tấm Poron đen nguyên tấm, dùng được mọi layout (lót lên PCB thì cắt lỗ switch + khe stab): giảm rung, tiếng thock trầm hơn',
     pcbFoam: true,
   },
   urgo: {

@@ -7,6 +7,7 @@ import type {
   CaseDef,
   CaseItem,
   Inventory,
+  Paid,
   KeycapItem,
   LayoutId,
   Order,
@@ -23,6 +24,7 @@ import type {
   SwitchItem,
   ToolItem,
   ToolKind,
+  ToolLevels,
 } from '@/types'
 
 export interface SwitchDef {
@@ -1587,7 +1589,27 @@ export const SIZE_MULT: Record<LayoutId, number> = {
   alice: 1.2,
 }
 
+/** màu khay (nhôm anod), mua xong bấm vào khay trên bàn để đổi (`nextTrayColor`) */
+export const TRAY_COLORS: Record<string, { name: string; hex: string }> = {
+  silver: { name: 'Bạc', hex: '#c9ccd1' },
+  black: { name: 'Đen', hex: '#2c2d31' },
+  brown: { name: 'Nâu', hex: '#6e4b34' },
+  red: { name: 'Đỏ', hex: '#a3262a' },
+  blue: { name: 'Xanh dương', hex: '#2f4f8f' },
+  gold: { name: 'Vàng đồng', hex: '#c6a04c' },
+  purple: { name: 'Tím', hex: '#5d3f86' },
+}
+
 export const TOOLS: Record<ToolKind, ToolDef[]> = {
+  // chỉ cho gọn bàn: ốc tháo ra nằm trong khay thay vì vương vãi trên bàn (không tăng chỉ số gì)
+  screwTray: [
+    { name: 'Chưa có khay đựng ốc', none: true, price: 0 },
+    {
+      name: 'Khay đựng ốc nhôm CNC',
+      price: 500,
+      desc: 'Khay nhôm hình giọt nước: ốc tháo ra bỏ vào lòng khay cho gọn, không lăn lung tung trên bàn. Nhiều màu (bấm khay trên bàn để đổi), chỉ để đẹp, không tăng chỉ số gì.',
+    },
+  ],
   spoolHolder: [
     { name: 'Chưa có giá đỡ cuộn thiếc', none: true, price: 0 },
     {
@@ -1683,6 +1705,7 @@ export const TOOLS: Record<ToolKind, ToolDef[]> = {
 export const TOOL_KINDS: Record<ToolKind, string> = {
   desolder: 'Rã hàn / hút thiếc',
   spoolHolder: 'Giá đỡ cuộn thiếc',
+  screwTray: 'Khay đựng ốc',
   switch: 'Lắp switch',
   cert: 'Chứng chỉ thợ',
   keycap: 'Lắp keycap',
@@ -1931,6 +1954,8 @@ export function buildCatalog(): Product[] {
     })
   }
   for (const [id, sp] of Object.entries(SUPPLIES)) {
+    // feet: các màu gộp chung 1 sản phẩm (đẩy sau vòng này)
+    if (sp.feet) continue
     products.push({
       id: `sup-${id}`,
       // sách phép bán ở mục riêng
@@ -1946,6 +1971,25 @@ export function buildCatalog(): Product[] {
       })),
     })
   }
+  const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+  // feet cao su: 1 sản phẩm, option = màu (mỗi màu là 1 vật tư riêng trong kho)
+  const feet = Object.entries(SUPPLIES).filter(([, sp]) => sp.feet)
+  if (feet.length)
+    products.push({
+      id: 'sup-feet',
+      cat: 'supply',
+      name: 'Feet cao su',
+      desc: feet[0][1].desc,
+      supply: feet[0][0],
+      options: feet.flatMap(([id, sp]) =>
+        sp.packs.map(([n, price]) => ({
+          label: `${capitalize(sp.name.replace('Feet cao su ', ''))} · ${n} ${sp.unit}`,
+          swatch: sp.color,
+          price,
+          item: { id, n },
+        })),
+      ),
+    })
   for (const [kind, levels] of Object.entries(TOOLS) as [ToolKind, ToolDef[]][]) {
     levels.forEach((t, level) => {
       if (t.none || !t.price) return
@@ -2138,6 +2182,23 @@ export const FLAW_UNUSABLE: PartCategory[] = ['keycap', 'switch', 'stab']
 export const unusable = (cat: PartCategory, item: PartItem | null) =>
   FLAW_UNUSABLE.includes(cat) && !!(item as { flaw?: string } | null)?.flaw
 
+/**
+ * Tiền linh kiện tính vào đơn: chỉ món đang nằm trong ô đối chiếu (món bị thay, dụng cụ, vật tư không tính);
+ * switch / stab mua dư chỉ tính phần layout cần. Bản lưu cũ (món chưa ghi giá) thì dùng tổng đã chi `spent`
+ */
+export function partSpent(inv: Inventory, order: Order, spent = 0) {
+  const items = Object.entries(inv) as [PartCategory, Paid | null][]
+  if (spent && !items.some(([, it]) => it?.paid !== undefined)) return spent
+  const { keys } = getLayout(order.layout, order.variant)
+  let sum = 0
+  for (const [cat, it] of items) {
+    if (!it?.paid) continue
+    const need = cat === 'switch' ? keys.length : cat === 'stab' ? stabTotal(stabNeed(keys)) : 0
+    sum += need && it.paidN ? it.paid * Math.min(1, need / it.paidN) : it.paid
+  }
+  return Math.round(sum)
+}
+
 export function checkInventory(
   inv: Inventory,
   order: Order,
@@ -2228,6 +2289,15 @@ export function caseModelOf(def: CaseDef, layout: LayoutId, variant: { bottom?: 
   if (def.modelFor?.wkl && variant.bottom === 'wkl') return def.modelFor.wkl
   return def.model
 }
+
+/**
+ * Tiến độ 1 con vít tính theo số lần vặn của tua vít tay (vặn đủ = SCREW_FULL); tua vít điện 1 click = đủ luôn.
+ * Đổi qua lại 2 loại tua vít giữa chừng không mất tiến độ
+ */
+export const SCREW_FULL = 3
+/** tua vít đang dùng: loại người chơi chọn (không quá loại xịn nhất đã mua), chưa chọn thì dùng loại xịn nhất */
+export const screwLevel = (tools: ToolLevels, pick: number | null | undefined) =>
+  Math.min(pick ?? tools.screw, tools.screw)
 
 /** Plateless thiếu điều kiện: không plate thì switch chỉ đứng vững khi hàn chết vào PCB, stab gài plate không có chỗ gài */
 export function platelessIssue(inv: Pick<Inventory, 'plate' | 'pcb' | 'stab'>): string | null {

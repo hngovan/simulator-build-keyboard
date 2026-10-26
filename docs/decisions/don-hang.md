@@ -375,3 +375,47 @@ bấm phá sản, new game".
 - App Kho: món bán được có nút "Đăng bán" (`Owned.sell`) → `openSell()` mở Hội Phím Cơ tab "Bài của tôi"
   (tab Hội Phím Cơ giờ ở store: `groupTab` / `setGroupTab`, metaSlice).
 - Đổi tên "Bid 1 phút" → **Fast bid** (UI, toast, bảng tỉ lệ, README, changelog).
+
+### Test xong phím → gửi khách, sao chỉ khi khách đánh giá, fast bid có bot (2026-10-26)
+
+- Người dùng: "test phím xong hết phải thông báo phím xong rồi, gửi khách thôi → bấm OK tới phần tin nhắn để gửi". `TestDone`
+  (BenchHud): bước `test` đủ phím + build đã xong các bước bắt buộc (`useBuildComplete`) → hộp "🎉 Phím đã xong rồi!", "OK, gửi khách"
+  = `deliver()`; "Để sau" ẩn tới khi đổi đơn. Hội thoại Mezzenger đang mở giờ ở store (`messengerPick`), `deliver` đặt id đơn vừa
+  đóng gói → mở thẳng hội thoại đó (cửa sổ hẹp vào khung chat luôn).
+- "Phím của bạn xong rồi nè không hiển thị số sao, sao chỉ hiện khi khách đánh giá": bỏ sao ở tin nhắn đóng gói, toast đóng gói và
+  `ResultCard` (Xem điểm chấm: chỉ còn bảng điểm, ghi "Số sao do khách chấm khi nhận hàng"). Toast khi gửi hàng + đánh giá vẫn có sao.
+- "Đăng fast bid không thấy bot thả giá / comment": giá khởi điểm mặc định = giá chợ mà giá trần ẩn chỉ 45–125% giá chợ → ~40% bài
+  không ai bid, và lúc đó `bidTurn` trả null (im lặng); bot lại chỉ ghé khi mở tab, chung lượt với bài giá cố định. Sửa: chọn Fast bid
+  thì ô giá về giá sàn (`bidFloor` = 45% giá chợ, giá trần ẩn không bao giờ dưới sàn → khởi điểm ≤ sàn chắc chắn có người bid; vẫn hạ được tới 0đ); `bidTurn` khởi điểm cao quá thì chê (`BID_HIGH`), chạm trần thì "theo không nổi" (`BID_STOP`), 20% chỉ hỏi / up bài;
+  `bidVisit` (sellSlice) mỗi bài ~35% / giây, App.tsx gọi cùng `settleBids` (chạy cả khi không mở tab). `botVisit` chỉ còn bài giá cố định.
+
+## "Đã chi linh kiện" chỉ tính món trong đối chiếu (2026-10-26)
+
+- Người dùng: "Đã chi linh kiện đang tính cả... dụng cụ thiếc hàn... chỉ tính trong phạm vi đối chiếu linh kiện, mua dư đâu có tính".
+  Dụng cụ / vật tư vốn không cộng vào `spent`, nhưng `spent` cộng mọi lần mua linh kiện (món bị thay vẫn tính, switch / stab mua dư tính hết).
+- Món linh kiện ghi giá đã trả `Paid` (`paid` / `paidN` trong types.ts, mọi `*Item`): `buy` ghi lên món, gộp cùng loại thì cộng dồn;
+  `takeStock` / `fillFromStock` gộp thì giữ giá món đang có (switch / stab từ kho chung không mang giá).
+- `partSpent(inv, order, spent)` (parts.ts): cộng `paid` các món đang nằm trong ô đối chiếu; switch / stab × min(1, cần / `paidN`)
+  (cần = số phím / `stabNeed`). Món không có `paid` (khách gửi, lấy kho chung) = 0. Save cũ chưa món nào có `paid` thì dùng `spent`.
+  Dùng ở app Chi tiết đơn (`OrderApp`) và `deliver` → `scoreDelivery` (chấm "trong ngân sách"). `spent` vẫn giữ làm tổng tiền thật đã chi.
+
+## Lỗi vào build: `inventory.switch` null (2026-10-27)
+
+- Người dùng: "bị lỗi const swType = useGame((s) => s.inventory.switch!.type) khi vào build ... Cannot read properties of null".
+- Nguyên nhân: 0.1.10 cho bán đồ của đơn đang build (`postListing` kind `job`, sellSlice `drop`): bán lô switch thì ô switch thành `null`
+  dù build còn (bàn lube, switch đã cắm, chấm điểm đều đọc `inventory.switch!.type`).
+- Sửa gốc: `drop` (sellSlice) đơn đã có build thì switch về `{ ...item, count: 0 }` (giữ loại). Save đã hỏng (switch null giữa build):
+  `LubePanel` hiện Alert "Hết switch" + nút bỏ qua, `LubeStation` không vẽ, `lubeBatch` / lắp switch / `deliver` báo hết / thiếu switch
+  thay vì vỡ. Mua switch mới thì chạy lại bình thường.
+
+## Chọn loại switch cho đơn, không tự dùng lô mua cuối (2026-10-27)
+
+- Người dùng: "nếu khách ko yêu cầu thì sẽ auto hiển thị option sw có sẵn trong kho để chọn loại mình muốn => hiện tại sw nào mua cuối
+  cùng thì sẽ auto dùng cho đơn => sai".
+- `buy` (shopSlice): đơn đã có switch dùng được (không lỗi, còn con, `switchOk`) hoặc board đã cắm switch mà mua loại khác → lô mới vào
+  kho chung (giữ giá), không thay switch của đơn (bỏ luôn lỗi "Board đã cắm switch loại khác" khi mua). Toast báo đổi ở Chi tiết đơn.
+- Kho chung giữ tiền switch: `Spare.switchPaid` (loại → { paid, n }); `addPart` cộng vào, `takeSwitches` (lấy ra kèm giá, gộp cùng loại)
+  dùng ở `buy` / `takeStock` / `fillFromStock`, `dropSwitch` khi bán ở chợ. Switch dư sau khi giao vào kho không mang giá (`leftoverSpare`).
+- App Chi tiết đơn: `SwitchPick` dưới dòng Switch (đơn đang làm, khách không đòi đích danh `switchType`, chưa cắm switch nào):
+  `OptionSelect` các loại đang có (đơn + kho chung, hợp `switchOk`) kèm số con → `takeStock`. Chạy thử (playwright, store): mua A 700k
+  rồi B 1.400k → B vào kho; chọn B "Đã chi" 940k, chọn lại A 470k (layout 47/70 con).

@@ -26,7 +26,7 @@ const FF_ORDER = Object.keys(FF_LABEL)
 /** nhóm dụng cụ theo việc dùng */
 const TOOL_GROUPS: { id: string; label: string; kinds: ToolKind[] }[] = [
   { id: 'solder', label: 'Hàn', kinds: ['solder', 'desolder', 'spoolHolder', 'tipCleaner'] },
-  { id: 'assem', label: 'Lắp ráp', kinds: ['switch', 'keycap', 'screw'] },
+  { id: 'assem', label: 'Lắp ráp', kinds: ['switch', 'keycap', 'screw', 'screwTray'] },
   { id: 'mod', label: 'Mod & lube', kinds: ['brush', 'opener', 'clipper'] },
 ]
 

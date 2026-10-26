@@ -52,36 +52,40 @@ function useSpin(
   })
 }
 
-// Tua vít tay: model Poly Haven (CC0, `bun run fetch:room`), dùng bản nhẹ không texture (`bun run convert:screwdriver-lite`)
-// hệ mét, cán ở dưới (y -0.08) → mũi ở trên (y 0.135)
-const SCREWDRIVER_GLB = '/models/room/screwdriver-lite.glb'
-const SCREWDRIVER_TIP_Y = 0.135
-/** thu về dài ~1.6u cho dễ nhìn cạnh con vít (thật dài 21cm) */
-const SCREWDRIVER_SCALE = 1.6 / 0.215
-useGLTF.preload(SCREWDRIVER_GLB)
+// Tua vít tay vẽ bằng code (thay model Poly Haven: lưỡi dẹt cố định, không khớp đầu vít đang chọn):
+// kiểu tua vít thay đầu — đầu kẹp lục giác ở gốc (đầu vít `DriverBit` cắm vào), thân thép, cán nhựa đỏ có rãnh + đệm cao su đen.
+// Gốc toạ độ = miệng đầu kẹp (BitDriver đặt ở y = BIT_LEN, ngay trên đầu vít), cán hướng lên +y, dài ~1.35u
+const handleRed = new THREE.MeshStandardMaterial({ color: '#e0553a', roughness: 0.45 })
+const gripBlack = new THREE.MeshStandardMaterial({ color: '#25262b', roughness: 0.85 })
+const chrome = new THREE.MeshStandardMaterial({ color: '#d6dbe2', metalness: 1, roughness: 0.2 })
 
-function ManualScrewdriver({ spinKey }: { spinKey: number }) {
-  const ref = useRef<THREE.Group>(null)
-  useSpin(ref, spinKey, false)
-  const { scene } = useGLTF(SCREWDRIVER_GLB)
-  // mỗi con vít có thể hiện tua vít riêng (lúc rê chuột qua lại) nên clone
-  const model = useMemo(() => {
-    const c = scene.clone()
-    c.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) o.castShadow = true
-    })
-    return c
-  }, [scene])
+export function ManualScrewdriver() {
   return (
-    <group ref={ref}>
-      {/* lật ngược cho mũi ở gốc, cán hướng lên */}
-      <group
-        rotation-x={Math.PI}
-        position-y={SCREWDRIVER_TIP_Y * SCREWDRIVER_SCALE}
-        scale={SCREWDRIVER_SCALE}
-      >
-        <primitive object={model} />
-      </group>
+    <group>
+      {/* đầu kẹp lục giác ôm chuôi đầu vít */}
+      <mesh material={chrome} position-y={0.01} castShadow>
+        <cylinderGeometry args={[0.05, 0.045, 0.14, 6]} />
+      </mesh>
+      {/* thân thép */}
+      <mesh material={chrome} position-y={0.29} castShadow>
+        <cylinderGeometry args={[0.03, 0.03, 0.42, 12]} />
+      </mesh>
+      {/* khâu nối cán */}
+      <mesh material={chrome} position-y={0.52} castShadow>
+        <cylinderGeometry args={[0.075, 0.05, 0.06, 16]} />
+      </mesh>
+      {/* cán nhựa thon dần về đầu, 6 rãnh bám tay */}
+      <mesh material={handleRed} position-y={0.88} castShadow>
+        <cylinderGeometry args={[0.1, 0.12, 0.66, 6]} />
+      </mesh>
+      {/* đệm cao su ôm giữa cán */}
+      <mesh material={gripBlack} position-y={0.9} castShadow>
+        <cylinderGeometry args={[0.125, 0.13, 0.28, 18]} />
+      </mesh>
+      {/* đầu cán bo tròn */}
+      <mesh material={handleRed} position-y={1.21} scale-y={0.45} castShadow>
+        <sphereGeometry args={[0.1, 18, 10]} />
+      </mesh>
     </group>
   )
 }
@@ -338,7 +342,7 @@ export function BitDriver({
   return (
     <group ref={spin}>
       <group ref={body} position-y={BIT_LEN}>
-        <ManualScrewdriver spinKey={0} />
+        <ManualScrewdriver />
       </group>
       {bits}
     </group>

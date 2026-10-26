@@ -14,6 +14,7 @@ import type {
   Product,
   ProductOption,
   StabItem,
+  SupplyItem,
   SwitchItem,
   ToolItem,
 } from '@/types'
@@ -82,7 +83,7 @@ export function ProductImage({
           : product.cat === 'tool' || product.cat === 'cert'
             ? tool && `${tool.kind}:${tool.level}`
             : product.cat === 'supply' || product.cat === 'spell'
-              ? product.supply
+              ? ((item as SupplyItem | undefined)?.id ?? product.supply)
               : product.cat === 'stab'
                 ? item && stabThumbType(item as StabItem)
                 : (item as SwitchItem | StabItem | undefined)?.type

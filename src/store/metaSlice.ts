@@ -45,6 +45,9 @@ export interface MetaSlice extends Profile {
   camMode: 'orbit' | 'pan'
   /** mục Shopii đang xem (ô đồ còn thiếu trên bàn mod mở thẳng tới mục cần mua) */
   shopCat: ShopCategory
+  /** hội thoại đang mở ở Mezzenger (id đơn); đóng gói xong thì mở thẳng hội thoại đơn đó để gửi */
+  messengerPick: string | null
+  setMessengerPick: (id: string | null) => void
   /** tab đang mở ở Hội Phím Cơ (chợ pass / bài của tôi) */
   groupTab: 'feed' | 'mine'
   setGroupTab: (tab: 'feed' | 'mine') => void
@@ -138,6 +141,8 @@ function snapshot(s: GameState): SaveData {
     supplies,
     audio,
     screwBit,
+    screwPick: s.screwPick,
+    trayColor: s.trayColor,
     rev,
     wear,
     reviews,
@@ -189,6 +194,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   camMode: 'orbit',
   shopCat: 'case',
   groupTab: 'feed',
+  messengerPick: null,
+  setMessengerPick: (messengerPick) => set({ messengerPick }),
   benchPicker: false,
   benchShort: null,
   gameOver: null,

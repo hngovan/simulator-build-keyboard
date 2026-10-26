@@ -36,7 +36,12 @@ export function stabModRules(modelId: string): StabModRule[] {
       label: 'Holee mod (Urgo)',
       needed: m.feet,
       allowed: true,
-      reason: m.tight ? 'Stab khít: dán băng vào sẽ bị nhũn' : undefined,
+      // Holee chỉ cần khi lỗ cắm wire trên stem rộng (wire lắc trong stem → lạch cạch); stab khít thì lỗ vừa wire sẵn
+      reason: m.feet
+        ? 'Lỗ stem rộng: dán băng để wire bớt dao động trong stem'
+        : m.tight
+          ? 'Stab khít: lỗ stem vừa wire, không cần dán băng'
+          : undefined,
     },
     {
       kind: 'housing',
@@ -49,6 +54,21 @@ export function stabModRules(modelId: string): StabModRule[] {
     { kind: 'wire', label: 'Lube wire stab', needed: true, allowed: true },
     { kind: 'wired', label: 'Lắp wire vào slider + ngàm', needed: true, allowed: true },
   ]
+}
+
+const HINT_TEXT: Record<StabModKind, string> = {
+  clip: 'cắt chân stem',
+  bandaid: 'Holee mod (băng Urgo)',
+  housing: 'phết mỡ housing + slider',
+  assembled: 'lắp slider',
+  wire: 'phết mỡ wire',
+  wired: 'lắp wire vào ngàm',
+}
+
+/** Gợi ý bước mod stab theo đúng mẫu stab: chỉ các mod cần làm, cùng thứ tự mũi tên vàng (stab khít không có clip / Holee) */
+export function stabModHint(modelId: string) {
+  const todo = stabModRules(modelId).filter((r) => r.needed)
+  return `Theo mũi tên vàng: ${todo.map((r) => HINT_TEXT[r.kind]).join(' → ')}`
 }
 
 // Trọng số chấm độ êm (lắp ráp không tính điểm, chỉ là thao tác bắt buộc)

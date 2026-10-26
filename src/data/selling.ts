@@ -305,31 +305,56 @@ export function richChance(l: Listing, cert = 0) {
   return RICH_BASE + RICH_CERT * cert + ((l.tags ?? []).includes('fs') ? 0.05 : 0)
 }
 
-/** giá trần ẩn của bài bid: quanh giá chợ (45% → 125%), bậc thợ / tag đẩy lên; làm tròn theo bước */
+/** giá sàn fast bid (k): người mua chắc chắn chịu trả tới mức này (= mức thấp nhất của giá trần ẩn) */
+export const BID_FLOOR = 0.45
+export const bidFloor = (src: ListingSource) => r10(sourceValue(src) * BID_FLOOR)
+
+/**
+ * Giá trần ẩn của fast bid: quanh giá chợ (45% → 125%), bậc thợ / tag đẩy lên; làm tròn theo bước.
+ * Không bao giờ dưới giá sàn (làm tròn lên theo bước): khởi điểm ≤ giá sàn thì chắc chắn có người bid
+ */
 export function bidCap(src: ListingSource, step: number, cert = 0, tags: ListingTag[] = []) {
   const k =
-    0.45 +
+    BID_FLOOR +
     Math.random() * 0.8 +
     RICH_CERT * cert +
     (tags.includes('fs') ? 0.03 : 0) +
     (tags.includes('test') ? 0.03 : 0)
-  return Math.floor((sourceValue(src) * k) / step) * step
+  const floor = Math.ceil(bidFloor(src) / step) * step
+  return Math.max(floor, Math.floor((sourceValue(src) * k) / step) * step)
 }
 
-/** 1 lượt bot ghé bài bid: trả thêm vài bước, không quá giá trần; hết giờ / chạm trần thì thôi */
+/** khởi điểm cao quá giá trần: không ai bid, chỉ chê */
+const BID_HIGH = [
+  'Khởi điểm cao quá bác ơi',
+  'Giá khởi điểm chát thế, hạ đi em vào bid',
+  'Khởi điểm này mua mới luôn cho lành',
+]
+/** đã bid tới trần: người mua dừng */
+const BID_STOP = ['Theo không nổi rồi', 'Đắt rồi, em dừng', 'Hóng xem ai chốt', 'Nhường bác kia 😅']
+
+/**
+ * 1 lượt bot ghé fast bid: trả thêm vài bước (không quá giá trần ẩn) hoặc bình luận (hỏi han / up bài; khởi điểm
+ * cao quá thì chê, chạm trần thì "theo không nổi"). top = người giữ giá mới (không có = chỉ bình luận); null = không ai ghé
+ */
 export function bidTurn(
   l: Listing,
   now = Date.now(),
-): { line: ListingLine; top: Bid['top'] } | null {
+): { line: ListingLine; top?: Bid['top'] } | null {
   const b = l.bid
-  if (!b || now >= b.endsAt) return null
+  if (!b || now >= b.endsAt || l.log.length >= 30) return null
   // còn xa giá trần thì người mua nhảy giá mạnh (tới ~30% khoảng còn lại), gần trần thì nhích từng bước
   const gap = Math.floor((b.cap - (b.top?.amount ?? b.start)) / b.step)
   const jump = Math.max(1, Math.round(Math.random() * gap * 0.3))
   const next = b.top ? b.top.amount + b.step * jump : b.start
-  if (next > b.cap) return null
-  // không tự bid đè chính mình
   const name = pick(BUYERS.filter((n) => n !== b.top?.name))
+  if (next > b.cap) {
+    if (Math.random() < 0.5) return null
+    return { line: { name, text: pick(b.top ? BID_STOP : BID_HIGH) } }
+  }
+  // thỉnh thoảng chỉ vào hỏi / up bài
+  if (Math.random() < 0.2) return { line: { name, text: pick([...QUESTIONS, ...UPS]) } }
+  // không tự bid đè chính mình
   return { line: { name, text: `${pick(BID_LINES)} ${next}k` }, top: { name, amount: next } }
 }
 

@@ -1,6 +1,6 @@
 import { useGame, useBuild, useCtx } from '@/store'
 import { STEP_INFO, stepProgress } from '@/data/steps'
-import { TOOLS } from '@/data/parts'
+import { SCREW_FULL } from '@/data/parts'
 import { HudPanel, StepDot } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { deadKey } from '@/store/scoring'
@@ -13,7 +13,7 @@ import { deadKey } from '@/store/scoring'
 export function StepList() {
   const ctx = useCtx()
   const build = useBuild()
-  const clicks = useGame((s) => TOOLS.screw[s.tools.screw].clicks!)
+  const clicks = SCREW_FULL
   const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
   // bước nào lùi về được: đã có thao tác được ghi lại từ lúc bắt đầu bước đó
   const firstRecorded = useGame((s) => (s.history.length ? s.history[0].build.stepIdx : Infinity))

@@ -17,6 +17,7 @@ import { CATS } from '@/data/parts'
 import {
   BID_STEPS,
   BUYBACK_DAYS,
+  bidFloor,
   jobPartFree,
   LISTING_TAGS,
   RICH_MAX,
@@ -203,7 +204,16 @@ function SourceRow({ src, index }: { src: ListingSource; index?: number }) {
       {open && (
         <div className="flex flex-col gap-2 border-t border-dashed border-line pt-2">
           <div className="flex flex-wrap items-center gap-2">
-            <OptionSelect value={mode} onChange={setMode} options={MODES} className="w-36" />
+            <OptionSelect
+              value={mode}
+              // fast bid mặc định khởi điểm = giá sàn (khởi điểm cao hơn giá người mua chịu trả thì không ai bid)
+              onChange={(m) => {
+                setMode(m)
+                setPrice(m === 1 ? bidFloor(src) : value)
+              }}
+              options={MODES}
+              className="w-36"
+            />
             <PriceInput
               value={price}
               onChange={setPrice}
@@ -246,7 +256,7 @@ function SourceRow({ src, index }: { src: ListingSource; index?: number }) {
           </div>
           <Muted>
             {bid
-              ? 'Fast bid chạy 1 phút, giá khởi điểm từ 0đ: may thì lời, ế thì lỗ.'
+              ? `Fast bid chạy 1 phút. Giá sàn ${fmt(bidFloor(src))}: khởi điểm tới mức này chắc chắn có người bid (hạ được tới 0đ), cao hơn thì có thể ế. May thì lời, ế thì lỗ.`
               : `Đăng tới ${RICH_MAX}× giá gốc (${fmt(Math.round(base * RICH_MAX))}) vẫn có thể gặp đại gia chốt trong đêm; chứng chỉ thợ +5% mỗi bậc.`}
             {sourceFlaw(src) && ' Hàng lỗi: bán đi có thể bị tố mô tả sai, admin ban chợ.'}
           </Muted>
