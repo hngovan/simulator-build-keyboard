@@ -25,13 +25,17 @@ export function GameOverDialog() {
             ['Tiền còn lại', fmtMoney(entry.money)],
           ]}
         />
-        <div className="text-center text-[13px] text-ink/75">
-          {sent === 'sending'
-            ? 'Đang gửi kết quả lên bảng xếp hạng...'
-            : sent === 'offline'
-              ? 'Chưa kết nối được server, kết quả sẽ tự gửi lại lần sau.'
+        {sent === 'offline' ? (
+          <Alert title="Chưa gửi được kết quả">
+            Chưa kết nối được server bảng xếp hạng, kết quả sẽ tự gửi lại lần sau.
+          </Alert>
+        ) : (
+          <div className="text-center text-[13px] text-ink/75">
+            {sent === 'sending'
+              ? 'Đang gửi kết quả lên bảng xếp hạng...'
               : `Đã ghi lên bảng xếp hạng: hạng ${sent.rank} / ${sent.total} theo tiền.`}
-        </div>
+          </div>
+        )}
         <Button tone="green" size="lg" onClick={close}>
           ↩ Về màn hình chính
         </Button>

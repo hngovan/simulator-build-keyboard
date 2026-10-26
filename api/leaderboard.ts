@@ -17,9 +17,26 @@ import {
 
 declare const process: { env: Record<string, string | undefined> }
 
-// tích hợp Upstash trên Vercel đặt KV_REST_API_*; tạo database Upstash tay thì là UPSTASH_REDIS_REST_*
-const URL_ = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL
-const TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN
+// tích hợp Upstash trên Vercel đặt KV_REST_API_* (có thể kèm tiền tố tự chọn, vd STORAGE_KV_REST_API_URL);
+// tạo database Upstash tay thì là UPSTASH_REDIS_REST_*. Lấy biến đầu tiên khớp đuôi tên
+const envEnd = (...ends: string[]) => {
+  const name = Object.keys(process.env).find(
+    (k) => ends.some((e) => k.endsWith(e)) && process.env[k],
+  )
+  return name ? process.env[name] : undefined
+}
+const URL_ = envEnd('KV_REST_API_URL', 'REDIS_REST_URL')
+// token chỉ đọc (KV_REST_API_READ_ONLY_TOKEN) không ghi được: không khớp đuôi này
+const TOKEN = envEnd('KV_REST_API_TOKEN', 'REDIS_REST_TOKEN')
+/** thiếu cấu hình: báo tên các biến liên quan đang có (không lộ giá trị) để dò */
+const notConfigured = () =>
+  json(
+    {
+      error: 'chưa cấu hình Upstash Redis',
+      env: Object.keys(process.env).filter((k) => /KV|REDIS|UPSTASH/.test(k)),
+    },
+    503,
+  )
 
 const RUNS = 'lb:runs'
 const zkey = (k: string) => `lb:z:${k}`
@@ -86,7 +103,7 @@ export async function OPTIONS() {
 }
 
 export async function GET(req: Request) {
-  if (!URL_ || !TOKEN) return json({ error: 'chưa cấu hình Upstash Redis' }, 503)
+  if (!URL_ || !TOKEN) return notConfigured()
   try {
     return json(await board(rankKey(new URL(req.url).searchParams.get('key'))))
   } catch (e) {
@@ -95,7 +112,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  if (!URL_ || !TOKEN) return json({ error: 'chưa cấu hình Upstash Redis' }, 503)
+  if (!URL_ || !TOKEN) return notConfigured()
   const run = parseRun(await req.json().catch(() => null))
   if (!run) return json({ error: 'bad run' }, 400)
   try {

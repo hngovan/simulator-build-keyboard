@@ -15,12 +15,13 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.4',
     date: '2026-10-26',
-    commits: [],
+    commits: ['4c3428f'],
     title: 'O-ring sau lắp switch, tua vít tay, bảng xếp hạng trên Vercel',
     items: [
       'O-ring mount: gắn vòng silicon sau khi lắp switch (PCB hàn thì sau khi hàn), lúc switch đã giữ chặt plate; bản lưu cũ tự dời bước',
       'Hiệu ứng tua vít thường: vặn chậm theo cổ tay, xoay đúng bằng góc con ốc, nhấn xuống khi vặn (không còn giật như tua vít điện)',
       'Bảng xếp hạng chạy được khi deploy Vercel (Vercel Function + Upstash Redis), chạy local vẫn dùng bun run server',
+      'Popup thua game: gửi kết quả lỗi thì hiện khung cảnh báo đỏ; API bảng xếp hạng tìm biến môi trường Upstash cả khi có tiền tố',
       'README: bảng lịch sử cập nhật mọi phiên bản, ảnh demo top mount / O-ring / hàn switch / dán feet / switch mới, hướng dẫn deploy Vercel',
     ],
   },
