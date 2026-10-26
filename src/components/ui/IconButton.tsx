@@ -10,24 +10,20 @@ interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title'> {
   tone?: ButtonTone
 }
 
-/** Nút vuông chỉ có icon, rê chuột hiện tooltip bên dưới (thanh menu bàn build) */
+/**
+ * Nút vuông chỉ có icon, rê chuột hiện tooltip. Dùng tooltip chung (`title` → GlobalTooltip vẽ qua portal, sát mép trên thì
+ * tự lật xuống dưới) thay vì ô absolute ngay dưới nút: nút nằm trong khung overflow-hidden (bảng chọn đơn) thì tooltip bị cắt mất
+ */
 export function IconButton({ icon, label, tone, className, ...props }: Props) {
   return (
-    <span className="group/tip relative inline-flex">
-      <Button
-        tone={tone}
-        aria-label={label}
-        className={cn('grid size-11 place-items-center !p-0 [&_svg]:size-[22px]', className)}
-        {...props}
-      >
-        {icon}
-      </Button>
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute top-full left-1/2 z-10 mt-2.5 -translate-x-1/2 translate-y-1 rounded-lg border border-white/10 bg-[#0e1018]/95 px-2.5 py-1.5 text-center text-[13px] font-extrabold whitespace-nowrap text-white opacity-0 shadow-[0_6px_16px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-150 group-hover/tip:translate-y-0 group-hover/tip:opacity-100"
-      >
-        {label}
-      </span>
-    </span>
+    <Button
+      tone={tone}
+      aria-label={label}
+      title={label}
+      className={cn('grid size-11 place-items-center !p-0 [&_svg]:size-[22px]', className)}
+      {...props}
+    >
+      {icon}
+    </Button>
   )
 }

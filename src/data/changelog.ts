@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Hội Phím Cơ: ô trống "Nhận đơn trước…" có icon như tab Bài của tôi',
       'Nút Bảng tỉ lệ: bóng đổ xanh nhạt cùng tông thay vệt xám, icon trắng',
       'Bảng tỉ lệ: dòng dài tự xuống dòng, không tràn khung',
+      'Sửa tooltip nút icon (Mua ở Shopii / Hội Phím Cơ / Chi tiết đơn) ở bảng chọn đơn bàn build bị khung che mất',
     ],
   },
   {

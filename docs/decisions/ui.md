@@ -390,3 +390,4 @@
   (đè riêng bằng `!`, không đổi `Button` chung).
 - Sửa (2026-10-26): nút "Bảng tỉ lệ" trong bong bóng: bóng đen 35% của `Button` trên nền kem thành vệt xám → bóng `#9cc3ff` (xanh nhạt cùng tông, cả hover / active), emoji 📊 → icon lucide `ChartColumn` trắng.
 - Sửa (2026-10-26): bảng tỉ lệ tràn khung ở dòng dài ("Test: phím không nhận · giao đi…") vì cột tỉ lệ `shrink-0` → 2 cột `min-w-0` co giãn, cột tỉ lệ `max-w-[55%]` + `break-words` xuống dòng (đã đo: dòng 3 hàng, nằm trong khung).
+- Sửa (2026-10-26): tooltip nút icon ở bảng chọn đơn (bàn build) bị ẩn — `IconButton` vẽ tooltip `absolute` ngay dưới nút, nút sát đáy bảng `overflow-hidden` nên bị cắt (không phải z-index). `IconButton` giờ dùng `title` → GlobalTooltip (portal, z-3000, sát mép trên tự lật xuống). Taskbar giữ tooltip riêng (không bị khung cắt).
