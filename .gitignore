@@ -3,3 +3,9 @@ dist/
 .superpowers/
 release/
 server/data/
+.env
+.env.*
+!.env.example
+
+.vercel
+.env*

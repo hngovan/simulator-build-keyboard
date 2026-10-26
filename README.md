@@ -105,6 +105,9 @@ bun run dev
   (tạo database Upstash tay thì đặt `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`), rồi deploy lại.
 - Client gọi `/api/leaderboard` cùng domain nên không cần đặt `VITE_LEADERBOARD_URL`. Chưa nối Redis thì API trả 503, kết quả
   lượt chơi nằm trong hàng chờ ở máy người chơi và gửi lại khi mở app Bảng xếp hạng.
+- Danh sách biến môi trường + giải thích: [.env.example](.env.example). File `.env` không có tác dụng trên Vercel, phải đặt
+  ở Settings → Environment Variables (môi trường **Production**) rồi **Redeploy**; API còn trả 503 thì phản hồi liệt kê tên biến
+  Redis đang thấy để dò.
 - Chạy local vẫn dùng `bun run server` (lưu file JSON), Vite proxy `/api` về đó.
 
 ## Quy ước mã nguồn
