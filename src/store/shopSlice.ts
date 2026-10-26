@@ -298,6 +298,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   },
   // sang ngày mới: gửi nốt đơn đã đóng gói, đợt đơn mới, đơn chờ quá hạn lâu thì khách huỷ
   nextDay: () => {
+    // phím của khách đang đăng bán mà chưa bán: trả về chờ gửi (gửi luôn bên dưới), vụ chuộc quá hạn thì mất
+    get().closeSellDay(get().day + 1)
     const s = get()
     // gửi các đơn đã đóng gói chưa gửi: khách hoàn tiền linh kiện + trả công, chấm sao → uy tín
     let money = s.money

@@ -7,20 +7,21 @@ import {
   fetchBoard,
   flushPending,
   runScore,
-  type RunEndReason,
+  type RunReason,
   type ServerRankKey,
   type ServerRun,
 } from '@/lib/leaderboardApi'
 
 const MEDALS = ['🥇', '🥈', '🥉']
-const REASON: Record<RunEndReason, [string, BadgeTone]> = {
+const REASON: Record<RunReason, [string, BadgeTone]> = {
+  save: ['Đang chơi', 'green'],
   rep: ['Dính phốt', 'red'],
   money: ['Cạn vốn', 'orange'],
   bankrupt: ['Phá sản', 'default'],
   newgame: ['Chơi lại', 'blue'],
 }
 
-type Row = Omit<ServerRun, 'reason'> & { reason?: RunEndReason; mine?: boolean }
+type Row = Omit<ServerRun, 'reason'> & { reason?: RunReason; mine?: boolean }
 type Load = 'loading' | 'error' | { total: number; runs: ServerRun[] }
 
 /** bộ lọc xếp hạng: tên chip + cách hiện giá trị bên phải mỗi dòng */

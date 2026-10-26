@@ -113,7 +113,22 @@ export function HudSection({
 export type StepDotState = 'done' | 'ahead' | 'cur' | 'todo' | 'skip'
 
 /** Chấm trạng thái của 1 bước: ✓ xong · số đang làm (vàng) / chưa tới (xám) · – không cần */
-export function StepDot({ state, children }: { state: StepDotState; children?: ReactNode }) {
+/** alert: bước gây lỗi (vd test thấy phím chưa hàn) — chấm đỏ nhấp nháy dấu "!" để quay lại sửa */
+export function StepDot({
+  state,
+  alert,
+  children,
+}: {
+  state: StepDotState
+  alert?: boolean
+  children?: ReactNode
+}) {
+  if (alert)
+    return (
+      <span className="grid size-[22px] shrink-0 animate-pulse place-items-center rounded-full bg-red text-[12px] font-extrabold text-white shadow-[0_0_0_4px_#ff5a5a66]">
+        !
+      </span>
+    )
   return (
     <span
       className={cn(

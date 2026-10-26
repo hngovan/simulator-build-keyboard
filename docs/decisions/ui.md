@@ -332,3 +332,17 @@
   ảnh demo ban-lube + han-switch nghiêng, nút "Chơi miễn phí trên web"), dựng ở 2× rồi chụp từng mảnh PNG ở trình duyệt Orca, ghép + thu nhỏ trung bình vùng (giải mã PNG bằng zlib, mã hoá `jpeg-js` q92; bản đầu chụp JPEG 1× bị mờ);
   trang tạm đã xoá. Muốn làm lại thì dựng lại tương tự.
 - Facebook / Zalo lưu đệm bản xem trước cũ: dùng Facebook Sharing Debugger ("Scrape Again") để làm mới.
+
+### Esc, cửa sổ sát mép trên, Cài đặt mới, Keeb-chan (2026-10-26)
+
+- Esc mở Cài đặt (đang mở trên cùng thì đóng): `hooks/useAppShortcuts.ts`; bỏ qua khi gõ chữ, bước test (Esc là 1 phím test), có popup
+  (`[class*="z-[3500]"]` / `z-[4000]` / `[role=dialog]`). Ở bàn build thì về máy tính rồi mở.
+- Mọi app mở ở `y: 12` (Desktop `initial`), chỉ lệch ngang; trước đây `20 + i * 26` nên app cuối danh sách mở thấp.
+- Cài đặt: khối "Tiến trình" trên cùng = Phá sản (đỏ, trái) + Lưu tiến trình (xanh, phải, `saveRun`). Ghi chú "lưu cùng tiến trình" /
+  "không hoàn tác được" / câu giải thích phá sản gói vào icon "!" (`Heading info`, tooltip `title`). Về màn đăng nhập mà tiến trình
+  chưa lên bảng xếp hạng thì hỏi (`ConfirmExit`: Ở lại / Thoát không lưu / Lưu & thoát).
+- Đóng tab: trình duyệt không cho hộp thoại tuỳ chỉnh lúc tắt trang, nên `pagehide` tự gửi tiến trình bằng `navigator.sendBeacon`
+  (`beaconRun`) thay vì hỏi.
+- NPC hướng dẫn Keeb-chan (yêu cầu: "gái anime 2D", ảnh tham khảo Typewriter-chan chibi): vẽ SVG `GuideGirl` chủ đề bàn phím (mái đen,
+  tóc kem 2 bên, băng đô hàng keycap, tạp dề in keycap, mắt nhắm ":3"). `GuideNpc`: máy tính góc phải trên taskbar, bàn build góc trái dưới;
+  Hiểu rồi / Thu nhỏ / Tắt hướng dẫn; bật lại + xem lại mẹo ở Cài đặt (`GuidePanel`).

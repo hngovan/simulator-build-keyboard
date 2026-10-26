@@ -314,6 +314,8 @@ export interface BuildState {
   closed: boolean
   keycaps: Record<string, true>
   tested: Record<string, true>
+  /** phím bấm thử ở bước test mà không ăn (PCB hàn: chưa hàn / hàn cháy); bản lưu cũ không có */
+  testFaults?: Record<string, true>
   stabMods: StabMods
   stabModDone: boolean
   /** số switch đã tách vỏ bằng đồ mở (bản lưu cũ không có: coi như = lubed) */
@@ -409,6 +411,8 @@ export interface DeliveryResult {
   labor: number
   /** số ngày giao trễ hạn (trừ uy tín) */
   late?: number
+  /** nút khách báo lỗi (nhãn phím): chưa hàn / hàn cháy, hoặc lỗi ẩn do không test hết trước khi giao */
+  defects?: string[]
 }
 
 export interface Toast {

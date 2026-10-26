@@ -1,6 +1,6 @@
 // Thua game / kết thúc lượt chơi: uy tín quá thấp, hết tiền nhận đơn, tự phá sản (hoặc chơi mới đè bản lưu)
 import type { Order, Review } from '@/types'
-import type { RunEndReason, RunEntry } from '@/lib/leaderboardApi'
+import type { RunEndReason, RunEntry, RunReason } from '@/lib/leaderboardApi'
 import { estimateCost } from './orders'
 
 /** uy tín từ mức này trở xuống thì thua (bị phốt quá nhiều) */
@@ -58,7 +58,11 @@ interface RunProfile {
 }
 
 /** kết quả 1 lượt chơi để gửi bảng xếp hạng */
-export function runEntry(p: RunProfile, reason: RunEndReason): RunEntry {
+/** dấu tiến trình: đổi thì bảng xếp hạng chưa có bản mới nhất (dùng cho nút Lưu / hỏi khi thoát) */
+export const runSig = (p: Pick<RunProfile, 'day' | 'done' | 'money' | 'rep'>) =>
+  `${p.day}|${p.done}|${p.money}|${p.rep}`
+
+export function runEntry(p: RunProfile, reason: RunReason): RunEntry {
   const shipped = p.reviews.filter((r) => r.kind === 'ship')
   return {
     runId: p.runId || newRunId(),

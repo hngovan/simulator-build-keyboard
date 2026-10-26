@@ -2,6 +2,8 @@
 // Gửi lỗi (mất mạng, server tắt) thì cất vào hàng chờ, lần mở bảng xếp hạng sau gửi lại.
 
 export type RunEndReason = 'rep' | 'money' | 'bankrupt' | 'newgame'
+/** lý do ghi bảng xếp hạng: kết thúc lượt, hoặc 'save' = lưu tiến trình khi đang chơi */
+export type RunReason = RunEndReason | 'save'
 import type { RankKey } from '../../server/leaderboardCore'
 export type ServerRankKey = RankKey
 export { runScore } from '../../server/leaderboardCore'
@@ -9,7 +11,7 @@ export { runScore } from '../../server/leaderboardCore'
 export interface RunEntry {
   runId: string
   name: string
-  reason: RunEndReason
+  reason: RunReason
   day: number
   done: number
   money: number
@@ -57,6 +59,17 @@ export async function submitRun(entry: RunEntry) {
     writePending([...readPending().filter((e) => e.runId !== entry.runId), entry])
     return null
   }
+}
+
+/** gửi lúc đóng tab (trình duyệt vẫn gửi nốt dù trang đã tắt); không gửi được thì cất hàng chờ */
+export function beaconRun(entry: RunEntry) {
+  const ok =
+    typeof navigator.sendBeacon === 'function' &&
+    navigator.sendBeacon(
+      `${API}/leaderboard`,
+      new Blob([JSON.stringify(entry)], { type: 'application/json' }),
+    )
+  if (!ok) writePending([...readPending().filter((e) => e.runId !== entry.runId), entry])
 }
 
 /** gửi lại các lượt chưa gửi được */

@@ -6,7 +6,8 @@ export const TOP = 50
 /** số lượt giữ lại (bỏ bớt lượt điểm tổng thấp nhất) */
 export const KEEP = 5000
 
-export const REASONS = ['rep', 'money', 'bankrupt', 'newgame'] as const
+/** save = người chơi tự lưu tiến trình giữa chừng (lượt vẫn đang chơi) */
+export const REASONS = ['rep', 'money', 'bankrupt', 'newgame', 'save'] as const
 /** score = điểm tổng hợp (`runScore`), các khoá còn lại là trường của lượt chơi */
 export const KEYS = ['score', 'rep', 'done', 'money', 'stars', 'day'] as const
 export type RankKey = (typeof KEYS)[number]

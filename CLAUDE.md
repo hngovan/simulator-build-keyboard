@@ -180,6 +180,15 @@ vào `window.__r3f` để debug trong console.
 - App "Bảng xếp hạng" (`apps/leaderboard/LeaderboardApp`, `lib/leaderboardApi.ts`): chỉ tính server (bỏ shop đối thủ giả lập),
   lượt chơi đã kết thúc của mọi người + lượt đang chơi chèn vào, xếp theo điểm tổng (`runScore`: đơn ×10 + uy tín ×20 + ngày ×5 + tiền / 100k), chip lọc theo tiền / đơn / uy tín / ngày (`server/leaderboardCore.ts`); gửi lỗi thì cất hàng chờ `sbk-lb-pending`.
   Tiền gọn theo cỡ `fmtMoney` (< 10.000k giữ k, ≥ 10.000k → m, ≥ 100.000k → B; `lib/format.ts`) ở bảng xếp hạng + ví; giá Shopii vẫn `fmt` (k).
+- Shop tự đăng bán ở Hội Phím Cơ (tab "Bài của tôi", `apps/group/MyListings`, `data/selling.ts`, `store/sellSlice.ts`): đồ kho chung
+  hoặc phím của khách (đơn đóng gói chưa gửi); bot hỏi / trả giá (`botTurn`), bấm giá để bán. Bán phím của khách: 5% (`STEAL_OK`) khách quên,
+  còn lại −1 uy tín + `stolen` (chuộc lại `buyBack` giá ×1.3, 30% không cho chuộc, chuộc được +2 uy tín, quá 3 ngày mất). `listings` / `stolen` trong Profile.
+- Test phím: PCB hàn còn phím chưa hàn / cháy thì bấm không ăn (`deadKey`, `build.testFaults` → StepList sáng "!" bước hàn để quay lại sửa);
+  bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
+  (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
+- NPC hướng dẫn Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`): mẹo theo tình huống (`TIPS`), `guideSeen` / `guideOff` trong Profile.
+- Esc mở / đóng Cài đặt (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup). Cài đặt trên cùng: Phá sản + Lưu tiến trình
+  (`saveRun` = gửi bảng xếp hạng lý do `'save'`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
   (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Tự phá sản ở Cài đặt; chơi mới đè save cũng gửi lượt cũ.
 - Layout có `fits` (Planck: `['40']`): case cỡ khác không có model CAD cũng vừa (`caseFits`).

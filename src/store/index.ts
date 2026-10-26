@@ -5,8 +5,9 @@ import { lossReason } from '@/data/gameOver'
 import { createMetaSlice, type MetaSlice } from './metaSlice'
 import { createShopSlice, type ShopSlice } from './shopSlice'
 import { createBuildSlice, type BuildSlice } from './buildSlice'
+import { createSellSlice, type SellSlice } from './sellSlice'
 
-export type GameState = MetaSlice & ShopSlice & BuildSlice
+export type GameState = MetaSlice & ShopSlice & BuildSlice & SellSlice
 export type { AppId } from './metaSlice'
 export type { StabModKind } from './buildSlice'
 
@@ -14,6 +15,7 @@ export const useGame = create<GameState>()((...a) => ({
   ...createMetaSlice(...a),
   ...createShopSlice(...a),
   ...createBuildSlice(...a),
+  ...createSellSlice(...a),
 }))
 
 // ---------- selector dùng lại ở nhiều nơi ----------
@@ -68,6 +70,11 @@ const SAVED_KEYS = [
   'history',
   'supplyUsed',
   'runId',
+  'lbSynced',
+  'listings',
+  'stolen',
+  'guideSeen',
+  'guideOff',
 ] as const satisfies readonly (keyof GameState)[]
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 useGame.subscribe((s, prev) => {

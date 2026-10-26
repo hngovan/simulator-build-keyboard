@@ -32,16 +32,73 @@ function ConfirmBankrupt({ onCancel, onConfirm }: { onCancel: () => void; onConf
   )
 }
 
-/** Người chơi tự tuyên bố phá sản: kết thúc lượt chơi, gửi bảng xếp hạng */
-function BankruptPanel() {
+/** Hỏi có lưu tiến trình lên bảng xếp hạng trước khi về màn hình đăng nhập không */
+function ConfirmExit({ onCancel }: { onCancel: () => void }) {
+  const [saving, setSaving] = useState(false)
+  const exit = () => (onCancel(), useGame.getState().returnToTitle())
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[3500] grid animate-fade-in place-items-center bg-black/60 p-4"
+      onPointerDown={(e) => e.target === e.currentTarget && onCancel()}
+    >
+      <HudCard className="flex w-[min(460px,100%)] flex-col gap-3">
+        <h3 className="font-head text-xl font-extrabold text-yellow">
+          💾 Lưu tiến trình trước khi thoát?
+        </h3>
+        <Muted className="text-sm">
+          Tiến trình mới chưa được ghi lên bảng xếp hạng. Bản lưu trong máy vẫn còn, vào lại chơi
+          tiếp được.
+        </Muted>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button onClick={onCancel}>Ở lại</Button>
+          <Button tone="red" onClick={exit}>
+            Thoát không lưu
+          </Button>
+          <Button
+            tone="green"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true)
+              await useGame.getState().saveRun()
+              exit()
+            }}
+          >
+            {saving ? 'Đang lưu...' : '💾 Lưu & thoát'}
+          </Button>
+        </div>
+      </HudCard>
+    </div>,
+    document.body,
+  )
+}
+
+/** Trên cùng Cài đặt: phá sản (trái) + lưu tiến trình lên bảng xếp hạng (phải, màu xanh) */
+function ProgressPanel() {
   const [asking, setAsking] = useState(false)
+  const [saving, setSaving] = useState(false)
   return (
     <Panel>
-      <Heading note="không hoàn tác được">Phá sản</Heading>
-      <Muted>Đóng cửa xưởng, ghi kết quả lượt chơi lên bảng xếp hạng rồi chơi lại từ đầu.</Muted>
-      <Button tone="red" wide onClick={() => setAsking(true)}>
-        🏳️ Tuyên bố phá sản
-      </Button>
+      <Heading info="Lưu: ghi tiến trình hiện tại lên bảng xếp hạng, chơi tiếp bình thường. Phá sản: đóng cửa xưởng, ghi kết quả lên bảng xếp hạng rồi chơi lại từ đầu, không hoàn tác được">
+        Tiến trình
+      </Heading>
+      <div className="flex gap-2">
+        <Button tone="red" className="flex-1" onClick={() => setAsking(true)}>
+          🏳️ Phá sản
+        </Button>
+        <Button
+          tone="green"
+          className="flex-1"
+          disabled={saving}
+          title="Ghi tiến trình hiện tại lên bảng xếp hạng"
+          onClick={async () => {
+            setSaving(true)
+            await useGame.getState().saveRun()
+            setSaving(false)
+          }}
+        >
+          {saving ? 'Đang lưu...' : '💾 Lưu tiến trình'}
+        </Button>
+      </div>
       {asking && (
         <ConfirmBankrupt
           onCancel={() => setAsking(false)}
@@ -79,12 +136,34 @@ function VolumeRow({
   )
 }
 
+/** Bật / tắt NPC hướng dẫn Keeb-chan, xem lại các mẹo từ đầu */
+function GuidePanel() {
+  const off = useGame((s) => s.guideOff)
+  const { setGuideOff } = useGame.getState()
+  return (
+    <Panel>
+      <Heading info="Lưu cùng tiến trình">Hướng dẫn</Heading>
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-panel-2 px-3 py-2.5">
+        <span className="font-bold">Keeb-chan nhắc mẹo chơi</span>
+        <Toggle checked={!off} onChange={(on) => setGuideOff(!on)} label="Bật hướng dẫn" />
+      </div>
+      <Button
+        size="sm"
+        className="mt-2"
+        onClick={() => useGame.setState({ guideSeen: [], guideOff: false })}
+      >
+        Xem lại mẹo từ đầu
+      </Button>
+    </Panel>
+  )
+}
+
 /** Công cụ thử nghiệm, chỉ hiện khi chạy `bun run dev` */
 function DevPanel() {
   const rich = useDevMoney((s) => s.on)
   return (
     <Panel>
-      <Heading note="chỉ có khi dev">Dev</Heading>
+      <Heading info="Chỉ có khi dev">Dev</Heading>
       <div className="flex items-center justify-between gap-3 rounded-xl bg-panel-2 px-3 py-2.5">
         <span className="font-bold">Tiền vô hạn</span>
         <Toggle checked={rich} onChange={setDevMoney} label="Tiền vô hạn" />
@@ -98,11 +177,14 @@ function DevPanel() {
 export function SettingsApp() {
   const audio = useGame((s) => s.audio)
   const { setAudio, returnToTitle } = useGame.getState()
+  const [exiting, setExiting] = useState(false)
 
   return (
     <div className="space-y-3">
+      <ProgressPanel />
+
       <Panel>
-        <Heading note="lưu cùng tiến trình">Âm thanh</Heading>
+        <Heading info="Lưu cùng tiến trình">Âm thanh</Heading>
         <div className="mb-3 flex items-center justify-between gap-3 rounded-xl bg-panel-2 px-3 py-2.5">
           {/* icon loa đổi theo trạng thái tắt / bật */}
           <span className="flex items-center gap-2 font-bold [&_svg]:size-5">
@@ -133,17 +215,22 @@ export function SettingsApp() {
         </Muted>
       </Panel>
 
+      <GuidePanel />
+
       {import.meta.env.DEV && <DevPanel />}
 
       <Panel>
-        <Heading>Phiên đăng nhập</Heading>
-        <Muted>Tiến trình hiện tại đã được lưu tự động và không bị xoá.</Muted>
-        <Button tone="red" wide onClick={returnToTitle}>
+        <Heading info="Tiến trình đã tự lưu trong máy, không bị xoá">Phiên đăng nhập</Heading>
+        <Button
+          tone="red"
+          wide
+          // tiến trình mới chưa lên bảng xếp hạng thì hỏi có lưu không
+          onClick={() => (useGame.getState().unsynced() ? setExiting(true) : returnToTitle())}
+        >
           ↩ Về màn hình đăng nhập
         </Button>
+        {exiting && <ConfirmExit onCancel={() => setExiting(false)} />}
       </Panel>
-
-      <BankruptPanel />
     </div>
   )
 }

@@ -154,6 +154,8 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const [done, total] = stepProgress(step, build, ctx, TOOLS.screw[s.tools.screw].clicks!)
   const finished = done >= total
   const optional = step === 'stabMod' || step === 'switchLube'
+  // hàn dở vẫn đi tiếp được (nút đỏ cảnh báo), khớp nextStep
+  const soft = step === 'solder' && done > 0 && !finished
   const last = build.stepIdx >= ctx.steps.length - 1
   const busy = !!s.stabAnim || !!s.lubeAnim
   // đang đứng ở bước cũ (đã lùi về): đi tiếp theo các bước đã làm
@@ -216,18 +218,26 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
           {/* bước mở hộp: click thùng là tự sang bước sau, không cần nút */}
           {!last && step !== 'unbox' && (
             <Button
-              tone={finished || ahead ? 'green' : 'blue'}
+              tone={finished || ahead ? 'green' : soft ? 'red' : 'blue'}
               size="sm"
               className="inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm max-md:min-w-[140px]"
               onClick={s.nextStep}
-              disabled={busy || (!finished && !optional && !ahead)}
-              title={finished || optional || ahead ? undefined : 'Làm xong bước này trước'}
+              disabled={busy || (!finished && !optional && !ahead && !soft)}
+              title={
+                finished || optional || ahead
+                  ? undefined
+                  : soft
+                    ? 'Phím chưa hàn / hàn cháy sẽ không ăn khi test, khách nhận sẽ báo lỗi'
+                    : 'Làm xong bước này trước'
+              }
             >
               {finished || ahead
                 ? 'Bước tiếp theo →'
                 : optional
                   ? 'Bỏ qua →'
-                  : `Còn ${total - done} nữa`}
+                  : soft
+                    ? `Bỏ dở, còn ${total - done} phím →`
+                    : `Còn ${total - done} nữa`}
             </Button>
           )}
         </div>

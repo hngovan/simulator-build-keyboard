@@ -1,14 +1,20 @@
+import { useState } from 'react'
 import { useGame } from '@/store'
-import { Alert } from '@/components/ui'
+import { Alert, OptionChip } from '@/components/ui'
 import { PostCard } from './PostCard'
+import { MyListings } from './MyListings'
 
-// Group Facebook pass đồ: rẻ hơn nhưng caption "thuật ngữ chợ" giấu lỗi, có seller bùng; inbox để dò hỏi / trả giá
+// Group Facebook pass đồ: rẻ hơn nhưng caption "thuật ngữ chợ" giấu lỗi, có seller bùng; inbox để dò hỏi / trả giá.
+// Tab "Bài của tôi": shop tự đăng bán (MyListings)
 export function GroupFeed() {
   const posts = useGame((s) => s.posts)
   const order = useGame((s) => s.order)
   const day = useGame((s) => s.day)
   const banUntil = useGame((s) => s.marketBanUntil)
-  // đi ăn xin bị ban: không xem / mua được tới hết ngày banUntil - 1
+  const mine = useGame((s) => s.listings.length)
+  const openStolen = useGame((s) => s.stolen.some((x) => x.status === 'open'))
+  const [tab, setTab] = useState<'feed' | 'mine'>(openStolen ? 'mine' : 'feed')
+  // đi ăn xin bị ban: không xem / mua / đăng được tới hết ngày banUntil - 1
   if (day < banUntil)
     return (
       <div className="p-6">
@@ -17,20 +23,33 @@ export function GroupFeed() {
         </Alert>
       </div>
     )
-  if (!order)
-    return (
-      <div className="p-8 text-center text-muted">
-        Nhận đơn trước để xem các bài pass đồ phù hợp nhé.
-      </div>
-    )
   return (
     <div className="flex flex-col gap-2.5">
-      <Alert tone="yellow" title="Hàng pass rẻ hơn 20–40% nhưng mô tả toàn thuật ngữ chợ">
-        Xin hình, check var trước khi chuyển khoản kẻo dính flaw hoặc gặp seller bùng!
-      </Alert>
-      {posts.map((post) => (
-        <PostCard key={post.id} post={post} />
-      ))}
+      <div className="flex flex-wrap gap-1">
+        <OptionChip active={tab === 'feed'} onClick={() => setTab('feed')}>
+          Chợ pass
+        </OptionChip>
+        <OptionChip active={tab === 'mine'} onClick={() => setTab('mine')}>
+          Bài của tôi{mine ? ` (${mine})` : ''}
+          {openStolen && ' 🚨'}
+        </OptionChip>
+      </div>
+      {tab === 'mine' ? (
+        <MyListings />
+      ) : !order ? (
+        <div className="p-8 text-center text-muted">
+          Nhận đơn trước để xem các bài pass đồ phù hợp nhé.
+        </div>
+      ) : (
+        <>
+          <Alert tone="yellow" title="Hàng pass rẻ hơn 20–40% nhưng mô tả toàn thuật ngữ chợ">
+            Xin hình, check var trước khi chuyển khoản kẻo dính flaw hoặc gặp seller bùng!
+          </Alert>
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} />
+          ))}
+        </>
+      )}
     </div>
   )
 }

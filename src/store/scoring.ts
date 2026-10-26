@@ -11,6 +11,17 @@ import type {
   ScoreCheck,
 } from '@/types'
 
+/** giao khi chưa test hết phím: tỉ lệ khách phát hiện 1 nút lỗi */
+export const UNTESTED_FAIL = 0.05
+/** khách báo lỗi nút: sao tối đa */
+const DEFECT_STARS = 2
+
+/** phím chưa hàn / hàn cháy: không ăn (PCB hàn) */
+export const deadKey = (build: BuildState, id: string) => {
+  const j = build.solder[id]
+  return !j || (j !== true && j.burnt)
+}
+
 interface ScoreInput {
   order: Order
   inventory: Inventory
@@ -20,6 +31,8 @@ interface ScoreInput {
   spent: number
   screwClicks: number
   brushLevel: number
+  /** nguồn ngẫu nhiên (lỗi ẩn khi chưa test hết), mặc định Math.random */
+  rng?: () => number
 }
 
 // Chấm điểm đơn hàng khi giao (hàm thuần, không đụng tới store)
@@ -32,6 +45,7 @@ export function scoreDelivery({
   spent,
   screwClicks,
   brushLevel,
+  rng = Math.random,
 }: ScoreInput): DeliveryResult {
   let done = 0
   let total = 0
@@ -134,6 +148,20 @@ export function scoreDelivery({
       got: Math.max(0, 10 - (over / order.budget) * 40),
     },
   ]
+  // nút lỗi khách báo lại: PCB hàn còn phím chưa hàn / hàn cháy thì chắc chắn lỗi đúng các nút đó;
+  // không thì giao khi chưa test hết phím có UNTESTED_FAIL khách gặp 1 nút lỗi trong số phím chưa test
+  const label = (k: { label: string; id: string; w: number }) =>
+    k.label || (k.w >= 4 ? 'Space' : k.id)
+  let defects = soldered ? ctx.keys.filter((k) => deadKey(build, k.id)).map(label) : []
+  const untested = ctx.keys.filter((k) => !build.tested[k.id])
+  if (!defects.length && untested.length && rng() < UNTESTED_FAIL)
+    defects = [label(untested[Math.floor(rng() * untested.length)])]
+  if (defects.length)
+    checks.push({
+      label: `Khách báo lỗi nút: ${defects.slice(0, 6).join(', ')}${defects.length > 6 ? ` (+${defects.length - 6})` : ''}`,
+      pts: 0,
+      got: -15,
+    })
   const flaws = (['case', 'pcb', 'plate', 'stab', 'keycap'] as const)
     .map((c) => (inventory[c] as { flaw?: string } | null)?.flaw)
     .filter(Boolean)
@@ -144,7 +172,8 @@ export function scoreDelivery({
       got: -8 * flaws.length,
     })
   const score = Math.max(0, Math.round(checks.reduce((a, c) => a + c.got, 0)))
-  const stars = score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1
+  const byScore = score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1
+  const stars = defects.length ? Math.min(DEFECT_STARS, byScore) : byScore
   return {
     checks,
     score,
@@ -152,5 +181,6 @@ export function scoreDelivery({
     // khách trả đủ budget linh kiện: mua rẻ hơn thì phần dư vào túi shop, lố thì shop chịu
     reimburse: order.budget,
     labor: Math.round((order.labor * score) / 100),
+    ...(defects.length ? { defects } : {}),
   }
 }

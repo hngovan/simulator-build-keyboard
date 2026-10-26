@@ -52,7 +52,8 @@ export function Desktop() {
             zIndex={10 + z}
             initial={{
               x: Math.max(8, Math.min(window.innerWidth - app.width - 8, 140 + i * 40)),
-              y: 20 + i * 26,
+              // mọi app mở sát mép trên màn hình, chỉ lệch ngang cho khỏi chồng khít nhau
+              y: 12,
             }}
             minimized={minimized.includes(id)}
             onFocus={() => openApp(id)}

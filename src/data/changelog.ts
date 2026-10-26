@@ -13,9 +13,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.6',
+    date: '2026-10-26',
+    commits: [],
+    title: 'Đăng bán ở chợ, Keeb-chan hướng dẫn, lưu tiến trình, lỗi khi không test',
+    items: [
+      'Hội Phím Cơ thêm tab "Bài của tôi": đăng bán đồ trong kho hoặc phím của khách, bot hỏi han và trả giá',
+      'Bán phím của khách: 5% khách quên, còn lại bị lộ −1 uy tín; chuộc lại trên chợ (có người không cho chuộc) để gửi khách, được +2 uy tín',
+      'Test phím: phím chưa hàn / hàn cháy không ăn, bước hàn sáng dấu "!" để quay lại sửa; giao khi chưa test hết có 5% khách báo nút lỗi',
+      'Bước hàn cho bỏ dở khi chưa hàn hết (phím thiếu sẽ bị khách báo lỗi)',
+      'NPC hướng dẫn Keeb-chan nhắc mẹo theo tình huống, tắt / bật ở Cài đặt',
+      'Esc mở Cài đặt; Cài đặt có nút Lưu tiến trình (ghi bảng xếp hạng) và Phá sản ở trên cùng, ghi chú gói vào icon "!"',
+      'Về màn hình đăng nhập thì hỏi lưu tiến trình; đóng tab tự gửi tiến trình lên bảng xếp hạng',
+      'Mọi cửa sổ app mở sát mép trên màn hình',
+      'Chứng chỉ / sách phép bán ở chợ ghi lý do pass thay vì tả ngoại quan',
+    ],
+  },
+  {
     version: '0.1.5',
     date: '2026-10-26',
-    commits: ['71f1d0f'],
+    commits: ['71f1d0f', 'e95bf7e'],
     title: 'Xếp hạng theo điểm tổng, banner khi gửi link',
     items: [
       'Bảng xếp hạng xếp theo điểm tổng (số đơn + uy tín + số ngày + tiền), lọc theo từng thông số; khung loading khi đang tải; chỉ hiện sao khi có đánh giá',

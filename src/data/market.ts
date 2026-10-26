@@ -110,6 +110,21 @@ function rollCond(cat: string): Cond {
   return list[0][0]
 }
 
+/** chứng chỉ / sách phép là giấy tờ: bài pass nói lý do bán thay vì tả ngoại quan */
+const PAPER_LINES: Record<string, string[]> = {
+  cert: [
+    'Pass lại giấy phép vì cần tiền gấp',
+    'Giải nghệ không build nữa, pass chứng chỉ',
+    'Chuyển nghề nên pass lại chứng chỉ',
+    'Cần tiền đóng học phí, pass gấp chứng chỉ',
+  ],
+  spell: [
+    'Học thuộc hết phép rồi, pass lại sách',
+    'Mua dư 1 cuốn, pass lại',
+    'Cần tiền gấp nên pass sách',
+  ],
+}
+
 /** câu mô tả trong bài đăng: người bán liêm thì nói thật kiểu chợ, không liêm thì nói tránh */
 function condPhrase(cond: Cond, honest: boolean): string {
   switch (cond) {
@@ -184,7 +199,9 @@ export function makePost(
   return {
     id,
     seller,
-    caption: [condPhrase(cond, honest), ...tags].join(' · '),
+    caption: [PAPER_LINES[cat] ? pick(PAPER_LINES[cat]) : condPhrase(cond, honest), ...tags].join(
+      ' · ',
+    ),
     product,
     opt,
     price,

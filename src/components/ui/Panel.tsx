@@ -1,4 +1,5 @@
 import type { HTMLAttributes, ReactNode } from 'react'
+import { CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/format'
 
 type DivProps = HTMLAttributes<HTMLDivElement>
@@ -22,10 +23,24 @@ export function HudCard({ className, ...props }: DivProps) {
 }
 
 /** Tiêu đề nhỏ của khối */
-export function Heading({ children, note }: { children: ReactNode; note?: ReactNode }) {
+/** info: ghi chú phụ (lưu cùng tiến trình, không hoàn tác được...) gói vào icon "!", rê chuột mới hiện */
+export function Heading({
+  children,
+  note,
+  info,
+}: {
+  children: ReactNode
+  note?: ReactNode
+  info?: string
+}) {
   return (
-    <h4 className="mb-2 text-base">
+    <h4 className="mb-2 flex items-center gap-1.5 text-base">
       {children} {note && <span className="text-xs font-normal text-muted">{note}</span>}
+      {info && (
+        <span title={info} aria-label={info} className="shrink-0 cursor-help text-yellow">
+          <CircleAlert className="size-4" strokeWidth={2.5} />
+        </span>
+      )}
     </h4>
   )
 }

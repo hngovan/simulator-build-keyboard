@@ -3,7 +3,7 @@ import { randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
 import type { InventoryCheck } from '@/data/parts'
 import type { AudioSettings, Order, ShopCategory, Toast, Review } from '@/types'
-import { newRunId, runEntry } from '@/data/gameOver'
+import { newRunId, runEntry, runSig } from '@/data/gameOver'
 import { submitRun, type RunEndReason, type RunEntry } from '@/lib/leaderboardApi'
 import { START, clearSave, loadSave, writeSave, type Profile, type SaveData } from './persistence'
 import { emptyInventory } from './shopSlice'
@@ -71,6 +71,13 @@ export interface MetaSlice extends Profile {
   endRun: (reason: RunEndReason) => void
   /** đóng popup thua game, về màn hình tiêu đề */
   closeGameOver: () => void
+  /** lưu tiến trình hiện tại lên bảng xếp hạng (lượt vẫn chơi tiếp), trả đã gửi được chưa */
+  saveRun: () => Promise<boolean>
+  /** tiến trình đã đổi so với lần ghi bảng xếp hạng gần nhất */
+  unsynced: () => boolean
+  /** NPC hướng dẫn: đã đọc mẹo (không hiện lại) / bật tắt hướng dẫn */
+  seeGuide: (id: string) => void
+  setGuideOff: (off: boolean) => void
 }
 
 export interface GameOver {
@@ -133,6 +140,11 @@ function snapshot(s: GameState): SaveData {
     spare,
     marketBanUntil,
     runId: s.runId,
+    lbSynced: s.lbSynced,
+    listings: s.listings,
+    stolen: s.stolen,
+    guideSeen: s.guideSeen,
+    guideOff: s.guideOff,
     session: {
       offers,
       jobs: jobs.map((j) => ({
@@ -314,6 +326,26 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       const g = get().gameOver
       if (g?.entry.runId === entry.runId) set({ gameOver: { ...g, sent: res ?? 'offline' } })
     })
+  },
+  saveRun: async () => {
+    const s = get()
+    if (!s.name || s.gameOver) return false
+    s.save()
+    const sig = runSig(s)
+    const res = await submitRun(runEntry(s, 'save'))
+    if (!res) {
+      get().toast('Chưa kết nối được server, tiến trình sẽ tự gửi lại lần sau', 'bad')
+      return false
+    }
+    set({ lbSynced: sig })
+    get().toast(`💾 Đã lưu tiến trình: hạng ${res.rank} / ${res.total} theo điểm tổng`, 'good')
+    return true
+  },
+  seeGuide: (id) => set((s) => ({ guideSeen: [...new Set([...s.guideSeen, id])] })),
+  setGuideOff: (guideOff) => set({ guideOff }),
+  unsynced: () => {
+    const s = get()
+    return !!s.name && !s.gameOver && runSig(s) !== s.lbSynced
   },
   closeGameOver: () => {
     stopBgm()

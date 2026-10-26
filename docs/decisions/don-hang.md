@@ -306,3 +306,18 @@ bấm phá sản, new game".
   mount `oring` + `og` (đều cần case 1 mảnh, `buildContext` chèn bước `ring`). Thêm `tklAlu` "Case TKL nhôm 1 mảnh" (anod, 1.800k,
   tray / oring / og) vào dòng "Case TKL" (`CASE_LINES`: Nhựa ABS / Nhôm 1 mảnh / Acrylic 2 mảnh / Nhôm 2 mảnh). Case CAD giữ mount theo
   thiết kế thật. Case 2 mảnh vẫn gasket / top (nhôm, PC, acrylic) hoặc sandwich (mica).
+
+### Đăng bán ở chợ, bán phím của khách, lỗi khi không test (2026-10-26)
+
+- Yêu cầu: bán phím của khách 5% không bị phát hiện, lộ thì −1 uy tín, chuộc lại trên chợ (có tỉ lệ không cho chuộc "Không giữ, mất rồi
+  đừng tìm") để trả khách, tăng uy tín; Hội Phím Cơ thêm mục mình đăng bài bán (đồ của khách, đồ trong kho), bot vào hỏi.
+- `data/selling.ts` (`sourceValue` ~70% giá mới, lỗi 45%, phím khách ~95% budget; `botTurn`: đăng giá > 1.4× giá chợ thì hay bị chê,
+  trả giá 60–105% giá chợ không quá giá đăng) + `store/sellSlice.ts` (post / unlist / botVisit / sellListing / buyBack / closeSellDay).
+  Bot ghé mỗi 3,5s khi đang mở tab. Hết ngày (`nextDay` gọi `closeSellDay` trước khi gửi đơn) phím khách chưa bán trả về chờ gửi.
+- Chuộc lại: giá ×1.3 giá đã bán, 30% bị từ chối (vụ đóng, mất phím), được thì +2 uy tín (bù −1 lúc lộ) và đơn về `packed` để gửi ở Mezzenger.
+- Lỗi khi giao (yêu cầu: "không test trước khi giao có tỉ lệ lỗi ~5%; hàn không hết thì chắc chắn lỗi lúc test hoặc khách báo nút lỗi";
+  "phải back về bước lỗi sáng vòng tròn để fix, hoặc cứ thế gửi"): xem CLAUDE.md mục Test phím. Bước hàn trước đây bắt hàn đủ mới qua
+  được → giờ cho "Bỏ dở, còn N phím" (nút đỏ) khi đã hàn ≥ 1 phím.
+- Chứng chỉ / sách phép bán ở chợ: caption là lý do pass ("Pass lại giấy phép vì cần tiền gấp"...) thay vì "nguyên nhám, ngoại quan đẹp" (`PAPER_LINES`).
+- Mua dụng cụ / vật tư (`buyTool` / `buySupply`) không cộng `spent`, chỉ `buy` linh kiện mới tính vào budget đơn (đã thử trong game:
+  mua cọ + Urgo, `spent` vẫn 0).

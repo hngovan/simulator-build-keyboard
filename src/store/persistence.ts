@@ -15,6 +15,7 @@ import type {
 } from '@/types'
 import type { HistoryEntry } from './buildSlice'
 import { buildContext } from '@/data/steps'
+import type { Listing, Stolen } from '@/data/selling'
 
 const SAVE_KEY = 'sbk-save-v3'
 
@@ -44,6 +45,15 @@ export interface Profile {
   marketBanUntil: number
   /** mã lượt chơi (gửi bảng xếp hạng server, 1 lượt 1 dòng); bản lưu cũ: rỗng */
   runId: string
+  /** dấu tiến trình (`runSig`) lần cuối đã ghi lên bảng xếp hạng; khác hiện tại = chưa lưu bản mới */
+  lbSynced: string
+  /** bài shop tự đăng bán ở Hội Phím Cơ */
+  listings: Listing[]
+  /** vụ bán phím của khách bị lộ (chuộc lại được trong vài ngày) */
+  stolen: Stolen[]
+  /** NPC hướng dẫn: mẹo đã bấm "Hiểu rồi" + tắt hẳn hướng dẫn */
+  guideSeen: string[]
+  guideOff: boolean
 }
 
 // Đơn đang làm dở (lưu lại để thoát game vào lại vẫn tiếp tục được)
@@ -176,6 +186,11 @@ export const START: Profile = {
   spare: { switches: {}, stabs: {}, items: [] },
   marketBanUntil: 0,
   runId: '',
+  lbSynced: '',
+  listings: [],
+  stolen: [],
+  guideSeen: [],
+  guideOff: false,
 }
 
 export function loadSave(): SaveData | null {

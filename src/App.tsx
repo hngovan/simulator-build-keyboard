@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
 import { useGame } from '@/store'
 import { useKeyboardTest } from '@/hooks/useKeyboardTest'
+import { useAppShortcuts } from '@/hooks/useAppShortcuts'
 import { Toasts } from '@/components/game/Toasts'
 import { GlobalTooltip } from '@/components/ui/GlobalTooltip'
 import { ReviewPops } from '@/features/apps/reviews/ReviewPops'
 import { GameOverDialog } from '@/features/gameover/GameOverDialog'
+import { GuideNpc } from '@/features/guide/GuideNpc'
 import { TitleScreen } from '@/features/title/TitleScreen'
 import { Desktop } from '@/features/desktop/Desktop'
 import { BenchHud } from '@/features/bench/BenchHud'
@@ -21,6 +23,7 @@ export default function App() {
   const zooming = useGame((s) => s.pcZoom)
   const audio = useGame((s) => s.audio)
   useKeyboardTest()
+  useAppShortcuts()
   useEffect(() => {
     applyAudioSettings(audio)
     // nhạc nền ở cả máy tính lẫn bàn build (không phát ở màn hình tiêu đề)
@@ -42,6 +45,7 @@ export default function App() {
       <Toasts />
       <GlobalTooltip />
       <ReviewPops />
+      {!zooming && <GuideNpc />}
       <GameOverDialog />
     </>
   )

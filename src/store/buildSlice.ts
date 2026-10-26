@@ -25,7 +25,7 @@ import {
 } from '@/data/mods'
 import { SUPPLIES } from '@/data/supplies'
 import type { BuildContext, BuildState, ScrewBit, ScrewStep, StepId, ToolKind } from '@/types'
-import { scoreDelivery } from './scoring'
+import { deadKey, scoreDelivery } from './scoring'
 import { leftoverSpare } from './spare'
 import type { GameState } from '.'
 import { emptyInventory } from './shopSlice'
@@ -316,7 +316,9 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (s.future.length > 1) return s.forwardToStep(s.build.stepIdx + 1)
       const optional = step === 'stabMod' || step === 'switchLube'
       const [done, total] = stepProgress(step, s.build, s.ctx, screwClicks(s))
-      if (!optional && done < total) return
+      // hàn dở (đã hàn ít nhất 1 phím) vẫn cho đi tiếp: phím chưa hàn / cháy sẽ lộ ra lúc test hoặc khách báo lỗi
+      const soft = step === 'solder' && done > 0
+      if (!optional && !soft && done < total) return
       commit(snapshot())
       set({
         build: {
@@ -711,6 +713,24 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     press: (id, down) => {
       const s = at('test')
       if (!s || !s.build.keycaps[id]) return false
+      // PCB hàn: phím chưa hàn / hàn cháy thì bấm không ăn, không tính đã test
+      if (s.ctx.pcbType === 'solder' && deadKey(s.build, id)) {
+        if (down) {
+          const k = s.ctx.keys.find((x) => x.id === id)
+          s.toast(
+            `⚠️ Phím ${k?.label || (k && k.w >= 4 ? 'Space' : id)} không ăn: chân chưa hàn hoặc hàn cháy`,
+            'bad',
+          )
+        }
+        set({
+          pressed: { ...s.pressed, [id]: false },
+          // ghi lại để danh sách bước sáng bước hàn (quay lại sửa)
+          ...(down && !s.build.testFaults?.[id]
+            ? { build: { ...s.build, testFaults: { ...s.build.testFaults, [id]: true } } }
+            : {}),
+        })
+        return true
+      }
       const pressed = { ...s.pressed, [id]: down }
       if (down && !s.build.tested[id])
         set({

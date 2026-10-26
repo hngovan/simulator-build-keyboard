@@ -26,6 +26,10 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 <!-- prettier-ignore -->
 | Phiên bản | Ngày | Mảng | Thay đổi chính |
 | --- | --- | --- | --- |
+| **0.1.6** | 26/10/2026 | 🛒 Đăng bán ở chợ | Tab "Bài của tôi" ở Hội Phím Cơ: bán đồ trong kho hoặc phím của khách (dễ bị lộ, chuộc lại được). |
+|  |  | 🧪 Test phím | Phím chưa hàn không ăn, bước hàn sáng "!" để quay lại; giao khi chưa test hết có thể bị báo lỗi nút. |
+|  |  | 🎀 Keeb-chan | NPC hướng dẫn nhắc mẹo theo tình huống. |
+|  |  | 💾 Lưu tiến trình | Esc mở Cài đặt, nút Lưu ghi bảng xếp hạng; đóng tab tự gửi. |
 | **0.1.5** | 26/10/2026 | 🏆 Bảng xếp hạng | Xếp theo điểm tổng (đơn + uy tín + ngày + tiền), lọc theo từng thông số, khung loading khi tải. |
 |  |  | 🔗 Gửi link | Gửi link game lên Facebook / Messenger / Zalo / Discord hiện banner + mô tả. |
 | **0.1.4** | 26/10/2026 | 💍 O-ring mount | Vòng silicon gắn sau khi lắp switch / hàn, lúc switch đã giữ chặt plate. |
@@ -71,6 +75,9 @@ Chi tiết từng mục: [src/data/changelog.ts](src/data/changelog.ts) (hoặc 
 - Bấm **Đóng gói đơn này** để chấm điểm, sau đó gửi khách trong Mezzenger (hoặc để **Kết thúc ngày** gửi nốt).
 - Tiền nhận gồm budget linh kiện (mua rẻ hơn thì phần dư vào túi) + tiền công theo điểm; lố ngân sách thì shop chịu phần lố và bị trừ điểm.
 - Kho chung của shop: mọi linh kiện mua dư / bị thay / thừa sau khi giao đều nằm trong Kho, nhận hoặc chuyển đơn thì tự lấy món hợp yêu cầu, chỉ cần mua phần thiếu.
+- **Test hết phím trước khi giao**: phím chưa hàn sẽ không ăn và khách báo lỗi nút; bỏ sót test thì 5% khách gặp nút lỗi (đánh giá thấp).
+- Hội Phím Cơ → **Bài của tôi**: tự đăng bán đồ trong kho hoặc… phím của khách (95% bị lộ, −1 uy tín; chuộc lại trên chợ thì gỡ được uy tín).
+- **Esc** mở Cài đặt: nút xanh **Lưu tiến trình** ghi lên bảng xếp hạng (đóng tab cũng tự gửi). Keeb-chan hướng dẫn mẹo chơi, tắt / bật ở Cài đặt.
 - Giữ đơn trong hạn để tránh mất uy tín; đơn chờ trễ quá 3 ngày sẽ bị khách huỷ. Dụng cụ có độ bền và chứng chỉ thợ giúp lắp / lube nhanh hơn.
 - **Thua game** khi uy tín từ −10 trở xuống (bị phốt quá nhiều) hoặc rảnh tay mà ví không đủ mua linh kiện cho đơn rẻ nhất. Có thể tự **tuyên bố phá sản** ở Cài đặt. Thua / phá sản / chơi mới đè bản lưu thì kết quả được ghi lên bảng xếp hạng server (app **Bảng xếp hạng**, xếp theo điểm tổng của số đơn + uy tín + số ngày + tiền, lọc lại được theo từng thông số).
 

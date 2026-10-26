@@ -31,6 +31,11 @@ const TEXTS = {
     'Hỏi đơn mà bị từ chối thẳng, hơi mất thiện cảm',
   ],
   cancel: ['Ôm đơn rồi để đó, quá hạn cả tuần. Huỷ!', 'Thợ không có tâm, nhận đơn xong bỏ xó'],
+  defect: [
+    'Nhận phím về bấm nút {keys} không ăn, shop có test trước khi giao không vậy 😤',
+    'Nút {keys} chết ngắc, làm ăn ẩu quá',
+    'Vừa gõ thử đã lỗi nút {keys}, thất vọng ghê',
+  ],
 }
 
 const base = (order: Order, day: number) => ({
@@ -45,9 +50,11 @@ export const shipRep = (r: DeliveryResult) => r.stars - 3 - (r.late ?? 0)
 
 /** Khách nhận hàng: đánh giá theo sao, trễ hạn thì phàn nàn trễ */
 export function shipReview(order: Order, r: DeliveryResult, day: number): Review {
-  const text = r.late
-    ? pick(TEXTS.late).replace('{n}', String(r.late))
-    : pick(r.stars >= 4 ? TEXTS.great : r.stars >= 3 ? TEXTS.ok : TEXTS.bad)
+  const text = r.defects?.length
+    ? pick(TEXTS.defect).replace('{keys}', r.defects.slice(0, 4).join(', '))
+    : r.late
+      ? pick(TEXTS.late).replace('{n}', String(r.late))
+      : pick(r.stars >= 4 ? TEXTS.great : r.stars >= 3 ? TEXTS.ok : TEXTS.bad)
   return { ...base(order, day), stars: r.stars, text, kind: 'ship', rep: shipRep(r) }
 }
 
