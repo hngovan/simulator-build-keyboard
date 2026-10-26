@@ -75,9 +75,8 @@ export interface MetaSlice extends Profile {
   saveRun: () => Promise<boolean>
   /** tiến trình đã đổi so với lần ghi bảng xếp hạng gần nhất */
   unsynced: () => boolean
-  /** NPC hướng dẫn: đã đọc mẹo (không hiện lại) / bật tắt hướng dẫn */
+  /** NPC hướng dẫn: đã đọc mẹo (không hiện lại) */
   seeGuide: (id: string) => void
-  setGuideOff: (off: boolean) => void
 }
 
 export interface GameOver {
@@ -144,7 +143,6 @@ function snapshot(s: GameState): SaveData {
     listings: s.listings,
     stolen: s.stolen,
     guideSeen: s.guideSeen,
-    guideOff: s.guideOff,
     session: {
       offers,
       jobs: jobs.map((j) => ({
@@ -342,7 +340,6 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     return true
   },
   seeGuide: (id) => set((s) => ({ guideSeen: [...new Set([...s.guideSeen, id])] })),
-  setGuideOff: (guideOff) => set({ guideOff }),
   unsynced: () => {
     const s = get()
     return !!s.name && !s.gameOver && runSig(s) !== s.lbSynced

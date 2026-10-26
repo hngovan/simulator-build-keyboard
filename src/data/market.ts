@@ -36,13 +36,12 @@ export type InboxAction =
   | 'mute'
   /** tự nhập giá trả (được trả tối đa OFFER_MAX lần) */
   | 'offer'
-  /** đi ăn xin: năn nỉ xin free, BEG_BAN bị ban khỏi chợ */
+  /** đi ăn xin: năn nỉ xin free, BEG_GIFT được cho, còn lại bị ban khỏi chợ */
   | 'beg'
 
 /** số lần được tự trả giá với 1 người bán */
 export const OFFER_MAX = 3
-/** đi ăn xin: tỉ lệ bị admin ban khỏi chợ / người bán cho free thật; số ngày bị ban */
-const BEG_BAN = 0.1
+/** đi ăn xin: tỉ lệ người bán cho free thật (không được thì bị admin ban khỏi chợ); số ngày bị ban */
 const BEG_GIFT = 0.05
 export const BAN_DAYS = 3
 
@@ -349,19 +348,20 @@ export function negotiate(post: GroupPost, action: InboxAction, amount = 0): Gro
     }
     case 'beg': {
       say('me', pick(BEG_LINES))
-      if (chance(BEG_BAN)) {
-        say('system', '🚫 Admin xoá bình luận: xin xỏ trong group. Bạn bị ban khỏi chợ 3 ngày')
-        blocked = true
-        ban = true
-      } else if (chance(BEG_GIFT)) {
+      if (chance(BEG_GIFT)) {
         price = 0
         ship = 0
         gift = true
         say('seller', 'Thôi thấy bác tội quá, em tặng luôn, ship em bao 🥲')
-      } else if (chance(0.3)) {
-        say('seller', pick(['Bác đi chỗ khác chơi giùm em', 'Xin xỏ vậy em block nha']))
+      } else {
+        say('seller', pick(BEG_REPLIES))
+        say(
+          'system',
+          `🚫 Admin xoá bình luận: xin xỏ trong group. Bạn bị ban khỏi chợ ${BAN_DAYS} ngày`,
+        )
         blocked = true
-      } else say('seller', pick(BEG_REPLIES))
+        ban = true
+      }
       break
     }
     case 'mute': {
@@ -413,8 +413,8 @@ const BEG_LINES = [
 ]
 const BEG_REPLIES = [
   'Em cũng nghèo bác ơi 😅',
-  'Free thì em cũng muốn xin bác đây',
-  'Bác chịu khó cày thêm rồi quay lại nha',
+  'Bác đi chỗ khác chơi giùm em',
+  'Xin xỏ vậy em báo admin nha',
 ]
 
 /** câu chào inbox đầu tiên của người bán */

@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.6',
     date: '2026-10-26',
-    commits: [],
+    commits: ['c6ab620'],
     title: 'Đăng bán ở chợ, Keeb-chan hướng dẫn, lưu tiến trình, lỗi khi không test',
     items: [
       'Hội Phím Cơ thêm tab "Bài của tôi": đăng bán đồ trong kho hoặc phím của khách, bot hỏi han và trả giá',
@@ -27,6 +27,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Về màn hình đăng nhập thì hỏi lưu tiến trình; đóng tab tự gửi tiến trình lên bảng xếp hạng',
       'Mọi cửa sổ app mở sát mép trên màn hình',
       'Chứng chỉ / sách phép bán ở chợ ghi lý do pass thay vì tả ngoại quan',
+      'Sửa lỗi mở Hội Phím Cơ bị văng khi kho chung có món dữ liệu cũ; bỏ nút tắt hướng dẫn (Cài đặt có nút nhắc lại mẹo)',
     ],
   },
   {

@@ -7,14 +7,14 @@ import { currentTip } from './tips'
 
 /**
  * NPC hướng dẫn Keeb-chan: góc dưới màn hình, bong bóng thoại theo tình huống (`TIPS`).
- * "Hiểu rồi" = không hiện lại mẹo đó; thu nhỏ thành avatar tròn; tắt hẳn ở nút "Tắt hướng dẫn" (bật lại ở Cài đặt)
+ * "Hiểu rồi" = không hiện lại mẹo đó; thu nhỏ thành avatar tròn (bấm để mở lại). Không có nút tắt hẳn
  */
 export function GuideNpc() {
   const tip = useGame(currentTip)
   const screen = useGame((s) => s.screen)
   const [small, setSmall] = useState(false)
   if (!tip || screen === 'title') return null
-  const { seeGuide, setGuideOff } = useGame.getState()
+  const { seeGuide } = useGame.getState()
   // máy tính: góc phải trên taskbar · bàn build: góc trái dưới (giữa dưới là bảng bước)
   const side = screen === 'pc' ? 'right-3 bottom-[calc(var(--taskbar-h)+10px)]' : 'bottom-3 left-3'
   if (small)
@@ -45,9 +45,6 @@ export function GuideNpc() {
         <div className="font-head text-base font-extrabold text-[#c2410c]">Keeb-chan</div>
         <p className="leading-snug">{tip.text}</p>
         <div className="flex flex-wrap justify-end gap-1.5">
-          <Button size="sm" onClick={() => setGuideOff(true)} title="Bật lại ở Cài đặt">
-            Tắt hướng dẫn
-          </Button>
           <Button size="sm" onClick={() => setSmall(true)}>
             Thu nhỏ
           </Button>

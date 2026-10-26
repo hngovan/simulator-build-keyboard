@@ -207,7 +207,7 @@ export function InboxChat({ post, onClose }: { post: GroupPost; onClose: () => v
                   <Button
                     size="sm"
                     tone="red"
-                    title="Năn nỉ xin free: hiếm khi được cho, 10% bị ban khỏi chợ 3 ngày"
+                    title="Năn nỉ xin free: 5% được cho, không được thì bị ban khỏi chợ 3 ngày"
                     disabled={deal.used.includes('beg')}
                     className="flex items-center gap-1.5"
                     onClick={() => inboxPost(live.id, 'beg')}

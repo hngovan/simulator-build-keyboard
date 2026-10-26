@@ -51,9 +51,8 @@ export interface Profile {
   listings: Listing[]
   /** vụ bán phím của khách bị lộ (chuộc lại được trong vài ngày) */
   stolen: Stolen[]
-  /** NPC hướng dẫn: mẹo đã bấm "Hiểu rồi" + tắt hẳn hướng dẫn */
+  /** NPC hướng dẫn: mẹo đã bấm "Hiểu rồi" */
   guideSeen: string[]
-  guideOff: boolean
 }
 
 // Đơn đang làm dở (lưu lại để thoát game vào lại vẫn tiếp tục được)
@@ -190,7 +189,6 @@ export const START: Profile = {
   listings: [],
   stolen: [],
   guideSeen: [],
-  guideOff: false,
 }
 
 export function loadSave(): SaveData | null {

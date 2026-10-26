@@ -74,7 +74,6 @@ const SAVED_KEYS = [
   'listings',
   'stolen',
   'guideSeen',
-  'guideOff',
 ] as const satisfies readonly (keyof GameState)[]
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 useGame.subscribe((s, prev) => {

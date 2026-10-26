@@ -136,23 +136,13 @@ function VolumeRow({
   )
 }
 
-/** Bật / tắt NPC hướng dẫn Keeb-chan, xem lại các mẹo từ đầu */
+/** Keeb-chan nhắc lại các mẹo đã bấm "Hiểu rồi" */
 function GuidePanel() {
-  const off = useGame((s) => s.guideOff)
-  const { setGuideOff } = useGame.getState()
   return (
     <Panel>
       <Heading info="Lưu cùng tiến trình">Hướng dẫn</Heading>
-      <div className="flex items-center justify-between gap-3 rounded-xl bg-panel-2 px-3 py-2.5">
-        <span className="font-bold">Keeb-chan nhắc mẹo chơi</span>
-        <Toggle checked={!off} onChange={(on) => setGuideOff(!on)} label="Bật hướng dẫn" />
-      </div>
-      <Button
-        size="sm"
-        className="mt-2"
-        onClick={() => useGame.setState({ guideSeen: [], guideOff: false })}
-      >
-        Xem lại mẹo từ đầu
+      <Button size="sm" onClick={() => useGame.setState({ guideSeen: [] })}>
+        Keeb-chan nhắc lại mẹo từ đầu
       </Button>
     </Panel>
   )

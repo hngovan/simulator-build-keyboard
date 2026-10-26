@@ -56,6 +56,6 @@ export const TIPS: Tip[] = [
   },
 ]
 
-/** mẹo đang hiện (null = không có / đã tắt hướng dẫn) */
+/** mẹo đang hiện (null = không có mẹo hợp tình huống) */
 export const currentTip = (s: GameState) =>
-  s.guideOff ? null : (TIPS.find((t) => !s.guideSeen.includes(t.id) && t.when(s)) ?? null)
+  TIPS.find((t) => !s.guideSeen.includes(t.id) && t.when(s)) ?? null

@@ -13,11 +13,20 @@ import {
 /** bot ghé bài của mình mỗi bao lâu (ms) khi đang mở tab */
 const BOT_MS = 3500
 
+/** món đọc được tên + giá (bản lưu cũ có thể còn món mà id đã đổi / bỏ khỏi danh mục) */
+const readable = (src: ListingSource) => {
+  try {
+    return !!sourceTitle(src) && Number.isFinite(sourceValue(src))
+  } catch {
+    return false
+  }
+}
+
 /** món đăng bán được: đồ trong kho chung + phím của khách đã đóng gói chưa gửi */
 function useSources(): { key: string; src: ListingSource; index?: number }[] {
   const spare = useGame((s) => s.spare)
   const packed = useGame((s) => s.packed)
-  return [
+  const list: { key: string; src: ListingSource; index?: number }[] = [
     ...packed
       .filter((p) => !p.shipped)
       .map((p) => ({ key: `c:${p.order.id}`, src: { kind: 'customer', packed: p } as const })),
@@ -37,6 +46,7 @@ function useSources(): { key: string; src: ListingSource; index?: number }[] {
       index,
     })),
   ]
+  return list.filter((x) => readable(x.src))
 }
 
 /** 1 dòng món có thể đăng: tên, giá gợi ý, ô nhập giá + nút đăng */

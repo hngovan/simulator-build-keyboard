@@ -139,6 +139,8 @@
   = ngày + 3, `isMarketBanned()` chặn inbox / mua; GroupFeed hiện bảng "đang bị ban"), `BEG_GIFT` 5% người bán tặng free
   (`deal.gift`: giá 0, ship 0, không bùng, nút "Nhận quà free"), còn lại 30% bị người bán block / bị chọc.
 - Bị ban: `notify()` (metaSlice `notices`, không lưu, tự ẩn 10s) hiện thông báo góc phải trên "bị ban khỏi chợ 3 ngày vì đi ăn xin người bán X".
+- 2026-10-26, người dùng: "sửa lại tỉ lệ ăn xin 5% thành công còn lại ko thành công thì bị ban khỏi chợ" → bỏ `BEG_BAN` và nhánh
+  block / chọc: `BEG_GIFT` 5% được tặng, 95% còn lại người bán đáp (`BEG_REPLIES`) + admin ban `BAN_DAYS` ngày (`deal.ban`, chặn luôn).
 
 ### Kho chung cho mọi linh kiện (2026-10-25, thay mục "Đồ dư từ đơn trước")
 
@@ -321,3 +323,4 @@ bấm phá sản, new game".
 - Chứng chỉ / sách phép bán ở chợ: caption là lý do pass ("Pass lại giấy phép vì cần tiền gấp"...) thay vì "nguyên nhám, ngoại quan đẹp" (`PAPER_LINES`).
 - Mua dụng cụ / vật tư (`buyTool` / `buySupply`) không cộng `spent`, chỉ `buy` linh kiện mới tính vào budget đơn (đã thử trong game:
   mua cọ + Urgo, `spent` vẫn 0).
+- Sửa (2026-10-26): mở Hội Phím Cơ bị văng "reading 'name'" với bản lưu thật — kho chung có món mà id không còn trong danh mục. `useSources` (MyListings) lọc `readable()` (thử `sourceTitle` / `sourceValue`, lỗi thì bỏ món đó).

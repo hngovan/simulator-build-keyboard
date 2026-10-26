@@ -346,3 +346,5 @@
 - NPC hướng dẫn Keeb-chan (yêu cầu: "gái anime 2D", ảnh tham khảo Typewriter-chan chibi): vẽ SVG `GuideGirl` chủ đề bàn phím (mái đen,
   tóc kem 2 bên, băng đô hàng keycap, tạp dề in keycap, mắt nhắm ":3"). `GuideNpc`: máy tính góc phải trên taskbar, bàn build góc trái dưới;
   Hiểu rồi / Thu nhỏ / Tắt hướng dẫn; bật lại + xem lại mẹo ở Cài đặt (`GuidePanel`).
+
+- Sửa (2026-10-26): bỏ hẳn tuỳ chọn tắt hướng dẫn (người dùng: "tắt rồi mở lại kiểu gì, bỏ option tắt đi"): bỏ `guideOff` / `setGuideOff`, bong bóng chỉ còn Thu nhỏ / Hiểu rồi, Cài đặt còn nút "Keeb-chan nhắc lại mẹo từ đầu".

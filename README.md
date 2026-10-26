@@ -47,7 +47,7 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 | **0.1.2** | 25/10/2026 | 🗃️ Kho chung | Đồ mua dư / bị thay / thừa sau khi giao không mất; nhận hoặc chuyển đơn tự lấy món hợp yêu cầu; Kho hiện cả đồ đơn đang chờ. |
 |  |  | 💰 Tiền & đơn hàng | Giao xong khách trả đủ budget linh kiện (mua rẻ thì lãi); đơn có thể đòi đích danh case / stab / chất liệu plate / chất liệu keycap. |
 |  |  | 🛒 Shopii | Bộ stab TKL + stab lẻ theo cỡ dây; bộ lọc ô đổ xuống ở mọi mục, "Chỉ hiện đồ hợp đơn"; keycap 3 chất liệu PBT / Mix / ABS; sách phép gói 100 / 200 / 500. |
-|  |  | 🤝 Hội Phím Cơ | Tự nhập giá trả (3 lần / người bán); "Đi ăn xin" xin free, 10% bị ban chợ 3 ngày. |
+|  |  | 🤝 Hội Phím Cơ | Tự nhập giá trả (3 lần / người bán); "Đi ăn xin" xin free, 5% được cho, còn lại bị ban chợ 3 ngày. |
 |  |  | 🎵 Âm thanh & app | Nhạc nền xoay 3 bài; app Bảng xếp hạng (so với shop đối thủ); Đánh giá có badge uy tín; Silent Tactile thành loại riêng. |
 |  |  | 🐛 Sửa lỗi | Plate 60% lật gương, case Planck xoay ngược, feet lệch hốc, camera xoay khi hàn, mỡ wire stab dài, chữ keycap SA bị che. |
 | **0.1.1** | 25/10/2026 | 📜 Lịch sử & tài liệu | Bấm số phiên bản ở màn hình tiêu đề xem lịch sử cập nhật; README có ảnh demo; dọn code không dùng. |
