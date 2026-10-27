@@ -515,3 +515,7 @@ giá BIN nghĩa là giá chiến thắng, người đăng có thể thêm giá B
   `ended` + `binned`, `endsAt = now` (dừng giờ, hết bình luận vì `bidTurn` bỏ qua bài `ended`) → chờ `closeBid` / `bailBid` như hết giờ.
   Bid ngầm lúc hết giờ (`settleBids`) chạm BIN thì lấy đúng giá BIN.
 - `ListingCard`: nhãn xanh "BIN …k" khi đang chạy, "Có người BIN · chờ chốt" / "X đã BIN" khi xong.
+- Lỗi (người dùng: bấm chi tiết đơn bị huỷ kèo → "Uncaught TypeError: Cannot read properties of null (reading 'id')"): đơn đã chọn mount
+  (chưa build) mà case / PCB khách gửi đã bị bán → `inventory.case = null`, `buildContext` đọc `inv.case!.id`. Thêm `contextFor()` (steps.ts:
+  thiếu mount / case / PCB thì null), dùng ở `OrderCard` (`useProgress`) + `OrderDetail` (OrderApp). Các chỗ gọi `buildContext` trong store
+  chỉ chạy khi đã có `build` (case / PCB đã lên bàn, không bán được) nên giữ nguyên. Lỗi có cả ở đơn thường bán case / PCB sau khi chọn mount.

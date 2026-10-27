@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { ChevronDown, CircleAlert, ClipboardList, Clock } from 'lucide-react'
 import { useGame } from '@/store'
 import { SCREW_FULL, checkInventory, partSpent } from '@/data/parts'
-import { buildContext, buildPercent } from '@/data/steps'
+import { buildPercent, contextFor } from '@/data/steps'
 import { Badge, ProgressBar, progressTone } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
 import type { Order } from '@/types'
@@ -66,7 +66,7 @@ function useProgress(c: OrderEntry) {
   const ctx =
     c.kind === 'active'
       ? ctxNow
-      : c.session?.mount && buildContext(c.order, c.session.inventory, c.session.mount)
+      : c.session && contextFor(c.order, c.session.inventory, c.session.mount)
   return ctx ? buildPercent(b, ctx, clicks) : 0
 }
 

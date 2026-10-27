@@ -39,7 +39,7 @@ import {
   useOrderEntries,
   type OrderEntry,
 } from '@/components/game/OrderCard'
-import { buildContext } from '@/data/steps'
+import { contextFor } from '@/data/steps'
 import type { BuildState, Inventory, PartCategory } from '@/types'
 import { getLayout } from '@/data/layouts'
 
@@ -91,7 +91,8 @@ function OrderDetail({ c }: { c: OrderEntry }) {
   const { inventory, provided, mount, build } = c.session
   // chỉ tính linh kiện trong ô đối chiếu (mua dư / món bị thay / dụng cụ / vật tư không tính)
   const spent = partSpent(inventory, order, c.session.spent)
-  const ctx = active ? s.ctx : mount ? buildContext(order, inventory, mount) : null
+  // món đã bán (case / PCB) thì không dựng kế hoạch build được → null (tránh vỡ ở đơn bị huỷ kèo)
+  const ctx = active ? s.ctx : contextFor(order, inventory, mount)
   const checks = checkInventory(inventory, order, build ? Object.keys(build.switches).length : 0)
   const ready = checks.every((x) => x.ok)
   const caseDef = inventory.case && CASES[inventory.case.id]

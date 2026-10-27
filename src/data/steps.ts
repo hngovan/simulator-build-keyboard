@@ -127,6 +127,14 @@ export const Y = {
 
 const cache = new Map<string, BuildContext>()
 
+/**
+ * `buildContext` an toàn cho UI: thiếu mount / case / PCB (vd món khách gửi đã đem bán, đơn bị huỷ kèo) thì null
+ * thay vì vỡ (buildContext đọc `inv.case.id`, `inv.pcb.type`)
+ */
+export function contextFor(order: Order, inv: Inventory, mount: string | null | undefined) {
+  return mount && inv.case && inv.pcb ? buildContext(order, inv, mount) : null
+}
+
 // Kế hoạch build: danh sách bước + vị trí vít/gasket, phụ thuộc kit, mount, layout
 export function buildContext(order: Order, inv: Inventory, mount: string): BuildContext {
   const plateless = isPlateless(inv.plate)
