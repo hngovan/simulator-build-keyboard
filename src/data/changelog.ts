@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.13',
     date: '2026-10-27',
-    commits: [],
+    commits: ['9af5d9f'],
     title: 'Gasket Poron, Blossom / Catto HHKB 2 mảnh, gờ case theo mount, vặn vít canh lực',
     items: [
       'Gasket mount: dán dải Poron 20 × 4mm mặt trên + mặt dưới tai plate, bán ở Shopii (gói 20 / 100 miếng)',
