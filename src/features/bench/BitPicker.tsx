@@ -50,7 +50,7 @@ export function BitPicker({ step }: { step: ScrewStep }) {
   useBenchKey('Digit4', PICK_BIT[3])
   return (
     <div className="fixed top-16 left-1/2 z-[5] flex -translate-x-1/2 items-center gap-3 rounded-2xl border-2 border-line bg-[rgba(14,16,24,0.92)] px-3 py-2 shadow-[0_6px_0_#0006]">
-      <div className="flex flex-col items-center gap-0.5 text-xs text-muted">
+      <div className="flex flex-col items-center gap-0.5 text-[13px] font-bold text-muted">
         Mặt ốc
         <BitIcon bit={need} className="size-9" />
       </div>

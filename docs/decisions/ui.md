@@ -498,3 +498,4 @@
   → chữ thập / lục giác / Torx / dẹt (`PICK_BIT`), số nhỏ ở góc mỗi ô + tooltip "(phím n)". Chạy thử: phím 3 → torx, phím 2 → hex.
 - **Bỏ tiêu đề bảng đầu vít** (2026-10-27, người dùng: "chữ chọn đầu vít và icon bỏ đi ko cần"): `BitPicker` bỏ dòng "🪛 Chọn đầu vít",
   chỉ còn ô "Mặt ốc" + 4 nút đầu vít.
+  Chữ "Mặt ốc" bold, 13px (người dùng: "chữ mặt ốc cho font bold và tăng size 13").
