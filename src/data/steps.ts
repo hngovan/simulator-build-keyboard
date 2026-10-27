@@ -12,7 +12,7 @@ import type {
   StepId,
 } from '@/types'
 import { blockerGaps, getLayout } from './layouts'
-import { CASES, STABS, caseModelOf, isPlateless } from './parts'
+import { CASES, STABS, TOOLS, caseModelOf, isPlateless } from './parts'
 import CASE_FEET from './caseFeet.json'
 import { stabModRules } from './mods'
 import stabModel from './stabModel.json'
@@ -22,7 +22,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   unbox: { title: 'Mở hộp hàng', hint: 'Click vào thùng hàng để mở' },
   caseOpen: {
     title: 'Tháo vít mở case',
-    hint: 'Case ghép (2 mảnh / mica nhiều lớp): click từng con vít để tháo, nhấc phần trên ra',
+    hint: 'Case ghép (2 mảnh / mica nhiều lớp): click từng con vít để tháo (đúng đầu vít, sai là tuôn ren), nhấc phần trên ra',
   },
   stabMod: {
     title: 'Mod stab (tuỳ chọn)',
@@ -33,7 +33,10 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     title: 'Lube switch (tuỳ chọn)',
     hint: 'Click switch trên đồ mở để tách housing, stem và lò xo, rồi click switch đã mở để lube 1 mẻ',
   },
-  stabScrew: { title: 'Vặn vít stab', hint: 'Stab screw-in: vặn chặt 2 vít cho mỗi stab' },
+  stabScrew: {
+    title: 'Vặn vít stab',
+    hint: 'Stab screw-in: giữ chuột vặn 2 vít mỗi stab, nhả khi thanh lực vào vùng xanh (quá là tuôn ren)',
+  },
   foam: {
     title: 'Lót foam PCB (tuỳ chọn)',
     hint: 'Click vào PCB để lót tấm foam Poron (mua ở Shopii → Lube & vật tư): giảm rung, tiếng thock hơn. Không lót thì bấm bước tiếp',
@@ -47,7 +50,10 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     title: 'Hàn switch',
     hint: 'Board đã lật. Giữ chuột lên từng chân, nhả trong vùng xanh; giữ quá lâu hoặc hụt quá 3 lần sẽ làm cháy chân và đen mũi hàn.',
   },
-  gasket: { title: 'Dán gasket', hint: 'Click các vị trí quanh plate để dán miếng đệm silicon' },
+  gasket: {
+    title: 'Dán gasket',
+    hint: 'Click từng tai / mép plate để dán dải gasket Poron (mỗi chỗ 2 miếng: mặt trên + mặt dưới)',
+  },
   ring: {
     title: 'Lắp vòng silicon',
     hint: 'Switch đã giữ chặt plate: click vào board để cuốn vòng O-ring vào khe giữa PCB và plate',
@@ -58,16 +64,22 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   topScrew: {
     title: 'Bắt vít plate vào case trên',
-    hint: 'Board đã lật: vặn các vít từ dưới lên, giữ plate vào case trên',
+    hint: 'Board đã lật: giữ chuột vặn các vít từ dưới lên, nhả khi thanh lực vào vùng xanh',
   },
   feet: {
     title: 'Dán feet cao su',
     hint: 'Case đã lật úp: click từng hốc tròn dưới đáy để dán feet (mỗi hốc 1 cái, chọn feet đen / trắng ở bảng bên)',
   },
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
-  trayScrew: { title: 'Bắt vít tray mount', hint: 'Vặn các vít giữ PCB vào standoff đáy case' },
+  trayScrew: {
+    title: 'Bắt vít tray mount',
+    hint: 'Giữ chuột vặn các vít giữ PCB vào standoff đáy case, nhả khi thanh lực vào vùng xanh',
+  },
   caseClose: { title: 'Đậy case trên', hint: 'Click vào case trên để đậy lại' },
-  caseScrew: { title: 'Vặn vít đóng case', hint: 'Vặn các vít để khoá các mảnh / lớp case lại' },
+  caseScrew: {
+    title: 'Vặn vít đóng case',
+    hint: 'Giữ chuột vặn các vít khoá case, nhả khi thanh lực vào vùng xanh (case PC / mica / acrylic vặn quá dễ nứt)',
+  },
   keycap: {
     title: 'Lắp keycap',
     hint: 'Click vào switch để cắm keycap (số cái mỗi lần theo bậc thợ + phép lắp keycap)',
@@ -96,6 +108,31 @@ export const SCREW_BITS: Record<ScrewStep, ScrewBit> = {
   trayScrew: 'torx',
   caseScrew: 'hex',
 }
+/** bước vặn vít ăn vào vỏ case (case nhựa giòn thì tuôn ren có thể nứt luôn case) */
+export const CASE_SCREW_STEPS: ScrewStep[] = ['caseOpen', 'topScrew', 'trayScrew', 'caseScrew']
+/** chất liệu case giòn: PC, mica, acrylic */
+const BRITTLE = ['pc', 'acrylic', 'mica']
+/** tuôn ren vít bắt vào case giòn: tỉ lệ nứt luôn case */
+export const CRACK_CHANCE = 0.35
+/** nứt case: đền khách phần giá trị phím (budget linh kiện) */
+export const CRACK_REFUND = 0.8
+/** tuôn ren: khách không phát hiện ra */
+export const STRIP_UNNOTICED = 0.2
+/** tuôn ren bị phát hiện: đền khách phần giá trị đơn (linh kiện + tiền công) */
+export const STRIP_REFUND = 0.3
+
+export const brittleCase = (caseId?: string | null) => {
+  const c = caseId ? CASES[caseId] : undefined
+  return !!c && (BRITTLE.includes(c.material) || BRITTLE.includes(c.bottom?.material ?? ''))
+}
+
+/** Vùng lực của 1 lần vặn theo tua vít (giây giữ chuột): nhả trong [lo, hi) là chặt, giữ tới hi là tuôn ren */
+export function torqueWindow(level: number, rng = Math.random) {
+  const t = TOOLS.screw[level]?.torque ?? TOOLS.screw[0].torque!
+  const lo = t.lo[0] + (t.lo[1] - t.lo[0]) * rng()
+  return { lo, hi: lo + t.ok[0] + (t.ok[1] - t.ok[0]) * rng() }
+}
+
 export const BIT_LABELS: Record<ScrewBit, string> = {
   phillips: 'Chữ thập',
   hex: 'Lục giác',
@@ -104,13 +141,25 @@ export const BIT_LABELS: Record<ScrewBit, string> = {
 }
 export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'foam', 'switchLube', 'test']
 /** Bước tuỳ chọn với đơn này: khách đòi lót foam (`order.foam`) thì bước `foam` bắt buộc */
-export const isOptionalStep = (step: StepId, order?: { foam?: true } | null) =>
-  OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam)
+export const isOptionalStep = (step: StepId, order?: { foam?: true; dev?: true } | null) =>
+  !!order?.dev || (OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam))
 /** Tên bước theo đơn: foam khách yêu cầu thì ghi rõ thay cho "(tuỳ chọn)" */
 export const stepTitle = (step: StepId, order?: { foam?: true } | null) =>
   step === 'foam' && order?.foam ? 'Lót foam PCB (khách yêu cầu)' : STEP_INFO[step].title
 export const CASE_WALL = 0.45
 export const CASE_MARGIN = 0.15
+/** khe từ mép board tới mép trong gờ đỡ trong lòng case (gờ không chạm PCB / plate) */
+export const LEDGE_GAP = 0.03
+/**
+ * Dải gasket Poron 20 × 4mm dày 2mm (u): dán 1 miếng mặt trên + 1 miếng mặt dưới tai / mép plate, `w` dọc mép, `d` vuông góc mép
+ * (case dựng bằng code: từ trong mép plate ra sát mặt vách case)
+ */
+export const GASKET = { w: 20 / 19.05, d: 4 / 19.05, t: 2 / 19.05 }
+/** số dải 20mm cho 1 điểm gasket: mỗi mặt (trên + dưới) nối đủ dải phủ hết chiều dài tai */
+export const gasketStrips = (g: { w?: number }) =>
+  2 * Math.ceil((g.w ?? GASKET.w) / GASKET.w - 0.05)
+/** top mount: tai plate lòi ra dưới vấu case trên (bề ngang), vít xuyên tai ở giữa khe board – vách */
+export const TOP_TAB = 0.6
 
 // Cao độ các lớp (đơn vị u = 19.05mm). Mặt trên plate = 0
 // Switch MX: plate tới PCB 5mm, plate dày 1.5mm, PCB dày 1.6mm
@@ -123,6 +172,31 @@ export const Y = {
   split: -0.3, // chỗ ghép case trên / case dưới
   caseTop: 0.36,
   table: -0.95,
+}
+
+/**
+ * Khung vòng silicon (u): O-ring mount nằm trong khe PCB – plate, từ trong mép board 0.04 ra sát mặt vách case
+ * (nằm trên gờ trong lòng case); OG ôm ngoài mép cả PCB + plate. `bottom` = mặt dưới vòng (gờ đỡ đặt tới đây)
+ */
+export function ringFrame(between: boolean) {
+  const t = between ? CASE_MARGIN + 0.04 : 0.12
+  const h = between ? Y.plateBot - Y.pcbTop - 0.01 : 0.3
+  const y = between ? (Y.pcbTop + Y.plateBot) / 2 : -0.17
+  // tâm dây cách mép board
+  const off = between ? CASE_MARGIN - t / 2 : 0.1
+  return { t, h, y, off, bottom: y - h / 2 }
+}
+
+/**
+ * Danh sách bước đổi (đổi case / mount giữa chừng, dữ liệu case đổi): tìm lại bước đang làm theo tên; danh sách mới có bước
+ * chưa từng có (vd dán gasket) nằm trước chỗ đang làm thì lùi về bước đó, không thì bước đó bị coi như đã qua
+ */
+export function remapStepIdx(old: StepId[], next: StepId[], idx: number) {
+  let at = next.indexOf(old[idx])
+  if (at < 0) at = Math.min(idx, next.length - 1)
+  // mở case (tháo vít case mới đổi sang) coi như đã làm: không lùi về tận đầu, chỉ lùi về bước lắp ráp mới (gasket, vòng...)
+  const added = next.findIndex((s) => !old.includes(s) && s !== 'caseOpen')
+  return added >= 0 && added < at ? added : Math.max(0, at)
 }
 
 const cache = new Map<string, BuildContext>()
@@ -180,7 +254,10 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   steps.push('keycap', 'test')
 
   const screwSide = caseDef.screwSide ?? 'bottom'
-  const caseScrews = caseScrewPoints(width, depth, screwSide)
+  // case CAD 2 mảnh: vít đúng lỗ trong model (mm, hệ model → u quanh tâm layout như feet)
+  const caseScrews = caseDef.screws
+    ? caseDef.screws.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
+    : caseScrewPoints(width, depth, screwSide)
 
   // Vít tray: nằm ở khe giữa các hàng phím
   const rowYs = [...new Set(keys.map((k) => k.y))].sort((a, b) => a - b)
@@ -227,23 +304,33 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   const screws: Record<ScrewStep, ScrewPoint[]> = {
     caseOpen: name('open', caseScrews),
     caseScrew: name('close', caseScrews),
-    // top mount: vít xuyên tai plate bắt vào mép dưới vách case trên, vặn từ dưới lên
+    // top mount: vít xuyên tai plate (lòi ra khe board – vách) bắt vào vấu case trên, vặn từ dưới lên
     topScrew: name(
       'top',
       caseScrews.map((p) => ({
         x: p.x,
-        z: Math.sign(p.z) * (depth / 2 + CASE_MARGIN + CASE_WALL / 2),
+        z: Math.sign(p.z) * (depth / 2 + CASE_MARGIN / 2),
       })),
     ),
     trayScrew: name('tray', trayScrews),
     stabScrew: name('stab', stabScrews),
   }
 
-  const gz = depth / 2 + 0.05
-  const gaskets = [-0.375, -0.125, 0.125, 0.375].flatMap((f) => [
-    { x: f * width, z: -gz },
-    { x: f * width, z: gz },
-  ])
+  // gasket từ trong mép plate ra sát mặt vách case (không lấn vào vách)
+  const gz = depth / 2 + CASE_MARGIN - GASKET.d / 2
+  // plate CAD có tai gasket (Blossom): gasket nằm đúng trên tai
+  const gaskets = caseDef.gaskets
+    ? caseDef.gaskets.map(([x, z, len, angle]) => ({
+        x: x * MM_U,
+        z: z * MM_U,
+        w: len * MM_U,
+        // góc trục dài trên mặt xz (z tới trước) → quay quanh trục y của three là −góc
+        rot: -angle,
+      }))
+    : [-0.375, -0.125, 0.125, 0.375].flatMap((f) => [
+        { x: f * width, z: -gz },
+        { x: f * width, z: gz },
+      ])
 
   const feet = feetPockets(caseModelOf(caseDef, order.layout, order.variant), width, depth, origin)
 

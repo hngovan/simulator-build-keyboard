@@ -49,6 +49,10 @@ import { certBonus } from '@/data/reputation'
 import { FLAW_TEXT, dealFloor, negotiate, type InboxAction } from '@/data/market'
 import type { Job, JobSession, PackedOrder } from './persistence'
 import { addPart, fillFromStock, stashAll, takeSwitches, without } from './spare'
+import { payout } from './scoring'
+
+/** tiền nhận khi gửi đơn (âm nếu đền hỏng nhiều hơn tiền khách trả) */
+const fmtGain = (n: number) => (n >= 0 ? `+${n}k` : `${n}k`)
 
 type BuyResult = 'ok' | 'scam' | 'fail'
 export interface LubePick {
@@ -154,7 +158,7 @@ export const CANCEL_REP = 3
 export const NO_WORK_FINE = 0.2
 
 /** Kho đồ ban đầu của 1 đơn: món khách gửi trong kit */
-function freshSession(order: Order, day: number): JobSession {
+export function freshSession(order: Order, day: number): JobSession {
   const inventory = emptyInventory()
   const provided: JobSession['provided'] = {}
   if (order.kit)
@@ -323,7 +327,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const s = get()
     const p = s.packed.find((x) => x.order.id === id && !x.shipped)
     if (!p) return
-    const gain = p.result.reimburse + p.result.labor
+    const gain = payout(p.result)
     set({
       packed: s.packed.map((x) => (x === p ? { ...x, shipped: true } : x)),
       money: s.money + gain,
@@ -331,7 +335,10 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       done: s.done + 1,
     })
     s.addReviews([shipReview(p.order, p.result, s.day)])
-    s.toast(`📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · +${gain}k`, 'good')
+    s.toast(
+      `📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · ${fmtGain(gain)}`,
+      'good',
+    )
   },
   // sang ngày mới: gửi nốt đơn đã đóng gói, đợt đơn mới, đơn chờ quá hạn lâu thì khách huỷ
   nextDay: () => {
@@ -349,10 +356,10 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     let repGain = 0
     const unsent = s.packed.filter((p) => !p.shipped)
     for (const p of unsent) {
-      money += p.result.reimburse + p.result.labor
+      money += payout(p.result)
       repGain += shipRep(p.result)
       s.toast(
-        `📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · +${p.result.reimburse + p.result.labor}k`,
+        `📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · ${fmtGain(payout(p.result))}`,
         'good',
       )
     }
@@ -403,8 +410,13 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
         '🚩 Khách report nhận đơn không làm',
         `${o.customer}: shop nhận đơn mà cả ngày không làm gì. Đền khách ${fine}k (${Math.round(NO_WORK_FINE * 100)}% tiền công)`,
       )
-    for (const j of cancelled)
+    for (const j of cancelled) {
       s.toast(`😡 ${j.order.customer} huỷ đơn vì trễ hạn quá lâu (−${CANCEL_REP} uy tín)`, 'bad')
+      s.logNotify(
+        '😡 Khách huỷ đơn',
+        `${j.order.customer} huỷ vì trễ hạn quá lâu (−${CANCEL_REP} uy tín)`,
+      )
+    }
     if (get().order || get().jobs.length) s.toast('🛒 Hội Phím Cơ có đợt hàng pass mới hôm nay')
     if (isSaleDay(day)) s.toast('🔥 Hôm nay Shopii sale linh kiện, giảm 5–30%!', 'good')
     s.addReviews([
@@ -626,8 +638,10 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       if (s.money < cost) return (s.toast('Không đủ tiền!', 'bad'), 'fail')
       set({ money: s.money - cost })
       const scammed = Math.random() < scam
-      if (scammed) s.toast(`😱 Seller bùng hàng! Mất trắng ${cost}k`, 'bad')
-      else {
+      if (scammed) {
+        s.toast(`😱 Seller bùng hàng! Mất trắng ${cost}k`, 'bad')
+        s.logNotify('😱 Seller bùng hàng', `Mất trắng ${cost}k`)
+      } else {
         set({ spare: addPart(get().spare, cat as PartCategory, item) })
         s.notify(
           '😬 Dính hàng lỗi',
@@ -780,7 +794,17 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     return []
   },
   startBuild: () => {
-    const s = get()
+    let s = get()
+    // mount đang chọn case không làm được (đổi case / dữ liệu case đổi): về mount hợp lệ đầu tiên
+    if (
+      s.order &&
+      s.inventory.case &&
+      s.mount &&
+      !CASES[s.inventory.case.id].mounts.includes(s.mount)
+    ) {
+      set({ mount: firstMount(CASES[s.inventory.case.id].mounts, s.inventory, s.order.mount) })
+      s = get()
+    }
     if (s.result) return s.toast('Đơn này đã giao rồi', 'bad')
     if (s.build) return set({ screen: 'bench' })
     if (!s.order || !s.mount || !checkInventory(s.inventory, s.order).every((c) => c.ok))

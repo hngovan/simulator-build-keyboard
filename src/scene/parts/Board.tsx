@@ -1,10 +1,17 @@
 import { useMemo, useRef } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import { PLATES } from '@/data/parts'
-import { CASE_MARGIN, CASE_WALL, TRAY_HOLE, Y, caseScrewHoles, keyCutouts } from '@/data/steps'
+import {
+  CASE_MARGIN,
+  CASE_WALL,
+  TOP_TAB,
+  TRAY_HOLE,
+  Y,
+  caseScrewHoles,
+  keyCutouts,
+} from '@/data/steps'
 import type { Key, Point, StepId } from '@/types'
 import { playClick } from '@/sound'
 import { Drop, lerpTo } from '../common/anim'
@@ -23,6 +30,7 @@ import { SolderPad } from './SolderPad'
 import { HintArrow } from '../stations/StationKit'
 import { plate60Cutouts } from '@/data/generated/plate60'
 import { plateUniversal } from '@/data/generated/plateUniversal'
+import { BLOSSOM_PLATE } from '@/data/generated/plateBlossom'
 
 /**
  * Lỗ switch spacebar của typ60 (toạ độ DXF, mm): trong DXF nó nối thông ra mép trước nên nằm trong
@@ -51,6 +59,8 @@ function plateGeometry(
   sandwich?: THREE.Shape,
   /** tray mount: lỗ to hơn đầu ốc để vít lọt xuống PCB (đã dò không chạm lỗ switch / stab) */
   trayHoles: Point[] = [],
+  /** top mount: tai plate lòi ra khe board – vách ở chỗ vít, nằm dưới vấu case trên */
+  tabs: Point[] = [],
 ) {
   // viền plate theo layout (Alice: 2 nửa xoay), nhỏ hơn PCB 0.01u mỗi cạnh
   const { shapes, shapeOf } = sandwich
@@ -96,15 +106,40 @@ function plateGeometry(
     hole.absarc(x, -z, TRAY_HOLE.plate, 0, Math.PI * 2, false)
     target.holes.push(hole)
   }
-  return new THREE.ExtrudeGeometry(shapes, { depth: -Y.plateBot, bevelEnabled: false }).rotateX(
-    -Math.PI / 2,
-  )
+  // tai liền mép plate (viền plate lùi 0.01u), không chồng lên phần plate
+  const tabShapes = tabs.map(({ x, z }) => {
+    const s = Math.sign(z)
+    const z0 = s * (depth / 2 - 0.01)
+    const z1 = s * (depth / 2 + CASE_MARGIN - 0.01)
+    return new THREE.Shape([
+      new THREE.Vector2(x - TOP_TAB / 2, -z0),
+      new THREE.Vector2(x + TOP_TAB / 2, -z0),
+      new THREE.Vector2(x + TOP_TAB / 2, -z1),
+      new THREE.Vector2(x - TOP_TAB / 2, -z1),
+    ])
+  })
+  return new THREE.ExtrudeGeometry([...shapes, ...tabShapes], {
+    depth: -Y.plateBot,
+    bevelEnabled: false,
+  }).rotateX(-Math.PI / 2)
 }
 
 const NO_HOLES: Point[] = []
 
-const ALICE_PLATE = '/models/plates/alice.glb'
-useGLTF.preload(ALICE_PLATE)
+/** plate gasket Blossom từ DXF gốc (`bun run gen:plate-blossom`, mm theo tâm board): viền + tai gasket + lỗ switch / stab */
+let blossomGeo: THREE.BufferGeometry | null = null
+function blossomPlateGeometry() {
+  if (blossomGeo) return blossomGeo
+  // shape nằm XY, y = −z (xoay −90° quanh x như plateGeometry)
+  const pts = (loop: [number, number][]) => loop.map(([x, z]) => new THREE.Vector2(x * MM, -z * MM))
+  const shape = new THREE.Shape(pts(BLOSSOM_PLATE.outline))
+  for (const hole of BLOSSOM_PLATE.holes) shape.holes.push(new THREE.Path(pts(hole)))
+  blossomGeo = new THREE.ExtrudeGeometry(shape, {
+    depth: -Y.plateBot,
+    bevelEnabled: false,
+  }).rotateX(-Math.PI / 2)
+  return blossomGeo
+}
 
 /** Vật liệu plate: kim loại bóng; PC / PEI (clear) là nhựa trong suốt, nhìn xuyên thấy PCB */
 function PlateMaterial({
@@ -155,17 +190,9 @@ function AlicePlate({
   clear: boolean
   ghost?: boolean
 }) {
-  const { scene } = useGLTF(ALICE_PLATE)
-  // lấy mesh đầu tiên trong GLB (tên node 'alice-plate' lúc load có thể không phải mesh → geometry rỗng, plate không hiện)
-  const geometry = useMemo(() => {
-    let g: THREE.BufferGeometry | undefined
-    scene.traverse((o) => {
-      if (!g && (o as THREE.Mesh).isMesh) g = (o as THREE.Mesh).geometry
-    })
-    return g
-  }, [scene])
+  const geometry = blossomPlateGeometry()
   return (
-    <mesh geometry={geometry} castShadow receiveShadow position-y={ghost ? 1 : 0} scale={MM}>
+    <mesh geometry={geometry} castShadow receiveShadow position-y={ghost ? 1 : 0}>
       <PlateMaterial color={color} metal={metal} clear={clear} ghost={ghost} />
     </mesh>
   )
@@ -234,6 +261,7 @@ export function Board() {
             )
           : undefined,
         trayHoles,
+        ctx.mount === 'top' ? ctx.screws.topScrew : NO_HOLES,
       ),
     [ctx, standard60CAD, sandwich, trayHoles],
   )

@@ -22,6 +22,7 @@ export default function App() {
   const hasBuild = useGame((s) => !!s.build)
   // đang bay camera vào màn hình máy tính: ẩn HUD cho thấy rõ màn hình
   const zooming = useGame((s) => s.pcZoom)
+  const guide = useGame((s) => !s.guideHidden)
   const audio = useGame((s) => s.audio)
   // fast bid ở Hội Phím Cơ: bot ghé bid / bình luận, hết giờ thì chốt bán (kể cả khi không mở tab chợ)
   const hasBid = useGame((s) => s.listings.some((l) => l.bid))
@@ -49,7 +50,7 @@ export default function App() {
         <>
           <Bench />
           {!zooming && (hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
-          {!zooming && <BenchDialog />}
+          {!zooming && guide && <BenchDialog />}
           <ShelfViewer />
           <BenchLoader />
         </>
@@ -57,7 +58,7 @@ export default function App() {
       <Toasts />
       <GlobalTooltip />
       <ReviewPops />
-      {!zooming && <GuideNpc />}
+      {!zooming && guide && <GuideNpc />}
       <GameOverDialog />
     </>
   )

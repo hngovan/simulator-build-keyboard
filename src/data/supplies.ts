@@ -30,10 +30,14 @@ export interface SupplyDef {
   oring?: { shore: number }
   /** tấm foam Poron lót giữa PCB và plate (bước `foam`): bán tấm nguyên, lót thì cắt theo layout */
   pcbFoam?: true
+  /** dải gasket Poron dán tai plate (bước `gasket`): mỗi điểm gasket dán 2 miếng, trên + dưới tai */
+  gasketStrip?: true
 }
 
 /** foam Poron lót PCB – plate: 1 tấm / bàn phím */
 export const FOAM_ID = 'foamPoron'
+/** dải gasket Poron 20mm (gasket mount): mỗi điểm gasket dán đủ dải phủ hết tai, mặt trên + mặt dưới (`gasketStrips`) */
+export const GASKET_ID = 'gasketPoron'
 
 /** feet cao su dán đáy case: id vật tư theo màu (chọn ở bảng bước dán feet, Shopii gộp 1 sản phẩm) */
 const FEET_COLORS: [id: string, name: string, color: string][] = [
@@ -141,6 +145,19 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     ],
     desc: 'Tấm Poron đen nguyên tấm, dùng được mọi layout (lót lên PCB thì cắt lỗ switch + khe stab): giảm rung, tiếng thock trầm hơn',
     pcbFoam: true,
+  },
+  // tham khảo "Poron Gasket Foam Strips 20pcs" (20 × 4mm, dày 2 / 3mm, ~8–10 USD)
+  gasketPoron: {
+    name: 'Dải gasket Poron 20 × 4mm',
+    unit: 'miếng',
+    color: '#26272b',
+    packs: [
+      [20, 180],
+      // Blossom 9 dải dài hết tai = 62 miếng
+      [100, 750],
+    ],
+    desc: 'Gasket mount: dải Poron dày 2mm có keo, dán mặt trên + mặt dưới mỗi tai plate (2 miếng / điểm gasket), plate kẹp nhún giữa 2 mảnh case',
+    gasketStrip: true,
   },
   urgo: {
     name: 'Băng keo cá nhân Urgo',

@@ -5,6 +5,7 @@ import { TOOLS } from '@/data/parts'
 import { CERT_BONUS, REP_RULES, REP_TIERS, certBonus, repTier } from '@/data/reputation'
 import { cn, fmt, fmtMoney } from '@/lib/format'
 import { Button, Chip, Tooltip } from '@/components/ui'
+import { NotifyBell } from './NotifyBell'
 
 type Side = 'top' | 'bottom'
 
@@ -246,6 +247,7 @@ export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
           Ngày {day}
         </Chip>
       </Tooltip>
+      <NotifyBell side={tipSide} />
     </div>
   )
 }

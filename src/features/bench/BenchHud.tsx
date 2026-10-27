@@ -19,6 +19,7 @@ import { StatusChips } from '@/components/game/StatusChips'
 import type { ScrewStep, StepId, ToolKind } from '@/types'
 import { StepList } from './StepList'
 import { FeetPanel, FoamPanel, LubePanel, RingPanel, SolderPanel, StabModPanel } from './ModPanels'
+import { DevCasePanel } from './DevCasePanel'
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
 import { CamModeButton, ResetCamButton } from './CamModeButton'
@@ -345,12 +346,6 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
           )}
         </div>
       </div>
-      {/* mẹo chuột / phím: điện thoại không dùng được nên ẩn */}
-      <span className={cn('text-xs text-muted max-md:hidden', !open && 'hidden')}>
-        {s.camMode === 'pan'
-          ? '✋ Chuột trái: kéo khung nhìn · Chuột phải: xoay 360° · Cuộn: zoom · R: đổi chế độ · Q: lật đáy · Space: góc mặc định'
-          : 'Chuột trái: thao tác / xoay 360° · Chuột phải hoặc Shift + kéo: di chuyển · Cuộn: zoom · R: bàn tay · Q: lật đáy · Space: góc mặc định'}
-      </span>
     </div>
   )
 }
@@ -415,6 +410,9 @@ export function BenchHud() {
       <SoundMeter />
     ) : null
 
+  // dev: đơn build thử có bảng đổi case / màu / mount ngay trên bàn
+  const devCase = import.meta.env.DEV && !!order.dev
+
   return (
     <>
       <TopBar canFlip={canFlip} isFlipped={isFlipped} />
@@ -425,9 +423,10 @@ export function BenchHud() {
         </HudPanel>
         <StepList />
       </div>
-      {side && (
+      {(side || devCase) && (
         // cột phải: chữ 14px đồng bộ với cột trái (chữ nhỏ 12 → 14px, tiêu đề lớn hơn 1 bậc)
-        <div className="fixed top-16 right-3 z-[5] flex max-h-[calc(100vh-160px)] w-[310px] flex-col text-sm max-md:hidden [&_.text-base]:text-lg [&_.text-xs]:text-sm">
+        <div className="fixed top-16 right-3 z-[5] flex max-h-[calc(100vh-160px)] w-[310px] flex-col gap-2 text-sm max-md:hidden [&_.text-base]:text-lg [&_.text-xs]:text-sm">
+          {devCase && <DevCasePanel />}
           {side}
         </div>
       )}

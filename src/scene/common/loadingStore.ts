@@ -6,6 +6,17 @@ interface SceneLoading {
   ready: boolean
   /** số khối đang chờ tải model khi đổi bước */
   pending: number
+  /** lần vào bàn build này đã tải xong hết (cả model bước đầu); chưa xong thì màn chờ phủ kín cả HUD */
+  settled: boolean
 }
 
-export const useSceneLoading = create<SceneLoading>()(() => ({ ready: false, pending: 0 }))
+export const useSceneLoading = create<SceneLoading>()(() => ({
+  ready: false,
+  pending: 0,
+  settled: false,
+}))
+
+// đã dựng cảnh + không còn model chờ tải: coi như vào bàn xong, từ đó đổi bước chỉ phủ mờ
+useSceneLoading.subscribe((s) => {
+  if (s.ready && s.pending === 0 && !s.settled) useSceneLoading.setState({ settled: true })
+})

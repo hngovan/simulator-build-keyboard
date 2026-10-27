@@ -24,6 +24,14 @@ const TEXTS = {
     'Thợ không có tâm, phím lỗi tùm lum',
     'Tiền mất tật mang, không recommend',
   ],
+  crack: [
+    'Nhận phím mà case nứt một đường, shop vặn vít kiểu gì vậy 😡',
+    'Case PC đẹp vậy mà nứt luôn chỗ bắt vít, may shop còn chịu đền',
+  ],
+  strip: [
+    'Vít tuôn ren lỏng lẻo hết, vặn lại không ăn. Ẩu quá!',
+    'Mở ra kiểm tra thấy vít toét ren, shop đền tiền mà vẫn bực',
+  ],
   late: ['Hẹn mà trễ {n} ngày, chờ mòn mỏi 😮‍💨', 'Phím được nhưng giao trễ {n} ngày, mất điểm'],
   decline: [
     'Thợ chảnh chó, nhắn mấy lần không thèm nhận đơn',
@@ -54,11 +62,13 @@ export const shipRep = (r: DeliveryResult) => r.stars - 3 - (r.late ?? 0)
 
 /** Khách nhận hàng: đánh giá theo sao, trễ hạn thì phàn nàn trễ */
 export function shipReview(order: Order, r: DeliveryResult, day: number): Review {
-  const text = r.defects?.length
-    ? pick(TEXTS.defect).replace('{keys}', r.defects.slice(0, 4).join(', '))
-    : r.late
-      ? pick(TEXTS.late).replace('{n}', String(r.late))
-      : pick(r.stars >= 4 ? TEXTS.great : r.stars >= 3 ? TEXTS.ok : TEXTS.bad)
+  const text = r.damage
+    ? pick(TEXTS[r.damage])
+    : r.defects?.length
+      ? pick(TEXTS.defect).replace('{keys}', r.defects.slice(0, 4).join(', '))
+      : r.late
+        ? pick(TEXTS.late).replace('{n}', String(r.late))
+        : pick(r.stars >= 4 ? TEXTS.great : r.stars >= 3 ? TEXTS.ok : TEXTS.bad)
   return { ...base(order, day), stars: r.stars, text, kind: 'ship', rep: shipRep(r) }
 }
 

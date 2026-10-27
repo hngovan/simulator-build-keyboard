@@ -1,7 +1,12 @@
 import type { StateCreator } from 'zustand'
 import {
+  CASE_SCREW_STEPS,
+  CRACK_CHANCE,
+  SCREW_BITS,
   SCREW_STEPS,
   SPIN_MS,
+  brittleCase,
+  gasketStrips,
   STEP_INFO,
   isOptionalStep,
   stabUnits,
@@ -30,7 +35,7 @@ import {
   type StabAnim,
   type StabModKind,
 } from '@/data/mods'
-import { FOAM_ID, SUPPLIES } from '@/data/supplies'
+import { FOAM_ID, GASKET_ID, SUPPLIES } from '@/data/supplies'
 import type { BuildContext, BuildState, ScrewBit, ScrewStep, StepId, ToolKind } from '@/types'
 import { deadKey, scoreDelivery } from './scoring'
 import { leftoverSpare } from './spare'
@@ -83,7 +88,10 @@ export interface BuildSlice {
   /** performance.now() lần cuối bấm phím ở bước test (hoặc lúc vào bước): để nhắc phím chưa test */
   testIdleFrom: number
   unbox: () => void
+  /** bước tháo vít: mỗi click 1 nấc (sai đầu vít thì tuôn ren) */
   turnScrew: (id: string) => void
+  /** bước vặn vào: nhả chuột sau `held` giây; [lo, hi) chặt, chưa tới lo thì vít mới vào 1 phần, tới hi / sai đầu vít là tuôn ren */
+  tightenScrew: (id: string, held: number, win: { lo: number; hi: number }) => void
   installStab: (id: string) => void
   placePlate: () => void
   /** lót foam Poron lên PCB (bước tuỳ chọn `foam`), trừ 1 tấm */
@@ -224,13 +232,49 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       supplies[id] = (supplies[id] ?? 0) + used - (e.supplyUsed[id] ?? 0)
     const sw = s.inventory.switch
     set({
-      build: e.build,
+      // tuôn ren / nứt case không hoàn tác được
+      build: { ...e.build, stripped: s.build.stripped, cracked: s.build.cracked },
       supplies,
       supplyUsed: e.supplyUsed,
       inventory: sw ? { ...s.inventory, switch: { ...sw, count: sw.count + back } } : s.inventory,
       pressed: {},
       viewFlip: false,
     })
+  }
+  /** bắt đủ vít (bước vặn vào) thì tự sang bước kế, chờ tua vít quay xong con cuối (không cắt hoạt cảnh / lật board giữa chừng) */
+  const afterScrew = (step: ScrewStep) => {
+    const s = get()
+    if (SCREW_STEPS[step] !== 'tighten' || !s.build || !s.ctx) return
+    const [done, total] = stepProgress(step, s.build, s.ctx, SCREW_FULL)
+    if (done < total) return
+    const idx = s.build.stepIdx
+    const level = screwLevel(s.tools, s.screwPick)
+    setTimeout(
+      () => {
+        const g = get()
+        // hoàn tác / đổi bước trong lúc chờ thì thôi
+        if (g.build?.stepIdx === idx && g.ctx?.steps[idx] === step) g.nextStep()
+      },
+      (level ? SPIN_MS.electric : SPIN_MS.manual) + 150,
+    )
+  }
+  /** tuôn ren 1 vít (sai đầu vít / quá lực): vít coi như xong nhưng ghi hỏng; vít ăn vào case giòn thì có thể nứt case */
+  const strip = (step: ScrewStep, id: string) => {
+    const s = get()
+    if (!s.build) return
+    const crack =
+      !s.build.cracked &&
+      CASE_SCREW_STEPS.includes(step) &&
+      brittleCase(s.inventory.case?.id) &&
+      Math.random() < CRACK_CHANCE
+    s.patchBuild({
+      screws: { ...s.build.screws, [id]: SCREW_FULL },
+      stripped: { ...s.build.stripped, [id]: true },
+      ...(crack ? { cracked: true } : {}),
+    })
+    if (crack) s.toast('💥 Vặn quá tay, nứt luôn case! Giao đi là phải đền khách', 'bad')
+    else s.toast('🔩 Tuôn ren con vít này rồi! Khách phát hiện là phải đền', 'bad')
+    afterScrew(step)
   }
   const once = (step: StepId, patch: Partial<BuildState>) => () => {
     const snap = snapshot()
@@ -408,24 +452,34 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const cur = s.build.screws[id] ?? 0
       if (cur >= SCREW_FULL) return
       commit(snapshot())
+      // sai đầu vít: toét ren, vít vẫn ra / vào nhưng ghi hỏng
+      if (s.screwBit !== SCREW_BITS[step]) return strip(step, id)
       // tua vít tay mỗi click 1 nấc, tua vít điện 1 click là đủ
       const level = screwLevel(s.tools, s.screwPick)
       const step1 = SCREW_FULL / TOOLS.screw[level].clicks!
       s.patchBuild({ screws: { ...s.build.screws, [id]: Math.min(SCREW_FULL, cur + step1) } })
-      // bắt đủ vít (bước vặn vào) thì tự sang bước kế, chờ tua vít quay xong con cuối (không cắt hoạt cảnh / lật board giữa chừng)
-      const after = get()
-      if (SCREW_STEPS[step] !== 'tighten' || !after.build) return
-      const [done, total] = stepProgress(step, after.build, s.ctx, SCREW_FULL)
-      if (done < total) return
-      const idx = after.build.stepIdx
-      setTimeout(
-        () => {
-          const g = get()
-          // hoàn tác / đổi bước trong lúc chờ thì thôi
-          if (g.build?.stepIdx === idx && g.ctx?.steps[idx] === step) g.nextStep()
-        },
-        (level ? SPIN_MS.electric : SPIN_MS.manual) + 150,
+      afterScrew(step)
+    },
+    tightenScrew: (id, held, win) => {
+      const s = get()
+      const step = s.step() as ScrewStep
+      if (
+        !s.build ||
+        !s.ctx ||
+        SCREW_STEPS[step] !== 'tighten' ||
+        !s.ctx.screws[step].some((sc) => sc.id === id)
       )
+        return
+      const cur = s.build.screws[id] ?? 0
+      if (cur >= SCREW_FULL) return
+      commit(snapshot())
+      if (s.screwBit !== SCREW_BITS[step] || held >= win.hi) return strip(step, id)
+      // nhả sớm: vít mới vào 1 phần, giữ tiếp lần sau
+      const v =
+        held >= win.lo ? SCREW_FULL : Math.min(SCREW_FULL * 0.9, (held / win.lo) * SCREW_FULL)
+      s.patchBuild({ screws: { ...s.build.screws, [id]: Math.max(cur, v) } })
+      if (v < SCREW_FULL) return
+      afterScrew(step)
     },
     installStab: (id) => {
       const s = at('stab')
@@ -775,7 +829,10 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     placeGasket: (i) => {
       const s = at('gasket')
       if (!s || s.build.gaskets[i]) return
-      commit(snapshot())
+      // chụp trước khi trừ vật tư: hoàn tác thì trả lại dải Poron (đủ phủ hết tai, mặt trên + dưới)
+      const snap = snapshot()
+      if (!s.useSupply(GASKET_ID, gasketStrips(s.ctx.gaskets[i]))) return
+      commit(snap)
       s.patchBuild({ gaskets: { ...s.build.gaskets, [i]: true } })
     },
     placeFoot: (i) => {
@@ -829,6 +886,25 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     deliver: () => {
       const s = get()
       if (!s.order || !s.build || !s.ctx) return
+      // đơn build thử (dev): dọn bàn luôn, không đóng gói / chấm điểm, đồ không vào kho chung
+      if (s.order.dev) {
+        set({
+          order: null,
+          result: null,
+          inventory: emptyInventory(),
+          provided: {},
+          spent: 0,
+          posts: [],
+          mount: null,
+          screen: 'pc',
+          build: null,
+          ctx: null,
+          history: [],
+          future: [],
+          supplyUsed: {},
+        })
+        return s.toast('Xong đơn build thử, đã dọn bàn')
+      }
       if (!s.inventory.switch)
         return s.toast('Đơn này đang thiếu switch, mua thêm rồi hãy giao', 'bad')
       const result = scoreDelivery({

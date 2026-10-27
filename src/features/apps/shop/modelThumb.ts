@@ -117,6 +117,26 @@ function createFeetStrip(color: string) {
   return group
 }
 
+/** Vỉ dải gasket Poron: tấm giấy lót trắng + các dải đen 20 × 4mm xếp hàng */
+function createGasketStrips(color: string) {
+  const group = new THREE.Group()
+  group.add(
+    new THREE.Mesh(
+      new THREE.BoxGeometry(2.4, 0.02, 1.2),
+      new THREE.MeshStandardMaterial({ color: '#e8e6df', roughness: 0.9 }),
+    ),
+  )
+  const strip = new THREE.BoxGeometry(1, 0.08, 0.2)
+  const poron = new THREE.MeshStandardMaterial({ color, roughness: 0.95 })
+  for (let i = 0; i < 8; i++) {
+    const m = new THREE.Mesh(strip, poron)
+    m.position.set(i < 4 ? -0.56 : 0.56, 0.05, ((i % 4) - 1.5) * 0.27)
+    group.add(m)
+  }
+  group.rotation.set(0.75, -0.35, 0.1)
+  return group
+}
+
 /** Tấm foam Poron nguyên (chưa cắt lỗ): hộp đen mỏng, 1 tấm dùng cho mọi layout */
 function createFoamSheet(color: string) {
   const sheet = new THREE.Mesh(
@@ -201,6 +221,7 @@ export async function buildScene(kind: ThumbKind, type: string) {
     if (SUPPLIES[type]?.spell) return createScroll(SUPPLIES[type].name)
     if (SUPPLIES[type]?.feet) return createFeetStrip(SUPPLIES[type].color)
     if (SUPPLIES[type]?.pcbFoam) return createFoamSheet(SUPPLIES[type].color)
+    if (SUPPLIES[type]?.gasketStrip) return createGasketStrips(SUPPLIES[type].color)
     if (SUPPLIES[type]?.oring) return createORings(SUPPLIES[type].color)
     if (type === 'urgo') {
       // hộp băng cá nhân "Band Aid Box" (Logansryche, Sketchfab, CC BY 4.0): model lệch xa gốc, căn tâm về 0

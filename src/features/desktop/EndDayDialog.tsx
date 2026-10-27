@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useGame } from '@/store'
 import { CANCEL_AFTER, NO_WORK_FINE } from '@/store/shopSlice'
 import { shipRep } from '@/data/reviews'
+import { payout } from '@/store/scoring'
 import { Alert, Button, HudCard, KeyValueTable } from '@/components/ui'
 import { cn, fmt, fmtMoney } from '@/lib/format'
 
@@ -23,7 +24,7 @@ export function EndDayDialog({ onClose }: { onClose: () => void }) {
   const s = useGame()
   const start = s.dayStart ?? { money: s.money, rep: s.rep }
   const unsent = s.packed.filter((p) => !p.shipped)
-  const income = unsent.reduce((a, p) => a + p.result.reimburse + p.result.labor, 0)
+  const income = unsent.reduce((a, p) => a + payout(p.result), 0)
   const repGain = unsent.reduce((a, p) => a + shipRep(p.result), 0)
   // giống nextDay: đơn đang chờ trễ quá CANCEL_AFTER ngày thì khách huỷ, đơn nhận mà cả ngày không làm thì đền tiền
   const cancelled = s.jobs.filter((j) => s.day + 1 - (j.order.dueDay ?? s.day + 1) > CANCEL_AFTER)

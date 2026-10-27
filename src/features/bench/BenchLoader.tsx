@@ -2,9 +2,9 @@ import { useProgress } from '@react-three/drei'
 import { cn } from '@/lib/format'
 import { useSceneLoading } from '@/scene/common/loadingStore'
 
-// Màn hình chờ khi tải cảnh 3D: phủ kín lúc vào bàn build lần đầu, phủ mờ khi bước mới cần tải model
+// Màn hình chờ khi tải cảnh 3D: phủ kín (che cả HUD) tới khi cảnh + model bước đầu tải xong, phủ mờ khi bước mới cần tải model
 export function BenchLoader() {
-  const ready = useSceneLoading((s) => s.ready)
+  const ready = useSceneLoading((s) => s.settled)
   const stepLoading = useSceneLoading((s) => s.pending > 0)
   const { active, progress } = useProgress()
   if (ready && !stepLoading) return null

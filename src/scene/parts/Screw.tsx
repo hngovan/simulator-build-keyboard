@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
+import { Html, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, useCtx, useStep } from '@/store'
 import { SCREW_FULL, screwLevel } from '@/data/parts'
-import { BIT_LABELS, SCREW_BITS, SCREW_STEPS, Y } from '@/data/steps'
+import { SCREW_BITS, SCREW_STEPS, Y, torqueWindow } from '@/data/steps'
+import { cn } from '@/lib/format'
 import type { ScrewBit, ScrewPoint, ScrewStep } from '@/types'
 import { playDrill, playScrew } from '@/sound'
 import { useHover } from '../common/useHover'
+import { useCamLock } from '../common/camLock'
 import { BIT_SWAP_MS, BitDriver, SCREW_SPIN, SPIN_MS } from '../models/HandTools'
 import { MM } from '../models/Switch'
 import { HintArrow } from '../stations/StationKit'
@@ -307,7 +309,7 @@ function Screw({
   const turns = useGame((s) => s.build?.screws[id] ?? 0)
   const toolLv = useGame((s) => screwLevel(s.tools, s.screwPick))
   const turnScrew = useGame((s) => s.turnScrew)
-  const toast = useGame((s) => s.toast)
+  const tightenScrew = useGame((s) => s.tightenScrew)
   // tiến độ tính theo mức đầy chung (tay 3 nấc, điện 1 click = đầy)
   const clicks = SCREW_FULL
   const done = turns >= clicks
@@ -336,6 +338,28 @@ function Screw({
   }, [model])
   const spinMs = toolLv ? SPIN_MS.electric : SPIN_MS.manual
   const p = Math.min(1, turns / clicks)
+  // vặn vào: giữ chuột siết, lực (giây) chạy theo thanh; vùng chặt ngẫu nhiên theo tua vít mỗi lần bấm
+  const hold = useRef<{ at: number; base: number; lo: number; hi: number } | null>(null)
+  const [held, setHeld] = useState<{ t: number; lo: number; hi: number } | null>(null)
+  const [spinTick, setSpinTick] = useState(0)
+  const holding = !!held
+  useEffect(() => {
+    if (!holding) return
+    useCamLock.setState({ locked: true })
+    return () => useCamLock.setState({ locked: false })
+  }, [holding])
+  const holdTime = () => {
+    const h = hold.current
+    return h ? h.base + (performance.now() - h.at) / 1000 : 0
+  }
+  const release = () => {
+    const h = hold.current
+    if (!h) return
+    const t = holdTime()
+    hold.current = null
+    setHeld(null)
+    tightenScrew(id, t, h)
+  }
   // tháo: trồi lên theo ren (thân ốc ~0.4u) · vặn: lún từ 0.25 xuống mặt
   const liftAt = (q: number) => (mode === 'tighten' ? (1 - q) * 0.25 : q * 0.4)
   const dir = mode === 'tighten' ? -1 : 1
@@ -372,6 +396,18 @@ function Screw({
     }
     const k = Math.min(1, (now - a.at) / spinMs)
     shown.current = a.from + (p - a.from) * (toolLv ? k : ease(k))
+    const h = hold.current
+    if (h) {
+      const t = holdTime()
+      shown.current = Math.min(1, t / h.lo)
+      a.from = shown.current
+      setHeld({ t, lo: h.lo, hi: h.hi })
+      // tua vít quay liên tục: mỗi nhịp quay 1 lần
+      const tick = Math.floor(((now - h.at) / spinMs) * (toolLv ? 1 : 1.5))
+      if (tick !== spinTick) setSpinTick(tick)
+      // giữ quá vùng chặt: tuôn ren ngay, không chờ nhả chuột
+      if (t >= h.hi) release()
+    }
     const lift = liftAt(shown.current)
     const t = outAt.current === null ? 0 : Math.min(1, Math.max(0, (now - outAt.current) / OUT_MS))
     const e = ease(t)
@@ -404,7 +440,7 @@ function Screw({
     return () => clearTimeout(t)
   }, [turns, spinMs])
   const [showTool, setShowTool] = useState(false)
-  const want = hover || busy
+  const want = hover || busy || !!held
   useEffect(() => {
     const t = setTimeout(() => setShowTool(want), want ? 0 : 200)
     return () => clearTimeout(t)
@@ -417,17 +453,23 @@ function Screw({
         ref={ref}
         position-y={y + liftAt(p)}
         onPointerDown={(e) => {
-          if (!interactive || done) return
+          if (!interactive || done || hold.current) return
           e.stopPropagation()
-          if (bit !== requiredBit) {
-            toast(`Cần đầu vít ${BIT_LABELS[requiredBit]}`, 'bad')
-            return
-          }
-          turnScrew(id)
           if (toolLv) playDrill()
           else playScrew()
+          if (mode === 'remove') return turnScrew(id)
+          const win = torqueWindow(toolLv)
+          // sai đầu vít: trượt toét ren ngay khi siết
+          if (bit !== requiredBit) return tightenScrew(id, 0, win)
+          hold.current = { at: performance.now(), base: (turns / clicks) * win.lo, ...win }
+          setHeld({ t: hold.current.base, ...win })
         }}
-        {...bind}
+        onPointerUp={release}
+        onPointerOver={bind.onPointerOver}
+        onPointerOut={() => {
+          bind.onPointerOut()
+          release()
+        }}
       >
         {/* vặn vào mà chưa bấm lần nào: chỉ khung nét đứt ở miệng lỗ (ốc chưa tra), bấm mới tra ốc vào rồi vặn */}
         {mode === 'tighten' && turns === 0 && (
@@ -464,14 +506,50 @@ function Screw({
           </mesh>
         )}
         {/* mũi tên vàng chỉ con vít tiếp theo (rê chuột vào / đang vặn thì ẩn cho thấy tua vít) */}
-        {hint && interactive && !done && !hover && !busy && <HintArrow at={[0, 0.3, 0]} />}
+        {hint && interactive && !done && !hover && !busy && !held && <HintArrow at={[0, 0.3, 0]} />}
+        {held && (
+          <Html center position={[0, 0.3, 0]} zIndexRange={[6, 6]}>
+            <TorqueBar t={held.t} lo={held.lo} hi={held.hi} />
+          </Html>
+        )}
       </group>
       {showTool && interactive && (
         <group ref={tool} position-y={y + liftAt(p) + 0.04} rotation={[0.35, 0, -0.3]} scale={1.6}>
-          <CurrentDriver spinKey={turns} dir={dir} />
+          <CurrentDriver spinKey={turns * 100 + spinTick} dir={dir} />
         </group>
       )}
     </group>
+  )
+}
+
+/** px mỗi giây trên thanh lực */
+const TORQUE_PX = 110
+
+/** Thanh lực vặn (giây giữ chuột): vàng = đang siết, xanh = nhả là chặt, đỏ = tuôn ren */
+function TorqueBar({ t, lo, hi }: { t: number; lo: number; hi: number }) {
+  const end = hi + 0.3
+  const pct = (x: number) => `${Math.min(100, (x / end) * 100)}%`
+  const zone = t < lo ? 'turn' : t < hi ? 'ok' : 'strip'
+  return (
+    <div
+      className="pointer-events-none -translate-y-12 select-none"
+      style={{ width: end * TORQUE_PX }}
+    >
+      <div className="relative h-4 overflow-hidden border-2 border-black/60 bg-[#1b1f28]">
+        <div
+          className={cn('absolute inset-y-0', zone === 'turn' ? 'bg-green/20' : 'bg-green/75')}
+          style={{ left: pct(lo), width: `calc(${pct(hi)} - ${pct(lo)})` }}
+        />
+        <div className="absolute inset-y-0 right-0 bg-red/45" style={{ left: pct(hi) }} />
+        <div
+          className={cn(
+            'relative h-full',
+            zone === 'turn' ? 'bg-yellow' : zone === 'ok' ? 'bg-green' : 'bg-red',
+          )}
+          style={{ width: pct(t) }}
+        />
+      </div>
+    </div>
   )
 }
 

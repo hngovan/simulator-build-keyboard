@@ -156,6 +156,7 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
     if (l.src.kind !== 'customer') {
       set({ money, listings })
       s.toast(`💸 ${how}Đã bán ${l.title} cho ${buyer}: +${amount}k`, 'good')
+      s.logNotify('💸 Đã bán', `${how}${l.title} cho ${buyer}: +${amount}k`)
       // đồ khách gửi của đơn đã nhận: khách lướt chợ thấy món của mình (STEAL_OK thoát) → huỷ kèo
       const src = l.src
       if (src.kind === 'job' && src.provided && Math.random() >= STEAL_OK) {
@@ -339,7 +340,10 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
         return { ...l, log: [...l.log, t.line], bid: t.top ? { ...l.bid, top: t.top } : l.bid }
       })
       if (changed) set({ listings })
-      for (const b of binned) s.toast(`🔨 ${b} · vào Bài của tôi chốt bán`, 'good')
+      for (const b of binned) {
+        s.toast(`🔨 ${b} · vào Bài của tôi chốt bán`, 'good')
+        s.logNotify('🔨 Fast bid có người BIN', `${b} · vào Bài của tôi chốt bán`)
+      }
     },
     settleBids: () => {
       const now = Date.now()
@@ -365,10 +369,15 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
             `🔨 Hết giờ fast bid ${l.title}: ${top.name} thắng ${top.amount}k · vào Bài của tôi chốt bán`,
             'good',
           )
+          s.logNotify(
+            '🔨 Fast bid kết thúc',
+            `${l.title}: ${top.name} thắng ${top.amount}k · vào Bài của tôi chốt bán`,
+          )
         } else {
           const s = get()
           set({ ...restore(s, l.src), listings: s.listings.filter((x) => x.id !== l.id) })
           s.toast(`🔨 Fast bid ${l.title} không ai trả, món về lại chỗ cũ`, 'info')
+          s.logNotify('🔨 Fast bid kết thúc', `${l.title} không ai trả, món về lại chỗ cũ`)
         }
       }
     },

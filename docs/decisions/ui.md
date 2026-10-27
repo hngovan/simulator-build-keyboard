@@ -729,3 +729,50 @@
   Chip chọn tag lúc đăng bán (`SourceRow`) giữ chữ đứng.
 - 2026-10-27, người dùng: "cho font lên 13 ở cả hashtag và" nhãn `Tag` → `Tag` `text-xs` → `text-[13px]`, icon trong nhãn 12 → 14px
   (hashtag, nguồn món "Đơn …" / "Phím của khách" / "Hàng lỗi", fast bid, chuộc phím).
+
+## Đổi hình nền desktop (2026-10-27)
+
+- Người dùng: "thêm 2 hình nền nữa để người dùng có thể thay đổi được hình nền máy tính như windows".
+- 3 hình nền vẽ bằng CSS (không thêm ảnh): Cực quang (gradient cũ, mặc định), Hoàng hôn (mặt trời sọc retro + đồi),
+  Bàn phím (lưới keycap nghiêng nền tối, vài phím màu nhấn). Danh sách id + tên: `features/desktop/wallpapers.ts`
+  (`WALLPAPERS`, `wallpaperOf` = id lạ về mặc định); hình vẽ: `Wallpaper.tsx` (tách file cho react-refresh).
+- Lưu `Profile.wallpaper` (START `'aurora'`, `SAVED_KEYS`, `snapshot`); chơi mới thì về mặc định như âm thanh.
+- Cài đặt → panel "Hình nền": 3 ô xem trước (vẽ hình nền cỡ 800×450 rồi `scale-[0.17]`), đang chọn viền vàng, bấm là đổi ngay.
+- Người dùng: "dấu chấm than trong setting đưa qua góc bên phải và làm style giống chấm than ở bảng xếp hạng" → `Heading`
+  (`components/ui/Panel.tsx`, prop `info`): ⓘ `ml-auto` sát phải, `size-5` màu `text-muted` (rê → `text-ink`) như đầu app bảng xếp hạng.
+- Người dùng: "UI cài đặt làm style giống bảng xếp hạng" → `SettingsApp` bỏ `Panel` / `Heading`: đầu app ô icon `Settings` vàng +
+  tiêu đề "Cài đặt" + dòng phụ + ⓘ; mỗi nhóm là `Section` (`rounded-2xl bg-black/15 p-1.5`, hàng tiêu đề chữ xám 13px + ⓘ phải)
+  chứa các `Row` `bg-panel-2`; % âm lượng màu xanh bên phải; ô hình nền đang chọn = nền vàng tối + viền vàng như dòng của mình;
+  ghi chú nhạc nền gộp vào ⓘ của nhóm Âm thanh.
+- Người dùng: "ko hiển thị con chuột kèm dấu ? khi hover vào icon chấm than trong setting" → bỏ `cursor-help` ở ⓘ của `Section` (giữ con trỏ thường như bảng xếp hạng).
+- Người dùng: "Cực quang => xoá name tương tự với 3 hình còn lại" → ô xem trước hình nền bỏ chữ tên bên dưới, chỉ còn ảnh
+  (tên vẫn ở tooltip `title`, danh sách tên giữ trong `wallpapers.ts`).
+- Người dùng: "button phá sản => xoá, h đây chỉ còn lưu tiến trình => xoá icon lưu tiến trình" → bỏ nút Phá sản + popup
+  `ConfirmBankrupt` khỏi Cài đặt (nhóm Tiến trình chỉ còn nút xanh "Lưu tiến trình", không icon 💾). `endRun('bankrupt')` /
+  lý do `bankrupt` trong `gameOver.ts` giữ nguyên (bản lưu / bảng xếp hạng cũ còn dùng). Cập nhật CLAUDE.md + OVERVIEW.
+- Người dùng: "keeb-chan nhắc lại mẹo từ đầu => ẩn hiện keeb-chan" → nhóm Hướng dẫn: thay nút "Nhắc lại mẹo" bằng `Toggle` "Hiện Keeb-chan".
+  Lưu `Profile.guideHidden` (START false, `SAVED_KEYS`, `snapshot`); `App.tsx` ẩn `GuideNpc` + `BenchDialog` khi bật ẩn
+  (Keeb-chan ở màn tiêu đề vẫn hiện). Bỏ chức năng xoá `guideSeen` (nhắc lại mẹo) khỏi Cài đặt.
+
+## Màn chờ bàn build che cả HUD + bỏ dòng mẹo chuột (2026-10-27)
+
+- Người dùng: "khi vào bàn build đang hiển thị luôn trước cả đơn, các bước build menu bên trái + menu dưới cùng trong khi còn đang tải".
+  Nguyên nhân: `ready` (Suspense ngoài: phòng + HDR) xong trước model bước (Suspense trong → `pending`), `BenchLoader` chuyển sang lớp mờ
+  `z-[4]` nằm dưới HUD. Sửa: `loadingStore` thêm `settled` (ready + pending 0 lần đầu, tự đặt qua `subscribe`, reset khi `SceneReady` gỡ);
+  `BenchLoader` phủ kín `z-[50]` tới khi `settled`, sau đó đổi bước mới phủ mờ như cũ.
+- Người dùng: "text-xs text-muted max-md:hidden => bỏ đi" → xoá dòng mẹo chuột / phím dưới thanh công cụ đáy `BenchHud`.
+- Người dùng: "bỏ phần header flex items-center gap-3 ở setting" → `SettingsApp` bỏ đầu app (ô icon + "Cài đặt" + dòng phụ + ⓘ),
+  chỉ còn các khối nhóm `Section`.
+
+## Chuông thông báo góc phải (2026-10-27)
+
+- Người dùng: "thêm notify góc bên phải màn hình để xem được các thông báo (khách phát hiện bán đồ của khách, đánh giá, bài bid kết thúc…),
+  có thể xoá noti nếu không cần xem lại".
+- `NotifyBell` (`components/game/NotifyBell.tsx`) gắn cuối `StatusChips` → có ở taskbar desktop (mở lên) + thanh trên bàn build (mở xuống).
+  Chấm đỏ số chưa xem; bảng portal ra body `z-[3100]` (taskbar nằm trong stacking context của desktop nên Keeb-chan z-60 đè lên nếu để absolute);
+  mỗi dòng `bg-panel-2` tiêu đề + "Ngày N" + nội dung + nút X xoá, "Xoá hết"; thông báo đánh giá bấm mở app Đánh giá.
+- Store (`metaSlice`): `logNotify(title, text, review?)` ghi vào `inbox` (mới nhất trước, `INBOX_KEEP` 50) + tăng `unread`;
+  `removeNotify` / `clearNotify` / `readNotify` (mở bảng = đã xem). `notify` (popup đỏ) và `addReviews` tự ghi.
+  Ghi thêm: bán được đồ (`completeSale`), fast bid có người BIN / hết giờ có người thắng / không ai trả (`settleBids`),
+  khách huỷ đơn vì trễ hạn (`nextDay`), seller bùng hàng. Toast vẫn hiện như cũ.
+- Lưu `Profile.inbox` + `unread` (START rỗng, `SAVED_KEYS`, `snapshot`); chơi mới thì xoá.

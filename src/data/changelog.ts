@@ -13,6 +13,24 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.13',
+    date: '2026-10-27',
+    commits: [],
+    title: 'Gasket Poron, Blossom / Catto HHKB 2 mảnh, gờ case theo mount, vặn vít canh lực',
+    items: [
+      'Gasket mount: dán dải Poron 20 × 4mm mặt trên + mặt dưới tai plate, bán ở Shopii (gói 20 / 100 miếng)',
+      'Blossom thành case 2 mảnh chỉ gasket mount: plate từ DXF gốc, 9 dải gasket dài hết tai, 8 vít đúng lỗ, 2 mảnh khép có đường tách',
+      'Catto HHKB thành case 2 mảnh gasket mount, 8 vít đúng lỗ model',
+      'Gờ trong lòng case: O-ring / OG có gờ đỡ vòng, gasket có gờ đỡ + gờ đè, top mount plate có tai + vấu case trên',
+      'Feet đúng mặt đáy case không có hốc (Blossom, RF-Bruh), mũi tên hướng dẫn dán feet / thả board / đậy case trên',
+      'Vặn vít vào: giữ chuột canh lực, quá tay tuôn ren hoặc nứt case PC / mica / acrylic, giao hàng phải đền',
+      'Chuông thông báo, hình nền desktop, ẩn / hiện Keeb-chan ở Cài đặt',
+      'Save cũ: mount case không còn làm được thì tự đổi, build làm dở lùi về bước mới (dán gasket)',
+      'Kìm cắt ở bàn mod stab không còn đè housing stab dài',
+      'Dev: build thử mọi case + màu, đổi case / chất liệu / màu / mount ngay trên bàn build',
+    ],
+  },
+  {
     version: '0.1.12',
     date: '2026-10-27',
     commits: ['1ce1ce1'],

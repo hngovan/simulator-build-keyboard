@@ -53,6 +53,7 @@ const SAVED_KEYS = [
   'screwBit',
   'screwPick',
   'trayColor',
+  'wallpaper',
   'wear',
   'reviews',
   'spare',
@@ -81,6 +82,9 @@ const SAVED_KEYS = [
   'listings',
   'stolen',
   'guideSeen',
+  'guideHidden',
+  'inbox',
+  'unread',
 ] as const satisfies readonly (keyof GameState)[]
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 useGame.subscribe((s, prev) => {

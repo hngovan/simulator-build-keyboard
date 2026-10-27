@@ -140,3 +140,23 @@
   `mount = 'oring'` + độ cứng (budget +30k). Khách nhắn câu dây O-ring, OrderSpec có dòng Mount + "Dây O-ring". `checkInventory` case
   phải làm được `order.mount`; mua case thì tự chọn mount khách đòi (`firstMount(..., want)`). Chấm "Dây O-ring … như khách dặn" 5 điểm.
   Chạy thử 400 đợt đơn: ~15% đơn có `oring`; bước ring trừ vật tư + vòng trắng quanh board (ảnh).
+
+## Lực vặn vít, tuôn ren, nứt case (2026-10-27)
+
+- Người dùng: "thêm lực vặn vít, không còn block không cho vặn nữa ⇒ vặn sai đầu vít thì bị tuôn ren, case PC / mica / acrylic thì tuôn
+  hoặc nặng hơn là nứt case, lực vặn random ngưỡng tuỳ loại tua vít". Chốt qua hỏi: giữ chuột + thanh lực; hỏng thì trừ điểm khi giao
+  (build tiếp được); sai đầu vít chắc chắn hỏng. Thêm: "hỏng thì đền khách" → nứt case 80% giá trị phím; "tuôn ren 20% khách không nhận ra,
+  còn lại trừ 30% giá trị đơn".
+- `ToolDef.torque` (TOOLS.screw): tay `lo` 1–1,6s + vùng chặt 0,6–0,9s; điện `lo` 0,45–0,8s + 0,18–0,35s. `torqueWindow(level)` random mỗi lần bấm.
+- Store: `tightenScrew(id, held, win)` (bước vặn vào) — sai đầu vít / held ≥ hi → `strip`; < lo → vít vào 1 phần (≤ 90%), giữ tiếp lần sau;
+  `turnScrew` (bước tháo, click) sai đầu vít cũng `strip`. `strip`: vít coi như xong + `build.stripped[id]`; bước ăn vào case
+  (`CASE_SCREW_STEPS`) + `brittleCase` (PC / mica / acrylic, cả đáy `bottom`) → `CRACK_CHANCE` 35% `build.cracked`. `restore` (hoàn tác /
+  quay lại bước) giữ nguyên `stripped` / `cracked`. Tự sang bước tách thành `afterScrew`.
+- UI `Screw.tsx`: giữ chuột trên vít (khoá camera như hàn), `TorqueBar` (vàng → xanh → đỏ), vít lún + tua vít quay liên tục theo lực;
+  giữ tới vạch đỏ thì tuôn ngay, rời chuột = nhả. Bỏ toast chặn "Cần đầu vít ...".
+- Chấm điểm (`scoring.ts`): nứt → check −25 + `refund` = 80% budget; tuôn ren (rng ≥ `STRIP_UNNOTICED`) → −10 + 30% (budget + labor);
+  có hỏng thì sao tối đa 2. `payout(r)` = reimburse + labor − refund dùng ở `shipOrder` / `nextDay` / `EndDayDialog`; `ResultCard` ghi "đền hỏng";
+  đánh giá khách `TEXTS.crack` / `TEXTS.strip`. Hint bước vặn + thoại Keeb-chan (`TORQUE_LINE`) nhắc canh lực.
+- Đã thử (Vite dev + Playwright): giữ chuột hiện thanh lực, quá vùng → tuôn ren; qua store: nhả sớm 0,5s → 1,5/3, nhả 1,3s → chặt,
+  sai đầu vít → tuôn, hoàn tác vẫn giữ dấu tuôn; refund 30% × (3.400 + 1.050) = 1.335k, nứt 80% × 3.400 = 2.720k.
+  Headless render ~2,4s/khung nên không canh nhả vùng xanh bằng chuột thật được.

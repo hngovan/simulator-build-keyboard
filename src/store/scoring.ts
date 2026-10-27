@@ -1,4 +1,10 @@
-import { isOptionalStep, stepProgress } from '@/data/steps'
+import {
+  CRACK_REFUND,
+  STRIP_REFUND,
+  STRIP_UNNOTICED,
+  isOptionalStep,
+  stepProgress,
+} from '@/data/steps'
 import { SOUND_WISH, TOOLS, buildSound, soundMatch } from '@/data/parts'
 import { stabQuality, switchLubeEval } from '@/data/mods'
 import { SUPPLIES } from '@/data/supplies'
@@ -15,6 +21,9 @@ import type {
 export const UNTESTED_FAIL = 0.05
 /** khách báo lỗi nút: sao tối đa */
 const DEFECT_STARS = 2
+
+/** tiền khách trả khi nhận hàng: budget linh kiện + tiền công − tiền đền hỏng (case nứt / tuôn ren) */
+export const payout = (r: DeliveryResult) => r.reimburse + r.labor - (r.refund ?? 0)
 
 /** phím chưa hàn / hàn cháy: không ăn (PCB hàn) */
 export const deadKey = (build: BuildState, id: string) => {
@@ -176,6 +185,28 @@ export function scoreDelivery({
       pts: 0,
       got: -15,
     })
+  // hỏng do vặn vít: case nứt thì khách thấy ngay, đền phần giá trị phím; tuôn ren thì có thể khách không để ý,
+  // phát hiện thì đền phần giá trị đơn (linh kiện + công)
+  const strips = Object.keys(build.stripped ?? {}).length
+  let damage: DeliveryResult['damage']
+  let refund = 0
+  if (build.cracked) {
+    damage = 'crack'
+    refund = Math.round(order.budget * CRACK_REFUND)
+    checks.push({
+      label: `Case nứt khi vặn vít: đền khách ${Math.round(CRACK_REFUND * 100)}% giá trị phím (${refund}k)`,
+      pts: 0,
+      got: -25,
+    })
+  } else if (strips && rng() >= STRIP_UNNOTICED) {
+    damage = 'strip'
+    refund = Math.round((order.budget + order.labor) * STRIP_REFUND)
+    checks.push({
+      label: `Khách phát hiện ${strips} vít tuôn ren: đền ${Math.round(STRIP_REFUND * 100)}% giá trị đơn (${refund}k)`,
+      pts: 0,
+      got: -10,
+    })
+  }
   const flaws = (['case', 'pcb', 'plate', 'stab', 'keycap'] as const)
     .map((c) => (inventory[c] as { flaw?: string } | null)?.flaw)
     .filter(Boolean)
@@ -187,7 +218,7 @@ export function scoreDelivery({
     })
   const score = Math.max(0, Math.round(checks.reduce((a, c) => a + c.got, 0)))
   const byScore = score >= 90 ? 5 : score >= 75 ? 4 : score >= 55 ? 3 : score >= 35 ? 2 : 1
-  const stars = defects.length ? Math.min(DEFECT_STARS, byScore) : byScore
+  const stars = defects.length || damage ? Math.min(DEFECT_STARS, byScore) : byScore
   return {
     checks,
     score,
@@ -196,5 +227,6 @@ export function scoreDelivery({
     reimburse: order.budget,
     labor: Math.round((order.labor * score) / 100),
     ...(defects.length ? { defects } : {}),
+    ...(damage ? { damage, refund } : {}),
   }
 }

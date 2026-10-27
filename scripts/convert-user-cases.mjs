@@ -78,15 +78,16 @@ const CASES = {
   ta65: { parts: [['65TA in3D TOP.stl'], ['65TA in3D BOT.stl'], ['65TA in3D TA.stl']], plateZ: 0 },
   // Blossom (doughnut923/Blossom, MIT — assets/community/blossom): 2 mảnh xếp sẵn để in. Nắp trên in úp mặt →
   // lật 180° quanh trục x, dời về trên đáy. Mũi nhọn (mặt trước) của đáy ở y nhỏ.
-  // Đáy là hình nêm (mép trước cao 2.5mm, vách sau 14.5mm) → nắp nghiêng ~4.9° tựa lên mép sau (rot),
+  // Đáy là hình nêm (mép trước cao 2.5mm, vách sau 14.5mm) → nắp nghiêng ~5.4° tựa lên mép sau (rot),
+  // chừa khe đều ~0,6mm (dz) cho thấy đường tách 2 mảnh (đo bằng tia đứng qua vách bên),
   // không thì nắp nằm ngang hở 1 khe lớn phía trước. plate nghiêng theo nắp: seat.tilt ghi tay ở parts.ts
   'alice-blossom': {
     parts: [
       ['../community/blossom/case/B_Case.stl'],
       [
         '../community/blossom/case/U_Case.stl',
-        27.1,
-        { flip: true, dy: -343.7, rot: { angle: 0.085, y0: 127.3, z0: 14.5 } },
+        26.4,
+        { flip: true, dy: -343.7, rot: { angle: 0.0941, y0: 127.3, z0: 14.5 } },
       ],
     ],
     plateZ: 10,

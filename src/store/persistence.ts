@@ -10,12 +10,13 @@ import type {
   PartCategory,
   ToolLevels,
   Review,
+  NotifyItem,
   Spare,
   StepId,
 } from '@/types'
 import type { HistoryEntry } from './buildSlice'
-import { buildContext } from '@/data/steps'
-import { SCREW_FULL } from '@/data/parts'
+import { buildContext, remapStepIdx } from '@/data/steps'
+import { CASES, SCREW_FULL } from '@/data/parts'
 import type { Listing, Stolen } from '@/data/selling'
 
 const SAVE_KEY = 'sbk-save-v3'
@@ -38,6 +39,8 @@ export interface Profile {
   screwPick: number | null
   /** màu khay đựng ốc (`TRAY_COLORS`), bấm khay trên bàn để đổi */
   trayColor: string
+  /** hình nền desktop KeebOS (`WALLPAPERS`), đổi ở Cài đặt */
+  wallpaper: string
   /** phiên bản dữ liệu lưu, để nâng cấp bản lưu cũ */
   rev: number
   /** số lần đã dùng dụng cụ có độ bền (mỏ hàn, bùi nhùi); đủ ToolDef.life thì hỏng */
@@ -62,6 +65,12 @@ export interface Profile {
   stolen: Stolen[]
   /** NPC hướng dẫn: mẹo đã bấm "Hiểu rồi" */
   guideSeen: string[]
+  /** ẩn NPC Keeb-chan (máy tính + bàn build), bật / tắt ở Cài đặt */
+  guideHidden: boolean
+  /** thông báo đã nhận (mới nhất trước, giữ tối đa INBOX_KEEP), xem lại / xoá ở chuông góc phải */
+  inbox: NotifyItem[]
+  /** số thông báo chưa xem (mở chuông thì về 0) */
+  unread: number
 }
 
 // Đơn đang làm dở (lưu lại để thoát game vào lại vẫn tiếp tục được)
@@ -187,6 +196,37 @@ function addFoamStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' 
   return { ...sess, build: { ...b, stepIdx }, history: [] }
 }
 
+/** đơn kit khách gửi case mà khách dặn mount case không còn làm được (dữ liệu case đổi, vd Blossom → chỉ gasket) */
+function fixOrderMount(order: Order): Order {
+  const c = order.kit?.case && CASES[order.kit.case.id]
+  return c && order.mount && !c.mounts.includes(order.mount)
+    ? { ...order, mount: c.mounts[0] }
+    : order
+}
+
+/**
+ * Mount đã chọn mà case không còn làm được (dữ liệu case đổi: Blossom / Catto HHKB thành 2 mảnh chỉ gasket) → đổi sang mount
+ * hợp lệ, build làm dở tìm lại bước (`remapStepIdx`). Chạy mọi lần nạp save (không theo rev: dữ liệu case đổi lúc nào cũng được)
+ */
+function fixMount<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const c = sess.inventory.case && CASES[sess.inventory.case.id]
+  if (!order || !c || !sess.mount || c.mounts.includes(sess.mount)) return sess
+  const mount = order.mount && c.mounts.includes(order.mount) ? order.mount : c.mounts[0]
+  const b = sess.build
+  if (!b || !sess.inventory.pcb) return { ...sess, mount }
+  const old = buildContext(order, sess.inventory, sess.mount).steps
+  const steps = buildContext(order, sess.inventory, mount).steps
+  return {
+    ...sess,
+    mount,
+    build: { ...b, stepIdx: remapStepIdx(old, steps, b.stepIdx) },
+    history: [],
+  }
+}
+
 /** Bản cũ có tua vít điện: vít đã vặn (≥ 1 click) là xong → đổi sang mức đầy SCREW_FULL; lịch sử hoàn tác bỏ đi */
 function fillScrews<S extends Pick<JobSession, 'build' | 'history'>>(sess: S): S {
   const b = sess.build
@@ -225,6 +265,7 @@ export const START: Profile = {
   screwBit: 'phillips',
   screwPick: null,
   trayColor: 'silver',
+  wallpaper: 'aurora',
   rev: SAVE_REV,
   wear: {},
   solderOwned: {},
@@ -238,6 +279,9 @@ export const START: Profile = {
   listings: [],
   stolen: [],
   guideSeen: [],
+  guideHidden: false,
+  inbox: [],
+  unread: 0,
 }
 
 export function loadSave(): SaveData | null {
@@ -279,6 +323,17 @@ export function loadSave(): SaveData | null {
       session = {
         ...fillScrews({ ...session, history: session.history ?? [] }),
         jobs: session.jobs?.map((j) => ({ ...j, session: fillScrews(j.session) })),
+      }
+    }
+    if (session) {
+      const order = session.order && fixOrderMount(session.order)
+      session = {
+        ...fixMount(order, { ...session, order, history: session.history ?? [] }),
+        offers: session.offers?.map(fixOrderMount),
+        jobs: session.jobs?.map((j) => {
+          const o = fixOrderMount(j.order)
+          return { order: o, session: fixMount(o, j.session) }
+        }),
       }
     }
     return {

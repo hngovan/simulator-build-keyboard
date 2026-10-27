@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import { RoundedBox } from '@react-three/drei'
 import { useGame, useCtx, useStep } from '@/store'
-import { Y } from '@/data/steps'
+import { GASKET, Y, ringFrame } from '@/data/steps'
+import { GASKET_ID, SUPPLIES } from '@/data/supplies'
 import { playClick } from '@/sound'
 import { useHover } from '../common/useHover'
 import { HintArrow } from '../stations/StationKit'
@@ -34,21 +35,28 @@ export function HotswapSockets() {
 function Gasket({
   x,
   z,
+  w,
+  rot,
   placed,
   active,
   onPlace,
 }: {
   x: number
   z: number
+  /** dài dọc mép / tai (u) */
+  w: number
+  rot: number
   placed: boolean
   active: boolean
   onPlace: () => void
 }) {
   const { hover, bind } = useHover(active && !placed)
   if (!placed && !active) return null
+  // 2 dải Poron kẹp tai plate: mặt trên (y 0 → t) + mặt dưới (plateBot − t → plateBot)
   return (
-    <mesh
-      position={[x, -0.04, z]}
+    <group
+      position={[x, 0, z]}
+      rotation-y={rot}
       onPointerDown={(e) => {
         if (!active || placed) return
         e.stopPropagation()
@@ -56,17 +64,21 @@ function Gasket({
       }}
       {...bind}
     >
-      <boxGeometry args={[0.9, 0.12, 0.28]} />
-      {placed ? (
-        <meshStandardMaterial color="#3a3a40" roughness={0.9} />
-      ) : (
-        <meshBasicMaterial color="#ffd84a" transparent opacity={hover ? 0.9 : 0.45} />
-      )}
-    </mesh>
+      {[GASKET.t / 2, Y.plateBot - GASKET.t / 2].map((y) => (
+        <mesh key={y} position-y={y} castShadow>
+          <boxGeometry args={[w, GASKET.t, GASKET.d]} />
+          {placed ? (
+            <meshStandardMaterial color={SUPPLIES[GASKET_ID].color} roughness={0.95} />
+          ) : (
+            <meshBasicMaterial color="#ffd84a" transparent opacity={hover ? 0.9 : 0.45} />
+          )}
+        </mesh>
+      ))}
+    </group>
   )
 }
 
-/** Các miếng gasket silicon quanh viền plate */
+/** Các điểm dán gasket Poron quanh viền / tai plate */
 export function Gaskets() {
   const ctx = useCtx()
   const step = useStep()
@@ -81,6 +93,8 @@ export function Gaskets() {
           key={i}
           x={g.x}
           z={g.z}
+          w={g.w ?? GASKET.w}
+          rot={g.rot ?? 0}
           placed={!!placed[i]}
           active={step === 'gasket'}
           onPlace={() => {
@@ -94,7 +108,7 @@ export function Gaskets() {
   )
 }
 
-/** Vòng silicon quanh board. O-ring mount: cuốn quanh viền, kẹp trong khe giữa PCB và plate (lòi ra ngoài 1 chút).
+/** Vòng silicon quanh board. O-ring mount: cuốn quanh viền, kẹp trong khe giữa PCB và plate, lòi ra tì vách + gờ case.
  * OG mount: ôm cả mép PCB + plate. ghost = bản xem trước chưa lắp */
 export function SiliconeRing({
   ghost,
@@ -107,11 +121,9 @@ export function SiliconeRing({
   color?: string
 }) {
   const ctx = useCtx()
-  // O-ring: cao bằng khe PCB–plate, tâm ngay mép board
-  const t = 0.12
-  const h = between ? Y.plateBot - Y.pcbTop - 0.01 : 0.3
-  const W = ctx.width + (between ? 0.04 : 0.2)
-  const D = ctx.depth + (between ? 0.04 : 0.2)
+  const { t, h, y, off } = ringFrame(between)
+  const W = ctx.width + 2 * off
+  const D = ctx.depth + 2 * off
   const sides: [number, number, number, number][] = [
     [0, -D / 2, W + t, t],
     [0, D / 2, W + t, t],
@@ -119,7 +131,7 @@ export function SiliconeRing({
     [W / 2, 0, t, D],
   ]
   return (
-    <group position-y={between ? (Y.pcbTop + Y.plateBot) / 2 : -0.17}>
+    <group position-y={y}>
       {sides.map(([x, z, w, d], i) => (
         <RoundedBox
           key={i}

@@ -19,6 +19,7 @@ export function ResultCard({ result, onNext }: { result: DeliveryResult; onNext?
       <ScoreRow strong label="Tổng điểm" value={`${result.score}/100`} />
       <Muted>
         Khách trả budget linh kiện {fmt(result.reimburse)} + tiền công {fmt(result.labor)}
+        {result.refund ? ` − đền hỏng ${fmt(result.refund)}` : ''}
       </Muted>
       {onNext && (
         <Button tone="green" wide onClick={onNext}>

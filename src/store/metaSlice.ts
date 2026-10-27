@@ -2,7 +2,7 @@ import type { StateCreator } from 'zustand'
 import { randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
 import type { InventoryCheck } from '@/data/parts'
-import type { AudioSettings, Order, ShopCategory, Toast, Review } from '@/types'
+import type { AudioSettings, NotifyItem, Order, ShopCategory, Toast, Review } from '@/types'
 import { newRunId, runEntry, runSig } from '@/data/gameOver'
 import { submitRun, type RunEndReason, type RunEntry } from '@/lib/leaderboardApi'
 import { START, clearSave, loadSave, writeSave, type Profile, type SaveData } from './persistence'
@@ -34,6 +34,13 @@ export interface MetaSlice extends Profile {
   notices: Notice[]
   notify: (title: string, text: string) => void
   dismissNotice: (id: number) => void
+  /** ghi 1 thông báo vào chuông góc phải (không hiện nổi; `notify` / `addReviews` tự ghi) */
+  logNotify: (title: string, text: string, review?: boolean) => void
+  /** xoá 1 thông báo khỏi chuông */
+  removeNotify: (id: string) => void
+  clearNotify: () => void
+  /** mở chuông: đánh dấu đã xem hết */
+  readNotify: () => void
   /** người chơi tự lật bàn phím xem đáy */
   viewFlip: boolean
   /** tăng lên để đưa camera về góc mặc định */
@@ -103,6 +110,9 @@ export interface Notice {
 let toastId = 0
 /** số đánh giá giữ lại trong bản lưu */
 const REVIEW_KEEP = 100
+/** số thông báo giữ lại ở chuông */
+const INBOX_KEEP = 50
+let notifySeq = 0
 /** thông báo đánh giá tự ẩn sau (ms) */
 const REVIEW_POP_MS = 6000
 /** thông báo hệ thống tự ẩn sau (ms) */
@@ -143,6 +153,7 @@ function snapshot(s: GameState): SaveData {
     screwBit,
     screwPick: s.screwPick,
     trayColor: s.trayColor,
+    wallpaper: s.wallpaper,
     rev,
     wear,
     reviews,
@@ -155,6 +166,9 @@ function snapshot(s: GameState): SaveData {
     listings: s.listings,
     stolen: s.stolen,
     guideSeen: s.guideSeen,
+    guideHidden: s.guideHidden,
+    inbox: s.inbox,
+    unread: s.unread,
     session: {
       offers,
       jobs: jobs.map((j) => ({
@@ -212,6 +226,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       reviews: [...s.reviews, ...reviews].slice(-REVIEW_KEEP),
       reviewPops: [...s.reviewPops, ...reviews].slice(-3),
     }))
+    for (const r of reviews)
+      get().logNotify(`⭐ Đánh giá ${r.stars}★ · ${r.customer}`, `“${r.text}”`, true)
     for (const r of reviews) setTimeout(() => get().dismissReview(r.id), REVIEW_POP_MS)
   },
   dismissReview: (id) => set((s) => ({ reviewPops: s.reviewPops.filter((r) => r.id !== id) })),
@@ -219,8 +235,22 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     const id = ++toastId
     set((s) => ({ notices: [...s.notices, { id, title, text }].slice(-3) }))
     setTimeout(() => get().dismissNotice(id), NOTICE_MS)
+    get().logNotify(title, text)
   },
   dismissNotice: (id) => set((s) => ({ notices: s.notices.filter((n) => n.id !== id) })),
+  logNotify: (title, text, review) => {
+    const item: NotifyItem = {
+      id: `nt-${Date.now().toString(36)}-${(notifySeq++).toString(36)}`,
+      day: get().day,
+      title,
+      text,
+      ...(review ? { review } : {}),
+    }
+    set((s) => ({ inbox: [item, ...s.inbox].slice(0, INBOX_KEEP), unread: s.unread + 1 }))
+  },
+  removeNotify: (id) => set((s) => ({ inbox: s.inbox.filter((n) => n.id !== id) })),
+  clearNotify: () => set({ inbox: [], unread: 0 }),
+  readNotify: () => set({ unread: 0 }),
   newGame: (name) => {
     // chơi mới đè bản lưu cũ: ghi lượt cũ lên bảng xếp hạng
     const old = loadSave()

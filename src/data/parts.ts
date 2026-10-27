@@ -1,5 +1,6 @@
 import { LAYOUTS, getLayout } from './layouts'
 import { SUPPLIES, type SupplyDef } from './supplies'
+import { BLOSSOM_GASKETS } from './generated/plateBlossom'
 import type {
   KeycapMaterial,
   SwitchKind,
@@ -96,6 +97,8 @@ export interface ToolDef {
   quality?: number
   /** độ bền: dùng được bao nhiêu lần thì hỏng (phải mua lại) */
   life?: number
+  /** tua vít: giây giữ chuột tới khi vít chặt (`lo`, ngẫu nhiên trong khoảng) + độ rộng vùng chặt (`ok`), quá là tuôn ren */
+  torque?: { lo: [number, number]; ok: [number, number] }
 }
 
 // Giá: nghìn đồng (k)
@@ -709,7 +712,7 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
 ]
 
 // Chất liệu case: ảnh hưởng hình ảnh (Bench) và âm thanh
-const CASE_MATERIALS: Record<string, SoundMod> = {
+export const CASE_MATERIALS: Record<string, SoundMod> = {
   abs: { name: 'Nhựa ABS', dl: 0.05, dp: 0 },
   anod: { name: 'Nhôm anod', dl: 0, dp: 0.04 },
   ecoat: { name: 'Nhôm E-coat (sần)', dl: 0, dp: 0.02 },
@@ -998,9 +1001,11 @@ export const CASES: Record<string, CaseDef> = {
     name: 'Catto HHKB',
     ff: '60',
     layouts: ['hhkb', 'truehhkb'],
-    pieces: 1,
+    // nắp (TOP) + đáy (BOT, có tạ) bắt 8 vít từ đáy lên → case 2 mảnh, gasket mount
+    pieces: 2,
+    screwSide: 'bottom',
     material: 'anod',
-    mounts: ['tray', 'oring'],
+    mounts: ['gasket'],
     price: 1900,
     colors: [
       'white',
@@ -1016,6 +1021,17 @@ export const CASES: Record<string, CaseDef> = {
     ],
     desc: 'Case HHKB có khối chặn liền case, tạ đáy',
     model: 'catto-hhkb',
+    // lỗ vít dò từ model: hốc chìm đầu vít sâu 3mm ở mặt đáy, ren lên nắp
+    screws: [
+      [-144, -53.1],
+      [-52.5, -53],
+      [52.5, -53],
+      [144, -53.1],
+      [-144, 52.5],
+      [-52.6, 52.5],
+      [52.6, 52.5],
+      [144, 52.5],
+    ],
     // case nêm: board nghiêng theo mép trước / sau (đo bằng script, plate thấp hơn giữa mép 0.25u; dz bù mặt keycap ngả về sau khi nghiêng)
     seat: { rise: -0.14, tilt: 0.167, dz: 0.1 },
   },
@@ -1289,9 +1305,11 @@ export const CASES: Record<string, CaseDef> = {
   aliceAlu: {
     name: 'Blossom',
     ff: 'alice',
-    pieces: 1,
+    // nắp + đáy bắt 8 vít từ đáy lên; plate CAD Blossom có 8 tai gasket → chỉ gasket mount
+    pieces: 2,
+    screwSide: 'bottom',
     material: 'anod',
-    mounts: ['tray'],
+    mounts: ['gasket'],
     price: 2400,
     colors: [
       'black',
@@ -1307,8 +1325,20 @@ export const CASES: Record<string, CaseDef> = {
     ],
     desc: 'Case Alice gasket mount kiểu Arisu, 2 nửa xoay ±12° + cụm mũi tên (doughnut923/Blossom, MIT)',
     model: 'alice-blossom',
-    // ghép 2 mảnh in 3D (scripts/convert-user-cases.mjs): đáy hình nêm, nắp + plate nghiêng ~4.9° theo đáy
-    seat: { rise: -0.048, tilt: 0.085 },
+    // lỗ vít dò từ model (lỗ tròn Ø ~4.6mm ở mặt đáy); gasket trên tai plate DXF gốc (`bun run gen:plate-blossom`)
+    screws: [
+      [-174.5, -66.5],
+      [-87, -66.5],
+      [45.5, -66.5],
+      [174.5, -66.5],
+      [-174.5, 48.2],
+      [-84.5, 52.8],
+      [45.5, 52.8],
+      [174.5, 48.1],
+    ],
+    gaskets: BLOSSOM_GASKETS,
+    // ghép 2 mảnh in 3D (scripts/convert-user-cases.mjs): đáy hình nêm, nắp + plate nghiêng ~5.4° theo đáy (khe tách 2 mảnh ~0,6mm)
+    seat: { rise: -0.118, tilt: 0.0942 },
   },
   planckAlu: {
     name: 'Planck nhôm',
@@ -1647,8 +1677,20 @@ export const TOOLS: Record<ToolKind, ToolDef[]> = {
     },
   ],
   screw: [
-    { name: 'Tua vít thường', clicks: 3, price: 0, desc: '3 lần click mỗi con vít' },
-    { name: 'Tua vít điện', clicks: 1, price: 350, desc: '1 click là xong' },
+    {
+      name: 'Tua vít thường',
+      clicks: 3,
+      price: 0,
+      desc: 'Giữ chuột để vặn: lực lên chậm, dễ canh',
+      torque: { lo: [1, 1.6], ok: [0.6, 0.9] },
+    },
+    {
+      name: 'Tua vít điện',
+      clicks: 1,
+      price: 350,
+      desc: 'Vặn nhanh nhưng lực lên gắt, dễ tuôn ren nếu giữ lâu',
+      torque: { lo: [0.45, 0.8], ok: [0.18, 0.35] },
+    },
   ],
   // hold = giây giữ mỏ hàn tới khi thiếc chảy đủ (nhân hệ số loại thiếc, cộng thời gian lấy thiếc)
   solder: [

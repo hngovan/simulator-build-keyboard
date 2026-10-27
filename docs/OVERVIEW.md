@@ -202,7 +202,7 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   đóng gói) được giữ sang ngày sau.
 - **Thua game** (`data/gameOver.ts`, `lossReason`, store tự xét sau mỗi lần đổi tiền / uy tín / đơn): uy tín ≤ −10 (bị phốt
   quá nhiều), hoặc không còn đơn đang làm / chờ gửi mà ví ít hơn tiền linh kiện ước tính của đơn chào rẻ nhất (`estimateCost`).
-  Người chơi cũng tự **tuyên bố phá sản** được (Cài đặt, hỏi lại "99% người chơi dừng lại ngay trước khi thắng lớn").
+  (Nút tự tuyên bố phá sản ở Cài đặt đã bỏ, 2026-10-27; `endRun('bankrupt')` vẫn giữ trong store.)
   Khi đó `endRun(reason)`: gửi kết quả lên server bảng xếp hạng, xoá bản lưu, popup tổng kết (`GameOverDialog`) → về màn tiêu đề.
   Chơi mới đè bản lưu cũ cũng gửi lượt cũ (lý do `newgame`).
 
@@ -256,8 +256,12 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 - **Mod stab**: làm theo mũi tên vàng — clip chân stem (cần kìm cắt) → Holee mod bằng Urgo → phết
   mỡ housing + slider → lắp slider → phết mỡ wire → lắp wire. Mẫu stab đời mới có thể đã clip sẵn
   hoặc đã lube sẵn; làm thừa / sai bước có thể bị chặn hoặc mất điểm.
-- **Vít**: chọn đúng đầu vít (chữ thập, lục giác, Torx) ở `BitPicker`. Tua vít thường cần 3 click
-  mỗi con; tua vít điện chỉ 1 click. Vít đáy / vít stab có thể tự lật board.
+- **Vít**: chọn đầu vít (chữ thập, lục giác, Torx) ở `BitPicker`; sai đầu vít không bị chặn nữa mà tuôn ren ngay.
+  Bước tháo vít: click (tua vít thường 3 click / con, điện 1 click). Bước vặn vào: **giữ chuột**, thanh lực chạy, nhả trong
+  vùng xanh là chặt, nhả sớm thì vít mới vào 1 phần, giữ quá là tuôn ren. Vùng xanh ngẫu nhiên mỗi lần theo tua vít
+  (`ToolDef.torque`: tay lên chậm dễ canh, điện nhanh gắt). Tuôn ren vít ăn vào case PC / mica / acrylic thì 35% nứt case.
+  Giao: nứt case → đền khách 80% budget linh kiện; tuôn ren → 20% khách không để ý, còn lại đền 30% (budget + công).
+  Vít đáy / vít stab có thể tự lật board.
 - **Keycap**: cắm theo bộ đã mua; số phím mỗi lần click phụ thuộc chứng chỉ thợ. Kiểm tra kỹ màu
   và profile vì đây là điểm chấm trực tiếp.
 

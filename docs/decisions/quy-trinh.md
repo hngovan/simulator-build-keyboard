@@ -22,6 +22,11 @@
   - Bàn build tải chậm trên swiftshader: chờ ~15s rồi mới chụp.
   - Muốn xem toàn bàn: đặt `controls.maxDistance = 200` rồi đặt camera bằng `__r3f`.
 
+- **Build thử mọi case (2026-10-27)**: Cài đặt → Dev → "🧪 Chọn case" (`DevBuildDialog`, `devBuild.ts` `startDevBuild`): bảng mọi
+  case theo cỡ + ô màu, chọn layout / mount / PCB / plate / stab rồi vào build ngay. Đơn có `order.dev` (`isOptionalStep` trả true
+  → bước nào cũng "Bỏ qua"), đủ linh kiện sẵn (kit gửi case / PCB / plate / stab + switch / keycap), dụng cụ chưa có cấp bậc 1 +
+  vật tư (trừ sách phép) bơm lên 999 (ghi thẳng vào save), giao thì `deliver` chỉ dọn bàn (không chấm điểm, đồ không vào kho chung).
+  Đơn đang làm được `stashActive` cất lại. Đã chạy thử `buildContext` + `checkInventory` cho 274 tổ hợp case × layout × mount × PCB: không lỗi.
 - Lệnh `eval|...` của drive.mjs tách theo dấu `|`: trong JS không dùng `||` (dùng `??` hoặc vòng lặp).
 - Không chạy `prettier --write src` cả thư mục khi phiên khác đang sửa dở file (đã lỡ format `PcbSurface.tsx` 1 lần).
 
@@ -59,3 +64,9 @@
   swiftshader (scratchpad `pw/demo.mjs`, trình duyệt sạch, không đụng save thật), dev server cổng 5199; dựng đơn / kho / build bằng
   `window.__game` + `import('/src/data/parts.ts')`, camera bằng `__r3f`. Chụp lại title / mezzenger (Keeb-chan mới), thêm kho (hàng lỗi),
   cho (đăng bán + bid), lot-foam, plateless, oc-mica; PNG → JPEG bằng ffmpeg `-q:v 3`.
+
+- **Đổi case ngay trên bàn build (dev, 2026-10-27)**: người dùng: "thêm option đổi màu case + chất liệu case tuỳ chọn + filter case luôn
+  trong bàn build khi đang bật option lên, chỉ ở môi trường dev". `DevCasePanel` (features/bench, cột phải BenchHud, chỉ khi
+  `import.meta.env.DEV && order.dev`): chip lọc chất liệu (`CASE_MATERIALS`, giờ export) → chip case vừa layout (`caseFits`) → ô màu → chip
+  mount. `setDevCase` / `setDevCaseColor` (devBuild.ts): đổi case dựng lại `ctx`, giữ nguyên `build`, đứng lại đúng bước đang làm nếu
+  danh sách bước mới còn bước đó; xoá undo / redo (ảnh chụp cũ lệch bước). Chụp kiểm: plastic60 tray đang lắp switch → gasket60 đỏ.

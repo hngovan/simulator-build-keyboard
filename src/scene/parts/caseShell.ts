@@ -36,6 +36,23 @@ function ringShape(W: number, D: number, wall: number, solid: boolean, inset = 0
   return shape
 }
 
+/**
+ * Gờ đỡ chạy quanh lòng case (đỡ vòng O-ring / gasket): vành phẳng `W` × `D` (mép ngoài lấn vào vách), rộng `wall`,
+ * từ y0 tới y1, góc bo như góc ruột case
+ */
+export function ledgeGeometry(W: number, D: number, y0: number, y1: number, wall: number) {
+  const shape = roundedRect(new THREE.Shape(), W, D, INNER_R) as THREE.Shape
+  shape.holes.push(roundedRect(new THREE.Path(), W - 2 * wall, D - 2 * wall, INNER_R))
+  const g = new THREE.ExtrudeGeometry(shape, {
+    depth: y1 - y0,
+    bevelEnabled: false,
+    curveSegments: 4,
+  })
+  g.rotateX(-Math.PI / 2)
+  g.translate(0, y0, 0)
+  return g
+}
+
 /** bo mép trên / dưới vỏ case liền khối (u) */
 const SHELL_BEVEL = 0.035
 

@@ -231,6 +231,8 @@ export interface Order {
   days: number
   /** ngày phải giao (đặt khi nhận đơn) */
   dueDay?: number
+  /** đơn build thử (chỉ khi dev): bỏ qua bước nào cũng được, giao thì dọn bàn, không chấm điểm */
+  dev?: true
   /** khách huỷ kèo giữa chừng: 'sold' = phát hiện shop đem đồ khách gửi đi bán ở chợ (đơn còn hiện tới hết ngày) */
   cancel?: 'sold'
   /** đơn kit theo thiết kế bàn phím mở (Bakeneko 60, Planck...) */
@@ -338,6 +340,10 @@ export interface BuildState {
   feet?: Record<number, string>
   inCase: boolean
   closed: boolean
+  /** vít bị tuôn ren (vặn sai đầu vít / quá lực); hoàn tác không gỡ được */
+  stripped?: Record<string, true>
+  /** case nứt (tuôn ren vít bắt vào case PC / mica / acrylic); hoàn tác không gỡ được */
+  cracked?: boolean
   keycaps: Record<string, true>
   tested: Record<string, true>
   /** phím bấm thử ở bước test mà không ăn (PCB hàn: chưa hàn / hàn cháy); bản lưu cũ không có */
@@ -381,7 +387,8 @@ export interface BuildContext {
   mount: string
   steps: StepId[]
   screws: Record<ScrewStep, ScrewPoint[]>
-  gaskets: Point[]
+  /** điểm dán gasket: tâm, dài dọc mép `w` (u, không có = 1 dải 20mm), góc `rot` (rad, quanh trục y) */
+  gaskets: (Point & { w?: number; rot?: number })[]
   /** hốc feet dưới đáy case (u, toạ độ cảnh): tâm x, z + bán kính r */
   feet: FootPocket[]
   screwSide: 'top' | 'bottom'
@@ -424,6 +431,13 @@ export interface CaseDef {
   seat?: { rise: number; tilt: number; dz?: number; dx?: number }
   /** model case CAD thật (public/models/cases/<model>.glb, `bun run convert:cases`), thay case dựng bằng code */
   model?: string
+  /** case CAD 2 mảnh: tâm lỗ vít ghép ở đáy [x, z] (mm, hệ model) thay vị trí vít tính theo cỡ case */
+  screws?: [number, number][]
+  /**
+   * plate CAD có tai gasket: dải gasket dọc hết tai [x, z, dài, góc] (mm, hệ plate = tâm board; góc rad của trục dài so với trục x,
+   * tai xiên như đoạn chữ V của Alice) thay các dải 20mm chia đều mép trước / sau
+   */
+  gaskets?: [number, number, number, number][]
 }
 
 export interface ScoreCheck {
@@ -441,12 +455,26 @@ export interface DeliveryResult {
   late?: number
   /** nút khách báo lỗi (nhãn phím): chưa hàn / hàn cháy, hoặc lỗi ẩn do không test hết trước khi giao */
   defects?: string[]
+  /** hỏng do vặn vít khách phát hiện (case nứt / tuôn ren) */
+  damage?: 'crack' | 'strip'
+  /** tiền đền khách vì hỏng (trừ khi gửi đơn) */
+  refund?: number
 }
 
 export interface Toast {
   id: number
   text: string
   kind: 'info' | 'good' | 'bad'
+}
+
+/** 1 thông báo lưu ở chuông góc phải (khách phát hiện bán đồ, đánh giá, fast bid...), xoá được */
+export interface NotifyItem {
+  id: string
+  day: number
+  title: string
+  text: string
+  /** đánh giá khách: bấm mở app Đánh giá */
+  review?: boolean
 }
 
 /** 1 đánh giá khách để lại cho shop (app "Đánh giá" + thông báo góc phải trên) */

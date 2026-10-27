@@ -36,6 +36,8 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
   `assets/community/hand-tools/` → `public/models/tools/` (tua vít: node `bit` quay + `body`, mũi ở gốc, trục +y).
 - `bun run fetch:emotes`: emote ếch Pepe (FrankerFaceZ, chỉ dùng cá nhân) → `public/emotes/`, emoji trong chat Mezzenger thay bằng emote (`messenger/emotes.tsx`).
 - `bun run convert:screwdriver-lite`: tua vít tay Poly Haven → `public/models/room/screwdriver-lite.glb` (bỏ texture, màu đỉnh, 90KB).
+- `bun run gen:plate-blossom`: plate gasket Blossom từ `assets/community/blossom/plate/plate.dxf` → `src/data/generated/plateBlossom.ts`
+  (căn lỗ switch theo layout Alice, dò tai → `BLOSSOM_GASKETS`; Board `AlicePlate` dựng từ đây).
 - `bun run gen:plates-universal`: plate universal 60 / 75 / TKL / full bằng lõi ai03 Plate Generator (kbplate.ai03.com,
   AGPL — clone ngoài repo, đặt `YAKB_DIR`): layout game gộp mọi variant → KLE + DXF trong `assets/plates/universal/`
   → `src/data/generated/plateUniversal.ts` (Board.tsx dùng, trừ 60 chuẩn giữ plate CAD typ60).
@@ -44,7 +46,8 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
   `inspect-step.mjs` là script dò/kiểm tra model. Thêm / đổi model case thì chạy `node scripts/probe-case-feet.mjs`
   (dò hốc dán feet dưới đáy → `src/data/caseFeet.json`, `RubberFeet` trong Case.tsx dán feet vào đúng hốc).
 
-Không có test tự động. Khi dev, store được gắn vào `window.__game`, camera / controls / scene của bàn build
+Không có test tự động. Dev: Cài đặt → Dev → "Chọn case" build thử mọi case (`order.dev`, bước nào cũng bỏ qua được), trên bàn build có `DevCasePanel`
+đổi case / chất liệu / màu / mount. Khi dev, store được gắn vào `window.__game`, camera / controls / scene của bàn build
 vào `window.__r3f` để debug trong console.
 
 ## Quy ước
@@ -125,7 +128,10 @@ vào `window.__r3f` để debug trong console.
   Thời gian hàn theo giây thật (`solderWindow`): bút hàn chảy 2–2,5s / cháy 3s, trạm hàn 1–2s / 3s,
   thiếc đểu +0,5s (`slow`) và `burnChance` ẩn 15%. Bút / trạm đã mua đổi qua lại được (`solderOwned`).
   Thiếc đểu có `burnChance` (cháy dù nhả đúng vùng xanh). Bàn mod stab bày đúng số stab của layout (`stabUnits`).
-  Đầu vít đang lắp (`screwBit`) lưu trong Profile.
+  Đầu vít đang lắp (`screwBit`) lưu trong Profile. Sai đầu vít không chặn: tuôn ren (`build.stripped`, hoàn tác không gỡ).
+  Bước vặn vào giữ chuột canh lực (`tightenScrew`, `torqueWindow` theo `ToolDef.torque`, `TorqueBar` trong Screw.tsx), quá vùng xanh
+  = tuôn ren; vít ăn vào case PC / mica / acrylic (`CASE_SCREW_STEPS`, `brittleCase`) `CRACK_CHANCE` nứt case (`build.cracked`).
+  Giao: `DeliveryResult.refund` (nứt 80% budget, tuôn ren bị phát hiện 30% budget + công, `STRIP_UNNOTICED` 20% thoát), `payout()`.
   PCB khoét 2 lỗ chân housing mỗi bên stab (`stabHoles` trong steps.ts, khớp chốt model CAD); vít screw-in bắt vào lỗ nhỏ.
   Top mount (case 2 mảnh): `topCase` (úp case trên lên plate) → `topScrew` (lật board, vặn vít từ dưới vào vách case trên) →
   `caseIn` (case trên nhấc theo board) → `caseScrew`, không có `caseClose`. O-ring mount (case 1 mảnh): vòng `ring` kẹp giữa PCB
@@ -135,6 +141,8 @@ vào `window.__r3f` để debug trong console.
   Stab plate-mount: gài vào plate (lắp sau bước plate, cao hơn PCB), mọi chất liệu plate đều được.
   Plateless: plate ảo `PLATELESS` (`'none'` trong `PLATES`, không bán: `plateIds()`), bật ở app Danh sách đơn (`setPlateless`);
   cần PCB hàn + stab không plate-mount (`platelessIssue`) + mount tray (`PLATELESS_MOUNTS`); `buildContext` bỏ bước `foam` / `plate`.
+  Gasket mount: bước `gasket` dán dải Poron 20 × 4mm (vật tư `GASKET_ID`, mặt trên + mặt dưới tai / mép plate, `GASKET`; Blossom dải
+  dài hết tai + xoay theo mép, `ctx.gaskets[].w / rot`; tiêu hao `gasketStrips` = số dải 20mm phủ hết × 2).
   Foam Poron PCB: bước tuỳ chọn `foam` trước `plate` (`placeFoam` trừ vật tư `FOAM_ID`, `build.foam`, âm thock hơn), cảnh `scene/parts/Foam.tsx`.
   Feet: bước `feet` (trước `topCase` / `caseIn`, case tự lật úp, chỉ hiện case) dán 1 feet vào mỗi hốc `ctx.feet`
   (`feetPockets` trong steps.ts: case CAD = hốc `caseFeet.json`, case dựng bằng code = 4 hốc CNC lõm `FOOT_R` / `FOOT_DEPTH`
@@ -176,6 +184,8 @@ vào `window.__r3f` để debug trong console.
 - Phím có `rot` (Alice: cột trong xoay ±12°, layout `fixed` toạ độ thật + `origin` / `outline`); `row` = hàng keycap đếm từ dưới lên (R1–R4 theo profile).
   PCB / plate theo đường viền `boardOutline` (layout xoay: đa giác lồi mỗi nửa). Chỗ trống hàng dưới
   (HHKB, WKL) có khối chặn liền case (`blockerGaps`).
+- Gờ trong lòng case (case dựng bằng code, `Ledge` / `TopBosses` trong Case.tsx): O-ring / OG có gờ đỡ vòng, gasket 2 mảnh có gờ đỡ + gờ đè,
+  top mount plate có tai + vấu case trên. Case CAD 2 mảnh (Blossom, Catto HHKB; gasket mount): `CaseModel part`, `CaseDef.screws` / `gaskets` (mm) theo model.
 - Case 1 mảnh dựng bằng code chơi được tray / O-ring / OG; case 2 mảnh có lỗ vít (`caseScrewHoles`: nhôm / PC / acrylic ở đáy,
   mica xuyên mọi tấm). Mica: tấm trên mặt plate khoét theo `keyRegions` (khung chặn liền tấm, không `Blockers` rời).
 - Shopii gộp case cùng dòng (`CASE_LINES`): 1 sản phẩm, chọn chất liệu (`ProductOption.group`) rồi màu; id case giữ riêng.
@@ -212,9 +222,11 @@ vào `window.__r3f` để debug trong console.
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
 - NPC hướng dẫn Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`): mẹo theo tình huống ở máy tính (`TIPS`), bàn build là hội thoại
-  theo bước / bàn trống (`BenchDialog`, `benchTopics`, câu thoại `benchLines.ts`, chưa đọc thì hiện), `guideSeen` trong Profile.
-- Esc mở / đóng Cài đặt (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup). Cài đặt trên cùng: Phá sản + Lưu tiến trình
+  theo bước / bàn trống (`BenchDialog`, `benchTopics`, câu thoại `benchLines.ts`, chưa đọc thì hiện), `guideSeen` trong Profile; ẩn / hiện ở Cài đặt (`guideHidden`).
+- Chuông thông báo (`components/game/NotifyBell.tsx`, cuối `StatusChips`): `logNotify` ghi `Profile.inbox` + `unread` (`notify` / `addReviews` /
+  bán đồ / fast bid / huỷ đơn trễ tự ghi), xoá từng cái hoặc xoá hết.
+- Esc mở / đóng Cài đặt (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup). Cài đặt trên cùng: Lưu tiến trình
   (`saveRun` = gửi bảng xếp hạng lý do `'save'`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
-  (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Tự phá sản ở Cài đặt; chơi mới đè save cũng gửi lượt cũ.
+  (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Chơi mới đè save cũng gửi lượt cũ (nút phá sản ở Cài đặt đã bỏ).
 - Layout có `fits` (Planck: `['40']`): case cỡ khác không có model CAD cũng vừa (`caseFits`).

@@ -24,7 +24,7 @@ import { screenCenter, screenEye } from './models/computerLayout'
 function SceneReady() {
   useEffect(() => {
     useSceneLoading.setState({ ready: true })
-    return () => useSceneLoading.setState({ ready: false })
+    return () => useSceneLoading.setState({ ready: false, settled: false })
   }, [])
   return null
 }

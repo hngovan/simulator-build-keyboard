@@ -10,6 +10,58 @@ const OUT = 'src/data/caseFeet.json'
 const DEPTH = [0.3, 4]
 /** bán kính hốc feet thật (mm): feet tròn Ø 7–13mm; nhỏ hơn là chốt / lỗ, lớn hơn là chữ khắc */
 const RADIUS = [3.5, 6.5]
+/** model không có hốc: feet dán phẳng, bán kính (mm, như FOOT_R của case dựng bằng code) + chừa tới mép / lỗ vít */
+const FLAT_R = 4
+const FLAT_MARGIN = 3
+
+/**
+ * Đáy phẳng không có hốc: dò mặt đáy thật (tam giác quay xuống sát đáy), mỗi góc chọn 1 chỗ sát góc nhất mà cả
+ * đĩa feet + lề nằm trọn trong mặt đáy (không lòi ra mép vát / lỗ vít như case Alice). Trả [x, z, r, 0]
+ */
+function flatFeet(tris, minY) {
+  const base = []
+  for (const [a, b, c] of tris) {
+    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]
+    const w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]
+    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
+    const len = Math.hypot(...n) || 1
+    if (n[1] / len > -0.95 || Math.max(a[1], b[1], c[1]) - minY > 0.3) continue
+    base.push([a, b, c].map((v) => [v[0], v[2]]))
+  }
+  if (!base.length) return []
+  const solid = (x, z) => base.some((t) => inTri([x, z], t))
+  const xs = base.flat().map((p) => p[0])
+  const zs = base.flat().map((p) => p[1])
+  const [x0, x1, z0, z1] = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)]
+  const R = FLAT_R + FLAT_MARGIN
+  // lấy mẫu cả đĩa (3 vòng), không chỉ viền: lỗ vít nhỏ lọt giữa đĩa cũng bị bắt
+  const ring = [R / 3, (2 * R) / 3, R].flatMap((r) =>
+    Array.from({ length: 16 }, (_, i) => [
+      r * Math.cos((i / 16) * Math.PI * 2),
+      r * Math.sin((i / 16) * Math.PI * 2),
+    ]),
+  )
+  const fits = (x, z) => solid(x, z) && ring.every(([dx, dz]) => solid(x + dx, z + dz))
+  const cx = (x0 + x1) / 2
+  const cz = (z0 + z1) / 2
+  const out = []
+  for (const [sx, sz] of [
+    [-1, -1],
+    [1, -1],
+    [-1, 1],
+    [1, 1],
+  ]) {
+    // dò 1/4 phía góc đó, bước 2mm, điểm theo tỉ lệ nửa bề ngang / bề sâu (càng sát góc càng cao)
+    let best = null
+    for (let x = cx; sx * (x - cx) <= (x1 - x0) / 2; x += 2 * sx)
+      for (let z = cz; sz * (z - cz) <= (z1 - z0) / 2; z += 2 * sz) {
+        const score = (sx * (x - cx)) / (x1 - x0) + (sz * (z - cz)) / (z1 - z0)
+        if ((!best || score > best.score) && fits(x, z)) best = { x, z, score }
+      }
+    if (best) out.push([Math.round(best.x * 10) / 10, Math.round(best.z * 10) / 10, FLAT_R, 0])
+  }
+  return out.length === 4 ? out : []
+}
 
 const io = new NodeIO()
 const names = process.argv.slice(2).length
@@ -121,8 +173,13 @@ for (const name of names) {
     big.some((g) => Math.abs(g[0] + f[0]) < 2 && Math.abs(g[1] - f[1]) < 6),
   )
   console.log(name, paired.length, JSON.stringify(paired))
-  // dưới 4 hốc thì không tin được, để game đặt feet mặc định ở 4 góc
+  // dưới 4 hốc thì không tin được: đáy phẳng → tự chọn 4 chỗ dán sát góc trong mặt đáy (không được thì game đặt mặc định)
   if (paired.length >= 4) out[name] = paired
+  else {
+    const flat = flatFeet(tris, minY)
+    console.log('  đáy phẳng', JSON.stringify(flat))
+    if (flat.length) out[name] = flat
+  }
 }
 if (!process.argv.slice(2).length) {
   fs.writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n')

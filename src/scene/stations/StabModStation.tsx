@@ -57,6 +57,8 @@ const TIP_Z = -3.75
 const SCISSORS_IDLE = v(-7.5, TABLE + 0.04, TIP_Z + 0.68)
 // nằm dọc giữa băng Urgo và cột slider đầu tiên, mũi chĩa lên (−z)
 const CLIPPER_IDLE = v(-2.95, TABLE + 0.09, TIP_Z + 0.45)
+/** chỉ có stab dài ở hàng đầu (housing trái lấn sang chỗ kìm): kìm dời sang bên trái kéo */
+const CLIPPER_AWAY = v(SCISSORS_IDLE.x - 1.7, TABLE + 0.09, TIP_Z + 0.45)
 /** góc kìm lúc nằm chờ / lúc kẹp chân (đều mũi −z: nằm dọc, đưa từ phía trước vào) */
 const CLIPPER_ROT_IDLE = Math.PI / 2
 const CLIPPER_ROT_CUT = Math.PI / 2
@@ -120,10 +122,18 @@ function layoutSets(sets: StabSet[]) {
   // mép trước: wire hàng cuối nằm ở hz + 2 và dài ~1.2, chừa thêm cho khung trắng của tấm lót
   const front = Math.max(...list.map((L) => L.hz)) + 3.8
   const toolX = right + 1
+  // kìm nằm dọc (rộng ~1.2, dài ~2.4 về trước): housing / slider hàng đầu lấn sang mép phải kìm thì dời kìm
+  const clipperHit = list.some(
+    (L) =>
+      L.hz < CLIPPER_IDLE.z + 2.4 &&
+      Math.min(L.hx[0] - 0.6, ...L.stand.map((p) => p.x - 0.25)) < CLIPPER_IDLE.x + 0.6,
+  )
+  const clipper = clipperHit ? CLIPPER_AWAY : CLIPPER_IDLE
   return {
     layout: list,
+    clipper,
     table: {
-      w: 2 * Math.max(TABLE_MIN.w / 2, toolX + 2.6, -Math.min(CLIPPER_IDLE.x, SCISSORS_IDLE.x) + 1),
+      w: 2 * Math.max(TABLE_MIN.w / 2, toolX + 2.6, -Math.min(clipper.x, SCISSORS_IDLE.x) + 1),
       d: 2 * Math.max(TABLE_MIN.d / 2, front),
     },
     // 2 hũ cách nhau đủ chỗ cho nhãn ("Housing + slider") nằm dưới hũ trước
@@ -394,7 +404,7 @@ function AnimatedBrush({
 }
 
 /** Kìm cắt: đưa từ phía trước vào kẹp 2 chân dưới đáy từng slider, chân bị cắt rơi xuống bàn */
-function AnimatedClipper({ layout }: { layout: SetLayout[] }) {
+function AnimatedClipper({ layout, idle }: { layout: SetLayout[]; idle: THREE.Vector3 }) {
   const ref = useRef<THREE.Group>(null)
   const pieces = useRef<THREE.Group>(null)
   const total = layout.length * 2
@@ -403,7 +413,7 @@ function AnimatedClipper({ layout }: { layout: SetLayout[] }) {
     if (!g) return
     const p = animProgress('clip')
     if (p === null) {
-      g.position.copy(CLIPPER_IDLE)
+      g.position.copy(idle)
       g.rotation.set(0, CLIPPER_ROT_IDLE, 0)
       setJaw(g.children[0], 1, 0.22, 0.16)
       if (pieces.current) pieces.current.visible = false
@@ -413,9 +423,7 @@ function AnimatedClipper({ layout }: { layout: SetLayout[] }) {
     // tâm 2 chân (y = -0.75mm của slider còn chân); kìm chĩa mũi về -z
     const foot = layout[j >> 1].standFeet[j & 1].clone().add(v(0, -0.75 * U, 0.65))
     const go = ease(seg(q, 0, 0.4)) * (1 - ease(seg(q, 0.6, 1)))
-    g.position
-      .lerpVectors(CLIPPER_IDLE, foot, ease(seg(q, 0, 0.4)))
-      .lerp(CLIPPER_IDLE, ease(seg(q, 0.6, 1)))
+    g.position.lerpVectors(idle, foot, ease(seg(q, 0, 0.4))).lerp(idle, ease(seg(q, 0.6, 1)))
     g.rotation.set(0, CLIPPER_ROT_IDLE + (CLIPPER_ROT_CUT - CLIPPER_ROT_IDLE) * go, 0)
     setJaw(
       g.children[0],
@@ -586,6 +594,7 @@ export function StabModStation() {
   const {
     layout,
     table,
+    clipper: CLIPPER_AT,
     jars: JARS_AT,
     brush: BRUSH_IDLE,
   } = useMemo(() => layoutSets(stabUnits(ctx.stabKeys)), [ctx.stabKeys])
@@ -775,7 +784,7 @@ export function StabModStation() {
       )}
       {noClipper ? (
         <MissingSlot
-          at={CLIPPER_IDLE.clone()
+          at={CLIPPER_AT.clone()
             .setY(TABLE)
             .add(v(0, 0, 0.3))}
           size={[1.2, 2.2]}
@@ -783,7 +792,7 @@ export function StabModStation() {
           onAct={askBuy('tool')}
         />
       ) : (
-        m.feet && <AnimatedClipper layout={layout} />
+        m.feet && <AnimatedClipper layout={layout} idle={CLIPPER_AT} />
       )}
       {mods.clip && (
         // chân stem đã cắt nằm trên bàn

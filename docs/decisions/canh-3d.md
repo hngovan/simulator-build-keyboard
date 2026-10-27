@@ -590,3 +590,105 @@
   thiếu ↑ ↓. `CapOverlay` (Keycap.tsx) in '→' xoay ±90° (`ARROW_SPIN`) cho 2 phím này, mọi layout.
 - **Khoá xoay camera khi hàn** (2026-10-27, người dùng: "đang hàn thì khoá góc quay màn hình ko cho quay trái quay phải gì cả"):
   `Controls` (Bench.tsx) `enableRotate={false}` suốt bước `solder` (cả 2 chế độ chuột / cảm ứng); vẫn kéo khung nhìn + zoom được.
+
+## Kìm cắt bàn mod stab đè housing stab dài (2026-10-27)
+
+- Yêu cầu: layout chỉ có 1 stab dài (6.25u / 7u) thì kìm cắt (`CLIPPER_IDLE`) nằm đè lên housing trái.
+- Lý do: không có stab ngắn thì stab dài nằm hàng đầu (`ROW0`), housing trái ở x ≈ −3,2 trùng chỗ kìm (−2,95).
+- Sửa (`StabModStation.tsx`): `layoutSets` trả thêm `clipper` — housing / slider hàng đầu lấn sang mép phải kìm thì kìm dời sang
+  `CLIPPER_AWAY` (bên trái kéo, x = kéo − 1,7); `AnimatedClipper` nhận `idle`, ô "Thiếu kìm cắt" cũng theo vị trí này.
+  Stab ngắn hàng đầu không chạm nên kìm giữ chỗ cũ; bàn stab dài vốn đã rộng (cột hũ mỡ bên phải) nên không bị nới thêm.
+
+## Gờ trong lòng case theo kiểu mount + Blossom 2 mảnh gasket (2026-10-27)
+
+- Yêu cầu: "oring mount phải có gờ để giữ oring lại ko sẽ bị lọt xuống, check xem các mount khác đã đúng chưa" (ảnh mẫu top / gasket
+  mount + case có gờ trong lòng); "case blossom là case 2 mảnh => chỉ mount được gasket, có plate model đi kèm"; "feet case blossom 2 feet
+  dưới bị lệch".
+- Hằng số chung (`steps.ts`): `LEDGE_GAP` (khe mép board → mép trong gờ 0,03u), `GASKET` (tâm y / cao / sâu miếng gasket), `TOP_TAB`,
+  `ringFrame(between)` (khung vòng O-ring / OG, BoardDetails `SiliconeRing` dùng chung). Gờ: `ledgeGeometry` (caseShell.ts), `Ledge` +
+  `TopBosses` (Case.tsx) — chỉ case dựng bằng code (case CAD theo model, mica kẹp plate giữa các lớp).
+- **O-ring**: vòng giờ rộng từ trong mép board 0,04 ra sát mặt vách (trước chỉ lòi 0,08, không chạm vách), gờ dày 0,1u ngay dưới
+  vòng chạy quanh lòng case, không chạm PCB. **OG**: gờ dưới mặt đáy vòng (−0,32).
+- **Gasket (2 mảnh)**: trước miếng gasket lấn 0,04u vào vách case trên và không có gì đỡ / đè. Giờ gasket dừng ở mặt vách
+  (`gz = depth/2 + CASE_MARGIN − GASKET.d/2`), case dưới có gờ nhô từ `Y.split` lên mặt dưới gasket, case trên có gờ đè mặt trên
+  gasket (plate kẹp giữa 2 gờ như ảnh mẫu).
+- **Top mount**: trước vít `topScrew` ở giữa vách (z = mép + 0,375) tại `Y.split`, cách plate 0,22u và plate không chạm vách. Giờ plate
+  có tai `TOP_TAB` lòi ra khe board – vách ở chỗ vít (`plateGeometry(tabs)`), case trên có vấu ngay trên tai, vít xuyên tai từ dưới
+  (`y = Y.plateBot`, z = mép board + CASE_MARGIN/2).
+- **Blossom** (`aliceAlu`): `pieces 2`, `screwSide 'bottom'`, `mounts ['gasket']`. Case CAD 2 mảnh: `CaseModel part` (đáy = node
+  `bottom` ở case dưới, nắp = node `case` + khung chặn ở case trên, nhấc / đậy được). `CaseDef.screws` (8 lỗ vít dò từ mặt đáy model,
+  mm) thay vị trí vít tính theo cỡ case; `CaseDef.gaskets` (8 tai của plate `alice.glb`, mm) thay gasket chia đều mép. Plate CAD
+  dùng sẵn khi mount ≠ tray (`aliceCAD`).
+- **Feet đáy phẳng**: `probe-case-feet.mjs` thêm `flatFeet` — model không dò được hốc thì lấy mặt đáy thật, mỗi góc chọn chỗ sát góc
+  nhất mà cả đĩa feet + lề 3mm nằm trọn trong mặt đáy (lấy mẫu cả đĩa, lần đầu chỉ kiểm viền nên feet trước đè lỗ vít). Thêm
+  `alice-blossom`, `rf-bruh` vào `caseFeet.json`; Bakeneko / Duality vẫn dò được 2 hốc → giữ feet mặc định.
+- Đã chụp (playwright, scratchpad `pw/shot.mjs`): plastic60 O-ring (gờ quanh lòng case), gasket60 (gờ đỡ + gờ đè), Blossom: feet,
+  gasket trên tai, 8 vít đóng case trùng lỗ.
+- **Catto HHKB 2 mảnh** (người dùng: "ok đổi trước catto HHKB đi"): `pieces 2`, `screwSide 'bottom'`, `mounts ['gasket']` (bỏ tray /
+  O-ring). 8 lỗ vít dò từ model (`screws`): hốc chìm đầu vít sâu 3mm ở mặt đáy (x ±144 / ±52,5, z ≈ ±53), không xuyên mặt đáy nên
+  lần dò đầu chỉ thấy 4 hốc feet. Tạ (node `weight`) nằm trong mảnh đáy → `CaseModel part="bottom"` vẽ kèm tạ. Không có plate CAD → plate
+  dựng bằng code, gasket chia đều mép trước / sau. Chụp kiểm: vít đóng case trùng lỗ, khung chặn HHKB đi cùng nắp.
+- Chưa sửa (hỏi người dùng): `case75Alu` / `frlAlu` 1 mảnh dựng bằng code vẫn có `gasket` (trái quy tắc gasket cần 2 mảnh; tên
+  "kiểu Q1" thì Q1 thật là 2 mảnh).
+
+## Plate Blossom từ DXF gốc (2026-10-27)
+
+- Yêu cầu: "file plate assets/community/blossom/plate/plate.dxf của case blossom alice đâu rồi? sao ko lấy ra dùng?"
+- Trước: plate Alice CAD (`AlicePlate`) lấy `public/models/plates/alice.glb` từ bộ plate khác (`keyboard-plate-files-4xgk3/alice/alice.stp`,
+  `convert-plates.mjs`), không phải plate của Blossom → tai gasket / 8 gasket đặt theo plate sai.
+- `scripts/gen-blossom-plate.ts` (`bun run gen:plate-blossom`) → `src/data/generated/plateBlossom.ts`: DXF chỉ có LINE rời (mm, y lên) →
+  nối đầu mút thành vòng (lưới 0.01mm), bỏ vòng 1 điểm / điểm trùng (không bỏ thì earcut vỡ: "reading 'next'", cả cảnh đen), vòng lớn nhất
+  = viền, còn lại = lỗ. Căn: 63 lỗ switch (diện tích 180–215mm²) ghép tâm phím `getLayout('alice')` → lệch tối đa 0,02mm. Tai gasket =
+  phần plate lòi khỏi viền PCB > 1,5mm (bỏ dải 2 bên |x| > 166) → 7 tai (3 sau, 2 góc trước, 2 giữa trước), tâm gasket lùi 3mm từ mép tai
+  → `BLOSSOM_GASKETS` (= `CASES.aliceAlu.gaskets`).
+- `AlicePlate` (Board.tsx) dựng `ExtrudeGeometry` từ `BLOSSOM_PLATE` (dựng 1 lần, dùng chung), bỏ GLB. `alice.glb` / phần Alice trong
+  `convert-plates.mjs` giờ không dùng nữa (chưa xoá). Chụp kiểm: plate có tai, lỗ switch khớp PCB, gasket trên tai.
+
+## Gasket Poron dán trên + dưới tai plate, bán ở Shopii (2026-10-27)
+
+- Yêu cầu: "ko gắn gasket lên à? sao mất bước đó rồi?" + ảnh khoanh các tai plate Blossom: "dán xuống ở trên ở dưới như poron, search
+  trên mạng kiểu build này bán trong shop luôn".
+- Mất bước: (1) bảng đổi case dev (`setDevCase`) giữ vị trí bước theo tên → đổi sang Blossom khi đã qua chỗ chèn `gasket` thì bước này
+  bị coi như đã làm; (2) save cũ có Blossom / Catto với mount tray / O-ring (case giờ chỉ gasket) → `startBuild` vẫn dùng mount cũ.
+  Sửa: `remapStepIdx` (steps.ts) — bước mới chèn trước chỗ đang làm thì lùi về đó (dùng ở `setDevCase` + `fixMount`); `fixMount` /
+  `fixOrderMount` (persistence.ts) chạy mọi lần nạp save: mount case không làm được → mount hợp lệ; `startBuild` cũng tự đổi.
+  Kiểm bằng script: save Blossom tray ở `caseIn` → nạp lại thành gasket, đứng ở bước `gasket`.
+- Vật tư `gasketPoron` (`GASKET_ID`, `GASKET_PER = 2`): tham khảo "Poron Gasket Foam Strips 20pcs" (20 × 4mm, dày 2 / 3mm, ~8–10 USD,
+  computerorbit.com) → gói 20 miếng 180k / 60 miếng 480k; `placeGasket` trừ 2 miếng mỗi điểm (hoàn tác trả lại). Ảnh Shopii
+  `createGasketStrips` (giấy lót + 8 dải đen).
+- `GASKET = { w: 20mm, d: 4mm, t: 2mm }` (u): `Gasket` (BoardDetails) vẽ 2 dải: mặt trên plate (0 → t) + mặt dưới (plateBot − t →
+  plateBot), thay khối bọc mép cũ. Gờ case code 2 mảnh dời theo: gờ dưới tới `plateBot − t`, gờ đè trên từ `t`. Blossom: tâm dải trên
+  tai (lùi 3mm từ mép tai, `BLOSSOM_GASKETS`). Chụp kiểm Blossom (dải chờ dán trên + dưới tai) + gasket60.
+- Test lại (playwright, scratchpad `pw/gk.mjs`): lộ lỗi `remapStepIdx` — đổi case 1 mảnh → 2 mảnh thì bước mới đầu tiên là `caseOpen`
+  (đầu danh sách) nên build lùi về tận đầu. Sửa: bỏ qua `caseOpen` khi tìm bước mới (case mới coi như đã mở). Sau sửa: plastic60 ở
+  `caseIn` → gasket60 đứng ở `gasket`; dán 1 điểm trừ 2 dải (3 → 1), còn 1 dải thì không dán được, hoàn tác trả lại (→ 3);
+  Shopii tìm "Dải gasket" ra sản phẩm 20 miếng 180k, ảnh vỉ dải đen.
+- **Dải gasket dài hết tai + tai chữ V** (người dùng: "gasket phải dài hết chứ sao có 1 nửa"; "2 cái chữ v quá dài, 1 cái bị lệch qua
+  trái"): dải cố định 20mm → dài theo tai, xoay theo mép. Lần 1 gom cụm ô lưới ngoài PCB + trục chính (PCA): ở chữ V cụm nối liền với
+  dải viền xiên nên dải dài ~68mm, lòi ra ngoài plate. Lần 2 (đang dùng, `gen-blossom-plate.ts`): đi dọc viền plate mỗi 1mm, chỗ nào
+  vùng 1 → 5mm tính từ mép vào nằm trọn trên plate + ngoài PCB thì dán được; đoạn liền cùng hướng (lệch < 8°) = 1 dải, tâm lùi 3mm.
+  Ra 7 dải: sau 48 / 104 / 97mm, góc trước 56 / 34mm, chữ V ~36mm xiên ±0,19 rad. `BLOSSOM_GASKETS` = [x, z, dài, góc],
+  `ctx.gaskets` thêm `w` / `rot`, `Gasket` xoay theo `rot`. Tiêu hao `gasketStrips`: mỗi mặt nối đủ dải 20mm phủ hết dài → Blossom
+  23 dải × 2 mặt = 46 miếng (gói 60). Kiểm bằng bản đồ ký tự (không ô dải nào ngoài plate) + chụp từ trên.
+
+## Blossom: 2 mảnh khép chưa khít (2026-10-27)
+
+- Yêu cầu: ảnh nhìn ngang Blossom, khe đen giữa nắp và đáy: "2 mảnh khép lại chưa khít nhau fix đi".
+- Đo (tia đứng qua vách bên x = ±177mm, mỗi 5mm theo z, đáy = điểm cao nhất node `bottom`, nắp = điểm thấp nhất node `case`):
+  khe 1,33mm ở mép sau tăng đều tới 2,43mm ở mép trước (120mm) → nắp nghiêng thiếu ~0,0091 rad và cao hơn ~1,3mm.
+- `convert-user-cases.mjs` (alice-blossom, nắp U_Case): `dz 27.1 → 25.8`, `rot.angle 0.085 → 0.0941` (cùng tâm xoay mép sau). Chạy lại
+  `bun run convert:user-cases`: chỉ `alice-blossom.glb` đổi (md5 các case khác giữ nguyên). Khe sau sửa 0,01–0,2mm hai bên vách.
+- Board theo nắp: nắp ở giữa hạ 1,95mm (−0,102u), dốc thêm 0,0092 rad → `CASES.aliceAlu.seat` `{ rise: −0.048, tilt: 0.085 }` →
+  `{ rise: −0.15, tilt: 0.0942 }`. Chạy lại `probe-case-feet.mjs` (feet Blossom lệch 0,1mm). Chụp kiểm: lật đáy + nhìn nghiêng mặt bên.
+
+## Đường tách Blossom, 2 dải gasket hai bên, mũi tên feet / thả board / đậy case (2026-10-27)
+
+- "sao lại liền luôn 1 khối thế này, phải có độ tách để người dùng hiểu case này là case 2 mảnh": khép sát (khe ≤ 0,2mm) trông liền khối →
+  `convert-user-cases.mjs` dz nắp 25.8 → 26.4 (khe đều ~0,6mm = đường tách tối mảnh dọc thân), board `seat.rise` −0.15 → −0.118.
+  Chụp nghiêng / nhìn ngang: thấy rõ đường ghép, không hở to.
+- "2 bên thiếu 2 gasket": `gen-blossom-plate.ts` bỏ lọc |x| < 166 → thêm 2 dải dọc 2 mép bên (x ±172mm, ~78mm, xoay 90°), tổng 9 dải =
+  62 miếng → gói lớn `gasketPoron` 60 → 100 miếng (750k).
+- "bước đậy nắp case trên không có mũi tên hướng dẫn à", "dán feet và thả board vào case cũng phải có": `HintArrow` trong Case.tsx —
+  feet: dưới hốc dán tiếp theo (`group rotation-x π` như vít đáy, case lật úp thì chỉ xuống); caseIn (chưa thả): trên giữa vách trước case
+  dưới (`frontZ`, cao `wallTop` / `BLOCKER_TOP` case CAD); đậy / úp case trên (`placing`): trên vách trước case trên đang lơ lửng.
+  Chụp kiểm plastic60 (feet, thả board) + gasket60 (đậy case).

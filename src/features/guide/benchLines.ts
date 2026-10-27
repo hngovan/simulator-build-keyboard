@@ -38,21 +38,28 @@ const INTRO = [
   'Ở dưới là việc cần làm ngay bây giờ, mũi tên vàng chỉ chỗ cần bấm. Lỡ tay thì Ctrl + Z hoàn tác nhé!',
 ]
 
+/** bước vặn vít vào: giữ chuột canh lực (thanh lực), quá tay là tuôn ren / nứt case → đền khách */
+const TORQUE_LINE =
+  'Giữ chuột lên vít để siết, nhả khi thanh lực vào vùng xanh. Giữ quá là tuôn ren, case PC / mica / acrylic còn có thể nứt, giao đi là phải đền khách đó 😱'
+
 /** case mica: nhiều tấm mica cắt laser chồng lên nhau, vít xuyên qua mọi lớp (không phải case 2 mảnh) */
 const MICA_LINES: Partial<Record<StepId, string[]>> = {
   caseOpen: [
     'Case mica này là nhiều tấm mica cắt laser chồng lên nhau, vít xuyên qua hết các lớp giữ chúng lại.',
-    'Chọn đúng đầu vít rồi click từng con vít. Tháo hết là nhấc được mấy lớp trên ra để thả board vào.',
+    'Chọn đúng đầu vít rồi click từng con vít (sai đầu là tuôn ren). Tháo hết là nhấc được mấy lớp trên ra để thả board vào.',
   ],
   caseClose: ['Xếp các lớp mica phía trên lại lên board nào. Click vào phần case trên nhé.'],
-  caseScrew: ['Vặn vít xuyên qua các lớp mica cho chặt là cả chồng mica liền thành case rồi 💪'],
+  caseScrew: [
+    'Vặn vít xuyên qua các lớp mica cho chặt là cả chồng mica liền thành case rồi 💪',
+    TORQUE_LINE,
+  ],
 }
 
 const STEP_LINES: Record<StepId, string[]> = {
   unbox: ['Hàng về rồi! Click vào thùng hàng để mở hộp, xem khách gửi gì nào 📦'],
   caseOpen: [
     'Case này 2 mảnh nên phải tháo vít trước đã.',
-    'Chọn đúng đầu vít rồi click từng con vít. Tháo hết là nhấc được case trên ra.',
+    'Chọn đúng đầu vít rồi click từng con vít (sai đầu là tuôn ren). Tháo hết là nhấc được case trên ra.',
   ],
   stabMod: [
     'Mod stab là bước tuỳ chọn, nhưng làm thì phím dài êm hẳn, hết lạch cạch đó!',
@@ -65,6 +72,7 @@ const STEP_LINES: Record<StepId, string[]> = {
   ],
   stabScrew: [
     'Stab screw-in thì mỗi con cần 2 vít bắt từ mặt dưới PCB. Vặn chặt kẻo stab bị lỏng nha!',
+    TORQUE_LINE,
   ],
   foam: [
     'Lót foam Poron giữa PCB và plate là tuỳ chọn, nhưng gõ sẽ bớt rung và ra tiếng thock trầm hơn đó!',
@@ -95,13 +103,14 @@ const STEP_LINES: Record<StepId, string[]> = {
     'Chọn feet đen hay trắng ở bảng bên phải, mỗi hốc dán 1 cái nha.',
   ],
   topCase: ['Top mount: úp case trên xuống plate trước. Click vào case trên nhé.'],
-  topScrew: ['Board đã lật: vặn vít từ dưới lên để giữ plate vào case trên.'],
+  topScrew: ['Board đã lật: vặn vít từ dưới lên để giữ plate vào case trên.', TORQUE_LINE],
   caseIn: ['Giờ thả board vào case. Click vào case để đặt board xuống.'],
   trayScrew: [
     'Tray mount: vặn các vít giữ PCB vào standoff dưới đáy case. Nhớ đổi đúng đầu vít Torx!',
+    TORQUE_LINE,
   ],
   caseClose: ['Đậy case trên lại nào. Click vào case trên.'],
-  caseScrew: ['Vặn vít khoá 2 mảnh case lại là xong phần vỏ rồi 💪'],
+  caseScrew: ['Vặn vít khoá 2 mảnh case lại là xong phần vỏ rồi 💪', TORQUE_LINE],
   keycap: [
     'Sắp xong rồi! Click vào switch để cắm keycap.',
     'Khách có đòi chất liệu keycap thì xem lại thông tin đơn bên trái cho chắc nha.',

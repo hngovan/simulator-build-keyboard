@@ -5,6 +5,7 @@ import { APPS, APP_IDS, BENCH_ICON, END_DAY_ICON } from './apps'
 import { DesktopIcon } from './DesktopIcon'
 import { EndDayDialog } from './EndDayDialog'
 import { Taskbar } from './Taskbar'
+import { Wallpaper } from './Wallpaper'
 
 // Màn hình "máy tính trong game": icon app, các cửa sổ, taskbar
 export function Desktop() {
@@ -12,17 +13,13 @@ export function Desktop() {
   const minimized = useGame((s) => s.minimized)
   const hasOffer = useGame((s) => s.offers.length > 0)
   const hasBuild = useGame((s) => !!s.build)
+  const wallpaper = useGame((s) => s.wallpaper)
   const { openApp, minimizeApp, closeApp, goBench } = useGame.getState()
   const [endDay, setEndDay] = useState(false)
 
   return (
     <div className="fixed inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,#1d3b6e_0%,#3f2b72_55%,#7a2f6a_100%)]">
-        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] bg-[size:22px_22px]" />
-        <div className="absolute right-10 bottom-[70px] font-head text-[90px] font-extrabold text-white/10">
-          KeebOS
-        </div>
-      </div>
+      <Wallpaper id={wallpaper} />
 
       <div className="absolute top-4 left-4 z-[2] flex flex-col gap-3 max-md:right-4 max-md:grid max-md:grid-cols-4 max-md:justify-items-center max-md:gap-y-4">
         {APP_IDS.map((id) => (

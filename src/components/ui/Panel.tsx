@@ -36,9 +36,14 @@ export function Heading({
   return (
     <h4 className="mb-2 flex items-center gap-1.5 text-base">
       {children} {note && <span className="text-xs font-normal text-muted">{note}</span>}
+      {/* ⓘ góc phải, kiểu đầu app bảng xếp hạng */}
       {info && (
-        <span title={info} aria-label={info} className="shrink-0 cursor-help text-yellow">
-          <CircleAlert className="size-4" strokeWidth={2.5} />
+        <span
+          title={info}
+          aria-label={info}
+          className="ml-auto shrink-0 cursor-help text-muted hover:text-ink"
+        >
+          <CircleAlert className="size-5" />
         </span>
       )}
     </h4>
