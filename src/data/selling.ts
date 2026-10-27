@@ -105,6 +105,12 @@ export interface Bid {
   /** giá cao nhất người mua chịu trả (ẩn, định sẵn lúc đăng); < start = không ai bid */
   cap: number
   top?: { name: string; amount: number }
+  /** hết giờ có người thắng: chờ shop chốt bán (`closeBid`) hoặc bùng (`bailBid`, bị ban chợ) */
+  ended?: boolean
+  /** giá BIN (buy it now, giá thắng ngay): có người BIN thì bài dừng giờ + dừng bình luận, chờ chốt */
+  bin?: number
+  /** kết thúc do có người BIN (không phải hết giờ) */
+  binned?: boolean
 }
 
 export interface Listing {
@@ -257,6 +263,9 @@ const UPS = [
   'Hóng',
   'Đẹp quá, up cho bác',
   'Chấm',
+  'Up phụ',
+  'Em đẹp nhưng không với tới được',
+  'Lúc có tiền thì không ai bán',
 ]
 /** khen shop có chứng chỉ thợ */
 const PRAISE = [
@@ -266,6 +275,16 @@ const PRAISE = [
   'Đồ thợ dùng thì khỏi lo',
 ]
 const BID_LINES = ['Bid', 'Bid nhé', 'Theo', 'Em bid', 'Lên']
+/**
+ * bình luận ở bài fast bid: không hỏi "còn không" (còn thì mới bid) / "ib giá chốt" (giá chốt = giá BIN, đặt sẵn khi đăng)
+ */
+const BID_CHAT = [
+  'Hàng zin không bác, có flaw gì không?',
+  'Có hình thật không bác ơi',
+  'Bảo hành gì không bác?',
+  ...UPS,
+  'Sống vội vậy chủ thớt',
+]
 
 /**
  * 1 lượt bot ghé bài giá cố định: hỏi han, up bài, khen thợ, chê giá hoặc trả giá; null = không ai ghé.
@@ -340,20 +359,23 @@ const BID_STOP = ['Theo không nổi rồi', 'Đắt rồi, em dừng', 'Hóng x
 export function bidTurn(
   l: Listing,
   now = Date.now(),
-): { line: ListingLine; top?: Bid['top'] } | null {
+): { line: ListingLine; top?: Bid['top']; bin?: boolean } | null {
   const b = l.bid
-  if (!b || now >= b.endsAt || l.log.length >= 30) return null
+  if (!b || b.ended || now >= b.endsAt || l.log.length >= 30) return null
   // còn xa giá trần thì người mua nhảy giá mạnh (tới ~30% khoảng còn lại), gần trần thì nhích từng bước
   const gap = Math.floor((b.cap - (b.top?.amount ?? b.start)) / b.step)
   const jump = Math.max(1, Math.round(Math.random() * gap * 0.3))
   const next = b.top ? b.top.amount + b.step * jump : b.start
   const name = pick(BUYERS.filter((n) => n !== b.top?.name))
+  // có giá BIN trong tầm (≤ giá trần ẩn): bid tới / qua BIN thì BIN luôn, thỉnh thoảng có người BIN sớm cho nhanh
+  if (b.bin && b.bin <= b.cap && (next >= b.bin || Math.random() < 0.12))
+    return { line: { name, text: `BIN ${b.bin}k` }, top: { name, amount: b.bin }, bin: true }
   if (next > b.cap) {
     if (Math.random() < 0.5) return null
     return { line: { name, text: pick(b.top ? BID_STOP : BID_HIGH) } }
   }
   // thỉnh thoảng chỉ vào hỏi / up bài
-  if (Math.random() < 0.2) return { line: { name, text: pick([...QUESTIONS, ...UPS]) } }
+  if (Math.random() < 0.2) return { line: { name, text: pick(BID_CHAT) } }
   // không tự bid đè chính mình
   return { line: { name, text: `${pick(BID_LINES)} ${next}k` }, top: { name, amount: next } }
 }

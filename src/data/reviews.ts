@@ -31,6 +31,10 @@ const TEXTS = {
     'Hỏi đơn mà bị từ chối thẳng, hơi mất thiện cảm',
   ],
   cancel: ['Ôm đơn rồi để đó, quá hạn cả tuần. Huỷ!', 'Thợ không có tâm, nhận đơn xong bỏ xó'],
+  sold: [
+    'Gửi đồ cho shop build mà shop đem lên chợ bán. Huỷ kèo, né gấp!',
+    'Lướt Hội Phím Cơ thấy đúng món mình gửi đang được bán. Shop lừa đảo!',
+  ],
   defect: [
     'Nhận phím về bấm nút {keys} không nhận tín hiệu, shop có test trước khi giao không vậy 😤',
     'Nút {keys} chết ngắc, làm ăn ẩu quá',
@@ -65,6 +69,15 @@ export const declineReview = (order: Order, day: number): Review => ({
   text: pick(TEXTS.decline),
   kind: 'decline',
   rep: DECLINE_REP,
+})
+
+/** Khách huỷ kèo vì phát hiện shop bán đồ mình gửi */
+export const soldReview = (order: Order, day: number, rep: number): Review => ({
+  ...base(order, day),
+  stars: 1,
+  text: pick(TEXTS.sold),
+  kind: 'cancel',
+  rep,
 })
 
 /** Khách huỷ đơn vì trễ hạn quá lâu */

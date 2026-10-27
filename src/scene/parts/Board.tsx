@@ -4,8 +4,8 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import { PLATES } from '@/data/parts'
-import { CASE_MARGIN, CASE_WALL, Y, caseScrewHoles, stabSpan } from '@/data/steps'
-import type { Key, StepId } from '@/types'
+import { CASE_MARGIN, CASE_WALL, TRAY_HOLE, Y, caseScrewHoles, keyCutouts } from '@/data/steps'
+import type { Key, Point, StepId } from '@/types'
 import { playClick } from '@/sound'
 import { Drop, lerpTo } from '../common/anim'
 import { MM } from '../models/Switch'
@@ -13,9 +13,10 @@ import { useHover } from '../common/useHover'
 import { Gaskets, HotswapSockets, SiliconeRing } from './BoardDetails'
 import { SUPPLIES } from '@/data/supplies'
 import { KeySlot } from './KeySlot'
+import { KeycapPreload } from './Keycap'
 import { PcbFoam } from './Foam'
 import { PcbSurface } from './PcbSurface'
-import { boardOutline } from './boardOutline'
+import { boardOutline, pointInPolygon } from './boardOutline'
 import { sandwichPlateShape } from './caseShell'
 import { ScrewSet } from './Screw'
 import { SolderPad } from './SolderPad'
@@ -23,10 +24,6 @@ import { HintArrow } from '../stations/StationKit'
 import { plate60Cutouts } from '@/data/generated/plate60'
 import { plateUniversal } from '@/data/generated/plateUniversal'
 
-/** lỗ cắt switch MX trên plate: 14 × 14mm */
-const CUTOUT = 14 * MM
-/** lỗ cắt stab Cherry trên plate: ~7mm dọc theo phím × 13mm ngang phím */
-const STAB_CUT = { along: 7 * MM, across: 13 * MM }
 /**
  * Lỗ switch spacebar của typ60 (toạ độ DXF, mm): trong DXF nó nối thông ra mép trước nên nằm trong
  * đường viền ngoài, không có trong plate60Cutouts → thêm tay
@@ -52,28 +49,18 @@ function plateGeometry(
   universal?: [number, number][][],
   /** sandwich mount: viền ngoài tấm liền theo case mica (thay viền layout) */
   sandwich?: THREE.Shape,
+  /** tray mount: lỗ to hơn đầu ốc để vít lọt xuống PCB (đã dò không chạm lỗ switch / stab) */
+  trayHoles: Point[] = [],
 ) {
   // viền plate theo layout (Alice: 2 nửa xoay), nhỏ hơn PCB 0.01u mỗi cạnh
   const { shapes, shapeOf } = sandwich
     ? { shapes: [sandwich], shapeOf: () => sandwich }
     : boardOutline(keys, width, depth, 0.01, outline)
-  let shape = shapes[0]
   // trục y của hình = -z của cảnh (do xoay -90° quanh x)
-  // lỗ chữ nhật tâm (x, z) nửa cạnh hx × hz, xoay rot quanh tâm (phím xoay như Alice)
-  const rect = (x: number, z: number, hx: number, hz: number, rot: number) => {
-    const c = Math.cos(rot)
-    const s = Math.sin(rot)
-    const pt = (dx: number, dz: number): [number, number] => [
-      x + dx * c + dz * s,
-      -(z - dx * s + dz * c),
-    ]
-    const hole = new THREE.Path()
-    hole.moveTo(...pt(-hx, -hz))
-    hole.lineTo(...pt(-hx, hz))
-    hole.lineTo(...pt(hx, hz))
-    hole.lineTo(...pt(hx, -hz))
+  const loopHole = (loop: [number, number][]) => {
+    const hole = new THREE.Path(loop.map(([x, z]) => new THREE.Vector2(x, -z)))
     hole.closePath()
-    shape.holes.push(hole)
+    return hole
   }
   if (cadCutouts) {
     const points = cadCutouts.flat()
@@ -94,34 +81,27 @@ function plateGeometry(
       hole.closePath()
       shapes[0].holes.push(hole)
     }
-  } else if (universal)
-    for (const loop of universal) {
-      const hole = new THREE.Path(loop.map(([x, z]) => new THREE.Vector2(x, -z)))
-      hole.closePath()
-      shapes[0].holes.push(hole)
-    }
+  } else if (universal) for (const loop of universal) shapes[0].holes.push(loopHole(loop))
   else
     for (const k of keys) {
       // lỗ khoét vào đúng mảnh plate chứa phím
-      shape = shapeOf(k)
-      rect(k.cx, k.cz, CUTOUT / 2, CUTOUT / 2, k.rot)
-      if (!k.stab) continue
-      // 2 lỗ stab hai bên switch, dọc theo chiều dài phím (phím dọc như Enter numpad thì theo z)
-      const s = stabSpan(k)
-      const vertical = k.h >= 2
-      for (const side of [-1, 1]) {
-        // lệch dọc theo trục phím rồi xoay theo phím
-        const [ox, oz] = vertical ? [0, side * s] : [side * s, 0]
-        const x = k.cx + ox * Math.cos(k.rot) + oz * Math.sin(k.rot)
-        const z = k.cz - ox * Math.sin(k.rot) + oz * Math.cos(k.rot)
-        if (vertical) rect(x, z, STAB_CUT.across / 2, STAB_CUT.along / 2, k.rot)
-        else rect(x, z, STAB_CUT.along / 2, STAB_CUT.across / 2, k.rot)
-      }
+      const shape = shapeOf(k)
+      for (const loop of keyCutouts(k)) shape.holes.push(loopHole(loop))
     }
+  // lỗ vít tray: vào mảnh plate chứa tâm lỗ
+  for (const { x, z } of trayHoles) {
+    const target = shapes.find((c) => pointInPolygon(new THREE.Vector2(x, -z), c.getPoints()))
+    if (!target) continue
+    const hole = new THREE.Path()
+    hole.absarc(x, -z, TRAY_HOLE.plate, 0, Math.PI * 2, false)
+    target.holes.push(hole)
+  }
   return new THREE.ExtrudeGeometry(shapes, { depth: -Y.plateBot, bevelEnabled: false }).rotateX(
     -Math.PI / 2,
   )
 }
+
+const NO_HOLES: Point[] = []
 
 const ALICE_PLATE = '/models/plates/alice.glb'
 useGLTF.preload(ALICE_PLATE)
@@ -198,6 +178,7 @@ export function Board() {
   const stepIdx = useStepIdx()
   const b = useBuild()
   const plateMat = useGame((s) => s.inventory.plate!.material)
+  const kcKit = useGame((s) => s.inventory.keycap?.kit)
   const { placePlate, placeFoam, wrapRing, dropInCase } = useGame.getState()
   const ref = useRef<THREE.Group>(null)
   const lifted = step === 'caseIn' && !b.inCase
@@ -226,12 +207,15 @@ export function Board() {
   const plate = PLATES[plateMat]
   // sandwich (case mica): plate kẹp giữa các lớp mica → viền liền cùng case + lỗ vít case, Alice cũng không dùng plate gasket CAD
   const sandwich = ctx.mount === 'sandwich' && ctx.caseDef.material === 'mica' && !ctx.caseDef.model
-  const aliceCAD = ctx.layout === 'alice' && !sandwich
+  // tray: plate CAD Alice không có lỗ vít tray → dựng plate theo phím (như sandwich) để khoét lỗ
+  const aliceCAD = ctx.layout === 'alice' && !sandwich && ctx.mount !== 'tray'
   const standard60CAD =
     ctx.layout === '60' &&
     (ctx.variant.backspace ?? '2u') === '2u' &&
     (ctx.variant.bottom ?? 'wk') === 'wk' &&
     (ctx.variant.rshift ?? '2.75u') === '2.75u'
+  // tray mount: vít xuyên plate + PCB bắt vào trụ đồng đáy case (vị trí đã dò không chạm lỗ switch / stab)
+  const trayHoles = ctx.mount === 'tray' ? ctx.screws.trayScrew : NO_HOLES
   const plateGeo = useMemo(
     () =>
       plateGeometry(
@@ -249,8 +233,9 @@ export function Board() {
               caseScrewHoles(ctx.caseDef, ctx.width, ctx.depth),
             )
           : undefined,
+        trayHoles,
       ),
-    [ctx, standard60CAD, sandwich],
+    [ctx, standard60CAD, sandwich, trayHoles],
   )
   const at = (name: StepId) => ctx.steps.indexOf(name)
   return (
@@ -262,6 +247,7 @@ export function Board() {
           outline={ctx.outline}
           keys={ctx.keys}
           screwHoles={at('stabScrew') >= 0 ? ctx.screws.stabScrew : []}
+          mountHoles={trayHoles}
           type={ctx.pcbType}
           hover={hover}
         />
@@ -275,6 +261,7 @@ export function Board() {
               width={ctx.width}
               depth={ctx.depth}
               outline={ctx.outline}
+              trayHoles={trayHoles}
               ghost={!b.foam}
             />
           </group>
@@ -306,6 +293,7 @@ export function Board() {
           </group>
         )
       )}
+      <KeycapPreload kit={kcKit} keys={ctx.keys} />
       {ctx.keys.map((k) => (
         <KeySlot key={k.id} k={k} />
       ))}
@@ -314,7 +302,14 @@ export function Board() {
       {at('stabScrew') >= 0 && stepIdx >= at('stabScrew') && (
         <ScrewSet step="stabScrew" y={Y.pcbBot} flip />
       )}
-      {at('trayScrew') >= 0 && b.inCase && <ScrewSet step="trayScrew" y={0.03} />}
+      {at('trayScrew') >= 0 && b.inCase && (
+        // đầu ốc chìm trong lỗ plate, tì mặt PCB; khung nét đứt / vòng vàng ở miệng lỗ trên mặt plate (plateless: mặt PCB)
+        <ScrewSet
+          step="trayScrew"
+          y={Y.pcbTop}
+          mouth={ctx.steps.includes('plate') ? 0 : Y.pcbTop}
+        />
+      )}
       <Gaskets />
       {(b.ring || step === 'ring') && (
         <group onPointerDown={onBoard}>

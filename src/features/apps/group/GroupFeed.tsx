@@ -1,6 +1,7 @@
 import { useGame } from '@/store'
-import { ClipboardList } from 'lucide-react'
-import { Alert, Badge, Empty, OptionChip } from '@/components/ui'
+import { CircleAlert, ClipboardList, Newspaper, Store, UsersRound } from 'lucide-react'
+import { Alert, Empty, TabChip } from '@/components/ui'
+import { UNLIST_FREE } from '@/data/selling'
 import { PostCard } from './PostCard'
 import { MyListings } from './MyListings'
 
@@ -27,41 +28,62 @@ export function GroupFeed() {
       </div>
     )
   return (
-    <div className="flex flex-col gap-2.5">
-      {/* 2 tab dính trên cùng khi cuộn (bù padding thân cửa sổ để nền phủ kín mép) */}
-      <div className="sticky -top-3.5 z-10 -mx-3.5 -mt-3.5 flex flex-wrap gap-1 bg-panel px-3.5 pt-3.5 pb-2 max-md:-top-2.5 max-md:-mx-2.5 max-md:-mt-2.5 max-md:px-2.5 max-md:pt-2.5">
-        <OptionChip active={tab === 'feed'} onClick={() => setTab('feed')}>
+    // cùng kiểu bảng xếp hạng: đầu (icon + tiêu đề + ⓘ) → tab lọc kiểu Shopii (đứng yên) → khung nền tối cuộn riêng
+    <div className="flex h-[min(680px,74vh)] flex-col gap-3 group-data-fill/win:h-full">
+      <div className="flex items-center gap-3">
+        <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-yellow/15 text-yellow">
+          <UsersRound className="size-9" strokeWidth={2.2} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-head text-2xl leading-tight font-extrabold text-yellow">
+            Hội Phím Cơ VN
+          </div>
+          <div className="truncate text-sm text-muted">
+            {tab === 'mine'
+              ? 'Đăng bán đồ kho chung, linh kiện đơn đã nhận'
+              : 'Hàng pass rẻ hơn 20–40% nhưng mô tả toàn thuật ngữ chợ'}
+          </div>
+        </div>
+        <span
+          className="shrink-0 self-start text-muted hover:text-ink"
+          title={
+            tab === 'mine'
+              ? `Gỡ bài quá ${UNLIST_FREE} lần / ngày là bị admin ban chợ · bán đồ của khách thì 95% bị lộ`
+              : 'Xin hình, check var trước khi chuyển khoản kẻo dính flaw hoặc gặp seller bùng! Ai cũng uy tín cho đến khi...'
+          }
+        >
+          <CircleAlert className="size-5" />
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        <TabChip
+          active={tab === 'feed'}
+          icon={Store}
+          count={order ? posts.length : undefined}
+          onClick={() => setTab('feed')}
+        >
           Chợ pass
-        </OptionChip>
-        <OptionChip
+        </TabChip>
+        <TabChip
           active={tab === 'mine'}
+          icon={Newspaper}
+          count={mine}
+          title={openStolen ? 'Phím của khách đang bị giữ, chuộc lại ngay' : undefined}
           onClick={() => setTab('mine')}
-          className="inline-flex items-center gap-1.5"
         >
           Bài của tôi
-          {mine > 0 && (
-            <Badge solid tone="blue" className="ml-0 px-1.5 py-0 text-[11px]">
-              {mine}
-            </Badge>
-          )}
           {openStolen && ' 🚨'}
-        </OptionChip>
+        </TabChip>
       </div>
-      {tab === 'mine' ? (
-        <MyListings />
-      ) : !order ? (
-        <Empty icon={<ClipboardList />}>Nhận đơn trước để xem các bài pass đồ phù hợp nhé.</Empty>
-      ) : (
-        <>
-          <Alert tone="yellow" title="Hàng pass rẻ hơn 20–40% nhưng mô tả toàn thuật ngữ chợ">
-            Xin hình, check var trước khi chuyển khoản kẻo dính flaw hoặc gặp seller bùng!
-            <i className="mt-1 block font-bold">“Ai cũng uy tín cho đến khi...”</i>
-          </Alert>
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </>
-      )}
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto rounded-2xl bg-black/15 p-1.5">
+        {tab === 'mine' ? (
+          <MyListings />
+        ) : !order ? (
+          <Empty icon={<ClipboardList />}>Nhận đơn trước để xem các bài pass đồ phù hợp nhé.</Empty>
+        ) : (
+          posts.map((post) => <PostCard key={post.id} post={post} />)
+        )}
+      </div>
     </div>
   )
 }

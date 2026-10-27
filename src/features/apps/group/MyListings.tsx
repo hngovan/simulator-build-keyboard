@@ -1,17 +1,9 @@
-import { useEffect, useState } from 'react'
-import { Gavel, Newspaper, PackageOpen } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { ChevronDown, Gavel, Newspaper, PackageOpen } from 'lucide-react'
 import { useGame } from '@/store'
-import {
-  Alert,
-  Avatar,
-  Badge,
-  Button,
-  Empty,
-  Heading,
-  Muted,
-  OptionChip,
-  OptionSelect,
-} from '@/components/ui'
+import { Alert, Button, Empty, Muted, OptionChip, OptionSelect } from '@/components/ui'
+import { NameAvatar } from '@/components/game/CustomerAvatar'
+import { Tag } from './Tag'
 import { cn, fmt } from '@/lib/format'
 import { CATS } from '@/data/parts'
 import {
@@ -111,30 +103,25 @@ function useSources(): Source[] {
   return list.filter((x) => readable(x.src))
 }
 
-/** badge nguồn món: phím của khách / đồ trong đơn / hàng lỗi */
-function SourceBadges({ src }: { src: ListingSource }) {
+/** nhãn nguồn món: phím của khách / đồ trong đơn / hàng lỗi */
+function SourceTags({ src }: { src: ListingSource }) {
   const flaw = sourceFlaw(src)
   return (
     <>
       {src.kind === 'customer' && (
-        <Badge solid tone="red" className="ml-0 shrink-0">
+        <Tag tone="red" className="shrink-0">
           Phím của khách
-        </Badge>
+        </Tag>
       )}
       {src.kind === 'job' && (
-        <Badge
-          solid
-          tone="blue"
-          className="ml-0 shrink-0"
-          title={`Linh kiện trong đơn ${src.customer}`}
-        >
+        <Tag tone="blue" className="shrink-0" title={`Linh kiện trong đơn ${src.customer}`}>
           Đơn {src.customer}
-        </Badge>
+        </Tag>
       )}
       {flaw && (
-        <Badge solid tone="red" className="ml-0 shrink-0" title={`Lỗi: ${flaw}`}>
+        <Tag tone="red" className="shrink-0" title={`Lỗi: ${flaw}`}>
           Hàng lỗi
-        </Badge>
+        </Tag>
       )}
     </>
   )
@@ -172,13 +159,15 @@ function SourceRow({ src, index }: { src: ListingSource; index?: number }) {
   const [mode, setMode] = useState(0)
   const [price, setPrice] = useState(value)
   const [step, setStep] = useState(1)
+  // giá BIN (0 = không đặt): người mua trả đúng giá này là thắng ngay
+  const [bin, setBin] = useState(0)
   const [tags, setTags] = useState<ListingTag[]>([])
   const customer = src.kind === 'customer'
   const bid = mode === 1
   const post = () =>
     useGame.getState().postListing(src, price, index, {
       tags,
-      ...(bid ? { bidStep: BID_STEPS[step] } : {}),
+      ...(bid ? { bidStep: BID_STEPS[step], bin } : {}),
     })
   return (
     <div
@@ -191,7 +180,7 @@ function SourceRow({ src, index }: { src: ListingSource; index?: number }) {
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5 font-bold">
             <span className="truncate">{sourceTitle(src)}</span>
-            <SourceBadges src={src} />
+            <SourceTags src={src} />
           </div>
           <Muted>
             Giá gốc {fmt(base)} · giá chợ ~{fmt(value)}
@@ -227,6 +216,16 @@ function SourceRow({ src, index }: { src: ListingSource; index?: number }) {
                 className="w-32"
               />
             )}
+            {bid && (
+              <label className="flex items-center gap-1.5 font-head text-sm font-extrabold">
+                BIN
+                <PriceInput
+                  value={bin}
+                  onChange={setBin}
+                  label="Giá BIN (k): ai trả đúng giá này thắng ngay, 0 = không đặt"
+                />
+              </label>
+            )}
           </div>
           <div className="flex flex-wrap gap-1">
             {TAG_IDS.filter((t) => !bid || (t !== 'firm' && t !== 'lowball')).map((t) => (
@@ -250,13 +249,13 @@ function SourceRow({ src, index }: { src: ListingSource; index?: number }) {
                   )
                 }
               >
-                {LISTING_TAGS[t].label}
+                #{LISTING_TAGS[t].label}
               </OptionChip>
             ))}
           </div>
           <Muted>
             {bid
-              ? `Fast bid chạy 1 phút. Giá sàn ${fmt(bidFloor(src))}: khởi điểm tới mức này chắc chắn có người bid (hạ được tới 0đ), cao hơn thì có thể ế. May thì lời, ế thì lỗ.`
+              ? `Fast bid chạy 1 phút, đặt giá BIN thì ai trả đúng giá đó thắng ngay (dừng giờ). Giá sàn ${fmt(bidFloor(src))}: khởi điểm tới mức này chắc chắn có người bid (hạ được tới 0đ), cao hơn thì có thể ế. May thì lời, ế thì lỗ.`
               : `Đăng tới ${RICH_MAX}× giá gốc (${fmt(Math.round(base * RICH_MAX))}) vẫn có thể gặp đại gia chốt trong đêm; chứng chỉ thợ +5% mỗi bậc.`}
             {sourceFlaw(src) && ' Hàng lỗi: bán đi có thể bị tố mô tả sai, admin ban chợ.'}
           </Muted>
@@ -286,16 +285,16 @@ function useCountdown(endsAt?: number) {
   return endsAt ? Math.max(0, Math.ceil((endsAt - now) / 1000)) : 0
 }
 
-/** bài mình đã đăng: thu gọn = tiêu đề + giá + badge; mở = bình luận / trả giá của bot, bấm giá để bán */
+/** bài mình đã đăng: thu gọn = tiêu đề + giá + nhãn (bấm tiêu đề / mũi tên); mở = bình luận / trả giá của bot, bấm giá để bán */
 function ListingCard({ l }: { l: Listing }) {
-  const { sellListing, unlist } = useGame.getState()
+  const { sellListing, unlist, closeBid, bailBid } = useGame.getState()
   const [open, setOpen] = useState(true)
   const left = useCountdown(l.bid?.endsAt)
   const offers = l.log.filter((x) => x.offer).length
   return (
     <div
       className={cn(
-        'rounded-[14px] border-2 bg-panel-2 p-3',
+        'rounded-xl border-2 bg-panel-2 p-3',
         sourceFlaw(l.src) ? 'border-red/70' : 'border-transparent',
       )}
     >
@@ -307,28 +306,32 @@ function ListingCard({ l }: { l: Listing }) {
           title={open ? 'Thu gọn bài' : 'Mở bài'}
           className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left"
         >
-          <span className="flex w-full min-w-0 items-center gap-1.5 font-extrabold">
-            <span className={cn('text-xs transition-transform', !open && '-rotate-90')}>▼</span>
-            <span className="truncate">{l.title}</span>
-          </span>
+          {/* hashtag nghiêng, nằm trên cùng (trên tiêu đề) */}
+          {!!l.tags?.length && (
+            <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 italic">
+              {l.tags.map((t) => (
+                <Tag key={t} tone={LISTING_TAGS[t].tone} title={LISTING_TAGS[t].hint}>
+                  #{LISTING_TAGS[t].label}
+                </Tag>
+              ))}
+            </span>
+          )}
+          <span className="w-full truncate font-head font-extrabold">{l.title}</span>
           <span className="flex flex-wrap items-center gap-1">
             {l.bid && (
-              <Badge solid tone="orange" className="ml-0">
-                <Gavel className="size-3" /> {left > 0 ? `Fast bid · còn ${left}s` : 'Hết giờ'}
-              </Badge>
+              <Tag tone="orange">
+                <Gavel />{' '}
+                {l.bid.binned
+                  ? 'Có người BIN · chờ chốt'
+                  : l.bid.ended
+                    ? 'Fast bid xong · chờ chốt'
+                    : left > 0
+                      ? `Fast bid · còn ${left}s`
+                      : 'Hết giờ'}
+              </Tag>
             )}
-            <SourceBadges src={l.src} />
-            {(l.tags ?? []).map((t) => (
-              <Badge
-                key={t}
-                solid
-                tone={LISTING_TAGS[t].tone}
-                className="ml-0"
-                title={LISTING_TAGS[t].hint}
-              >
-                {LISTING_TAGS[t].label}
-              </Badge>
-            ))}
+            {l.bid?.bin && !l.bid.binned && <Tag tone="green">BIN {fmt(l.bid.bin)}</Tag>}
+            <SourceTags src={l.src} />
             {!open && (
               <Muted>
                 {l.log.length} bình luận{offers ? ` · ${offers} trả giá` : ''}
@@ -342,7 +345,9 @@ function ListingCard({ l }: { l: Listing }) {
           </span>
           {l.bid && (
             <Muted>
-              {l.bid.top ? `${l.bid.top.name} đang giữ giá` : `Khởi điểm · bước ${l.bid.step}k`}
+              {l.bid.top
+                ? `${l.bid.top.name} ${l.bid.binned ? 'đã BIN' : l.bid.ended ? 'thắng bid' : 'đang giữ giá'}`
+                : `Khởi điểm · bước ${l.bid.step}k`}
             </Muted>
           )}
         </div>
@@ -351,13 +356,38 @@ function ListingCard({ l }: { l: Listing }) {
             Gỡ bài
           </Button>
         )}
+        {/* mở / đóng bình luận (giống dòng Danh sách đơn) */}
+        <button
+          type="button"
+          aria-label={open ? 'Thu gọn bài' : 'Mở bài'}
+          onClick={() => setOpen(!open)}
+          className="shrink-0 text-muted hover:text-ink"
+        >
+          <ChevronDown className={cn('size-5 transition-transform', open && 'rotate-180')} />
+        </button>
       </div>
+      {/* fast bid hết giờ: không tự bán, shop chốt cho người thắng hoặc bùng (bị admin ban chợ) */}
+      {l.bid?.ended && l.bid.top && (
+        <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+          <Button
+            size="sm"
+            tone="red"
+            title="Không bán cho người thắng: món về chỗ cũ nhưng bị admin ban chợ"
+            onClick={() => bailBid(l.id)}
+          >
+            Bùng bid
+          </Button>
+          <Button size="sm" tone="green" onClick={() => closeBid(l.id)}>
+            Chốt bán {fmt(l.bid.top.amount)} cho {l.bid.top.name}
+          </Button>
+        </div>
+      )}
       {open && (
         <div className="mt-2 flex flex-col gap-1">
           {!l.log.length && <Muted>Chưa ai bình luận, chờ chút nhé...</Muted>}
           {l.log.map((line, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
-              <Avatar small>{line.name[0]}</Avatar>
+              <NameAvatar name={line.name} className="size-9" />
               <div className="min-w-0 flex-1">
                 <b>{line.name}</b>: {line.text}
               </div>
@@ -371,6 +401,45 @@ function ListingCard({ l }: { l: Listing }) {
         </div>
       )}
     </div>
+  )
+}
+
+/** Nhóm bài thu gọn được: tiêu đề + ghi chú bên trái, số bài / món (14px đậm) + mũi tên bên phải; bấm tiêu đề để mở / đóng */
+function Section({
+  title,
+  note,
+  count,
+  unit,
+  children,
+}: {
+  title: string
+  note?: string
+  count: number
+  /** đơn vị số đếm: bài / món */
+  unit: string
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(true)
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={open}
+        title={open ? 'Thu gọn' : 'Mở'}
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 px-1.5 pt-1 text-left text-base font-bold"
+      >
+        <span className="font-head font-extrabold">{title}</span>
+        {note && <span className="text-xs font-normal text-muted">{note}</span>}
+        <span className="ml-auto font-head text-sm font-extrabold text-muted tabular-nums">
+          {count} {unit}
+        </span>
+        <ChevronDown
+          className={cn('size-5 shrink-0 text-muted transition-transform', open && 'rotate-180')}
+        />
+      </button>
+      {open && children}
+    </>
   )
 }
 
@@ -391,7 +460,8 @@ export function MyListings() {
   }, [has])
 
   return (
-    <div className="flex flex-col gap-2.5">
+    // chữ phụ xám (text-xs text-muted: giá gốc / chợ, bình luận, ghi chú gỡ bài) 12 → 13px cho dễ đọc
+    <div className="flex flex-col gap-2.5 [&_.text-xs.text-muted]:text-[13px]">
       {stolen
         .filter((x) => x.status === 'open')
         .map((x) => (
@@ -412,40 +482,32 @@ export function MyListings() {
         .map((x) => (
           <div key={x.id} className="rounded-xl bg-panel-2 px-3 py-2 text-sm">
             <b>{x.buyer}</b>: “{x.reply}”{' '}
-            <Badge solid tone={x.status === 'returned' ? 'green' : 'red'} className="ml-0">
+            <Tag tone={x.status === 'returned' ? 'green' : 'red'}>
               {x.status === 'returned' ? 'Đã chuộc lại' : 'Mất phím'}
-            </Badge>
+            </Tag>
           </div>
         ))}
 
-      <Heading
+      <Section
+        title="Bài đang đăng"
         note={unlists ? `· đã gỡ ${unlists}/${UNLIST_FREE} lần hôm nay` : undefined}
-        info={`Gỡ bài quá ${UNLIST_FREE} lần / ngày là bị admin ban chợ. Bán phím của khách thì 95% bị lộ`}
+        count={listings.length}
+        unit="bài"
       >
-        Bài đang đăng
-        <Badge solid tone={has ? 'blue' : 'default'} className="ml-0">
-          {listings.length}
-        </Badge>
-      </Heading>
-      {!has && <Empty icon={<Newspaper />}>Chưa có bài đăng nào</Empty>}
-      {listings.map((l) => (
-        <ListingCard key={l.id} l={l} />
-      ))}
+        {!has && <Empty icon={<Newspaper />}>Chưa có bài đăng nào</Empty>}
+        {listings.map((l) => (
+          <ListingCard key={l.id} l={l} />
+        ))}
+      </Section>
 
-      <Heading>
-        Đăng bán món mới
-        {sources.length > 0 && (
-          <Badge solid tone="default" className="ml-0">
-            {sources.length}
-          </Badge>
+      <Section title="Đăng bán món mới" count={sources.length} unit="món">
+        {!sources.length && (
+          <Empty icon={<PackageOpen />}>Kho trống, chưa có món nào để đăng bán</Empty>
         )}
-      </Heading>
-      {!sources.length && (
-        <Empty icon={<PackageOpen />}>Kho trống, chưa có món nào để đăng bán</Empty>
-      )}
-      {sources.map((x) => (
-        <SourceRow key={x.key} src={x.src} index={x.index} />
-      ))}
+        {sources.map((x) => (
+          <SourceRow key={x.key} src={x.src} index={x.index} />
+        ))}
+      </Section>
     </div>
   )
 }

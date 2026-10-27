@@ -12,6 +12,7 @@ import { LAYOUTS, getLayout, randomVariant, variantText } from './layouts'
 import { repTier } from './reputation'
 import { ORING_IDS, SUPPLIES } from './supplies'
 import { makePost } from './market'
+import { avatarSrc } from './avatars'
 import {
   CASES,
   PLATES,
@@ -56,8 +57,7 @@ const CUSTOMERS = [
   'Chị Ngọc',
   'Bạn Long',
 ]
-const avatarFor = (customer: string) =>
-  `/avatars/customers/customer-${String(CUSTOMERS.indexOf(customer) + 1).padStart(2, '0')}.svg`
+const avatarFor = (customer: string) => avatarSrc(CUSTOMERS.indexOf(customer))
 const PACKAGING = ['túi zip', 'hộp giấy', 'thùng carton', 'rương gỗ']
 
 export function estimateCost(
@@ -372,6 +372,20 @@ const SELLERS = [
 
 // Bài đăng trong "Hội Phím Cơ": hàng giá rẻ, caption thuật ngữ chợ che tình trạng thật, có thể gặp seller bùng.
 // Mỗi ngày đăng đợt mới (`nextDay`), id theo ngày để inbox / bài đã mua của hôm trước không lẫn sang
+/**
+ * Tin chat ngắn của khách ở Mezzenger (1–2 ý chính: chào + layout, âm thanh + hạn); chi tiết yêu cầu hiện ở bảng `OrderSpec`
+ * ngay dưới. `order.lines` (bản dài) vẫn giữ: lấy lời chào / câu case featured ở đây
+ */
+export function chatIntro(order: Order): string[] {
+  const out = [order.lines[0]]
+  // đơn case "hot" (featured): câu giới thiệu case ngay sau lời chào
+  if (order.featured && order.lines[1]) out.push(order.lines[1])
+  out.push(
+    `${SOUND_WISH[order.wish].msg}. Làm trong ${order.days} ngày giúp mình nha, yêu cầu chi tiết mình ghi dưới đây 👇`,
+  )
+  return out
+}
+
 export function groupPosts(order: Order, day = 1): GroupPost[] {
   const catalog = buildCatalog().filter(
     (p) => !p.layouts || p.layouts.includes(order.layout) || Math.random() < 0.15,

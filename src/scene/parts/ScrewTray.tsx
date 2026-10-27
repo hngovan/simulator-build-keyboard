@@ -7,7 +7,7 @@ import { playClick } from '@/sound'
 import { Clickable } from '../stations/StationKit'
 import { bowlY, createScrewTray } from '../models/screwTrayModel'
 import { SPIN_MS } from '../models/HandTools'
-import { LooseScrew, OUT_MS, screwLength } from './Screw'
+import { LooseScrew, OUT_MS, TRAY_SHAFT, screwLength } from './Screw'
 
 /** số giả ngẫu nhiên cố định theo thứ tự ốc (ốc không nhảy chỗ mỗi lần vẽ lại) */
 const rand = (i: number, k: number) => {
@@ -16,8 +16,8 @@ const rand = (i: number, k: number) => {
 }
 
 /**
- * Ốc case đã tháo (bước `caseOpen`) mà chưa vặn lại (`caseScrew`): có khay đựng ốc (`tools.screwTray`) thì nằm gọn trong
- * lòng khay, không có thì vương vãi trên bàn. Đặt góc sau bên trái thảm (sau case, không chồng lên case trên đang tháo).
+ * Ốc case đã tháo (bước `caseOpen`) mà chưa vặn lại (`caseScrew`) + ốc tray mount kèm case chưa bắt (`trayScrew`, bấm lần
+ * đầu là lấy ra khỏi khay): có khay đựng ốc (`tools.screwTray`) thì nằm gọn trong lòng khay, không có thì vương vãi trên bàn. Đặt góc sau bên trái thảm (sau case, không chồng lên case trên đang tháo).
  * Bấm khay để đổi màu (`nextTrayColor`). Khay chỉ để gọn, không tăng chỉ số
  */
 export function ScrewTray() {
@@ -61,10 +61,15 @@ export function ScrewTray() {
   // đúng ốc trên case: cùng model / cỡ với bước tháo vít, case mica vít xuyên mọi lớp thì dài như lúc bắt (ScrewSet)
   const shaft =
     ctx.caseDef.material === 'mica' && ctx.screwSide === 'top' ? Y.caseTop - Y.floorBot - 0.06 : 0
+  // ốc tray mount chưa bắt (chưa bấm lần nào)
+  const trayLeft =
+    ctx.mount === 'tray' ? ctx.screws.trayScrew.filter((s) => !b.screws[s.id]).length : 0
   const len = screwLength('caseOpen', shaft)
+  const trayLen = screwLength('trayScrew', TRAY_SHAFT)
+  const total = n + trayLeft
   const spots = useMemo(
     () =>
-      Array.from({ length: n }, (_, i) => {
+      Array.from({ length: total }, (_, i) => {
         if (!hasTray) {
           // vương trên bàn quanh chỗ đặt khay
           const x = (rand(i, 1) - 0.5) * 3.2
@@ -72,12 +77,13 @@ export function ScrewTray() {
           return { x, y: 0, z, rot: rand(i, 3) * Math.PI * 2 }
         }
         // xếp song song trong lòng khay, đầu ốc so le (thân xen kẽ nhau cho sát); hàng ngoài tì lên thành lòng chảo
-        const z = (i - (n - 1) / 2) * 0.22
-        return { x: 0, y: bowlY(Math.hypot(len / 2, z)), z, rot: i % 2 ? Math.PI : 0 }
+        const z = (i - (total - 1) / 2) * 0.22
+        const l = i < n ? len : trayLen
+        return { x: 0, y: bowlY(Math.hypot(l / 2, z)), z, rot: i % 2 ? Math.PI : 0 }
       }),
-    [n, hasTray, len],
+    [n, total, hasTray, len, trayLen],
   )
-  if (!hasTray && !n) return null
+  if (!hasTray && !total) return null
   return (
     // mặt thảm cắt (như SolderKit), góc sau bên trái board; mũi khay chĩa ra sau
     <group position={[-ctx.width / 2 + 1.5, Y.table + 0.08, -ctx.depth / 2 - 4]} rotation-y={-0.6}>
@@ -95,7 +101,11 @@ export function ScrewTray() {
       )}
       {spots.map((p, i) => (
         <group key={i} position={[p.x, p.y, p.z]} rotation-y={p.rot}>
-          <LooseScrew step="caseOpen" shaft={shaft} />
+          {i < n ? (
+            <LooseScrew step="caseOpen" shaft={shaft} />
+          ) : (
+            <LooseScrew step="trayScrew" shaft={TRAY_SHAFT} />
+          )}
         </group>
       ))}
     </group>

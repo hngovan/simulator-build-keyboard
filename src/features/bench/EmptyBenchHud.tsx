@@ -4,7 +4,12 @@ import { CATS } from '@/data/parts'
 import { Button, IconButton, Muted, TitleBar, TitleButton } from '@/components/ui'
 import { APPS } from '@/features/desktop/apps'
 import { OrderSpec } from '@/components/game/OrderSpec'
-import { OrderCard, useOrderEntries, type OrderEntry } from '@/components/game/OrderCard'
+import {
+  OrderCard,
+  OrderListFrame,
+  useOrderEntries,
+  type OrderEntry,
+} from '@/components/game/OrderCard'
 import { StatusChips } from '@/components/game/StatusChips'
 import { CamModeButton, ResetCamButton } from './CamModeButton'
 import { useBenchKey } from './useBenchKey'
@@ -93,7 +98,7 @@ export function OrderPicker() {
               </div>
             </>
           ) : list.length ? (
-            <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
+            <OrderListFrame>
               {list.map((c) => (
                 <OrderCard
                   key={c.order.id}
@@ -117,7 +122,7 @@ export function OrderPicker() {
                   }
                 />
               ))}
-            </div>
+            </OrderListFrame>
           ) : (
             <div className="flex flex-col items-center gap-3 py-4 text-center">
               <Muted>Chưa nhận đơn nào. Vào Mezzenger đọc tin khách rồi bấm "Nhận đơn".</Muted>

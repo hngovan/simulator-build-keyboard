@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import polygonClipping, { type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping'
-import { Y, stabSpan } from '@/data/steps'
-import type { Key } from '@/types'
+import { TRAY_HOLE, Y, stabSpan } from '@/data/steps'
+import type { Key, Point } from '@/types'
 import { boardOutline } from './boardOutline'
 
 /** foam Poron lấp kín khe PCB – plate (~3,3mm): mặt dưới plate tì sát mặt foam */
@@ -14,9 +14,15 @@ const COLOR = '#25262b'
 /**
  * Tấm foam Poron đen giữa PCB và plate, kiểu tấm cắt sẵn theo layout: mỗi phím 1 lỗ vuông gần bằng phím,
  * phím dài (Shift, Enter, Backspace...) 1 lỗ dài liền; spacebar để liền tấm, chỉ khoét lỗ switch giữa
- * + 2 khe stab. Hình 2D trên mặt xz rồi đùn lên theo y (như plate)
+ * + 2 khe stab, lỗ tròn cho vít tray mount lọt xuống PCB. Hình 2D trên mặt xz rồi đùn lên theo y (như plate)
  */
-function foamGeometry(keys: Key[], width: number, depth: number, outline?: [number, number][]) {
+function foamGeometry(
+  keys: Key[],
+  width: number,
+  depth: number,
+  outline?: [number, number][],
+  trayHoles: Point[] = [],
+) {
   const { shapes } = boardOutline(keys, width, depth, 0.03, outline)
   // trục y của hình = -z của cảnh (do xoay -90° quanh x)
   const ring = (pts: [number, number][]): Ring => [...pts, pts[0]]
@@ -44,6 +50,16 @@ function foamGeometry(keys: Key[], width: number, depth: number, outline?: [numb
       rect(x, z, 0.22, (1 - WEB) / 2, k.rot)
     }
   }
+  // vít tray: lỗ tròn như lỗ plate (không thì foam che mất đầu ốc tì mặt PCB)
+  for (const { x, z } of trayHoles)
+    holes.push([
+      ring(
+        Array.from({ length: 24 }, (_, i): [number, number] => {
+          const a = (i / 24) * Math.PI * 2
+          return [x + Math.cos(a) * TRAY_HOLE.plate, -(z + Math.sin(a) * TRAY_HOLE.plate)]
+        }),
+      ),
+    ])
   // viền tấm trừ đi các lỗ phím (polygon-clipping): lỗ nào lấn ra mép viền (góc Alice...) thành rãnh khoét vào mép,
   // không để lỗ chồng ra ngoài hình (tam giác hoá vỡ thành mảnh tam giác)
   const plates = shapes.map((sh): Polygon => [
@@ -67,17 +83,20 @@ export function PcbFoam({
   width,
   depth,
   outline,
+  trayHoles,
   ghost = false,
 }: {
   keys: Key[]
   width: number
   depth: number
   outline?: [number, number][]
+  /** lỗ vít tray mount */
+  trayHoles?: Point[]
   ghost?: boolean
 }) {
   const geo = useMemo(
-    () => foamGeometry(keys, width, depth, outline),
-    [keys, width, depth, outline],
+    () => foamGeometry(keys, width, depth, outline, trayHoles),
+    [keys, width, depth, outline, trayHoles],
   )
   return (
     <mesh

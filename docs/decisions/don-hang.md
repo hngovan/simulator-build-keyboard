@@ -207,6 +207,42 @@ bấm phá sản, new game".
     Đầu bảng chỉ "#hạng + tên + tiền" (bỏ "Cần thêm X để vượt Y"). Dòng phụ thành `Badge solid` (ngày / đơn / uy tín / sao), bên phải
     `font-head font-extrabold` = tiền. `fmtMoney` (dưới 10.000k giữ k, từ 10.000k → m, từ 100.000k → B theo yêu cầu người dùng) dùng cho bảng xếp hạng, popup thua
     và ví (`StatusChips`).
+- 2026-10-27, người dùng: "icon xếp hạng 1, 2, 3 đi thay vào đó là số". Bỏ `MEDALS` (🥇🥈🥉) trong `LeaderboardApp` (`RunRow`), mọi hạng hiện số.
+- 2026-10-27, người dùng: "thiết kế lại bảng xếp hạng theo style này" (ảnh mẫu) + "các điểm bị âm sẽ không được hiển thị lên bảng xếp hạng".
+  `LeaderboardApp`: đầu app cúp + tiêu đề + ô "Hạng của bạn" (điểm âm tô đỏ, hạng "–"); tab lọc có icon lucide (nút vàng = đang chọn);
+  khung bảng có hàng tiêu đề Hạng / Người chơi / tên thông số; dòng = `RankMark` (huy hiệu vàng / bạc / đồng có số cho top 3, ô tròn từ hạng 4),
+  `CustomerAvatar` theo tên, badge có icon (`Stat`; tiền dùng tone mới `purple` trong `BUTTON_TONES`). Lượt `runScore < 0` bị lọc khỏi bảng
+  (lọc ở client, cả lượt của mình), chân bảng đếm số lượt hiện. Cửa sổ rộng 680. Tab lọc tự vẽ nút (không `OptionChip`) để ra nút vàng đặc như mẫu.
+- 2026-10-27, người dùng: "đổi lại avatar random nhân vật anime". Thêm 24 avatar DiceBear Lorelei (CC0, tóc nhiều màu, không râu)
+  ở `public/avatars/anime/` (`scripts/fetch-anime-avatars.mjs`, `bun run fetch:anime-avatars`, lưu sẵn không gọi API lúc chơi);
+  `PlayerAvatar` (CustomerAvatar.tsx) chọn theo hash tên người chơi. Đã thử Lorelei mặc định (đen trắng, có râu) và Adventurer (CC BY, kiểu hoạt hình) — không giống anime bằng.
+- 2026-10-27, người dùng: "thay thế toàn bộ thành bộ vẽ Moods đi" + "dùng loại bare nhé". Mọi avatar (khách Mezzenger / Đánh giá / đơn,
+  người chơi bảng xếp hạng, người bán + người bình luận ở Hội Phím Cơ — trước là chữ cái đầu `Avatar small`) dùng 24 avatar DiceBear Moods
+  (CC0, API 10.x, preset Bare = `cheeksProbability=0`, `animationVariant=slow`: chớp mắt ~5,3s, CSS trong SVG chạy được trong `<img>`, tự tắt khi prefers-reduced-motion; trước đó thử none = ảnh tĩnh) ở `public/avatars/moods/` (`scripts/fetch-avatars.mjs`, `bun run fetch:avatars`).
+  Xoá `avatars/customers/` (Notionists), `avatars/anime/` (Lorelei) + script cũ. `data/avatars.ts`: `avatarSrc` / `avatarIndex`;
+  `NameAvatar` (theo hash tên) + `CustomerAvatar` (theo số trong `order.avatar`, save cũ `customer-NN` vẫn đọc được số).
+- 2026-10-27, người dùng: "bỏ hết badge ở bảng xếp hạng, bao gồm cả trạng thái chơi lại, đang chơi". `LeaderboardApp` (`RunRow`): bỏ badge
+  "Bạn" + badge lý do kết thúc (xoá `REASON`; dòng của mình vẫn viền vàng + tên vàng); `Stat` thành icon màu + chữ thường (không `Badge`).
+  Bảng xếp hạng là ngoại lệ của quy ước badge trong CLAUDE.md (tone `purple` vẫn giữ trong `BUTTON_TONES`).
+- 2026-10-27, người dùng: "uy tín -1 ko được vào bảng xếp hạng". `ranked()` trong `LeaderboardApp`: lên bảng khi `runScore >= 0` và `rep >= 0`
+  (lọc ở client, cả lượt của mình; ô "Hạng của bạn" hiện "–" + chữ đỏ). Server vẫn lưu lượt uy tín âm, chỉ không hiện.
+- 2026-10-27, người dùng: "bỏ luôn cả text đi ko cần hiển thị luôn" + "hạng của bạn ... chỉ cần hiển thị font-head text-3xl font-extrabold
+  text-yellow ex: #2". Góc phải trên bỏ khung / icon cúp / nhãn "Hạng của bạn" / điểm / tooltip, chỉ còn `#N`; chưa lên bảng thì không hiện gì.
+- 2026-10-27, người dùng: "bỏ luôn xếp hạng của mình ở top ... mặc định vào sẽ go đến xếp hạng của mình sau đó người chơi tự scroll lên".
+  Bỏ hẳn `#N` góc phải trên. Dòng của mình có `data-mine`; `useEffect` theo `data` / `key` / `pos` đặt `scrollTop` của khung danh sách
+  để dòng đó nằm giữa (tự tính, không `scrollIntoView` để khỏi cuộn cửa sổ / desktop bên ngoài).
+- 2026-10-27, người dùng: dòng chú thích chân bảng "đưa lên header ở trên góc bên phải ... icon dấu chấm than hover vào mới hiển thị text
+  ... ko cần hiển thị lượt chơi". Bỏ khung chú thích dưới cùng; header thêm icon `CircleAlert` góc phải trên, `title` = "Xếp theo ... · ghi khi
+  thua game, phá sản hoặc chơi mới" (bỏ số lượt chơi).
+- 2026-10-27, người dùng: "bỏ cụm này luôn đi ko cần nữa: flex flex-wrap gap-x-3 gap-y-0.5". Bỏ hàng thông số dưới tên (ngày / đơn / uy tín /
+  tiền / sao) + component `Stat` + vạch giả của hàng đó trong `LoadingRows`; mỗi dòng còn hạng, avatar, tên, giá trị theo bộ lọc bên phải.
+- 2026-10-27, người dùng: tên người chơi dài muốn xem tooltip nhưng không hiện. Ô tên trong `RunRow` thiếu `title`; thêm `title={r.name}`
+  (`GlobalTooltip` vẽ), tên bị `truncate` thì rê chuột xem đủ.
+- 2026-10-27, người dùng: "đổi width của bảng xếp hạng thành 534px vừa đủ hiển thị 4 button trên cùng 1 hàng". `apps.ts` leaderboard
+  `width` 680 → 534 (tab lọc vẫn `flex-wrap`, tab thứ 5 xuống hàng).
+- 2026-10-27, người dùng: "tooltip tên phải hiển thị ngay ở vị trí bắt đầu của name chứ sao lại show ở giữa". `GlobalTooltip` mặc định căn giữa
+  phần tử (ô tên giãn hết `flex-1` nên tooltip lệch vào giữa thẻ) → thêm tuỳ chọn `data-tip-align="start"` (căn mép trái phần tử, không
+  `-translate-x-1/2`, chữ trái); ô tên `RunRow` dùng tuỳ chọn này.
 
 ### Stab tách dây 6.25u / 7u + badge số lượng (2026-10-25, "mua tkl nhưng build dùng 2 wire 2u thì vẫn còn lại 2u và 1 7u, 1 6.25u")
 
@@ -427,3 +463,55 @@ bấm phá sản, new game".
   "Foam PCB". `isOptionalStep(step, order)` (steps.ts) thay `OPTIONAL_STEPS.includes`: đơn có `foam` thì bước `foam` bắt buộc (nextStep
   buildSlice, Objective + `useBuildComplete` BenchHud, độ hoàn chỉnh `scoreDelivery`); `stepTitle` ghi "Lót foam PCB (khách yêu cầu)".
   Chấm thêm "Lót foam PCB như khách dặn" 5 điểm. Đơn đòi foam thì không bật plateless (`setPlateless` + Toggle ở Chi tiết đơn).
+
+### Ảnh đơn keycap 1 màu (2026-10-27, "ảnh keycap khách gửi đơn là alpha xanh và mod trắng, nhưng lúc vào build thì toàn bộ là màu xanh")
+
+- `orderSpec` (`messenger/orderThumb.ts`) bốc màu nhấn ngẫu nhiên cho phím chức năng (50% màu chữ, 50% màu keycap khác) chỉ để ảnh đẹp,
+  nhưng đơn chỉ có `keycapColor`, bộ keycap Shopii 1 màu cả bộ và bàn build vẽ 1 màu → ảnh đơn / cửa sổ xem 3D (`OrderViewer`) lệch với lúc build.
+  Sửa: `accent = KEYCAP_COLORS[keycapColor].hex` (mod cùng màu alpha). Không đổi case / màu case của ảnh (`orderLook` vẫn bốc như cũ).
+  Kệ trưng bày (`ShelfDisplay`) và ảnh case Shopii (`caseSpec`) vẫn phối màu nhấn vì không gắn với đơn.
+
+### Danh sách đơn: tiền công + tiền dư linh kiện (2026-10-27, "số tiền hiển thị ở danh sách đơn đang sai: đáng lẽ tính số tiền công + số tiền dư khi mua đủ linh kiện ... tách nhau bằng dấu +")
+
+- `OrderCard` (bàn build `OrderPicker` + app Danh sách đơn) cột phải trước chỉ hiện `labor`. Giờ = `labor` + `leftover()`:
+  tiền dư = `budget − partSpent(inventory, order, spent)` (cùng cách tính "Đã chi" ở Chi tiết đơn, đồ khách gửi không có giá nên không tính),
+  chỉ hiện khi đơn đủ linh kiện (`checkInventory` không thiếu) hoặc đã vào build; chưa đủ thì chỉ tiền công. Mỗi số `font-head text-xl` xanh,
+  cách nhau dấu `+` muted; mua lố budget thì dấu `−` + số đỏ. Tooltip ghi rõ 2 khoản; hàng tiêu đề cột "Tiền công + dư".
+
+### Danh sách đơn: dòng trạng thái + khách huỷ kèo vì bị bán đồ (2026-10-27)
+
+Người dùng: "sửa lại thành hiển thị 2 text là đủ linh kiện và không đủ linh kiện, sẽ có trường hợp thêm 1 status đặc biệt khi đã nhận đơn
+mà cố tình đem bán đồ của khách trên chợ mà khách vô tình phát hiện được thì status ở danh sách đơn là: khách huỷ kèo vì phát hiện bạn bán đồ của khách".
+
+- `OrderCard`: dòng phụ dưới tên (trước: layout · kit · % build / thiếu món) chỉ còn "Đủ linh kiện" (xanh; đã vào build cũng tính đủ) /
+  "Không đủ linh kiện" (vàng) / "Khách huỷ kèo vì phát hiện bạn bán đồ của khách" (đỏ, thẻ mờ, ẩn nút hành động + tiền dư + thanh tiến độ).
+  % build vẫn xem ở thanh tiến độ.
+- Cơ chế mới (trước đây bán đồ khách gửi của đơn đã nhận không bị gì): `completeSale` bài kind `job` có `provided` → 5% `STEAL_OK` thoát
+  (cùng tỉ lệ bán phím của khách), còn lại `soldCancel`: gắn `Order.cancel = 'sold'`, đơn đang ở bàn build thì cất thành job (`stashActive`
+  export từ shopSlice) + trả bàn trống; −`CANCEL_REP` (3, cùng mức khách huỷ vì trễ hạn) uy tín, `soldReview` 1★ (kind `cancel`), `notify`.
+  Đơn huỷ vẫn nằm trong `jobs` tới `nextDay` (bỏ khỏi `jobs`, đồ shop mua cất kho chung `stashAll`, không phạt `NO_WORK_FINE`, không tính
+  huỷ trễ hạn lần nữa); `switchJob` chặn. Mezzenger: hội thoại đó dấu HUỶ (thẻ mờ), tin khách giận, nút "Khách đã huỷ kèo đơn này" mờ,
+  nằm ở mục lọc Huỷ. Bán tiếp đồ của đơn đã huỷ không phạt thêm. Đồ khách gửi còn lại mất khi sang ngày (khách lấy về).
+
+### Fast bid hết giờ không tự bán (2026-10-27, "bài bid sau khi xong ko phải auto bán luôn => để lại => có thể bùng bid => bị ban")
+
+- `settleBids`: trước hết giờ là `completeSale` luôn cho người giữ giá. Giờ có người thắng (kể cả bid ngầm khi không mở tab) thì gắn
+  `Bid.ended` + `top`, toast báo người thắng, bài đứng lại trong "Bài của tôi"; không ai bid thì vẫn trả món về như cũ.
+- `closeBid(id)`: chốt bán cho người thắng (`completeSale`, như cũ: tiền, hàng lỗi có thể bị tố, phím / đồ của khách có thể bị lộ).
+  `bailBid(id)`: bùng, món về chỗ cũ (`restore`) + `banMarket` (ban chợ `BAN_DAYS` ngày, lý do ghi người thắng + giá).
+- Bài đã hết giờ không còn lượt bot bid (`bidVisit` bỏ qua), không gỡ được (đã có `top`), đại gia đêm không đụng bài bid; để qua đêm vẫn chờ.
+- `ListingCard`: nhãn "Fast bid xong · chờ chốt", "X thắng bid", 2 nút "Bùng bid" (đỏ, tooltip báo bị ban) / "Chốt bán …k cho X" (xanh).
+
+### Fast bid: bình luận riêng + giá BIN (2026-10-27)
+
+Người dùng: "fast bid sao lại comment là còn ko ạ? còn thì người ta mới bid chứ => xoá đi; tương tự: ib chốt giá nhé là sai => 1 số người muốn có
+giá BIN nghĩa là giá chiến thắng, người đăng có thể thêm giá BIN => có người BIN thì dừng comment, bài bid dừng time luôn" + thêm câu bình luận.
+
+- `bidTurn` (data/selling.ts) bình luận lấy `BID_CHAT` thay `QUESTIONS + UPS`: bỏ "Còn không bác?", "Ib em giá chốt nhé" (bài giá cố định
+  vẫn giữ). Thêm câu: "Up phụ", "Em đẹp nhưng không với tới được", "Lúc có tiền thì không ai bán" (vào `UPS`, dùng cả 2 loại bài),
+  "Sống vội vậy chủ thớt" (chỉ fast bid).
+- Giá BIN: `Bid.bin` (ô "BIN" khi đăng fast bid ở `SourceRow`, 0 = không đặt, phải > khởi điểm). `bidTurn`: BIN ≤ giá trần ẩn thì lượt bid
+  tới / qua BIN thành "BIN …k", 12% / lượt có người BIN sớm; BIN > giá trần thì không ai BIN. `bidVisit` gặp BIN: `top` = người BIN,
+  `ended` + `binned`, `endsAt = now` (dừng giờ, hết bình luận vì `bidTurn` bỏ qua bài `ended`) → chờ `closeBid` / `bailBid` như hết giờ.
+  Bid ngầm lúc hết giờ (`settleBids`) chạm BIN thì lấy đúng giá BIN.
+- `ListingCard`: nhãn xanh "BIN …k" khi đang chạy, "Có người BIN · chờ chốt" / "X đã BIN" khi xong.

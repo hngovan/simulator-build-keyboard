@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
@@ -196,6 +196,16 @@ function NativeCap({
   )
 }
 
+/** Tải trước model keycap (theo profile + các hàng phím của layout) ngay khi vào bàn build, lắp keycap khỏi chờ */
+export function KeycapPreload({ kit, keys }: { kit?: string; keys: Key[] }) {
+  useEffect(() => {
+    const profile = KEYCAP_KITS[kit ?? 'base']?.profile ?? 'cherry'
+    for (const model of new Set(keys.map((k) => keycapModel(profile, k.row))))
+      if (model) useGLTF.preload(`/models/keycaps/${model}.glb`)
+  }, [kit, keys])
+  return null
+}
+
 /** Keycap: lún xuống khi nhấn, có chấm xanh khi đã test; chưa test mà để lâu thì viền đỏ */
 export function Keycap({ k, color, kit }: { k: Key; color: string; kit?: string }) {
   const ref = useRef<THREE.Group>(null)
@@ -209,7 +219,10 @@ export function Keycap({ k, color, kit }: { k: Key; color: string; kit?: string 
   return (
     <group ref={ref}>
       {keycapModel(profile, k.row) ? (
-        <NativeCap k={k} color={color} profile={profile} testing={testing} tested={tested} />
+        // model chưa tải xong thì chỉ phím này hiện trễ, không treo Suspense cả bàn build (cả cảnh nháy màn chờ)
+        <Suspense fallback={null}>
+          <NativeCap k={k} color={color} profile={profile} testing={testing} tested={tested} />
+        </Suspense>
       ) : (
         <>
           <mesh geometry={geometry} castShadow receiveShadow>

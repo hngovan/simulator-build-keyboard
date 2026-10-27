@@ -112,6 +112,7 @@ export function OrderSpec({
     ['Foam PCB', order.foam ? 'Khách muốn lót foam' : 'Tuỳ shop'],
     ['Budget linh kiện', fmt(order.budget)],
     ['Tiền công', fmt(order.labor)],
+    ['Thời gian', `${order.days} ngày`],
   )
   return (
     <>

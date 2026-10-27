@@ -16,6 +16,7 @@ import { CASES, STABS, caseModelOf, isPlateless } from './parts'
 import CASE_FEET from './caseFeet.json'
 import { stabModRules } from './mods'
 import stabModel from './stabModel.json'
+import { plateUniversal } from './generated/plateUniversal'
 
 export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   unbox: { title: 'Mở hộp hàng', hint: 'Click vào thùng hàng để mở' },
@@ -76,6 +77,9 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     hint: 'Gõ bàn phím thật hoặc click phím 3D. Phím đã test có chấm xanh; phím không có trên bàn phím của bạn (Fn, macro...) thì click',
   },
 }
+
+/** thời gian 1 lần vặn (ms): tay vặn 1 vòng cổ tay, điện quay liền 1 hơi tới khi vít ăn hết ren */
+export const SPIN_MS = { manual: 550, electric: 700 }
 
 export const SCREW_STEPS: Record<ScrewStep, 'remove' | 'tighten'> = {
   caseOpen: 'remove',
@@ -185,16 +189,23 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   const blocks = blockerGaps(keys, width, depth, CASE_MARGIN + 0.05)
   const blocked = (x: number, z: number) =>
     blocks.some((b) => Math.abs(x - b.x) < b.w / 2 + 0.15 && Math.abs(z - b.z) < b.d / 2 + 0.15)
-  const trayScrews = trayRaw.map((p) => {
+  // lỗ plate cho vít tray lọt qua phải nằm trên phần plate liền, không chạm lỗ switch / stab
+  const cutouts = mount === 'tray' ? plateCutoutsFor(order.layout, keys, outline) : []
+  const bad = (x: number, z: number) =>
+    blocked(x, z) || !clearOfCutouts(cutouts, x, z, TRAY_HOLE.plate)
+  const placed = trayRaw.map((p) => {
     // dời ngang dần vào giữa; dải chắn chạy hết bề ngang (giữa hàng F và hàng số) thì dời sang khe hàng kế tiếp
     for (let dz = 0; dz <= 3; dz++) {
       const z = p.z + dz * (p.z < 0 ? 1 : -1) * 0.5
       let x = p.x
-      for (let i = 0; i < 40 && blocked(x, z); i++) x -= Math.sign(x || 1) * 0.25
-      if (!blocked(x, z)) return { ...p, x, z }
+      for (let i = 0; i < 40 && bad(x, z); i++) x -= Math.sign(x || 1) * 0.25
+      if (!bad(x, z)) return { ...p, x, z }
     }
-    return p
+    return null
   })
+  // không tìm được chỗ plate liền thì bỏ vít đó (trụ đồng / lỗ khoét / vít luôn trùng nhau), bỏ hết thì giữ chỗ gốc
+  const found = placed.filter((p) => p !== null)
+  const trayScrews = found.length ? found : trayRaw
 
   // vít screw-in bắt vào lỗ nhỏ của stab
   const stabScrews = stabKeys.flatMap((k) =>
@@ -336,6 +347,65 @@ export const FOOT_DEPTH = 0.042
 export const stabSpan = (k: Key) => {
   const len = Math.max(k.w, k.h)
   return len >= 6 ? (len - 1) / 2 : 0.62
+}
+
+const MM_U = 1 / 19.05
+/** lỗ switch trên plate 14mm; lỗ stab Cherry ~7mm dọc theo phím × 13mm ngang phím */
+export const PLATE_CUT = { switch: 14 * MM_U, stabAlong: 7 * MM_U, stabAcross: 13 * MM_U }
+/**
+ * tray mount: vít bắt từ trên xuống, lọt qua lỗ plate (rộng hơn đầu ốc r 1,9mm), đầu ốc chìm tì mặt PCB,
+ * thân xuyên PCB (lỗ vừa thân M2) vào trụ đồng
+ */
+export const TRAY_HOLE = { pcb: 1.1 * MM_U, plate: 2.4 * MM_U }
+
+/** lỗ cắt plate của 1 phím ([x, z] theo u, chữ nhật xoay theo `rot`): lỗ switch + 2 lỗ stab */
+export function keyCutouts(k: Key): [number, number][][] {
+  const rect = (x: number, z: number, hx: number, hz: number): [number, number][] => {
+    const c = Math.cos(k.rot)
+    const s = Math.sin(k.rot)
+    return [
+      [-hx, -hz],
+      [-hx, hz],
+      [hx, hz],
+      [hx, -hz],
+    ].map(([dx, dz]) => [x + dx * c + dz * s, z - dx * s + dz * c])
+  }
+  const loops = [rect(k.cx, k.cz, PLATE_CUT.switch / 2, PLATE_CUT.switch / 2)]
+  if (!k.stab) return loops
+  // 2 lỗ stab hai bên switch, dọc theo chiều dài phím (phím dọc như Enter numpad thì theo z)
+  const s = stabSpan(k)
+  const vertical = k.h >= 2
+  const [along, across] = [PLATE_CUT.stabAlong / 2, PLATE_CUT.stabAcross / 2]
+  for (const side of [-1, 1]) {
+    // lệch dọc theo trục phím rồi xoay theo phím
+    const [ox, oz] = vertical ? [0, side * s] : [side * s, 0]
+    const x = k.cx + ox * Math.cos(k.rot) + oz * Math.sin(k.rot)
+    const z = k.cz - ox * Math.sin(k.rot) + oz * Math.cos(k.rot)
+    loops.push(vertical ? rect(x, z, across, along) : rect(x, z, along, across))
+  }
+  return loops
+}
+
+/** lỗ cắt plate dùng để dò chỗ khoét vít tray: plate universal (gộp mọi variant) nếu có, không thì theo phím */
+export const plateCutoutsFor = (layout: string, keys: Key[], outline?: unknown) =>
+  (!outline && plateUniversal[layout]) || keys.flatMap(keyCutouts)
+
+/** vòng tròn tâm (x, z) bán kính r không chạm lỗ cắt nào (không nằm trong lỗ, cách mọi cạnh ≥ r) */
+export function clearOfCutouts(loops: [number, number][][], x: number, z: number, r: number) {
+  return loops.every((loop) => {
+    let inside = false
+    for (let i = 0, j = loop.length - 1; i < loop.length; j = i++) {
+      const [ax, az] = loop[i]
+      const [bx, bz] = loop[j]
+      if (az > z !== bz > z && x < ((bx - ax) * (z - az)) / (bz - az) + ax) inside = !inside
+      // khoảng cách tới cạnh ab
+      const dx = bx - ax
+      const dz = bz - az
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)))
+      if (Math.hypot(x - ax - t * dx, z - az - t * dz) < r) return false
+    }
+    return !inside
+  })
 }
 
 /** lỗ stab Cherry trên PCB (u, mỗi bên 2 lỗ): lỗ nhỏ 3.05mm ở -6.985mm, lỗ lớn 3.97mm ở +8.255mm */

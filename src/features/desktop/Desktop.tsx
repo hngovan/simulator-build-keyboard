@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useGame } from '@/store'
 import { Window } from '@/components/ui'
-import { APPS, APP_IDS, BENCH_ICON } from './apps'
+import { APPS, APP_IDS, BENCH_ICON, END_DAY_ICON } from './apps'
 import { DesktopIcon } from './DesktopIcon'
+import { EndDayDialog } from './EndDayDialog'
 import { Taskbar } from './Taskbar'
 
 // Màn hình "máy tính trong game": icon app, các cửa sổ, taskbar
@@ -11,6 +13,7 @@ export function Desktop() {
   const hasOffer = useGame((s) => s.offers.length > 0)
   const hasBuild = useGame((s) => !!s.build)
   const { openApp, minimizeApp, closeApp, goBench } = useGame.getState()
+  const [endDay, setEndDay] = useState(false)
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -30,6 +33,8 @@ export function Desktop() {
             onOpen={() => openApp(id)}
           />
         ))}
+        {/* kết thúc ngày: popup tổng kết, chọn kết thúc hoặc làm tiếp */}
+        <DesktopIcon app={END_DAY_ICON} onOpen={() => setEndDay(true)} />
         {/* mobile: bàn build nằm chung lưới icon (máy tính thì đứng riêng góc phải) */}
         <span className="md:hidden">
           <DesktopIcon app={BENCH_ICON} badge={hasBuild} onOpen={goBench} />
@@ -66,6 +71,7 @@ export function Desktop() {
       })}
 
       <Taskbar />
+      {endDay && <EndDayDialog onClose={() => setEndDay(false)} />}
     </div>
   )
 }

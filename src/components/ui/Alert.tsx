@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { TriangleAlert } from 'lucide-react'
+import { TriangleAlert, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/format'
 
 const TONES = {
@@ -10,11 +10,14 @@ const TONES = {
 /** Khung cảnh báo nổi bật trong HUD / cửa sổ (thay dòng chữ đỏ nhỏ dễ bị bỏ sót) */
 export function Alert({
   tone = 'red',
+  icon: Icon = TriangleAlert,
   title,
   children,
   className,
 }: {
   tone?: keyof typeof TONES
+  /** icon đầu tiêu đề (mặc định tam giác cảnh báo) */
+  icon?: LucideIcon
   title: ReactNode
   children?: ReactNode
   className?: string
@@ -29,7 +32,7 @@ export function Alert({
       )}
     >
       <div className="alert-title flex items-start gap-1.5 font-extrabold">
-        <TriangleAlert className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} />
+        <Icon className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} />
         <span>{title}</span>
       </div>
       {children}

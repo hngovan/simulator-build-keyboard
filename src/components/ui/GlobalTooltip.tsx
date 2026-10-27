@@ -1,21 +1,27 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/format'
+import { placeTip } from './placeTip'
 
 /** chờ rê chuột bao lâu thì hiện (ms) */
 const DELAY = 250
-/** khoảng cách tooltip tới phần tử (px) */
-const GAP = 8
 
 /**
  * Tooltip kiểu game cho mọi phần tử có thuộc tính `title` trong toàn app (gắn 1 lần ở App):
  * rê chuột thì chuyển `title` sang `data-tip` (tắt tooltip mặc định của trình duyệt) và vẽ nhãn tối chữ đậm
- * giống `Tooltip` — ưu tiên phía trên, sát mép trên màn hình thì lật xuống dưới. Code mới chỉ cần ghi `title=`.
+ * giống `Tooltip` — ưu tiên phía trên; đo kích thước thật rồi đặt (`placeTip`): không đủ chỗ thì lật xuống dưới, luôn nằm
+ * trong màn hình. Code mới chỉ cần ghi `title=`.
+ * Mặc định căn giữa phần tử; `data-tip-align="start"` thì căn mép trái (vd tên dài bị cắt "...").
  */
 export function GlobalTooltip() {
-  const [tip, setTip] = useState<{ text: string; x: number; y: number; below: boolean } | null>(
-    null,
-  )
+  const [tip, setTip] = useState<{ text: string; anchor: DOMRect; start: boolean } | null>(null)
+  const box = useRef<HTMLSpanElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  useLayoutEffect(() => {
+    if (!tip || !box.current) return
+    const t = box.current.getBoundingClientRect()
+    setPos(placeTip(tip.anchor, t.width, t.height, 'top', tip.start))
+  }, [tip])
   useEffect(() => {
     let timer = 0
     let current: HTMLElement | null = null
@@ -42,9 +48,8 @@ export function GlobalTooltip() {
       current = el
       timer = window.setTimeout(() => {
         if (current !== el || !el.isConnected) return
-        const r = el.getBoundingClientRect()
-        const below = r.top < 48
-        setTip({ text, x: r.left + r.width / 2, y: below ? r.bottom + GAP : r.top - GAP, below })
+        setPos(null)
+        setTip({ text, anchor: el.getBoundingClientRect(), start: el.dataset.tipAlign === 'start' })
       }, DELAY)
     }
     const out = (e: PointerEvent) => {
@@ -65,15 +70,16 @@ export function GlobalTooltip() {
     }
   }, [])
   if (!tip) return null
-  // giữ tooltip trong màn hình theo chiều ngang (rộng tối đa 320px)
-  const x = Math.min(Math.max(tip.x, 170), window.innerWidth - 170)
   return createPortal(
     <span
+      ref={box}
       role="tooltip"
-      style={{ left: x, top: tip.y }}
+      style={pos ?? { left: 0, top: 0 }}
       className={cn(
-        'pointer-events-none fixed z-[3000] max-w-[320px] -translate-x-1/2 animate-fade-in rounded-lg border border-white/10 bg-[#0e1018]/95 px-2.5 py-1.5 text-center text-[13px] leading-snug font-extrabold text-white shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
-        !tip.below && '-translate-y-full',
+        'pointer-events-none fixed z-[3000] max-w-[320px] animate-fade-in rounded-lg border border-white/10 bg-[#0e1018]/95 px-2.5 py-1.5 text-[13px] leading-snug font-extrabold text-white shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
+        tip.start ? 'text-left' : 'text-center',
+        // lần vẽ đầu chỉ để đo
+        !pos && 'invisible',
       )}
     >
       {tip.text}

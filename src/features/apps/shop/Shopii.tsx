@@ -1,23 +1,10 @@
-import { useMemo, useState } from 'react'
-import { PackageX } from 'lucide-react'
-import { Button, OptionSelect, Toggle, SoundLegend } from '@/components/ui'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { CircleAlert, Flame, LoaderCircle, PackageX, Search } from 'lucide-react'
+import { Alert, Button, SoundLegend, TabChip, Tooltip } from '@/components/ui'
 import { useGame } from '@/store'
-import {
-  CASES,
-  KEYCAP_KITS,
-  SHOP_CATS,
-  buildCatalog,
-  caseFits,
-  keycapMaterialOf,
-  stabStock,
-  switchOk,
-} from '@/data/parts'
-import { cn } from '@/lib/format'
+import { SHOP_CATS, buildCatalog, stabStock } from '@/data/parts'
+import { SALE_EVERY, isSaleDay, nextSaleDay, withSale } from '@/data/sale'
 import type {
-  CaseItem,
-  KeycapItem,
-  PlateItem,
-  Order,
   PartCategory,
   PartItem,
   Product,
@@ -27,157 +14,235 @@ import type {
   SwitchItem,
   ToolItem,
 } from '@/types'
+import { ListFilterPicker } from './OptionFilter'
 import { ProductCard } from './ProductCard'
 import { shopFilters } from './shopFilters'
 
-/** Sản phẩm hợp đơn đang làm: đúng layout, keycap đúng profile, switch / case / stab đúng con khách đòi (hoặc đúng loại) */
-function fitsOrder(p: Product, order: Order) {
-  if (p.layouts && !p.layouts.includes(order.layout)) return false
-  if (p.cat === 'keycap' && order.keycapKit)
-    return KEYCAP_KITS[p.id.replace(/^kc-/, '')]?.profile === KEYCAP_KITS[order.keycapKit]?.profile
-  if (p.cat === 'switch') return switchOk(p.id.replace(/^sw-/, ''), order)
-  if (p.cat === 'case' && order.caseId)
-    return p.options.some((o) => (o.item as CaseItem).id === order.caseId)
-  if (p.cat === 'stab' && order.stabType) return p.id === `stab-${order.stabType}`
-  return true
+/**
+ * Thông báo sale trải hết bề ngang trên cùng Shopii: ngày sale / đếm ngược tới đợt sale; ⓘ góc phải (rê / focus) hiện mô tả
+ * gạch đầu dòng (`Tooltip wide`, vì tooltip `title` chung chỉ 1 dòng)
+ */
+function SaleBanner({ day }: { day: number }) {
+  const left = nextSaleDay(day) - day
+  return (
+    <Alert
+      icon={Flame}
+      className="relative shrink-0 pr-9"
+      title={isSaleDay(day) ? 'Đang sale linh kiện hôm nay' : `Sale tiếp theo: còn ${left} ngày`}
+    >
+      <span className="absolute top-1.5 right-2">
+        <Tooltip
+          wide
+          side="bottom"
+          content={
+            <ul className="list-disc pl-4">
+              <li>Giá bán các vật phẩm sẽ giảm từ 5% ~ 30%</li>
+              <li>Chu kỳ lặp lại {SALE_EVERY} ngày 1 lần sẽ có đợt sale</li>
+            </ul>
+          }
+        >
+          <button
+            type="button"
+            aria-label="Lịch sale Shopii"
+            className="grid size-6 place-items-center rounded-full text-[#ffb4b4] hover:bg-white/10 focus:bg-white/10"
+          >
+            <CircleAlert className="size-4" />
+          </button>
+        </Tooltip>
+      </span>
+    </Alert>
+  )
 }
 
-/** Option hợp đơn: keycap đúng chất liệu + màu (không còn option nào thì giữ nguyên) */
-function fitOptions(p: Product, order: Order): Product {
-  // plate: chỉ còn đúng chất liệu khách đòi; case: đúng màu khách đòi
-  if (p.cat === 'plate' && order.plateMaterial) {
-    const options = p.options.filter((o) => (o.item as PlateItem).material === order.plateMaterial)
-    return options.length ? { ...p, options } : p
-  }
-  if (p.cat === 'case') {
-    // dòng case nhiều chất liệu: bỏ chất liệu không vừa layout / không phải con khách đòi, rồi lọc màu
-    const fit = p.options.filter((o) => {
-      const id = (o.item as CaseItem).id
-      return order.caseId ? id === order.caseId : caseFits(CASES[id], order.layout)
-    })
-    const color = fit.filter((o) => (o.item as CaseItem).color === order.caseColor)
-    const options = order.caseColor && color.length ? color : fit
-    return options.length ? { ...p, options } : p
-  }
-  if (p.cat !== 'keycap') return p
-  const options = p.options.filter((o) => {
-    const it = o.item as KeycapItem
-    return (
-      it.color === order.keycapColor &&
-      (!order.keycapMaterial || keycapMaterialOf(it) === order.keycapMaterial)
-    )
-  })
-  return options.length ? { ...p, options } : p
-}
+/** chờ ngừng gõ bao lâu (ms) mới tìm */
+const SEARCH_MS = 300
 
-// Sàn thương mại: linh kiện mới giá niêm yết + vật tư mod
+/** chữ thường bỏ dấu (gõ "ban phim" vẫn ra "bàn phím") */
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase()
+
+// Sàn thương mại: linh kiện mới giá niêm yết + vật tư mod. Cột trái ghim cố định (ô tìm kiếm chung mọi mục, mục "Đang sale"
+// ngày sale, các mục hàng, bộ lọc trong mục), bên phải lưới sản phẩm trong khung nền tối như bảng xếp hạng
 export function Shopii() {
   const catalog = useMemo(() => buildCatalog(), [])
+  const day = useGame((s) => s.day)
   const purchase = useGame((s) => s.lastSolderPurchase)
   const undoPurchase = useGame((s) => s.undoSolderPurchase)
-  const order = useGame((s) => s.order)
   const tools = useGame((s) => s.tools)
   const solderOwned = useGame((s) => s.solderOwned)
   const { buy, buySupply, buyTool } = useGame.getState()
   // mục đang xem nằm trong store để chỗ khác mở thẳng đúng mục (vd ô đồ thiếu trên bàn mod)
   const cat = useGame((s) => s.shopCat)
-  const setCat = (shopCat: ShopCategory) => useGame.setState({ shopCat })
-  const [match, setMatch] = useState(false)
+  const [saleView, setSaleView] = useState(false)
+  // ô tìm kiếm: `query` = chữ đang gõ, `applied` = chữ đã tìm (debounce SEARCH_MS sau lần gõ cuối)
+  const [query, setQuery] = useState('')
+  const [applied, setApplied] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setApplied(query), SEARCH_MS)
+    return () => clearTimeout(t)
+  }, [query])
+  // lưới sản phẩm dựng nền (không giật ô gõ); dựng xong mới hiện. Loading chỉ hiện sau debounce (đang dựng kết quả),
+  // lúc đang gõ thì chưa (trước tính cả `query !== applied` nên vừa gõ đã loading)
+  const shownQuery = useDeferredValue(applied)
+  const searchBusy = shownQuery !== applied
+  const clearSearch = () => (setQuery(''), setApplied(''))
+  const setCat = (shopCat: ShopCategory) => {
+    setSaleView(false)
+    useGame.setState({ shopCat })
+  }
   // bộ lọc trong mục (case theo form factor, switch theo loại, dụng cụ theo nhóm); đổi mục thì về "Tất cả"
   const [filter, setFilter] = useState({ cat, id: 'all' })
-  const all = catalog
-    .filter(
-      (p) =>
-        p.cat === cat &&
-        (!match || !order || fitsOrder(p, order)) &&
-        // dụng cụ / chứng chỉ đã có (hoặc đã có bản tốt hơn, bút / trạm hàn cất dự phòng) thì không bán nữa
-        !(
-          p.tool &&
-          (tools[p.tool.kind] >= p.tool.level ||
-            (p.tool.kind === 'solder' && solderOwned[p.tool.level] !== undefined))
-        ),
-    )
-    // bật "hợp đơn": keycap chỉ còn option đúng chất liệu + màu khách đòi
-    .map((p) => (match && order ? fitOptions(p, order) : p))
-  const filters = shopFilters(cat, all)
+  // đổi mục / Đang sale / tìm / bộ lọc thì lưới sản phẩm cuộn về đầu
+  const grid = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    grid.current?.scrollTo({ top: 0 })
+  }, [cat, saleView, shownQuery, filter])
+  const sale = isSaleDay(day)
+  // giá hôm nay (ngày sale: linh kiện giảm 5–30%); dụng cụ / chứng chỉ đã có (hoặc đã có bản tốt hơn, bút / trạm hàn cất
+  // dự phòng) thì không bán nữa
+  const stock = useMemo(
+    () =>
+      catalog
+        .filter(
+          (p) =>
+            !(
+              p.tool &&
+              (tools[p.tool.kind] >= p.tool.level ||
+                (p.tool.kind === 'solder' && solderOwned[p.tool.level] !== undefined))
+            ),
+        )
+        .map((p) => withSale(p, day)),
+    [catalog, tools, solderOwned, day],
+  )
+  const onSale = stock.filter((p) => p.sale)
+  const q = fold(shownQuery.trim())
+  const searching = q.length > 0
+  // tìm kiếm: mọi mục theo tên / mô tả · Đang sale: mọi linh kiện đang giảm · còn lại: mục đang chọn + bộ lọc trong mục
+  const all = searching
+    ? stock.filter((p) => fold(`${p.name} ${p.desc}`).includes(q))
+    : saleView && sale
+      ? onSale
+      : stock.filter((p) => p.cat === cat)
+  const filters = searching || (saleView && sale) ? [] : shopFilters(cat, all)
   const active = filters.find((f) => f.id === (filter.cat === cat ? filter.id : 'all'))
   const list = active ? all.filter(active.match) : all
 
   return (
-    <div className="flex min-h-[420px] gap-3 max-md:flex-col">
-      <div className="flex w-[150px] shrink-0 flex-col gap-1.5 self-start max-md:w-auto max-md:flex-row max-md:flex-wrap md:sticky md:top-0">
-        {(Object.entries(SHOP_CATS) as [ShopCategory, string][]).map(([id, name]) => (
-          <button
-            key={id}
-            className={cn(
-              'rounded-[10px] px-3 py-2 text-left font-extrabold',
-              cat === id ? 'bg-orange shadow-[0_3px_0_#0005]' : 'bg-panel-2',
-            )}
-            onClick={() => setCat(id)}
-          >
-            {name}
-          </button>
-        ))}
-        <div className="mt-2 flex items-center gap-2 rounded-[10px] bg-panel-2 px-2.5 py-2 text-xs font-bold">
-          <Toggle checked={match} onChange={setMatch} label="Chỉ hiện đồ hợp đơn" />
-          <span className={match ? 'text-ink' : 'text-muted'}>Chỉ hiện đồ hợp đơn</span>
-        </div>
-      </div>
-      <div className="relative grid flex-1 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))] content-start gap-2.5">
-        {(filters.length > 0 || list.some((p) => p.sound)) && (
-          // thanh trên ghim ở đỉnh cửa sổ khi cuộn (bù padding p-3.5 / p-2.5 của thân Window):
-          // chú thích 2 thanh âm thanh bên trái, bộ lọc bên phải
-          <div className="sticky -top-3.5 z-10 col-span-full -mt-3.5 flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 bg-panel pt-3.5 pb-1.5 max-md:-top-2.5 max-md:-mt-2.5 max-md:pt-2.5">
-            {list.some((p) => p.sound) && <SoundLegend className="md:mr-auto" />}
-            {/* bộ lọc dạng ô đổ xuống cho gọn, mỗi dòng kèm số sản phẩm khớp */}
-            {filters.length > 0 && (
-              <OptionSelect
-                className="w-56"
+    // khung cao cố định: thông báo sale đứng yên trên cùng, cột trái + lưới sản phẩm tự cuộn riêng
+    <div className="flex h-[min(680px,74vh)] flex-col gap-3 group-data-fill/win:h-full max-md:h-auto">
+      <SaleBanner day={day} />
+      <div className="flex min-h-0 flex-1 gap-3 max-md:flex-col">
+        {/* cột trái cố định (cuộn riêng nếu dài) */}
+        <div className="flex w-[200px] shrink-0 flex-col gap-1.5 overflow-y-auto max-md:w-auto">
+          {/* viền vàng khi gõ vẽ vào trong (ring-inset): cột trái overflow-y-auto cắt mất ring nhô ra ngoài */}
+          <label className="flex items-center gap-2 rounded-xl bg-panel-2 px-3 py-2 ring-yellow ring-inset focus-within:ring-2">
+            <Search className="size-4 shrink-0 text-muted" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Tìm sản phẩm..."
+              aria-label="Tìm sản phẩm"
+              className="w-full min-w-0 bg-transparent text-sm font-bold outline-none placeholder:text-muted"
+            />
+          </label>
+          {sale && (
+            <TabChip
+              active={saleView && !searching}
+              count={onSale.length}
+              title="Hôm nay Shopii sale linh kiện 5–30%"
+              onClick={() => (clearSearch(), setSaleView(true))}
+              className="w-full"
+            >
+              Đang sale
+            </TabChip>
+          )}
+          <div className="flex flex-col gap-1.5 max-md:flex-row max-md:flex-wrap">
+            {(Object.entries(SHOP_CATS) as [ShopCategory, string][]).map(([id, name]) => (
+              <TabChip
+                key={id}
+                active={!searching && !(saleView && sale) && cat === id}
+                onClick={() => (clearSearch(), setCat(id))}
+                className="md:w-full"
+              >
+                {name}
+              </TabChip>
+            ))}
+          </div>
+          {/* bộ lọc trong mục: nút lọc + popup (cùng kiểu chọn option trong thẻ sản phẩm), mỗi dòng kèm số sản phẩm khớp */}
+          {filters.length > 0 && (
+            <div className="mt-1.5">
+              <ListFilterPicker
+                title="Lọc sản phẩm trong mục"
                 value={Math.max(
                   0,
                   filters.findIndex((f) => f.id === active?.id),
                 )}
                 onChange={(i) => setFilter({ cat, id: filters[i].id })}
-                options={filters.map((f) => ({
+                items={filters.map((f) => ({
                   label: f.label,
                   note: String(all.filter(f.match).length),
                 }))}
               />
+            </div>
+          )}
+        </div>
+        {/* khung bo góc có đệm; lớp cuộn bên trong không bo → thanh cuộn không bị góc bo che */}
+        <div className="relative flex min-h-[260px] min-w-0 flex-1 flex-col rounded-2xl bg-black/15 p-1.5">
+          <div
+            ref={grid}
+            className="grid min-h-0 flex-1 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))] content-start gap-2 overflow-y-auto"
+          >
+            {list.some((p) => p.sound) && (
+              <div className="col-span-full px-1">
+                <SoundLegend />
+              </div>
             )}
+            {purchase && (
+              <div className="col-span-full">
+                <Button size="sm" onClick={undoPurchase}>
+                  Hoàn tác mua máy hàn · hoàn {purchase.cost}k
+                </Button>
+              </div>
+            )}
+            {list.map((p) => (
+              <ProductCard
+                // giá đổi theo ngày sale → chọn lại option từ đầu
+                key={`${p.id}:${p.sale ?? 0}`}
+                product={p}
+                onBuy={(p, o, qty) => {
+                  const price = o.price * qty
+                  if (p.cat === 'supply' || p.cat === 'spell') {
+                    const it = o.item as SupplyItem
+                    buySupply(it.id, it.n * qty, price)
+                  } else if (p.cat === 'tool' || p.cat === 'cert') {
+                    const it = o.item as ToolItem
+                    buyTool(it.kind, it.level, o.price)
+                  } else buy(p.cat as PartCategory, multiply(p.cat, o.item as PartItem, qty), price)
+                }}
+              />
+            ))}
           </div>
-        )}
-        {purchase && (
-          <div className="col-span-full">
-            <Button size="sm" onClick={undoPurchase}>
-              Hoàn tác mua máy hàn · hoàn {purchase.cost}k
-            </Button>
-          </div>
-        )}
-        {list.map((p) => (
-          <ProductCard
-            // bật / tắt lọc thì số option đổi → chọn lại từ đầu
-            key={`${p.id}:${match}`}
-            product={p}
-            onBuy={(p, o, qty) => {
-              const price = o.price * qty
-              if (p.cat === 'supply' || p.cat === 'spell') {
-                const it = o.item as SupplyItem
-                buySupply(it.id, it.n * qty, price)
-              } else if (p.cat === 'tool' || p.cat === 'cert') {
-                const it = o.item as ToolItem
-                buyTool(it.kind, it.level, o.price)
-              } else buy(p.cat as PartCategory, multiply(p.cat, o.item as PartItem, qty), price)
-            }}
-          />
-        ))}
-        {/* không có sản phẩm: icon hết hàng nằm giữa khung sản phẩm */}
-        {!list.length && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted">
-            <PackageX className="size-16 opacity-70" strokeWidth={1.5} />
-            <span className="font-head text-lg font-extrabold">Hết hàng</span>
-            <span className="text-xs">Không có sản phẩm phù hợp</span>
-          </div>
-        )}
+          {/* đang tìm: loading che lưới tới khi dựng xong kết quả */}
+          {searchBusy && (
+            <div
+              role="status"
+              aria-label="Đang tìm sản phẩm"
+              className="absolute inset-0 z-20 flex flex-col items-center justify-start gap-2 rounded-2xl bg-[#1a1f2b] pt-24 text-muted"
+            >
+              <LoaderCircle className="size-10 animate-spin" />
+              <span className="font-head text-sm font-extrabold">Đang tìm...</span>
+            </div>
+          )}
+          {/* không có sản phẩm: icon hết hàng nằm giữa khung sản phẩm */}
+          {!list.length && !searchBusy && (
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted">
+              <PackageX className="size-16 opacity-70" strokeWidth={1.5} />
+              <span className="font-head text-lg font-extrabold">
+                {searching ? 'Không tìm thấy' : 'Hết hàng'}
+              </span>
+              <span className="text-xs">Không có sản phẩm phù hợp</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

@@ -25,6 +25,8 @@ interface ScrewProps extends ScrewPoint {
   hint?: boolean
   /** rút ngắn còn tỉ lệ này của chiều dài ốc (giữ đầu ốc), vd vít stab 2/3 */
   short?: number
+  /** độ cao miệng lỗ (mặc định = y): vít tray chìm dưới plate thì khung nét đứt / vòng vàng nằm trên mặt plate cho khỏi bị che */
+  mouth?: number
 }
 
 type ScrewStyle = 'countersunk' | 'socket' | 'button'
@@ -300,6 +302,7 @@ function Screw({
   shaft = 0,
   hint = false,
   short = 1,
+  mouth = y,
 }: ScrewProps) {
   const turns = useGame((s) => s.build?.screws[id] ?? 0)
   const toolLv = useGame((s) => screwLevel(s.tools, s.screwPick))
@@ -428,7 +431,7 @@ function Screw({
       >
         {/* vặn vào mà chưa bấm lần nào: chỉ khung nét đứt ở miệng lỗ (ốc chưa tra), bấm mới tra ốc vào rồi vặn */}
         {mode === 'tighten' && turns === 0 && (
-          <group position-y={-liftAt(0)}>
+          <group position-y={mouth - y - liftAt(0)}>
             <ScrewGhost style={style} />
           </group>
         )}
@@ -453,7 +456,7 @@ function Screw({
         {interactive && !done && !hover && (
           // ốc chưa tra: vòng vàng nằm sát miệng lỗ (quanh khung nét đứt), không lơ lửng chỗ ốc chờ
           <mesh
-            position-y={mode === 'tighten' && turns === 0 ? 0.04 - liftAt(0) : 0.04}
+            position-y={mode === 'tighten' && turns === 0 ? mouth - y + 0.04 - liftAt(0) : 0.04}
             rotation-x={-Math.PI / 2}
           >
             <ringGeometry args={[0.15, 0.2, 24]} />
@@ -473,7 +476,18 @@ function Screw({
 }
 
 /** Bộ vít của 1 bước. flip: vít bắt từ mặt dưới (đầu vít hướng xuống) */
-export function ScrewSet({ step, y, flip }: { step: ScrewStep; y: number; flip?: boolean }) {
+export function ScrewSet({
+  step,
+  y,
+  flip,
+  mouth,
+}: {
+  step: ScrewStep
+  y: number
+  flip?: boolean
+  /** độ cao miệng lỗ (vít chìm trong lỗ, vd vít tray dưới plate) */
+  mouth?: number
+}) {
   const ctx = useCtx()
   const cur = useStep()
   const bit = useGame((s) => s.screwBit)
@@ -484,7 +498,9 @@ export function ScrewSet({ step, y, flip }: { step: ScrewStep; y: number; flip?:
     ctx.caseDef.material === 'mica' &&
     ctx.screwSide === 'top'
       ? y - Y.floorBot - 0.06
-      : 0
+      : step === 'trayScrew'
+        ? TRAY_SHAFT
+        : 0
   // mũi tên chỉ con vít chưa xong gần giữa board nhất (giữa khung hình, không bị khung HUD 2 bên che), rồi mới ra các góc
   const next = useGame(
     (s) =>
@@ -508,6 +524,7 @@ export function ScrewSet({ step, y, flip }: { step: ScrewStep; y: number; flip?:
       hint={sc.id === next}
       // vít stab: model M3×8 lòi lên quá cao qua PCB → ngắn còn 2/3
       short={step === 'stabScrew' ? 2 / 3 : 1}
+      mouth={flip ? undefined : mouth}
     />
   ))
   return (
@@ -559,6 +576,9 @@ function BitSwapPreview({ at }: { at: [number, number, number] }) {
 }
 
 /** Độ dài ốc của bước `step` (u): model gốc hoặc thân ren dài thêm (`shaft`, case mica) */
+/** thân ren dài của vít tray: đầu ốc tì mặt PCB, xuyên PCB rồi ăn ~0,12u vào trụ đồng */
+export const TRAY_SHAFT = Y.pcbTop - Y.pcbBot + 0.12
+
 export function screwLength(step: ScrewStep, shaft = 0) {
   const style = SCREW_STYLES[step]
   return Math.max(-THREADS[style].end, HEAD_H[style] + shaft / MM) * MM

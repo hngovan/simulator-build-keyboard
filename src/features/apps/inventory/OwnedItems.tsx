@@ -30,16 +30,7 @@ import type {
   StabItem,
   SwitchItem,
 } from '@/types'
-import {
-  Badge,
-  Button,
-  Empty,
-  Heading,
-  OptionChip,
-  Panel,
-  Tooltip,
-  ViewHint,
-} from '@/components/ui'
+import { Badge, Button, Empty, TabChip, ThumbLoading, Tooltip, ViewHint } from '@/components/ui'
 import { cn } from '@/lib/format'
 import type { ToolKind } from '@/types'
 
@@ -53,11 +44,11 @@ const SLOT_STEP = 12
 
 /** bộ lọc kho: theo tiền tố id món (part / tool / supply) */
 type Filter = 'all' | 'part' | 'tool' | 'supply'
-const FILTERS: { id: Filter; icon: LucideIcon; label: string }[] = [
-  { id: 'all', icon: LayoutGrid, label: 'Tất cả' },
-  { id: 'part', icon: Keyboard, label: 'Linh kiện (mọi đơn + kho chung)' },
-  { id: 'tool', icon: Wrench, label: 'Dụng cụ' },
-  { id: 'supply', icon: Droplet, label: 'Lube & vật tư' },
+const FILTERS: { id: Filter; icon: LucideIcon; name: string; label: string }[] = [
+  { id: 'all', icon: LayoutGrid, name: 'Tất cả', label: 'Tất cả' },
+  { id: 'part', icon: Keyboard, name: 'Linh kiện', label: 'Linh kiện (mọi đơn + kho chung)' },
+  { id: 'tool', icon: Wrench, name: 'Dụng cụ', label: 'Dụng cụ' },
+  { id: 'supply', icon: Droplet, name: 'Vật tư', label: 'Lube & vật tư' },
 ]
 const remainText = (it: Owned) =>
   it.left === undefined
@@ -166,16 +157,24 @@ function loadSlots(): (string | null)[] {
   }
 }
 
-/** Ảnh 1 ô: model 3D chụp sẵn (cache chung với Shopii), chưa chụp xong thì hiện ảnh vẽ */
+/** Ảnh 1 ô: model 3D chụp sẵn (cache chung với Shopii), đang chụp thì loading, không có model thì ảnh vẽ */
 function Thumb({ it }: { it: Owned }) {
   const model = it.thumb && 'kind' in it.thumb ? it.thumb : null
   const box = it.thumb && 'caseId' in it.thumb ? it.thumb : null
   const shot = useModelThumb(model?.kind ?? null, model?.type)
   const caseShot = useCaseThumb(box?.caseId, box?.color)
   const src = shot ?? caseShot
+  // đang chụp ảnh model (lần đầu tải tài nguyên) thì hiện loading, không có model mới dùng ảnh vẽ
+  const loading = (model && shot === undefined) || (box && caseShot === undefined)
   return (
     <div className="pointer-events-none flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-lg bg-black/15">
-      {src ? <img src={src} alt={it.name} className="h-full w-full object-contain" /> : it.art}
+      {src ? (
+        <img src={src} alt={it.name} className="h-full w-full object-contain" />
+      ) : loading ? (
+        <ThumbLoading />
+      ) : (
+        it.art
+      )}
     </div>
   )
 }
@@ -396,43 +395,31 @@ export function OwnedItems() {
   }
 
   return (
-    <Panel>
-      <div className="flex items-center justify-between gap-2">
-        <Heading>Đồ trong kho</Heading>
-        {/* bộ lọc icon + số món: nút khối như OptionChip, đang chọn viền + icon vàng */}
-        <div className="mb-2 flex gap-1.5">
-          {FILTERS.map(({ id, icon: Icon, label }) => {
-            const n =
+    // cùng kiểu bảng xếp hạng: tab lọc → khung nền tối chứa lưới ô (bỏ đầu icon + tiêu đề)
+    <div className="flex flex-col gap-3">
+      {/* tab lọc dính đỉnh cửa sổ khi cuộn lưới (giống GroupFeed): bù padding thân cửa sổ, nền che lưới bên dưới */}
+      <div className="sticky -top-3.5 z-10 -mx-3.5 -mt-3.5 -mb-1 flex flex-wrap gap-1.5 bg-panel px-3.5 pt-3.5 pb-1 max-md:-top-2.5 max-md:-mx-2.5 max-md:-mt-2.5 max-md:px-2.5 max-md:pt-2.5">
+        {FILTERS.map(({ id, icon, name, label }) => (
+          <TabChip
+            key={id}
+            active={filter === id}
+            icon={icon}
+            title={label}
+            count={
               id === 'all' ? owned.length : owned.filter((o) => o.id.startsWith(`${id}:`)).length
-            return (
-              <Tooltip key={id} label={label}>
-                <OptionChip
-                  type="button"
-                  aria-label={label}
-                  aria-pressed={filter === id}
-                  active={filter === id}
-                  onClick={() => setFilter(id)}
-                  className="h-8 cursor-pointer items-center! gap-1.5 leading-none"
-                >
-                  {/* icon + số món hiện luôn cạnh bộ lọc */}
-                  <Icon className="size-4" />
-                  <span className="flex h-4 items-center text-[13px] leading-none font-extrabold tabular-nums">
-                    {n}
-                  </span>
-                </OptionChip>
-              </Tooltip>
-            )
-          })}
-        </div>
+            }
+            onClick={() => setFilter(id)}
+          >
+            {name}
+          </TabChip>
+        ))}
       </div>
       {!owned.length && (
-        <div className="mb-2">
-          <Empty icon={<PackageOpen />}>
-            Kho đang trống. Mua linh kiện, dụng cụ, vật tư ở Shopii.
-          </Empty>
-        </div>
+        <Empty icon={<PackageOpen />}>
+          Kho đang trống. Mua linh kiện, dụng cụ, vật tư ở Shopii.
+        </Empty>
       )}
-      <div className="grid grid-cols-4 gap-2 rounded-xl bg-black/20 p-2 @3xl:grid-cols-6 @3xl:gap-3">
+      <div className="grid grid-cols-4 gap-2 rounded-2xl bg-black/15 p-2 @3xl:grid-cols-6 @3xl:gap-3">
         {filter !== 'all' && !shown.length && (
           <div className="col-span-4 @3xl:col-span-6">
             <Empty icon={<PackageOpen />}>Không có món nào trong mục này.</Empty>
@@ -479,7 +466,7 @@ export function OwnedItems() {
                       it.flaw
                         ? 'border-red shadow-[0_0_0_2px_rgba(255,80,80,0.35)]'
                         : it.using
-                          ? 'border-green'
+                          ? 'border-yellow'
                           : 'border-line hover:border-white/30',
                       dragging === it.id && 'opacity-40',
                     )}
@@ -506,7 +493,7 @@ export function OwnedItems() {
                         {it.tag}
                       </div>
                     )}
-                    {/* số lần / lượt còn lại: badge tròn góc ảnh (đang dùng = viền xanh) */}
+                    {/* số lần / lượt còn lại: badge tròn góc ảnh (đang dùng = viền vàng) */}
                     {it.left !== undefined && (
                       <span
                         aria-label={remainText(it) ?? undefined}
@@ -532,6 +519,6 @@ export function OwnedItems() {
         })}
       </div>
       {viewing && <ItemViewer it={viewing} onClose={() => setViewing(null)} />}
-    </Panel>
+    </div>
   )
 }

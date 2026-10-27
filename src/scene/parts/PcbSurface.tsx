@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { CanvasTexture, DoubleSide, Path, SRGBColorSpace, Vector2 } from 'three'
-import { Y, stabHoles } from '@/data/steps'
+import { TRAY_HOLE, Y, stabHoles } from '@/data/steps'
 import type { Key, Point } from '@/types'
 import { boardOutline, outlinePlane, outlineSlab, pointInPolygon } from './boardOutline'
 
@@ -11,6 +11,8 @@ interface PcbSurfaceProps {
   outline?: [number, number][]
   keys: Key[]
   screwHoles: Point[]
+  /** lỗ vít tray mount xuyên PCB (khoét thật + vòng đồng) */
+  mountHoles: Point[]
   type: string
   hover: boolean
 }
@@ -124,7 +126,7 @@ export function makePcbTexture(
       g.stroke()
     }
   }
-  // Vòng đồng quanh lỗ bắt vít stab xuyên PCB.
+  // Vòng đồng quanh lỗ bắt vít xuyên PCB (vít stab screw-in, vít tray mount).
   screwHoles.forEach(({ x, z }) => {
     const cx = px(x)
     const cy = py(z)
@@ -154,13 +156,14 @@ export function PcbSurface({
   outline,
   keys,
   screwHoles,
+  mountHoles,
   type,
   hover,
 }: PcbSurfaceProps) {
   const dark = type === 'hotswap'
   const texture = useMemo(
-    () => makePcbTexture(width, depth, keys, dark, screwHoles),
-    [width, depth, keys, screwHoles, dark],
+    () => makePcbTexture(width, depth, keys, dark, [...screwHoles, ...mountHoles]),
+    [width, depth, keys, screwHoles, mountHoles, dark],
   )
   useEffect(() => () => texture.dispose(), [texture])
   // thân + 2 mặt PCB theo đường viền layout (Alice: 2 nửa xoay), texture phủ khung width × depth
@@ -192,11 +195,19 @@ export function PcbSurface({
         }
       }
     }
+    // lỗ vít tray: vào mảnh PCB chứa tâm lỗ
+    for (const { x, z } of mountHoles) {
+      const shape = shapes.find((c) => pointInPolygon(new Vector2(x, -z), c.getPoints()))
+      if (!shape) continue
+      const hole = new Path()
+      hole.absarc(x, -z, TRAY_HOLE.pcb, 0, Math.PI * 2, false)
+      shape.holes.push(hole)
+    }
     return {
       body: outlineSlab(shapes, Y.pcbBot, Y.pcbTop),
       face: outlinePlane(shapes, width, depth),
     }
-  }, [keys, width, depth, outline])
+  }, [keys, width, depth, outline, mountHoles])
 
   return (
     <group>

@@ -54,11 +54,18 @@ vào `window.__r3f` để debug trong console.
 - Import qua alias `@/` → `src/`.
 - Comment / text UI viết tiếng Việt, ngắn gọn, giống code xung quanh.
 - ESLint flat config: TS + react-hooks + react-refresh.
-- Chọn option sản phẩm: `OptionSelect` (ô đổ xuống); `OptionChip` chỉ cho bộ lọc / picker khung 3D.
-- Tooltip: chỉ cần ghi `title="..."` (1 dòng ngắn), `GlobalTooltip` tự vẽ kiểu game; không dùng dòng phụ trong tooltip.
+- Chọn option sản phẩm Shopii: `OptionFilter` (nút lọc → popup 2 cột chất liệu | màu, kiểu menu lọc hội thoại Mezzenger, giá chỉ
+  hiện khi khác nhau); ô đổ xuống khác: `OptionSelect`; `OptionChip` chỉ cho bộ lọc / picker khung 3D; tab lọc đầu app
+  (bảng xếp hạng, Kho) dùng `TabChip` (đang chọn = khối vàng đặc). App dạng danh sách theo khuôn bảng xếp hạng: đầu icon vàng +
+  tiêu đề + ⓘ, khung `bg-black/15` có hàng tiêu đề cột, dòng `bg-panel-2` (dòng của mình / đang làm viền vàng), giá trị xanh bên phải.
+- Tooltip: chỉ cần ghi `title="..."` (1 dòng ngắn), `GlobalTooltip` tự vẽ kiểu game (căn giữa phần tử, `data-tip-align="start"` = căn mép trái); không dùng dòng phụ trong tooltip.
+  Nội dung nhiều dòng (mô tả, gạch đầu dòng): `<Tooltip wide content={...}>`. Cả 2 đo kích thước rồi đặt bằng `placeTip` (tự lật, nằm trong
+  màn hình); không tự vẽ khung nổi `absolute` (bị khung cuộn cắt).
 - Badge / nhãn trạng thái: luôn dùng `<Badge solid tone="...">` (khối màu đặc + bóng đổ giống `Button`, màu lấy từ `BUTTON_TONES`:
-  default / green / yellow / red / blue / orange); đứng đầu dòng / trong flex thì thêm `className="ml-0"`. Không dùng Badge viền mảnh
+  default / green / yellow / red / blue / orange / purple); đứng đầu dòng / trong flex thì thêm `className="ml-0"`. Không dùng Badge viền mảnh
   (không `solid`) hay tự vẽ span màu; nút chọn dùng `OptionChip`, nút bấm dùng `Button`. Sửa UI thì đồng bộ theo các component này.
+- Ngoại lệ, app kiểu bảng xếp hạng (Bảng xếp hạng, Mezzenger, Đánh giá, Hội Phím Cơ): không badge — đầu app ô icon + tiêu đề vàng + `CircleAlert`
+  tooltip, tab `TabChip` đứng yên, danh sách trong khối `rounded-2xl bg-black/15 p-1.5`, nhãn = chữ màu (`group/Tag.tsx`) hoặc vật gắn lên thẻ.
 
 ## Kiến trúc
 
@@ -110,7 +117,7 @@ vào `window.__r3f` để debug trong console.
 - Mua/được cung cấp linh kiện → chọn mount → `startBuild` kiểm tra kho rồi tạo `ctx = buildContext(...)`
   và `build = newBuild()`. `ctx` là dữ liệu dẫn xuất, không lưu — dựng lại từ order + inventory + mount.
 - Các action trong `buildSlice` cập nhật `build` qua `patchBuild` (không tự chuyển bước; người chơi bấm
-  `nextStep`) → bước `test` → `deliver()` gọi `scoreDelivery`, trừ uy tín theo số ngày trễ hạn.
+  `nextStep`; riêng `dropInCase` case 1 mảnh thả xong, `placeFoot` dán xong feet cuối, `turnScrew` bắt đủ vít bước vặn vào (chờ `SPIN_MS`) thì tự sang bước kế) → bước `test` → `deliver()` gọi `scoreDelivery`, trừ uy tín theo số ngày trễ hạn.
 - Hàn (PCB solder): cần mỏ hàn (`tools.solder` ≥ 1) + thiếc (`SOLDER_IDS` trong supplies, chọn ở `solderPick`).
   Giữ chuột trên chân: `solderTiming` cho vạch đạt / cháy; cháy thì `tipDirty`, phải lau bùi nhùi
   (`tipCleaner`, `cleanTip`). Dụng cụ có độ bền (`ToolDef.life`, đếm ở `wear`, hết thì về "chưa có"): bút hàn 300, trạm 1000, bùi nhùi 1000.
@@ -142,7 +149,9 @@ vào `window.__r3f` để debug trong console.
   món không gửi thì đơn có thể ghi `pcbType` / `caseColor`.
 - Nhiều đơn mỗi ngày: `deliver()` chấm điểm rồi đẩy vào `packed` (Session) và trả bàn trống; gửi từng đơn ở Mezzenger
   (`shipOrder`, cộng tiền / uy tín ngay, `PackedOrder.shipped`), "Kết thúc ngày" (`nextDay()`) gửi nốt đơn chưa gửi.
-  Mezzenger là app chat (hội thoại đơn mới / đã nhận / chờ gửi / từ chối, chỉ mất khi gửi hàng; câu trả lời nhanh = tin gửi khách).
+  Kết thúc ngày = icon desktop (`END_DAY_ICON`) → popup `EndDayDialog` (tổng kết so `dayStart` tiền / uy tín đầu ngày, lưu Session).
+  Chat khách Mezzenger: tin ngắn `chatIntro` + bảng `OrderSpec` (không liệt kê từng yêu cầu thành tin).
+  Mezzenger là app chat (hội thoại đơn mới / đã nhận / chờ gửi / đã gửi / từ chối, nút icon lọc `FilterMenu` Mới / Đang làm / Xong / Huỷ; trạng thái là vật gắn lên thẻ: phong bì (đơn mới) / ghim / kẹp giấy + hạn / tem bưu kiện / dấu mộc ĐÃ GIAO, HUỶ; đơn đã gửi + từ chối mất khi sang ngày; câu trả lời nhanh = tin gửi khách).
   Từ chối quá `DECLINE_FREE` đơn / ngày thì −1 uy tín; khách để lại đánh giá (`data/reviews.ts`, `Profile.reviews`) → thông báo
   góc phải trên (`ReviewPops`) + app "Đánh giá".
   Tin khách tô đậm / màu chữ cần chú ý (`messenger/highlight.tsx`); "Nhận đơn" gửi tin "Ok shop nhận đơn này nhé";
@@ -170,6 +179,8 @@ vào `window.__r3f` để debug trong console.
 - Case 1 mảnh dựng bằng code chơi được tray / O-ring / OG; case 2 mảnh có lỗ vít (`caseScrewHoles`: nhôm / PC / acrylic ở đáy,
   mica xuyên mọi tấm). Mica: tấm trên mặt plate khoét theo `keyRegions` (khung chặn liền tấm, không `Blockers` rời).
 - Shopii gộp case cùng dòng (`CASE_LINES`): 1 sản phẩm, chọn chất liệu (`ProductOption.group`) rồi màu; id case giữ riêng.
+- Shopii: cột trái ghim (tìm kiếm chung mọi mục, "Đang sale", mục hàng, bộ lọc trong mục). Sale linh kiện cứ 3 ngày 1 lần (`data/sale.ts`:
+  `isSaleDay` ngày chia hết 3, ~60% linh kiện giảm 5–30% cố định theo ngày + id, `withSale` → `ProductOption.was` + `Product.sale`), budget khách không đổi.
 - Ảnh đơn / case Shopii / cửa sổ xem 3D dùng chung `buildKeyboardModel` (`features/apps/messenger/orderThumb.ts`).
 - Hội Phím Cơ: bài pass viết bằng thuật ngữ chợ phím che tình trạng thật (`data/market.ts`); inbox người bán (xin hình, check var,
   xin bớt, lowball, tự nhập giá `'offer'` popup, đi ăn xin `'beg'` → 10% được free, 70% người bán chặn, 20% ban chợ 3 ngày `marketBanUntil`...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
@@ -188,9 +199,11 @@ vào `window.__r3f` để debug trong console.
   linh kiện đơn đã nhận chưa build (kind `job`, kể cả đồ khách gửi) hoặc phím của khách (đơn đóng gói chưa gửi). Giá gốc `sourceBase` /
   giá chợ `sourceValue` (70%); bot hỏi / up bài / khen thợ / chê / trả giá (`botTurn(l, cert)`), bấm giá để bán; giá trên giá chợ tới
   `RICH_MAX` 1.4× giá gốc thì đêm có đại gia chốt (`richChance`, tối đa 1 / đêm, +5% / bậc thợ). Tag bài `ListingTag` (Free ship...).
-  Fast bid (`Listing.bid`, 60s, khởi điểm từ 0, `settleBids` gọi mỗi giây ở App.tsx). Gỡ bài > `UNLIST_FREE` 3 lần / ngày → `banMarket`.
+  Fast bid (`Listing.bid`, 60s, khởi điểm từ 0, `settleBids` gọi mỗi giây ở App.tsx; hết giờ có người thắng thì không tự bán: `bid.ended`, shop `closeBid` chốt hoặc `bailBid` bùng → `banMarket`). Gỡ bài > `UNLIST_FREE` 3 lần / ngày → `banMarket`.
   Bán phím của khách: 5% (`STEAL_OK`) khách quên, còn lại −1 uy tín + `stolen` (chuộc lại `buyBack` giá ×1.1~1.3, 30% không cho
-  chuộc, chuộc được +1 uy tín, quá 3 ngày mất). `listings` / `stolen` / `unlists` / `marketBanWhy` trong Profile.
+  chuộc, chuộc được +1 uy tín, quá 3 ngày mất).
+  Bán đồ khách gửi (`provided`) của đơn đã nhận: 5% (`STEAL_OK`) thoát, còn lại khách huỷ kèo (`soldCancel` trong sellSlice, `order.cancel = 'sold'`,
+  −`CANCEL_REP` uy tín + đánh giá 1★ `soldReview`); đơn vẫn hiện ở danh sách đơn / Mezzenger (dấu HUỶ) tới hết ngày, không làm tiếp được. `listings` / `stolen` / `unlists` / `marketBanWhy` trong Profile.
 - Hàng pass lỗi keycap / switch / stab (`FLAW_UNUSABLE`): mua về vào thẳng kho chung (viền đỏ + badge "Hàng lỗi" ở app Kho),
   `checkInventory` không cho lắp cho khách, chỉ bán lại (giá gốc ½, `FLAW_CAUGHT` 10% bị tố → ban chợ 3 ngày).
 - Qua ngày (`nextDay`): phải nhận ≥ 1 đơn trong ngày (`acceptedToday`, hoặc đã làm / đóng gói đơn); đơn đã nhận mà cả ngày không làm

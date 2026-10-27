@@ -499,3 +499,233 @@
 - **Bỏ tiêu đề bảng đầu vít** (2026-10-27, người dùng: "chữ chọn đầu vít và icon bỏ đi ko cần"): `BitPicker` bỏ dòng "🪛 Chọn đầu vít",
   chỉ còn ô "Mặt ốc" + 4 nút đầu vít.
   Chữ "Mặt ốc" bold, 13px (người dùng: "chữ mặt ốc cho font bold và tăng size 13").
+- **Mezzenger tối giản giống bảng xếp hạng** (2026-10-27, người dùng: "thiết kế lại style khung chat tối giản giống bảng xếp hạng").
+  `Messenger.tsx`: bỏ viền ngoài + đường kẻ `border-*`, cột hội thoại và khung chat thành 2 khối `rounded-2xl bg-black/15 p-1.5` cách nhau `gap-3`;
+  vùng tin nhắn là ô `rounded-xl bg-black/15` lồng trong. `ThreadRow` = thẻ `bg-panel-2` (đang chọn: `bg-[#3a3418] ring-2 ring-yellow ring-inset`,
+  tên vàng như dòng của mình ở bảng xếp hạng), tên `font-head font-extrabold`, avatar `ring-2 ring-white/15`; trạng thái (Đơn mới / Đang làm...)
+  thành chữ màu `STATUS` thay `Badge`; "N đơn mới" thành chữ muted, "Ngày N" `font-head text-xl text-yellow`. `ChatBubble` khách bỏ viền.
+  Mezzenger + bảng xếp hạng là ngoại lệ của quy ước `Badge solid` trong CLAUDE.md.
+- **Ribbon "Đơn mới"** (2026-10-27, người dùng: "đơn mới thay vì hiển thị chữ đơn mới thì có thể làm ribbon-shapes gắn ở góc phải").
+  `ThreadRow`: hội thoại `offer` có dải ribbon chéo vàng 45° ở góc phải trên (`absolute rotate-45`, thẻ `relative overflow-hidden` cắt 2 đầu),
+  chữ "Đơn mới" `font-head` 10px; bỏ chữ trạng thái của đơn mới, nội dung chừa `pr-6`. Trạng thái khác vẫn là chữ màu.
+  Cùng ngày, người dùng gửi ảnh mẫu "đổi lại thành kiểu ribbon-shapes như này": bỏ dải chéo, thay bằng `NewRibbon` (SVG) treo mép trên
+  góc phải thẻ: thân đỏ gradient đáy nhọn + mép gấp cuộn tối ở góc trái trên, chữ trắng "Đơn mới"; nội dung thẻ chừa `pr-14`.
+  Người dùng gửi ảnh mẫu khác ("ý tôi là kiểu này"): `NewRibbon` thành ribbon dựng đứng vàng (`--color-yellow`) nhô lên 6px trên mép thẻ,
+  tam giác gấp tối bên phải phần nhô, đáy nhọn, chữ 2 dòng "Đơn / mới" màu tối. Thẻ bỏ `overflow-hidden`; danh sách `gap-2 pt-1.5` để
+  ribbon không bị cắt / đè thẻ trên; nội dung chừa `pr-11`.
+  Người dùng: "ghi chữ new vào là được rồi" → ribbon ghi 1 chữ "NEW" (`text-xs`), thân ngắn lại (cao 36 thay 47).
+  Người dùng: "bo viền xíu hơi góc cạnh" → path thân bo góc 2px (góc trái trên, 2 góc đáy, mũi nhọn; góc phải trên nối nếp gấp giữ vuông).
+- **Mezzenger tab lọc + giữ đơn đã gửi** (2026-10-27, người dùng: "có filter sort theo đang làm, done, cancel và new => done đơn vẫn hiển thị trên màn hình").
+  Hội thoại thêm loại `shipped` (đơn `packed` có `shipped`, giữ tới `nextDay` sẵn trong store): hiện tin xin địa chỉ + "Shop gửi hàng rồi..." / "Phím của bạn đây..."
+  rồi khách cảm ơn, chữ trạng thái "Đã gửi" (muted), chỉ còn nút xem điểm. Trước đây gửi xong hội thoại biến mất và nhảy sang hội thoại đầu.
+  Cột trái có tab `FILTERS`: Tất cả / Mới (offer) / Đang làm (accepted) / Xong (packed + shipped) / Huỷ (rejected), kèm số; tên tab tiếng Việt theo
+  quy ước UI. Hội thoại đang mở lấy từ toàn bộ `threads` (đổi trạng thái ra khỏi tab đang lọc vẫn giữ khung chat), chưa chọn thì lấy đầu tab.
+  Người dùng: "hiển thị 1 icon filter ở bên phải ấn vào thì mới lựa chọn option để sort cho gọn" → bỏ hàng tab, đầu cột (cạnh "N đơn mới")
+  có nút icon `ListFilter` (`FilterMenu`): bấm đổ xuống 5 mục kèm số + dấu ✓, bấm ra ngoài thì đóng; đang lọc khác "Tất cả" thì nút vàng.
+  Người dùng: "bỏ cái text (6 đơn mới) đi ko cần nữa" → bỏ chữ "N đơn mới / Hết đơn mới" ở đầu cột, chỉ còn "Ngày N" + nút lọc (số đơn mới xem trong menu lọc).
+  Người dùng: "ribbon hơi cao cho ngắn lại 1 xíu" → `NewRibbon` cao 36 → 30 (thân 29 → 23, mũi nhọn giữ 7).
+- **Ghim "Đang làm"** (2026-10-27, người dùng gửi ảnh ghim đỏ: "trạng thái đang làm thì hiển thị gim cắm vào là được"). `Pin` (SVG trong
+  Messenger.tsx: đầu tròn, thân tối, đế loe, kim bạc, vệt sáng, xoay 40°) cắm ở góc phải trên thẻ hội thoại đơn đang làm (`accepted` + `active`),
+  nhô ra ngoài mép thẻ; bỏ chữ "Đang làm", nội dung chừa `pr-5`. Đơn đã nhận chưa làm vẫn chữ "Đã nhận". Danh sách `pt-1.5` → `pt-2.5` để thẻ đầu không cắt đầu ghim.
+  Người dùng: "xoay đầu cây ghim cho như đang cắm vào => bỏ đoạn đầu nhọn sắt nhô ra" → bỏ kim (như đã cắm ngập vào thẻ), xoay 40° → 35°,
+  dời ghim xuống 5 đơn vị trong viewBox để đế ghim áp sát mép thẻ.
+  Người dùng gửi ảnh mẫu "phải như này mới đúng" (ghim nhìn từ trên xuống): `Pin` vẽ lại phối cảnh — đế + đầu ghim là elip có cạnh dày
+  (đỏ sẫm) + mặt trên đỏ + viền sáng trắng ở mép dưới, thân nối giữa, bóng đổ xám xuống trái; vẽ theo trục đứng rồi `rotate(40)` cho đầu chĩa
+  lên phải. SVG 40px (`-top-3 -right-2`), danh sách `pt-3`. Render thử bằng Chrome headless (scratchpad) để chỉnh: elip tròn hơn (nhìn từ trên),
+  thân ngắn, viền sáng chỉ ở mép dưới phải như mẫu.
+- **Trạng thái hội thoại = vật gắn lên thẻ** (2026-10-27, người dùng hỏi "đã nhận thì nên hiển thị kiểu gì thay vì chữ", "cancel và new thì sao",
+  chốt "ok thử triển khai đi" theo đề xuất). `ThreadRow` bỏ hẳn chữ trạng thái (xoá `STATUS` / `statusOf`), mỗi loại 1 vật:
+  mới = `NewRibbon`, đang làm = `Pin`, đã nhận chưa làm = `Clip` (kẹp giấy bạc ở mép trên) + hạn giao `dueOf` (còn n ngày / hạn hôm nay cam /
+  trễ n ngày đỏ; còn 1 ngày cam), chờ gửi = `PostStamp` (tem cam răng cưa = `mask` khoét lỗ `PERFS`, hình hộp theo icon Package),
+  đã giao = `Stamp` xanh "ĐÃ GIAO" (thẻ `opacity-80`), huỷ = `Stamp` đỏ "HUỶ" (thẻ `opacity-60`, tooltip báo −1 uy tín khi `angry`).
+  Mẫu render bằng Chrome headless trước khi đưa vào code. Nội dung thẻ chừa `pr-*` theo từng vật.
+  Người dùng: "đổi chữ new thành chữ mới" → ribbon ghi "MỚI".
+  Người dùng: "cho cái kẹp nằm ngang được ko để truncate text được full text" → `Clip` xoay ngang (path cũ `translate(34 0) rotate(90)`,
+  SVG 34×14, `-top-2 right-3`, nghiêng −3°), nằm trên mép thẻ nên bỏ `pr-6`: tin cuối dùng hết bề ngang.
+  Người dùng chỉnh tay: kẹp `rotate-[344deg]`, `right-0`, `-top-1.5` (−6px).
+  Người dùng: "chữ hủy cũng thế đưa lên trên đoạn name cho text sub ở dưới full ra" → `Stamp` thêm `top` (ngang hàng tên, `top-1.5`), dấu HUỶ
+  dùng `top`; bỏ `pr-11` của cả khối, chỉ hàng tên chừa `pr-10` → tin cuối dùng hết bề ngang. Dấu ĐÃ GIAO vẫn giữa thẻ.
+  Người dùng: "cái ghim cần thu nhỏ hay đưa vào 1 xíu ko? để text ở dưới full ra" → `Pin` 40 → 36px, dời ra góc `-top-3.5 -right-2.5` (chỉ
+  ngang hàng tên), chừa `pr-5` ở hàng tên thay vì cả khối → tin cuối dùng hết bề ngang.
+  Lỗi (người dùng: "thanh menu chat bên cạnh đang bị scroll"): `Pin` `-right-2.5` lòi ra ngoài thẻ 10px (kẹp `right-0` xoay cũng lòi ~1px),
+  danh sách `overflow-y-auto` nên bật cuộn ngang. Danh sách thêm `pr-2.5` (chừa chỗ ghim nhô ra) + `overflow-x-hidden`.
+- **Đơn mới = phong bì** (2026-10-27, người dùng: ribbon chữ "MỚI" không hợp → chọn phong bì theo đề xuất). Xoá `NewRibbon`, thêm `Envelope`
+  (SVG phong bì vàng chưa mở, nắp gập, dấu sáp đỏ, nghiêng 10°, `-top-2 right-1`): cùng kiểu "đồ thật gắn lên hồ sơ" với ghim / kẹp / tem /
+  dấu mộc, không cần chữ (ribbon chật chữ có dấu). Chừa chỗ chỉ ở hàng tên (`pr-8`), tin cuối dùng hết bề ngang. Render thử Chrome headless.
+- Người dùng: đầu cột hội thoại (Ngày N + nút lọc) "hơi cao giảm lại" → `h-14` → `h-10` (đầu khung chat vẫn `h-14` vì avatar 40px, 2 đầu
+  không còn thẳng hàng).
+
+### Chat Mezzenger gọn + bảng tóm tắt yêu cầu (2026-10-27)
+
+- Người dùng: "sửa lại UI chat đi hơi lạc quẻ, ghi chat cơ bản 1 2 ý chính rồi làm 1 bảng tóm tắt là được cho người chơi dễ đọc
+  dễ hiểu chứ dài như này quá lười để đọc". Trước: mỗi yêu cầu 1 bong bóng (`order.lines`, 10–15 tin).
+- Giờ: ảnh đơn → `chatIntro(order)` (orders.ts: lời chào + layout, câu case featured nếu có, âm thanh + số ngày + "chi tiết ghi dưới
+  đây 👇", vẫn tô màu bằng `Highlight`) → 1 bong bóng rộng (`ChatBubble wide`) chứa `OrderSpec compact` (cùng bảng ở bàn build /
+  app Chi tiết đơn, kit khách gửi ở khối xanh trên đầu). `order.lines` vẫn sinh (chatIntro lấy lời chào / câu featured).
+- `OrderSpec` thêm dòng "Thời gian" (`order.days` ngày), hiện cả ở HUD bàn build / Chi tiết đơn.
+- Chỉ sửa đúng chỗ render tin khách trong Messenger.tsx (phiên khác đang sửa phần danh sách hội thoại cùng file). Chưa chụp kiểm.
+- Người dùng: "hover vào ảnh hiển thị icon kính lúp được rồi, ko cần hiệu ứng nổi lên nữa". `OrderImage` (ảnh đơn trong chat) bỏ bóng đổ,
+  bóng to ra khi rê và ảnh phóng `scale-105`; chỉ còn `ViewHint` (kính lúp) khi rê.
+- Cùng ngày, người dùng: "bỏ truncate text-xs text-muted đi luôn giúp tôi ko cần nữa": bỏ dòng xem trước tin cuối dưới tên khách
+  trong `ThreadRow` (cột hội thoại chỉ còn avatar + tên + hạn + vật gắn trạng thái), xoá biến `last` + import `withEmotes`.
+- **App Đánh giá style bảng xếp hạng** (2026-10-27, người dùng: "sửa đánh giá làm style tương tự bảng xếp hạng"). `ReviewsApp`: đầu app ô icon
+  `Star` + tiêu đề vàng `font-head text-2xl`, dòng tóm tắt chữ thường (sao + điểm TB + số đánh giá + uy tín, uy tín âm chữ đỏ) thay 2 `Badge`;
+  icon `CircleAlert` muted góc phải trên = tooltip cách chấm (như bảng xếp hạng); tab lọc tự vẽ nút vàng có icon (Tất cả / 4–5 sao / 1–2 sao)
+  thay `OptionChip`; danh sách trong khối `rounded-2xl bg-black/15 p-1.5`. `ReviewCard`: tên `font-head font-extrabold`, avatar `ring-2`,
+  uy tín +/- `font-head` (thông báo `ReviewPops` dùng chung card nên đổi theo).
+  Người dùng: "4-5 sao và 1-3 sao nhé" → tab lọc thứ 3 đổi thành "1–3 sao" (`stars <= 3`), 3 sao không còn chỉ ở Tất cả.
+
+### Kết thúc ngày = icon desktop + popup tổng kết (2026-10-27)
+
+- Người dùng: "button kết thúc ngày h đây sẽ đưa ra ngoài màn hình chính như 1 icon app trên màn hình => bấm vào sẽ show popup:
+  tổng kết ngày hôm nay: số tiền, số đơn nhận, số đơn hủy,... => có option kết thúc, và tiếp tục".
+- Bỏ nút "Kết thúc ngày · xong N đơn" ở đáy cột hội thoại Mezzenger. Icon `END_DAY_ICON` (apps.ts, mặt trăng lucide
+  `public/icons/apps/moon.svg`, không phải app cửa sổ) ở cột icon desktop (mobile: trong lưới) → `EndDayDialog`
+  (features/desktop): bảng tiền (so đầu ngày ±), uy tín ±, đơn nhận / từ chối / xong (đã gửi · chờ gửi) / đang làm dở / đơn mới
+  chưa trả lời; `Alert` việc sẽ xảy ra khi qua ngày (gửi nốt đơn chờ +tiền / uy tín, đền đơn nhận mà chưa làm, huỷ đơn trễ quá
+  `CANCEL_AFTER`, cùng công thức `nextDay`); chưa nhận đơn nào thì khoá nút + báo. Nút "Tiếp tục làm" / "Kết thúc ngày".
+- Store: `dayStart` { money, rep } (shopSlice, Session + snapshot + SAVED_KEYS): chơi mới = START, `nextDay` ghi mốc ngày mới,
+  save cũ = tiền / uy tín lúc tải. `CANCEL_AFTER` export từ shopSlice.
+- Chưa chụp kiểm.
+
+### Danh sách đơn + Kho theo kiểu bảng xếp hạng (2026-10-27)
+
+- Người dùng: "danh sách đơn cũng cần sửa lại style cho giống bảng xếp hạng" + "kho cũng vậy".
+- `OrderListFrame` (components/game/OrderCard.tsx): đầu (ClipboardList vàng + "Danh sách đơn" + dòng phụ + ⓘ tooltip phím M) →
+  khung `bg-black/15` có hàng tiêu đề cột "Khách / Tiền công". Dùng ở `OrderPicker` (bàn build) + `OrderApp`.
+- `OrderCard` thành dòng kiểu `RunRow`: avatar `size-11` viền, tên `font-head` (đơn đang làm chữ vàng, dòng nền `#3a3418` viền vàng
+  như dòng "của bạn") + `TimeBadge`, dòng phụ 1 hàng (layout · kit · % build / đủ đồ / thiếu gì), tiền công `font-head text-xl` xanh bên
+  phải, nút hành động + mũi tên mở chi tiết, thanh tiến độ khi đang build. Bỏ badge "Đang làm / Đã nhận" + hàng Công / Budget / Hạn
+  (đã có trong bảng chi tiết `OrderSpec`).
+- Kho (`OwnedItems`): bỏ `Panel` / `Heading` "Đồ trong kho" → đầu (Boxes vàng + "Kho" + dòng phụ + ⓘ) → tab lọc `TabChip` (icon + tên
+  ngắn + số món, tooltip tên dài) → lưới ô trong khung `rounded-2xl bg-black/15` (giữ kéo thả / xem 3D).
+- `TabChip` (components/ui): tab lọc tách từ bảng xếp hạng (khối vàng đặc khi chọn, có `count`); LeaderboardApp dùng lại.
+- Chưa chụp kiểm.
+- 2026-10-27, người dùng: đầu app Kho (ô icon `Boxes` + tiêu đề "Kho" + dòng phụ + ⓘ hướng dẫn) "không cần thêm vào, xoá đi". `OwnedItems` bỏ cả khối,
+  app mở thẳng vào tab lọc + lưới ô; mất tooltip "Bấm ô để xem / lấy / cất · kéo thả để đổi chỗ".
+  Người dùng: "fixed filter ở trên ko cho scroll theo" → hàng tab lọc của Kho `sticky -top-3.5` (bù padding thân `Window`, nền `bg-panel`,
+  z-10), cùng cách `GroupFeed` / Shopii; lưới ô cuộn bên dưới.
+
+### Bỏ toast đỏ khi dán Holee (2026-10-27)
+
+- Người dùng: "ở bước holee dán băng keo vào liên quan gì mà show thông báo alert trên cùng vậy ?? => xóa đi". `modStab('bandaid')` luôn
+  `toast('⚠️ ' + rule.reason, 'bad')`; stab Cherry (cần Holee) có `reason` là câu giải thích ("Lỗ stem rộng...") → mod đúng vẫn báo đỏ.
+  Giờ chỉ báo khi dán thừa (`!rule.needed`: stab khít, reason "không cần dán băng").
+- 2026-10-27: nút "Kết thúc ngày" ở chân cột hội thoại Mezzenger đã bị gỡ (chuyển thành icon `END_DAY_ICON` trên desktop mở `EndDayDialog`).
+  Người dùng: "ok thêm đi" → thêm lại nút xanh `MoonStar` "Kết thúc ngày" ở chân cột (h-16 bằng thanh trả lời khung chat), bấm mở cùng
+  `EndDayDialog` (portal ra `document.body` để overlay `fixed` không kẹt trong cửa sổ). Icon desktop vẫn giữ.
+
+### Shopii theo kiểu bảng xếp hạng (2026-10-27)
+
+- Người dùng: "sửa style của shopii cho giống style của bảng xếp hạng".
+- `Shopii`: bỏ cột nút mục hàng cam bên trái → đầu (ShoppingBag vàng + "Shopii" + dòng phụ + ⓘ) → hàng tab mục `TabChip` có icon
+  (`CAT_ICONS`: Box / CircuitBoard / Grid3x3 / RectangleHorizontal / ToggleRight / Keyboard / Droplet / Wrench / Award / BookOpen)
+  → hàng công cụ (công tắc "Chỉ hiện đồ hợp đơn" trái · `SoundLegend` · `OptionSelect` bộ lọc trong mục phải; bỏ thanh ghim `sticky`
+  bù padding Window) → lưới sản phẩm trong khung `rounded-2xl bg-black/15 p-1.5`.
+- `ProductCard`: `rounded-xl bg-panel-2`, rê chuột viền vàng `ring-inset` (thay viền cam), tên `font-head text-base`, giá
+  `font-head text-xl text-green` (như giá trị bên phải bảng xếp hạng); nút "Mua ngay" giữ cam.
+- Chưa chụp kiểm.
+
+### Shopii: sale theo sự kiện, cột trái ghim + tìm kiếm, chọn option kiểu nút lọc (2026-10-27)
+
+- Người dùng: "shopii sẽ có sale linh kiện theo sự kiện, 3 ngày sale 1 lần, sale 5% → 30%... filter sale; bỏ Chỉ hiện đồ hợp đơn;
+  [khối đầu] header shopii cũng bỏ; menu filter đưa qua bên trái fixed, filter option cũng fixed, thêm 1 thanh search text chung".
+- `data/sale.ts`: `SALE_EVERY` 3, `isSaleDay(day)` (ngày 3, 6, 9...), `nextSaleDay`, `salePct(day, p)` (chỉ 6 mục linh kiện, hash
+  FNV theo `day:id`: 60% sản phẩm sale, 5–30% bước 5), `withSale(p, day)` (giá option giảm, giá gốc ở `was`, `Product.sale` = %).
+  Kiểm số ngày 1–9: chỉ ngày 3 / 6 / 9 có 52–57 / 125 sản phẩm, min 5% max 30%. `nextDay` toast "🔥 Hôm nay Shopii sale linh kiện".
+  Budget đơn tính theo giá gốc → mua ngày sale lãi hơn.
+- `Shopii`: bỏ khối đầu + công tắc hợp đơn (xoá `fitsOrder` / `fitOptions`). Cột trái 200px `md:sticky md:top-0`: ô tìm kiếm (bỏ dấu,
+  tìm tên + mô tả mọi mục), tab "Đang sale" (`Flame`, số sản phẩm; ngày thường: dòng "Sale tiếp theo: ngày N"), tab mục hàng
+  (`TabChip` giãn hết cột, thêm prop `className`, số đếm `ml-auto`), `OptionSelect` bộ lọc trong mục. Phải: lưới trong khung tối,
+  `SoundLegend` đầu lưới.
+- `ProductCard`: badge đỏ "−N%" cạnh tên, giá sale xanh + giá gốc gạch ngang.
+- Người dùng: "filter item bên trong shopii làm theo style filter giống filter lọc ở chat... case màu nào cũng giá như nhau chỉ đắt
+  nếu khác chất liệu => mở filter thì popup lọc chọn chất liệu và chọn màu nằm ngang nhau". `OptionFilter` (shop/): nút (chấm màu +
+  "chất liệu · màu" + `ListFilter`, mở = vàng) → popup kiểu `FilterMenu` Mezzenger: cột "Chất liệu" (giá theo chất liệu, chọn thì
+  popup vẫn mở) | cột "Màu" / "Lựa chọn" (chấm màu; giá chỉ hiện khi các option khác giá, vd switch 10 / 70 con), chọn xong đóng.
+  Thay 2 `OptionSelect` trong thẻ. Picker trong khung xem 3D giữ `OptionChip`.
+- Chưa chụp kiểm.
+
+### Tìm kiếm Shopii debounce + loading ảnh model lần đầu (2026-10-27)
+
+- Người dùng: "search sử dụng debounce khi nhả phím thì mới tiến hành search để tối ưu hiệu năng, khi nhả phím search thì phải có
+  loading hiển thị ở khu vực sản phẩm => chờ render hết thì mới show lên tránh bị lag" + "thêm loading khi lần đầu chơi game tải tài
+  nguyên thay vì hiển thị ảnh mặc định".
+- `Shopii`: `query` (ô gõ, cập nhật ngay) → `applied` sau `SEARCH_MS` 300ms ngừng gõ → `useDeferredValue` (lưới dựng nền); `searchBusy`
+  (chưa hết debounce hoặc đang dựng) → lớp loading `LoaderCircle` "Đang tìm..." phủ kín khung sản phẩm (ẩn lưới cũ, vòng xoay `pt-24`
+  phía trên). Bấm mục / "Đang sale" thì xoá tìm ngay (`clearSearch`).
+- `useModelThumb` (shop/modelThumb) + `useCaseThumb` (messenger/orderThumb): `undefined` = đang chụp, `null` = không có model / không
+  có key (trước cả 2 đều `null` → hiện ảnh vẽ PartArt / ToolArt / SupplyArt tạm rồi mới đổi ảnh thật). `ThumbLoading` (components/ui:
+  nền nhấp nháy + vòng xoay) thay ảnh vẽ lúc đang chụp ở `ProductImage` (Shopii) + ô Kho (`Thumb` trong OwnedItems); ảnh đơn
+  Mezzenger (`OrderImage`) thay emoji ⌨️ nhún. Ảnh vẽ chỉ còn cho món không có model 3D.
+- Chưa chụp kiểm.
+- Cùng ngày, người dùng: "thông báo alert đến ngày sale nên để trên cùng và cũng hiển thị 1 icon chấm than ở góc mô tả lịch sale cứ
+  3 ngày mới thì sale 1 lần": cột trái Shopii trên cùng là `Alert tone="yellow"` (ngày sale: "Hôm nay sale linh kiện" / "Giảm 5–30%,
+  chỉ trong hôm nay"; ngày thường: "Sale tiếp theo: ngày N" / "Còn X ngày..."), `CircleAlert` góc phải trên (tooltip lịch theo
+  `SALE_EVERY`: ngày 3, 6, 9...). Bỏ dòng `Muted` "Sale linh kiện tiếp theo"; tab "Đang sale" vẫn hiện ngày sale.
+- Cùng ngày, người dùng: "hiển thị fixed full luôn chứ ko phải nằm mỗi bên góc; Sale tiếp theo: ngày 3 => đếm ngược số ngày; icon tam
+  giác => lửa => alert màu đỏ; [dòng mô tả] bỏ, đưa vào dấu chấm than xuống hàng chấm đầu dòng: giá bán giảm 5%~30%, chu kì lặp lại
+  3 ngày 1 lần" + "menu ko cần hiển thị icon nữa".
+  `SaleBanner` (Shopii.tsx): `Alert` đỏ (thêm prop `icon` cho Alert, mặc định TriangleAlert) icon `Flame`, trải hết bề ngang trên cùng,
+  tiêu đề "Đang sale linh kiện hôm nay" / "Sale tiếp theo: còn N ngày"; ⓘ góc phải: khung nổi (rê / focus, kiểu mô tả "i" thẻ sản phẩm,
+  vì GlobalTooltip chỉ 1 dòng) 2 gạch đầu dòng. Shopii thành khung cao cố định `h-[min(680px,74vh)]` (phóng to: `h-full`; mobile
+  tự cao): banner đứng yên, cột trái + lưới sản phẩm `overflow-y-auto` riêng (bỏ `sticky`), lớp loading / hết hàng nằm ở khung ngoài
+  không cuộn. `TabChip` `icon` thành tuỳ chọn; menu mục hàng + tab "Đang sale" chỉ chữ (xoá `CAT_ICONS`).
+- Cùng ngày, người dùng: "filter ở bên ngoài sửa style cho giống với filter sản phẩm ở bên trong": bộ lọc trong mục ở cột trái
+  (`OptionSelect`) → `ListFilterPicker` (shop/OptionFilter.tsx, dùng chung `Row` với `OptionFilter`): nút (tên mục lọc + số khớp +
+  `ListFilter`; mở hoặc đang lọc khác "Tất cả" = vàng như nút lọc chat) → popup 1 cột kiểu `FilterMenu`, chọn xong đóng.
+- Cùng ngày, người dùng: "khi mở popup filter ở bên trái menu đang bị scroll x ??? và khi không đủ chiều cao để hiển thị của popup nhưng
+  vẫn show xuống dưới => bị khuất đi 1 phần phải scroll xuống để xem => fix". Popup `absolute` nằm trong cột trái / lưới (`overflow-y-auto`,
+  cột 200px mà popup `min-w-[200px]` → cuộn ngang; luôn bung xuống → bị khung cắt). `Floating` (OptionFilter.tsx): portal ra `body`,
+  `position: fixed` z 2000 theo `getBoundingClientRect` của nút; đo `scrollHeight` lần vẽ đầu (invisible) → dưới không đủ mà trên rộng
+  hơn thì lật lên (`bottom`), `maxHeight` = chỗ trống + cuộn trong popup; ép trong bề ngang màn hình; đặt lại khi resize / cuộn bất kỳ
+  khung nào (`scroll` capture); bấm ngoài nút + popup thì đóng. Dùng cho cả `OptionFilter` (thẻ sản phẩm, 2 cột rộng 360) và
+  `ListFilterPicker` (cột trái); nút tách `TriggerButton`. Chưa chụp kiểm.
+- Cùng ngày, người dùng: "bên trong shopii ko còn hiệu ứng nhô ra khi hover vào sản phẩm nữa chỉ cần hiển thị kính lúp như hiện tại là
+  đủ": ảnh case (`ProductImage`) bỏ đổ bóng to dần khi rê (`hover:shadow`) + ảnh phóng `group-hover:scale-105`; giữ `ViewHint` kính lúp.
+- Cùng ngày, người dùng: "scroll xuống dưới cùng của sản phẩm => qua menu sản phẩm khác thì vẫn ko scroll lên top" + "thanh scroll của
+  sản phẩm đang bị khuất đi bởi radius ?? 1 là xóa radius đi 2 là fix cho nó ko bị ẩn". Lưới (`ref grid`) `scrollTo({ top: 0 })` khi
+  đổi `cat` / `saleView` / `shownQuery` / `filter`. Giữ bo góc: khung ngoài `rounded-2xl bg-black/15 p-1.5` (bỏ `overflow-hidden`), lớp
+  cuộn bên trong không bo (`min-h-0 flex-1 overflow-y-auto`) → thanh cuộn cách mép đệm 6px, không bị góc bo cắt.
+- 2026-10-27, người dùng: ô tìm kiếm Shopii bấm vào có viền vàng "đang bị khuất đi 1 phần". `ring-2` vẽ ra ngoài ô, cột trái `overflow-y-auto`
+  cắt mất → thêm `ring-inset` (viền vẽ vào trong ô).
+- 2026-10-27, người dùng: "khi đang typing thì đã xuất hiện loading rồi là sai, phải sau khi nhả phím mới xuất hiện vì đang debounce".
+  Shopii `searchBusy` bỏ điều kiện `query !== applied` (đang chờ debounce), chỉ còn `shownQuery !== applied` (debounce xong, lưới đang dựng).
+- **Hội Phím Cơ VN style bảng xếp hạng** (2026-10-27, người dùng: "sửa luôn ui của chợ phím cơ vn giống style của bảng xếp hạng" + "filter sẽ được
+  apply style của filter ở Shopii và fixed ở trên cùng ko scroll theo"). `GroupFeed`: khung cao cố định `h-[min(680px,74vh)]`; đầu app ô icon
+  `UsersRound` + tiêu đề vàng + dòng phụ theo tab, `CircleAlert` góc phải = tooltip (cảnh báo hàng pass trước là `Alert` vàng / luật gỡ bài);
+  tab `TabChip` (cùng Shopii, có icon + số: bài pass / bài của tôi) đứng yên, chỉ khối `rounded-2xl bg-black/15 p-1.5` bên dưới cuộn (bỏ sticky
+  bù padding cũ). Mọi `Badge` trong group (tag bài pass, nguồn món, fast bid, chuộc phím, số đếm) → `Tag` (`group/Tag.tsx`, chữ màu theo tone).
+  `PostCard`: thẻ `rounded-xl`, tên người bán `font-head`, avatar `ring-2`. Ngoại lệ quy ước Badge thêm Hội Phím Cơ.
+- 2026-10-27, người dùng: "bài đăng và bài bán có thể thu gọn được". `PostCard` (bài pass ở chợ): bấm đầu bài thu gọn còn người bán + tên món +
+  giá + `ChevronDown` (mở: caption, ảnh, tag, lượt thích, nút Inbox); bài đã chốt mặc định thu gọn + mờ. `ListingCard` (bài mình bán): bỏ dấu ▼
+  nhỏ trước tiêu đề, thêm `ChevronDown` bên phải (sau "Gỡ bài") như dòng Danh sách đơn, tiêu đề `font-head`; bấm tiêu đề vẫn mở / đóng.
+- Cùng ngày, người dùng: "ở kho nếu đang sử dụng thì viền vàng thay vì xanh như hiện tại": ô Kho `it.using` `border-green` →
+  `border-yellow` (cùng màu "đang chọn / đang làm" của bảng xếp hạng, danh sách đơn); hàng lỗi vẫn viền đỏ.
+- 2026-10-27, người dùng: đầu app Hội Phím Cơ đã có dấu chấm than ghi lưu ý "nên bên trong ko cần, bỏ đi". `MyListings` bỏ `info` (ⓘ vàng
+  "Gỡ bài quá … lần / ngày…") ở tiêu đề "Bài đang đăng"; lưu ý này đã ở tooltip `CircleAlert` đầu app (tab Bài của tôi).
+- 2026-10-27, người dùng: "hashtag đăng thêm dấu # ở trước". Tag bài pass (`PostCard`: #Fs, #Price no offer...) và tag bài mình đăng
+  (`LISTING_TAGS` ở `ListingCard` + chip chọn tag khi đăng bán ở `SourceRow`) hiện kèm `#` phía trước (chỉ hiển thị, dữ liệu không đổi).
+
+### Tooltip tự lật / ép trong màn hình (2026-10-27)
+
+- Người dùng: "tooltip đôi khi cũng bị vấn đề giống filter popup là không đủ view để hiển thị mà ko đổi vị trí xuất hiện => bị ẩn đi".
+  `GlobalTooltip` chỉ lật xuống khi phần tử cách mép trên < 48px (không đo tooltip; dài nhiều dòng / lật xuống sát đáy vẫn tràn),
+  `Tooltip` không lật, không ép ngang.
+- `placeTip(anchor, w, h, prefer, start)` (components/ui/placeTip.ts): ưu tiên phía `prefer`, không đủ thì phía kia, cả 2 chật thì
+  phía rộng hơn rồi ép trong màn hình (cách mép 8px); ngang căn giữa / mép trái (`data-tip-align="start"`), ép trong màn hình.
+  `GlobalTooltip` + `Tooltip` vẽ lần đầu `invisible` ở (0, 0) để đo → `useLayoutEffect` đặt vị trí. `Tooltip`: thêm `wide` (w-64, chữ
+  thường căn trái, nhiều dòng), hiện cả khi focus, z 3000 (cùng GlobalTooltip).
+- Khung nổi tự vẽ `absolute` + `group-hover` (mô tả "i" trên thẻ Shopii, ⓘ lịch sale ở `SaleBanner`) → `<Tooltip wide>` (bỏ `title`
+  trên nút "i" cho khỏi 2 tooltip chồng nhau).
+- Chưa chụp kiểm.
+- 2026-10-27, người dùng: "mục đăng món mới có thể thu gọn được và số bài đăng sẽ nằm góc bên phải tương tự với bài đang đăng, font lên 14 bold".
+  `MyListings`: 2 nhóm "Bài đang đăng" / "Đăng bán món mới" dùng `Section` (thay `Heading` + `Tag` số đếm): bấm tiêu đề thu gọn, số đếm
+  ("n bài" / "n món") `font-head text-sm` (14px) đậm sát phải + `ChevronDown`. Cả 2 nhóm cùng thu gọn được cho đồng bộ.
+- 2026-10-27, người dùng: "text-xs text-muted tăng lên font 13" (tab Bài của tôi). Gốc `MyListings` thêm `[&_.text-xs.text-muted]:text-[13px]`
+  (giá gốc / giá chợ, số bình luận, người giữ giá bid, ghi chú "đã gỡ…"); không sửa `Muted` dùng chung vì `cn` không gộp class trùng.
+- 2026-10-27, người dùng: "hashtag phải chữ in nghiêng và nằm trên cùng". `PostCard`: hàng hashtag `italic` chuyển lên đầu khối thông tin
+  (trên tên món / giá); `ListingCard`: hashtag tách khỏi hàng nhãn (fast bid / nguồn món), `italic`, nằm trên tiêu đề bài.
+  Chip chọn tag lúc đăng bán (`SourceRow`) giữ chữ đứng.
+- 2026-10-27, người dùng: "cho font lên 13 ở cả hashtag và" nhãn `Tag` → `Tag` `text-xs` → `text-[13px]`, icon trong nhãn 12 → 14px
+  (hashtag, nguồn món "Đơn …" / "Phím của khách" / "Hàng lỗi", fast bid, chuộc phím).

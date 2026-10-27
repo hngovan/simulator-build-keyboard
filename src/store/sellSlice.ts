@@ -23,7 +23,9 @@ import {
   type Stolen,
 } from '@/data/selling'
 import { BAN_DAYS } from '@/data/market'
+import { soldReview } from '@/data/reviews'
 import { addPart, dropSwitch, without } from './spare'
+import { CANCEL_REP, emptyInventory, stashActive } from './shopSlice'
 import type { GameState } from '.'
 import type { SwitchItem } from '@/types'
 
@@ -38,7 +40,7 @@ export interface SellSlice {
     src: ListingSource,
     price: number,
     index?: number,
-    opts?: { tags?: ListingTag[]; bidStep?: number },
+    opts?: { tags?: ListingTag[]; bidStep?: number; bin?: number },
   ) => void
   /** gỡ bài: trả món về chỗ cũ; gỡ quá UNLIST_FREE lần / ngày thì admin ban chợ */
   unlist: (id: string) => void
@@ -46,8 +48,12 @@ export interface SellSlice {
   botVisit: () => void
   /** mỗi bài fast bid đang chạy: bot ghé ngẫu nhiên (bid / bình luận); App gọi mỗi giây, kể cả khi không mở tab chợ */
   bidVisit: () => void
-  /** bài bid hết giờ: bán cho người trả cao nhất (không ai bid thì trả món về) */
+  /** bài bid hết giờ: có người thắng thì đứng lại chờ shop chốt / bùng (không tự bán); không ai bid thì trả món về */
   settleBids: () => void
+  /** chốt bán bài bid đã hết giờ cho người thắng */
+  closeBid: (id: string) => void
+  /** bùng bid: không bán cho người thắng, món về chỗ cũ, bị admin ban chợ */
+  bailBid: (id: string) => void
   /** bán cho người trả giá ở dòng bình luận `line` */
   sellListing: (id: string, line: number) => void
   /** inbox người mua xin chuộc lại phím của khách */
@@ -111,6 +117,36 @@ function restore(s: GameState, src: ListingSource): Partial<GameState> {
 
 const certOf = (s: GameState) => s.tools.cert ?? 0
 
+/**
+ * Khách phát hiện shop bán đồ mình gửi: đơn gắn `cancel: 'sold'` (vẫn hiện ở danh sách đơn tới hết ngày, không làm tiếp được),
+ * đơn đang ở bàn build thì cất thành job + trả bàn trống; −CANCEL_REP uy tín + đánh giá 1★
+ */
+function soldCancel(s: GameState, orderId: string): Partial<GameState> | null {
+  const active = s.order?.id === orderId && !s.result
+  const jobs = active ? stashActive(s) : s.jobs
+  const job = jobs.find((j) => j.order.id === orderId)
+  if (!job || job.order.cancel) return null
+  return {
+    jobs: jobs.map((j) => (j === job ? { ...j, order: { ...j.order, cancel: 'sold' } } : j)),
+    rep: s.rep - CANCEL_REP,
+    ...(active
+      ? {
+          order: null,
+          inventory: emptyInventory(),
+          provided: {},
+          spent: 0,
+          posts: [],
+          mount: null,
+          build: null,
+          ctx: null,
+          history: [],
+          future: [],
+          supplyUsed: {},
+        }
+      : {}),
+  }
+}
+
 export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set, get) => {
   /** chốt bán 1 bài: cộng tiền; hàng lỗi có thể bị tố mô tả sai; phím của khách thì hiếm khi thoát */
   const completeSale = (l: Listing, buyer: string, amount: number, how = '') => {
@@ -120,6 +156,20 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
     if (l.src.kind !== 'customer') {
       set({ money, listings })
       s.toast(`💸 ${how}Đã bán ${l.title} cho ${buyer}: +${amount}k`, 'good')
+      // đồ khách gửi của đơn đã nhận: khách lướt chợ thấy món của mình (STEAL_OK thoát) → huỷ kèo
+      const src = l.src
+      if (src.kind === 'job' && src.provided && Math.random() >= STEAL_OK) {
+        const cancel = soldCancel(get(), src.orderId)
+        if (cancel) {
+          const order = cancel.jobs!.find((j) => j.order.id === src.orderId)!.order
+          set(cancel)
+          s.addReviews([soldReview(order, s.day, -CANCEL_REP)])
+          s.notify(
+            '🚨 Khách huỷ kèo',
+            `${order.customer} phát hiện bạn bán ${l.title} (đồ khách gửi) cho ${buyer}: huỷ đơn, −${CANCEL_REP} uy tín`,
+          )
+        }
+      }
       // hàng lỗi bán đi: người mua nhận hàng thấy lỗi, tố mô tả sai sự thật
       if (sourceFlaw(l.src) && Math.random() < FLAW_CAUGHT)
         get().banMarket(
@@ -156,6 +206,8 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
       if (s.isMarketBanned()) return s.toast('Bạn đang bị ban khỏi chợ', 'bad')
       const bid = opts.bidStep !== undefined
       if (bid ? price < 0 : price <= 0) return s.toast('Nhập giá bán trước đã', 'bad')
+      if (bid && opts.bin && opts.bin <= price)
+        return s.toast('Giá BIN phải cao hơn giá khởi điểm (hoặc để 0 = không đặt)', 'bad')
       let patch: Partial<GameState>
       switch (src.kind) {
         case 'item':
@@ -224,6 +276,7 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
                 step: opts.bidStep!,
                 endsAt: Date.now() + BID_MS,
                 cap: bidCap(src, opts.bidStep!, certOf(s), tags),
+                ...(opts.bin ? { bin: opts.bin } : {}),
               },
             }
           : {}),
@@ -267,37 +320,72 @@ export const createSellSlice: StateCreator<GameState, [], [], SellSlice> = (set,
     bidVisit: () => {
       const s = get()
       let changed = false
+      const binned: string[] = []
       const listings = s.listings.map((l) => {
-        // ~1 lượt ghé mỗi 3 giây mỗi bài
-        if (!l.bid || Math.random() > 0.35) return l
+        // ~1 lượt ghé mỗi 3 giây mỗi bài (bài đã hết giờ thì thôi)
+        if (!l.bid || l.bid.ended || Math.random() > 0.35) return l
         const t = bidTurn(l)
         if (!t) return l
         changed = true
+        // có người BIN: dừng giờ + dừng bình luận, chờ shop chốt (như hết giờ)
+        if (t.bin) {
+          binned.push(`${l.title}: ${t.top!.name} BIN ${t.top!.amount}k`)
+          return {
+            ...l,
+            log: [...l.log, t.line],
+            bid: { ...l.bid, top: t.top, ended: true, binned: true, endsAt: Date.now() },
+          }
+        }
         return { ...l, log: [...l.log, t.line], bid: t.top ? { ...l.bid, top: t.top } : l.bid }
       })
       if (changed) set({ listings })
+      for (const b of binned) s.toast(`🔨 ${b} · vào Bài của tôi chốt bán`, 'good')
     },
     settleBids: () => {
       const now = Date.now()
       for (const l of get().listings) {
         const b = l.bid
-        if (!b || now < b.endsAt) continue
+        if (!b || b.ended || now < b.endsAt) continue
         // không mở tab lúc bid chạy: người mua vẫn bid ngầm tới trần
         let top = b.top
         if (!top && b.cap >= b.start) {
           const steps = Math.floor((b.cap - b.start) / b.step)
-          top = {
-            name: randomBuyer(),
-            amount: b.start + b.step * Math.floor(Math.random() * (steps + 1)),
-          }
+          const amount = b.start + b.step * Math.floor(Math.random() * (steps + 1))
+          // bid ngầm chạm giá BIN thì người đó BIN
+          top = { name: randomBuyer(), amount: b.bin && amount >= b.bin ? b.bin : amount }
         }
-        if (top) completeSale(l, top.name, top.amount, '🔨 Hết giờ fast bid! ')
-        else {
+        if (top) {
+          const s = get()
+          set({
+            listings: s.listings.map((x) =>
+              x.id === l.id ? { ...x, bid: { ...b, top, ended: true } } : x,
+            ),
+          })
+          s.toast(
+            `🔨 Hết giờ fast bid ${l.title}: ${top.name} thắng ${top.amount}k · vào Bài của tôi chốt bán`,
+            'good',
+          )
+        } else {
           const s = get()
           set({ ...restore(s, l.src), listings: s.listings.filter((x) => x.id !== l.id) })
           s.toast(`🔨 Fast bid ${l.title} không ai trả, món về lại chỗ cũ`, 'info')
         }
       }
+    },
+    closeBid: (id) => {
+      const l = get().listings.find((x) => x.id === id)
+      if (!l?.bid?.ended || !l.bid.top) return
+      completeSale(l, l.bid.top.name, l.bid.top.amount, '🔨 Chốt fast bid! ')
+    },
+    bailBid: (id) => {
+      const s = get()
+      const l = s.listings.find((x) => x.id === id)
+      const top = l?.bid?.ended && l.bid.top
+      if (!l || !top) return
+      set({ ...restore(s, l.src), listings: s.listings.filter((x) => x !== l) })
+      get().banMarket(
+        `Bùng fast bid ${l.title}: ${top.name} thắng ${top.amount}k mà shop không bán`,
+      )
     },
     sellListing: (id, lineIdx) => {
       const s = get()

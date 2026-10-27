@@ -61,6 +61,7 @@ const SAVED_KEYS = [
   'unlists',
   'rejected',
   'acceptedToday',
+  'dayStart',
   'worked',
   'offers',
   'jobs',

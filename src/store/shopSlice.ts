@@ -1,3 +1,4 @@
+import { isSaleDay } from '@/data/sale'
 import type { StateCreator } from 'zustand'
 import { groupPosts, randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
@@ -88,6 +89,8 @@ export interface ShopSlice {
   rejected: Order[]
   /** số đơn đã nhận hôm nay (qua ngày phải nhận ít nhất 1 đơn) */
   acceptedToday: number
+  /** tiền / uy tín lúc bắt đầu ngày (popup tổng kết ngày so chênh lệch); null = bản lưu cũ chưa có */
+  dayStart: { money: number; rep: number } | null
   /** id đơn đã làm hôm nay (mua đồ / thao tác build); đơn đã nhận mà không làm thì qua ngày khách report, đền tiền */
   worked: string[]
   /** chuyển sang làm 1 đơn đã nhận (đơn đang làm dở được cất lại nguyên trạng) */
@@ -144,7 +147,9 @@ export const emptyInventory = (): Inventory => ({
 })
 const KIT_PARTS = ['case', 'pcb', 'plate', 'stab'] as const
 /** trễ hạn quá số ngày này thì khách huỷ đơn */
-const CANCEL_AFTER = 3
+export const CANCEL_AFTER = 3
+/** uy tín bị trừ khi khách huỷ đơn (trễ hạn quá lâu / phát hiện shop bán đồ khách gửi) */
+export const CANCEL_REP = 3
 /** nhận đơn mà cả ngày không làm: đền khách phần này của tiền công */
 export const NO_WORK_FINE = 0.2
 
@@ -179,7 +184,7 @@ const firstMount = (mounts: string[], inv: Inventory, want?: string | null) =>
   mounts[0]
 
 /** Cất đơn đang làm (nếu có) thành 1 job */
-const stashActive = (s: GameState): Job[] =>
+export const stashActive = (s: GameState): Job[] =>
   s.order && !s.result
     ? [
         ...s.jobs,
@@ -241,6 +246,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   packed: [],
   rejected: [],
   acceptedToday: 0,
+  dayStart: null,
   worked: [],
   lubePick: { switch: 'g0', housing: 'g2', wire: 'bdz', spring: 'gpl105' },
   solderPick: 'solder6337',
@@ -291,6 +297,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const s = get()
     if (s.stabAnim || s.lubeAnim || s.order?.id === id) return
     if (s.result) return s.toast('Bấm "Kết thúc ngày" trước rồi làm đơn tiếp nhé', 'bad')
+    if (s.jobs.find((j) => j.order.id === id)?.order.cancel)
+      return s.toast('Khách đã huỷ kèo đơn này rồi', 'bad')
     const jobs = stashActive(s)
     const job = jobs.find((j) => j.order.id === id)
     if (!job) return
@@ -349,13 +357,17 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       )
     }
     const day = s.day + 1
-    const cancelled = s.jobs.filter((j) => day - (j.order.dueDay ?? day) > CANCEL_AFTER)
-    const rep = s.rep + repGain - cancelled.length * 3
+    // khách huỷ kèo vì bị bán đồ (đã trừ uy tín lúc phát hiện): hết ngày thì đơn mất, đồ shop mua cất kho chung
+    const sold = s.jobs.filter((j) => j.order.cancel)
+    const cancelled = s.jobs.filter(
+      (j) => !j.order.cancel && day - (j.order.dueDay ?? day) > CANCEL_AFTER,
+    )
+    const rep = s.rep + repGain - cancelled.length * CANCEL_REP
     // đơn đã nhận mà cả ngày không đụng tới (không mua đồ, không build): khách report nhận không làm,
     // shop đền NO_WORK_FINE tiền công của đơn
     const idleJobs = [...(s.order && !s.result ? [s.order] : []), ...s.jobs.map((j) => j.order)]
       .filter((o) => !s.worked.includes(o.id))
-      .filter((o) => !cancelled.some((j) => j.order.id === o.id))
+      .filter((o) => !o.cancel && !cancelled.some((j) => j.order.id === o.id))
     const fines = idleJobs.map((o) => ({ o, fine: Math.round((o.labor * NO_WORK_FINE) / 10) * 10 }))
     money -= fines.reduce((a, f) => a + f.fine, 0)
     set({
@@ -363,7 +375,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       offers: randomOffers(rep),
       // chợ Hội Phím Cơ qua ngày mới: bỏ bài cũ, đăng đợt hàng mới cho từng đơn đang làm / đang chờ
       jobs: s.jobs
-        .filter((j) => !cancelled.includes(j))
+        .filter((j) => !cancelled.includes(j) && !sold.includes(j))
         .map((j) => ({ ...j, session: { ...j.session, posts: groupPosts(j.order, day) } })),
       // đơn đang làm dở (chưa đóng gói) vẫn giữ để làm tiếp ngày mai
       order: s.result ? null : s.order,
@@ -372,7 +384,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       packed: [],
       money,
       // khách huỷ: switch / stab đã mua cho đơn đó cất vào đồ dư
-      spare: cancelled.reduce(
+      spare: [...cancelled, ...sold].reduce(
         (sp, j) => stashAll(sp, j.session.inventory, j.session.provided),
         s.spare,
       ),
@@ -382,6 +394,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       rep,
       rejected: [],
       acceptedToday: 0,
+      dayStart: { money, rep },
       worked: [],
       screen: 'pc',
     })
@@ -391,11 +404,12 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
         `${o.customer}: shop nhận đơn mà cả ngày không làm gì. Đền khách ${fine}k (${Math.round(NO_WORK_FINE * 100)}% tiền công)`,
       )
     for (const j of cancelled)
-      s.toast(`😡 ${j.order.customer} huỷ đơn vì trễ hạn quá lâu (−3 uy tín)`, 'bad')
+      s.toast(`😡 ${j.order.customer} huỷ đơn vì trễ hạn quá lâu (−${CANCEL_REP} uy tín)`, 'bad')
     if (get().order || get().jobs.length) s.toast('🛒 Hội Phím Cơ có đợt hàng pass mới hôm nay')
+    if (isSaleDay(day)) s.toast('🔥 Hôm nay Shopii sale linh kiện, giảm 5–30%!', 'good')
     s.addReviews([
       ...unsent.map((p) => shipReview(p.order, p.result, s.day)),
-      ...cancelled.map((j) => cancelReview(j.order, s.day, -3)),
+      ...cancelled.map((j) => cancelReview(j.order, s.day, -CANCEL_REP)),
     ])
   },
 

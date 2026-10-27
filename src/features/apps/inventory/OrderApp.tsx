@@ -33,7 +33,12 @@ import {
 } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
-import { OrderCard, useOrderEntries, type OrderEntry } from '@/components/game/OrderCard'
+import {
+  OrderCard,
+  OrderListFrame,
+  useOrderEntries,
+  type OrderEntry,
+} from '@/components/game/OrderCard'
 import { buildContext } from '@/data/steps'
 import type { BuildState, Inventory, PartCategory } from '@/types'
 import { getLayout } from '@/data/layouts'
@@ -247,26 +252,28 @@ export function OrderApp() {
   const ready = !!s.order && checkInventory(s.inventory, s.order, 0).every((x) => x.ok)
   return (
     // chữ 14px đồng bộ HUD bàn build (chữ nhỏ 12 → 14px)
-    <div className="flex flex-col gap-1.5 text-sm [&_.text-xs]:text-sm">
-      {list.map((c) => (
-        <OrderCard
-          key={c.order.id}
-          c={c}
-          defaultOpen={c.kind === 'active'}
-          detail={<OrderDetail c={c} />}
-          action={
-            c.kind === 'active' ? (
-              <Button tone="green" size="sm" disabled={!ready && !s.build} onClick={s.startBuild}>
-                {s.build ? 'Làm tiếp' : ready ? 'Ra bàn build' : 'Chưa đủ đồ'}
-              </Button>
-            ) : (
-              <Button tone="blue" size="sm" onClick={() => s.switchJob(c.order.id)}>
-                Đổi sang làm
-              </Button>
-            )
-          }
-        />
-      ))}
+    <div className="text-sm [&_.text-xs]:text-sm">
+      <OrderListFrame>
+        {list.map((c) => (
+          <OrderCard
+            key={c.order.id}
+            c={c}
+            defaultOpen={c.kind === 'active'}
+            detail={<OrderDetail c={c} />}
+            action={
+              c.kind === 'active' ? (
+                <Button tone="green" size="sm" disabled={!ready && !s.build} onClick={s.startBuild}>
+                  {s.build ? 'Làm tiếp' : ready ? 'Ra bàn build' : 'Chưa đủ đồ'}
+                </Button>
+              ) : (
+                <Button tone="blue" size="sm" onClick={() => s.switchJob(c.order.id)}>
+                  Đổi sang làm
+                </Button>
+              )
+            }
+          />
+        ))}
+      </OrderListFrame>
     </div>
   )
 }

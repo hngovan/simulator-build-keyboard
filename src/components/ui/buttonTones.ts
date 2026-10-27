@@ -6,4 +6,5 @@ export const BUTTON_TONES = {
   red: 'bg-red text-white',
   blue: 'bg-blue text-white',
   orange: 'bg-orange text-white',
+  purple: 'bg-purple text-white',
 } as const

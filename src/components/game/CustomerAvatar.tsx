@@ -1,13 +1,18 @@
-const AVATAR_COUNT = 10
+import { avatarIndex, avatarSrc } from '@/data/avatars'
 
-function avatarIndex(customer: string) {
+/** Avatar ngẫu nhiên nhưng cố định theo tên (người chơi, người bán ở chợ...) */
+export function NameAvatar({ name, className = 'size-11' }: { name: string; className?: string }) {
   return (
-    [...customer].reduce((value, letter) => (value * 31 + letter.charCodeAt(0)) >>> 0, 0) %
-    AVATAR_COUNT
+    <img
+      src={avatarSrc(avatarIndex(name))}
+      alt={`Avatar của ${name}`}
+      className={`shrink-0 rounded-full bg-panel-2 object-cover ${className}`}
+      loading="lazy"
+    />
   )
 }
 
-/** Local, deterministic illustrated portrait; old saves with emoji map by customer name. */
+/** Avatar khách: theo số trong `order.avatar` (save cũ `customer-NN` / emoji thì theo tên khách) */
 export function CustomerAvatar({
   avatar,
   customer,
@@ -17,13 +22,10 @@ export function CustomerAvatar({
   customer: string
   className?: string
 }) {
-  const index = avatar?.startsWith('/avatars/customers/')
-    ? Number(avatar.match(/customer-(\d+)/)?.[1] ?? 1) - 1
-    : avatarIndex(customer)
-  const src = `/avatars/customers/customer-${String((index % AVATAR_COUNT) + 1).padStart(2, '0')}.svg`
+  const num = avatar?.startsWith('/avatars/') ? Number(avatar.match(/-(\d+)\.svg$/)?.[1]) : NaN
   return (
     <img
-      src={src}
+      src={num > 0 ? avatarSrc(num - 1) : avatarSrc(avatarIndex(customer))}
       alt={`Avatar của ${customer}`}
       className={`shrink-0 rounded-full bg-panel-2 object-cover ${className}`}
       loading="lazy"

@@ -106,6 +106,8 @@ interface Session {
   /** số đơn nhận hôm nay + id đơn đã làm hôm nay (luật qua ngày); bản lưu cũ không có */
   acceptedToday?: number
   worked?: string[]
+  /** tiền / uy tín đầu ngày (tổng kết ngày); bản lưu cũ không có */
+  dayStart?: { money: number; rep: number } | null
 }
 
 /** 1 đơn đã đóng gói: kết quả chấm sẵn, tiền / uy tín cộng khi gửi cho khách (hoặc kết thúc ngày) */

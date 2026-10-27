@@ -174,6 +174,7 @@ function snapshot(s: GameState): SaveData {
       supplyUsed,
       rejected: s.rejected,
       acceptedToday: s.acceptedToday,
+      dayStart: s.dayStart,
       worked: s.worked,
     },
   }
@@ -231,6 +232,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       reviewPops: [],
       rejected: [],
       acceptedToday: 0,
+      dayStart: { money: START.money, rep: START.rep },
       worked: [],
       name: name.trim() || 'Thợ phím',
       lastSolderPurchase: null,
@@ -278,6 +280,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       rejected: session?.rejected ?? [],
       // bản lưu cũ: coi như hôm nay đã làm các đơn đang có (không bị phạt oan)
       acceptedToday: session?.acceptedToday ?? 0,
+      // bản lưu cũ: lấy tiền / uy tín lúc tải làm mốc đầu ngày
+      dayStart: session?.dayStart ?? { money: profile.money, rep: profile.rep },
       worked:
         session?.worked ??
         [rest.order, ...(jobs ?? []).map((j) => j.order)].flatMap((o) => (o ? [o.id] : [])),

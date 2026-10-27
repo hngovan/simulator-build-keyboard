@@ -66,7 +66,7 @@ Model switch MX (`models/switch.glb`) và stabilizer (`models/stab.glb`) chuyể
 
 ## Customer avatars
 
-- 10 locally stored DiceBear Notionists Neutral SVG avatars, generated with unique seeds; style artwork by DiceBear, CC0 1.0. [Style license details](https://www.dicebear.com/licenses/).
+- 24 locally stored DiceBear Moods SVG avatars (`public/avatars/moods/`, preset Bare, slow blink animation, `bun run fetch:avatars`) for customers, leaderboard players and market sellers; style by DiceBear, CC0 1.0. [Style license details](https://www.dicebear.com/licenses/).
 
 ## Chat emotes
 

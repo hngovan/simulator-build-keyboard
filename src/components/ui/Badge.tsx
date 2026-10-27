@@ -22,6 +22,7 @@ const BADGE_TONES = {
   blue: 'bg-blue/15 text-[#7fb0ff] ring-blue/35',
   yellow: 'bg-yellow/15 text-yellow ring-yellow/35',
   orange: 'bg-orange/15 text-orange ring-orange/35',
+  purple: 'bg-purple/15 text-[#b3a1ff] ring-purple/35',
   red: 'bg-red/15 text-[#ff8a8a] ring-red/35',
   money: 'bg-green/15 text-green ring-green/35',
   rep: 'bg-[#d9a441]/15 text-[#f0c060] ring-[#d9a441]/35',

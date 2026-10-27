@@ -4,11 +4,11 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { TOOLS } from '@/data/parts'
 import type { ScrewBit } from '@/types'
+import { SPIN_MS } from '@/data/steps'
 
 // ---------- Dụng cụ cầm tay (đầu mũi ở gốc toạ độ, thân hướng lên +y) ----------
 
-/** thời gian 1 lần vặn (ms): tay vặn 1 vòng cổ tay, điện quay liền 1 hơi tới khi vít ăn hết ren */
-export const SPIN_MS = { manual: 550, electric: 700 }
+export { SPIN_MS }
 /** góc ốc xoay cho trọn 1 con vít: tay 3 nấc × 2.2, điện quay nhiều vòng trong 1 hơi */
 export const SCREW_SPIN = { manual: 6.6, electric: 28 }
 /** tua vít tay xoay đúng bằng góc ốc mỗi nấc (không trượt so với ốc) */

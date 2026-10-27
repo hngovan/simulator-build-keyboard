@@ -1,5 +1,12 @@
 import type { StateCreator } from 'zustand'
-import { SCREW_STEPS, STEP_INFO, isOptionalStep, stabUnits, stepProgress } from '@/data/steps'
+import {
+  SCREW_STEPS,
+  SPIN_MS,
+  STEP_INFO,
+  isOptionalStep,
+  stabUnits,
+  stepProgress,
+} from '@/data/steps'
 import { SCREW_FULL, SWITCHES, TOOLS, TRAY_COLORS, partSpent, screwLevel } from '@/data/parts'
 import {
   JOINTS_PER_KEY,
@@ -367,7 +374,19 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       commit(snap)
       get().patchBuild({ ring: s.oringPick })
     },
-    dropInCase: once('caseIn', { inCase: true }),
+    // case 1 mảnh: thả board vào case xong thì sang luôn bước kế (bắt vít tray...): mũi tên + tua vít hiện ngay,
+    // khỏi bấm "Bước tiếp theo"; 1 thao tác = 1 lần hoàn tác (về lại lúc chưa thả). Case 2 mảnh vẫn chờ bấm rồi mới đậy case
+    dropInCase: () => {
+      const s = at('caseIn')
+      if (!s || s.build.inCase) return
+      commit(snapshot())
+      const auto = s.ctx.caseDef.pieces !== 2
+      set({
+        build: { ...s.build, inCase: true, stepIdx: s.build.stepIdx + (auto ? 1 : 0) },
+        viewFlip: false,
+        testIdleFrom: performance.now(),
+      })
+    },
     // đậy case chỉ 1 thao tác: đậy xong tự sang bước vặn vít (không bắt bấm "Bước tiếp theo")
     closeCase: () => {
       once('caseClose', { closed: true })()
@@ -390,8 +409,23 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (cur >= SCREW_FULL) return
       commit(snapshot())
       // tua vít tay mỗi click 1 nấc, tua vít điện 1 click là đủ
-      const step1 = SCREW_FULL / TOOLS.screw[screwLevel(s.tools, s.screwPick)].clicks!
+      const level = screwLevel(s.tools, s.screwPick)
+      const step1 = SCREW_FULL / TOOLS.screw[level].clicks!
       s.patchBuild({ screws: { ...s.build.screws, [id]: Math.min(SCREW_FULL, cur + step1) } })
+      // bắt đủ vít (bước vặn vào) thì tự sang bước kế, chờ tua vít quay xong con cuối (không cắt hoạt cảnh / lật board giữa chừng)
+      const after = get()
+      if (SCREW_STEPS[step] !== 'tighten' || !after.build) return
+      const [done, total] = stepProgress(step, after.build, s.ctx, SCREW_FULL)
+      if (done < total) return
+      const idx = after.build.stepIdx
+      setTimeout(
+        () => {
+          const g = get()
+          // hoàn tác / đổi bước trong lúc chờ thì thôi
+          if (g.build?.stepIdx === idx && g.ctx?.steps[idx] === step) g.nextStep()
+        },
+        (level ? SPIN_MS.electric : SPIN_MS.manual) + 150,
+      )
     },
     installStab: (id) => {
       const s = at('stab')
@@ -427,7 +461,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
             return fail('Phải Holee mod (dán băng vào lỗ wire trên slider) trước khi lắp slider')
           // 1 miếng Urgo cắt đôi dán được 2 stab
           if (!s.useSupply('urgo', Math.ceil(n / 2))) return false
-          if (rule.reason) s.toast(`⚠️ ${rule.reason}`, 'bad')
+          // chỉ cảnh báo khi dán thừa (stab khít không cần Holee); stab cần dán thì `reason` chỉ là câu giải thích, không báo
+          if (!rule.needed && rule.reason) s.toast(`⚠️ ${rule.reason}`, 'bad')
           break
         case 'assembled':
           if (needed('clip') && !mods.clip) return fail('Clip chân stem trước khi lắp slider')
@@ -750,7 +785,14 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const snap = snapshot()
       if (!s.useSupply(s.feetPick, 1)) return
       commit(snap)
-      get().patchBuild({ feet: { ...s.build.feet, [i]: s.feetPick } })
+      const feet = { ...s.build.feet, [i]: s.feetPick }
+      // dán xong feet cuối thì sang luôn bước kế (case tự lật lại), khỏi bấm "Bước tiếp theo"
+      const all = Object.keys(feet).length >= s.ctx.feet.length
+      const build = get().build!
+      set({
+        build: { ...build, feet, stepIdx: build.stepIdx + (all ? 1 : 0) },
+        ...(all ? { viewFlip: false, testIdleFrom: performance.now() } : {}),
+      })
     },
     press: (id, down) => {
       const s = at('test')

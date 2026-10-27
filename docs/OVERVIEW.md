@@ -103,9 +103,11 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/com
 1. **Title** (`features/title/TitleScreen.tsx`): chơi mới thì nhập tên thợ; nếu đã có bản lưu thì
    có nút tiếp tục kèm ngày và số tiền.
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar. Chơi mới mở sẵn
-   Mezzenger. Icon **Bàn build** đưa sang cảnh 3D (`screen = 'bench'`).
-3. **Mezzenger**: hội thoại đơn mới, đơn chờ gửi và đơn đã gửi. Có thể xem chi tiết yêu cầu, nhận
-   đơn, từ chối, gửi hàng, xem điểm chấm và bấm **Kết thúc ngày**.
+   Mezzenger. Icon **Bàn build** đưa sang cảnh 3D (`screen = 'bench'`). Icon **Kết thúc ngày** mở popup
+   tổng kết ngày (tiền / uy tín so đầu ngày, đơn nhận / từ chối / xong, việc sẽ xảy ra khi qua ngày), chọn
+   kết thúc hoặc tiếp tục làm (`EndDayDialog`).
+3. **Mezzenger**: hội thoại đơn mới, đơn chờ gửi và đơn đã gửi. Có thể xem chi tiết yêu cầu (tin ngắn + bảng
+   tóm tắt), nhận đơn, từ chối, gửi hàng, xem điểm chấm.
 4. **Shopii**: mua case, PCB, plate, stab, switch, keycap, vật tư, dụng cụ, chứng chỉ thợ và sách phép.
 5. **Kho**: xem linh kiện của đơn đang làm, dụng cụ (kèm độ bền còn lại) và vật tư; kéo thả đổi chỗ.
    Hiện cả đồ của đơn đang chờ (ghi tên khách) và **kho chung** (mua dư, bị thay, thừa sau khi giao); nhận / chuyển đơn

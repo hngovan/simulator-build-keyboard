@@ -65,7 +65,7 @@ export const APPS: Record<AppId, AppDef> = {
     title: 'Bảng xếp hạng',
     icon: '/icons/apps/trophy.svg',
     color: '#c0392b',
-    width: 560,
+    width: 534,
     Component: LeaderboardApp,
   },
   settings: {
@@ -84,4 +84,10 @@ export const BENCH_ICON: Omit<AppDef, 'Component' | 'width'> = {
   title: 'Bàn build',
   icon: '/icons/apps/keyboard.svg',
   color: '#2e8b57',
+}
+/** icon "Kết thúc ngày": mở popup tổng kết ngày (`EndDayDialog`), không phải cửa sổ app */
+export const END_DAY_ICON: Omit<AppDef, 'Component' | 'width'> = {
+  title: 'Kết thúc ngày',
+  icon: '/icons/apps/moon.svg',
+  color: '#34407a',
 }

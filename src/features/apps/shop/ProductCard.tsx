@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Badge, Button, OptionChip, OptionSelect, QtyInput, SoundBars } from '@/components/ui'
+import { Badge, Button, OptionChip, QtyInput, SoundBars, Tooltip } from '@/components/ui'
 import { stabStock } from '@/data/parts'
 import { fmt } from '@/lib/format'
 import type { Product, ProductOption, StabItem, SupplyItem, ToolItem } from '@/types'
+import { OptionFilter } from './OptionFilter'
 import { ProductImage } from './ProductImage'
 import { useGame } from '@/store'
 
@@ -57,7 +58,7 @@ export function ProductCard({ product, onBuy }: Props) {
   const equipped = !!solderItem && tools.solder === solderItem.level
   const canEquip = !!solderItem && owned[solderItem.level] !== undefined
   return (
-    <div className="flex flex-col gap-1.5 rounded-[14px] border-2 border-transparent bg-panel-2 p-2.5 hover:border-orange">
+    <div className="flex flex-col gap-1.5 rounded-xl bg-panel-2 p-2.5 hover:ring-2 hover:ring-yellow hover:ring-inset">
       <ProductImage
         product={product}
         swatch={opt.swatch}
@@ -95,57 +96,55 @@ export function ProductCard({ product, onBuy }: Props) {
         }
       />
       <div className="flex items-center gap-1.5">
-        <div className="min-w-0 flex-1 truncate font-extrabold" title={product.name}>
+        <div
+          className="min-w-0 flex-1 truncate font-head text-base font-extrabold"
+          title={product.name}
+        >
           {product.name}
         </div>
-        <div className="group/info relative shrink-0">
+        {product.sale && (
+          <Badge solid tone="red" className="ml-0 shrink-0">
+            −{product.sale}%
+          </Badge>
+        )}
+        {/* mô tả: tooltip nhiều dòng tự lật khi sát mép (không bị khung cuộn cắt) */}
+        <Tooltip wide content={opt.hint ?? product.desc}>
           <button
-            className="grid size-5 place-items-center rounded-full bg-white/10 text-xs font-extrabold text-muted hover:bg-orange hover:text-black focus:bg-orange focus:text-black"
+            type="button"
+            className="grid size-5 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-extrabold text-muted hover:bg-orange hover:text-black focus:bg-orange focus:text-black"
             aria-label={`Xem mô tả ${product.name}`}
-            aria-describedby={`desc-${product.id}`}
-            title={`Xem mô tả ${product.name}`}
           >
             i
           </button>
-          <div
-            id={`desc-${product.id}`}
-            role="tooltip"
-            className="pointer-events-none absolute top-full right-0 z-20 mt-1 w-52 rounded-lg border border-white/15 bg-[#101522] px-2.5 py-2 text-xs leading-relaxed text-white opacity-0 shadow-xl transition-opacity group-focus-within/info:opacity-100 group-hover/info:opacity-100"
-          >
-            {opt.hint ?? product.desc}
-          </div>
-        </div>
+        </Tooltip>
       </div>
       {product.sound && <SoundBars {...product.sound} />}
-      {/* mọi sản phẩm chọn option bằng ô đổ xuống cho gọn (kèm giá từng option); có nhóm thì chọn nhóm trước */}
-      {groups.length > 1 && (
-        <OptionSelect
-          value={groups.indexOf(opt.group ?? '')}
-          onChange={pickGroup}
-          options={groups.map((g) => ({
-            label: g,
-            note: fmt(product.options.find((o) => o.group === g)!.price),
-          }))}
+      {/* chọn option kiểu nút lọc (popup chất liệu | màu nằm ngang); chỉ 1 option thì không cần */}
+      {product.options.length > 1 && (
+        <OptionFilter
+          options={product.options}
+          groups={groups}
+          shown={shown}
+          sel={sel}
+          onGroup={pickGroup}
+          onPick={setSel}
         />
       )}
-      <OptionSelect
-        value={shown.findIndex(([, i]) => i === sel)}
-        onChange={(k) => setSel(shown[k][1])}
-        options={shown.map(([o]) => ({
-          label: o.label,
-          swatch: o.swatch,
-          note: fmt(o.price),
-        }))}
-      />
       {stackable && (
         <div className="flex items-center justify-between text-sm font-bold text-muted">
           Số lượng
           <QtyInput value={qty} onChange={setQty} />
         </div>
       )}
-      <div className="mt-auto flex items-center justify-between">
-        <span className="font-head text-lg font-extrabold text-[#ff8c5a]">
-          {fmt(opt.price * (stackable ? qty : 1))}
+      <div className="mt-auto flex items-center justify-between gap-2">
+        {/* ngày sale: giá gốc gạch ngang + % giảm */}
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
+          <span className="font-head text-xl font-extrabold text-green">
+            {fmt(opt.price * (stackable ? qty : 1))}
+          </span>
+          {opt.was !== undefined && (
+            <s className="text-xs font-bold text-muted">{fmt(opt.was * (stackable ? qty : 1))}</s>
+          )}
         </span>
         <Button
           tone="orange"

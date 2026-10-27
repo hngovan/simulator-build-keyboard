@@ -490,6 +490,49 @@
   `Y.floorTop` (mica: mặt trên 2 tấm đáy, `micaStackPlan`); case CAD (`CadStandoffs`) bắn tia từ mặt dưới PCB xuống model GLB tìm sàn,
   trúng trụ có sẵn sát PCB (< 0,03u) / không trúng thì bỏ. Liền nhóm case dưới (lật theo bước feet). Chụp kiểm plastic60 + eclipse60
   (playwright, scratchpad `pw/tray.mjs`). Chưa làm: vị trí vít tray vẫn sinh theo khe hàng phím, chưa khớp lỗ vít riêng trong CAD.
+- **Khoét lỗ vít tray qua plate + PCB** (2026-10-27, người dùng: "khoét trụ đồng cho case traymount nhưng plate và pcb ko khoét thì
+  làm sao bắt vít từ trên xuống được"): trước đó vít tray nằm lơ lửng trên mặt plate (y 0,03), plate / PCB liền.
+  `steps.ts`: `PLATE_CUT` (lỗ switch 14mm, stab 7 × 13mm, chuyển từ Board.tsx), `TRAY_HOLE` (PCB r 1,1mm vừa thân M2, plate r 2,4mm
+  rộng hơn đầu vít r 1,9mm), `keyCutouts(k)` (lỗ cắt plate theo phím, Board dùng chung), `plateCutoutsFor` (plate universal nếu có, không
+  thì theo phím), `clearOfCutouts`. `buildContext` dò chỗ vít tray: ngoài khối chặn còn phải nằm trên phần plate liền (không chạm lỗ
+  switch / stab); không tìm được thì bỏ vít đó (65%: 5 → 4, Alice 4), nên trụ đồng / lỗ / vít luôn trùng nhau.
+  `plateGeometry` thêm `trayHoles` (lỗ tròn vào mảnh plate chứa tâm), `PcbSurface` thêm `mountHoles` (khoét thật + vòng đồng).
+  Vít tray đặt ở `Y.pcbTop` (đầu ốc tì mặt PCB, lọt trong lỗ plate). Alice tray: bỏ plate CAD (không có lỗ vít) → plate dựng theo phím.
+  Kiểm số: mọi case tray × layout, 0 lỗ chạm lỗ cắt; chụp plastic60 (có / không switch, vít đã vặn), tklTray, aliceAlu (playwright,
+  scratchpad `tray/shot.mjs`). Plate CAD 60 chuẩn (DXF) dò theo plate universal 60 (gộp mọi variant, rộng hơn).
+- Cùng ngày, người dùng: "bị mất luôn cả nét đứt màu vàng mô phỏng vị trí bắt ốc rồi, và ốc bắt vào thì bị biến mất luôn": hạ vít xuống
+  `Y.pcbTop` làm vòng vàng (r 0,15–0,2u, rộng hơn lỗ plate) bị plate che, khung nét đứt + đầu ốc nằm sâu trong lỗ, góc camera chéo bị
+  plate / switch che. Đổi: vít xuyên **cả plate + PCB** vào trụ đồng, đầu ốc tì mặt plate (`y = 0`; plateless: `Y.pcbTop`).
+  `TRAY_HOLE` = { pcb 1,1mm, plate 1,2mm (vừa thân vít), seat 2,4mm (vùng plate liền cho đầu ốc, dùng khi dò vị trí) }.
+  `ScrewSet` trayScrew có thân ren dài `y − Y.pcbBot + 0,12` (xuyên plate + PCB, ăn vào trụ đồng). Chụp lại góc mặc định: khung nét
+  đứt + vòng vàng hiện, ốc vặn xong nằm trên plate giữa các switch. Đầu ốc (Ø 3,8mm) vẫn bị vỏ switch (15,6mm) lấn nhẹ khi nhìn chéo.
+- Cùng ngày, người dùng: "vít bắt vào khay phải nằm ẩn bên trong pcb nha => lỗ traymount trên plate phải to ra để ốc có thể lọt qua"
+  → quay lại đầu ốc chìm tì mặt PCB (`y = Y.pcbTop`), lỗ plate r 2,4mm (> đầu ốc r 1,9mm, dò không chạm lỗ switch / stab), bỏ `seat`.
+  Không để vòng vàng / khung nét đứt bị plate che: `Screw` / `ScrewSet` thêm `mouth` (độ cao miệng lỗ), vít tray `mouth = 0` (mặt
+  plate; plateless = `Y.pcbTop`) → khung nét đứt + vòng vàng lúc chưa bấm nằm trên mặt plate; bấm rồi thì ốc lún dần xuống lỗ.
+  `TRAY_SHAFT` (Screw.tsx) = thân ren xuyên PCB + 0,12u vào trụ đồng.
+- Cùng ngày, người dùng: "ko có vít ở trên khay đựng ốc thì làm sao có vít bắt vào case được": `ScrewTray` trước chỉ đựng ốc case đã
+  tháo (`caseOpen`). Thêm ốc tray mount kèm case chưa bắt (`trayScrew`, chưa bấm lần nào) vào khay (không có khay thì vương trên bàn),
+  bấm lần đầu là lấy ra khỏi khay. Chưa chụp kiểm (người dùng chặn chạy trình duyệt headless).
+- Cùng ngày, người dùng: "ở bước thả board vào case => nếu đã thả vào xong thì hiển thị luôn mũi tên hướng dẫn vàng và tua vít để bắt
+  chứ ko cần phải qua màn tiếp theo... sau khi thả vào là mặc định qua màn tiếp theo" + "đối với case 1 mảnh thôi nha".
+  `dropInCase` (buildSlice): bỏ `once`, tự ghi `inCase` + (case `pieces !== 2`) `stepIdx + 1` trong 1 lần `set` (1 lần hoàn tác về lúc
+  chưa thả), `viewFlip: false`. Case 2 mảnh giữ như cũ (chờ bấm "Bước tiếp theo" rồi đậy case, gợi ý ở BenchHud). Ngoại lệ duy nhất của
+  quy tắc "không tự chuyển bước".
+- Cùng ngày, người dùng (ảnh lỗ plate đen kín): "vặn xong rồi mà ko thấy hình ốc hiển thị": foam Poron PCB (`PcbFoam`) lấp kín khe
+  PCB – plate nhưng chỉ khoét lỗ phím → đầu ốc tray (tì mặt PCB) nằm dưới foam đen. `foamGeometry` thêm `trayHoles` (lỗ tròn r
+  `TRAY_HOLE.plate`, trừ cùng lỗ phím bằng polygon-clipping), Board truyền `trayHoles`. Chưa chụp kiểm.
+- Cùng ngày, người dùng: "ở bước dán feet xong cũng tự động qua step tiếp theo ko cần phải bấm nữa": `placeFoot` dán feet cuối
+  (`feet` đủ `ctx.feet.length`) thì cùng lần `set` tăng `stepIdx` + `viewFlip: false` (case tự lật lại), 1 lần hoàn tác. Mọi loại case.
+- Cùng ngày, người dùng: "bắt vít xong cũng tự động chuyển qua step tiếp theo luôn": `turnScrew` bước vặn vào (`SCREW_STEPS` =
+  tighten: stabScrew / topScrew / trayScrew / caseScrew; tháo vít `caseOpen` giữ bấm tay) đủ vít thì `setTimeout(SPIN_MS + 150)` rồi
+  `nextStep()` (chờ tua vít quay xong con cuối, không cắt hoạt cảnh / lật board giữa chừng; hoàn tác / đổi bước trong lúc chờ thì thôi).
+  `SPIN_MS` chuyển từ `scene/models/HandTools.tsx` sang `data/steps.ts` (store không import scene), HandTools export lại.
+- Cùng ngày, người dùng: "tới bước lắp keycap có vẻ phải tải model lần đầu nên khi lắp thì bị nháy": `NativeCap` gọi `useGLTF`
+  theo profile + hàng (`/models/keycaps/*.glb`, 100–570KB mỗi file) → phím đầu của mỗi hàng treo `<Suspense>` bọc `Workbench`
+  (Bench.tsx) → cả bàn build thành `StepLoading` rồi hiện lại. Sửa: `KeycapPreload` (Keycap.tsx, đặt trong Board) gọi
+  `useGLTF.preload` các model của kit keycap trong kho theo các hàng của layout ngay khi vào bàn build; mỗi `NativeCap` bọc
+  `<Suspense fallback={null}>` riêng (lỡ chưa tải xong thì chỉ phím đó hiện trễ). Chưa chụp kiểm.
 - **Khung chặn case mica Alice** (2026-10-27, người dùng: "case mica alice chưa có block... tham khảo case blossom"): `keyRegions`
   (layouts.ts) với phím xoay trước trả rỗng → tấm mica trên cùng khoét trống cả ruột. Thêm `rotatedRegions`: hợp các ô phím xoay
   (w × h theo `rot`, nới 0,01u cho ô sát nhau dính liền) bằng `polygon-clipping` (chuyển từ devDependencies sang dependencies),

@@ -103,12 +103,13 @@ export interface KeyboardSpec {
   capOf?: (k: Key) => string | undefined
 }
 
-/** Bàn phím của đơn: case / keycap theo đơn, phím chức năng phối màu nhấn cố định theo mã đơn */
+/**
+ * Bàn phím của đơn: case / keycap theo đơn. Keycap 1 màu cả bộ (phím chức năng cùng màu chữ cái) cho khớp
+ * bộ keycap bán ở Shopii + bàn build; trước đây bốc màu nhấn ngẫu nhiên cho mod → ảnh đơn khác lúc build
+ */
 export function orderSpec(order: Order): KeyboardSpec {
-  const { caseId, color, keycapKit, rnd } = orderLook(order)
-  const main = KEYCAP_COLORS[order.keycapColor]
-  const others = Object.values(KEYCAP_COLORS).filter((c) => c !== main)
-  const accent = rnd() < 0.5 ? main.legend : others[Math.floor(rnd() * others.length)].hex
+  const { caseId, color, keycapKit } = orderLook(order)
+  const accent = KEYCAP_COLORS[order.keycapColor].hex
   return {
     layout: order.layout,
     variant: order.variant,
@@ -351,5 +352,6 @@ export function useCaseThumb(caseId: string | undefined, color: string | undefin
       alive = false
     }
   }, [key, caseId, color])
-  return shot?.key === key ? shot.src : null
+  // undefined = đang chụp, null = không chụp được
+  return !key ? null : shot?.key === key ? shot.src : undefined
 }

@@ -1,10 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { ChevronDown, Clock } from 'lucide-react'
+import { ChevronDown, CircleAlert, ClipboardList, Clock } from 'lucide-react'
 import { useGame } from '@/store'
-import { CATS, SCREW_FULL, checkInventory } from '@/data/parts'
+import { SCREW_FULL, checkInventory, partSpent } from '@/data/parts'
 import { buildContext, buildPercent } from '@/data/steps'
-import { LAYOUTS } from '@/data/layouts'
-import { Badge, ProgressBar, StepDot, progressTone } from '@/components/ui'
+import { Badge, ProgressBar, progressTone } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
 import type { Order } from '@/types'
 import type { JobSession } from '@/store/persistence'
@@ -18,8 +17,15 @@ export interface OrderEntry {
   session?: Pick<JobSession, 'inventory' | 'build' | 'mount' | 'provided' | 'spent'>
 }
 
-const KIND_TEXT = { active: 'Đang làm', job: 'Đã nhận' } as const
-const KIND_TONE = { active: 'green', job: 'blue' } as const
+/**
+ * Tiền dư linh kiện của đơn = budget khách trả − tiền đã mua linh kiện (`partSpent`, như "Đã chi" ở Chi tiết đơn).
+ * Chỉ biết khi đã đủ linh kiện (hoặc đã vào build); âm = mua lố budget, shop chịu
+ */
+function leftover(c: OrderEntry, missing: { ok: boolean }[] | null) {
+  if (c.order.cancel || !c.session || (!c.session.build && (!missing || missing.length)))
+    return null
+  return c.order.budget - partSpent(c.session.inventory, c.order, c.session.spent)
+}
 
 /** Badge thời gian: đơn mới = số ngày làm; đã nhận = còn bao nhiêu ngày tới hạn / trễ */
 function TimeBadge({ order, day }: { order: Order; day: number }) {
@@ -65,8 +71,45 @@ function useProgress(c: OrderEntry) {
 }
 
 /**
- * Card 1 đơn: thông tin, % tiến độ, linh kiện còn thiếu, nút hành động (`action`);
- * bấm vào card để mở `detail` bên dưới, bấm lần nữa để đóng
+ * Khung danh sách đơn cùng kiểu bảng xếp hạng: đầu (icon + tiêu đề + dòng phụ + ⓘ) → khung nền tối có hàng tiêu đề cột
+ * → các dòng đơn (`OrderCard`). Dùng ở bàn build (`OrderPicker`) + app Danh sách đơn
+ */
+export function OrderListFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-0 flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-yellow/15 text-yellow">
+          <ClipboardList className="size-9" strokeWidth={2.2} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-head text-2xl leading-tight font-extrabold text-yellow">
+            Danh sách đơn
+          </div>
+          <div className="truncate text-sm text-muted">Đơn đang làm và đơn đã nhận</div>
+        </div>
+        <span
+          className="shrink-0 self-start text-muted hover:text-ink"
+          title="Bấm vào đơn để xem chi tiết · ở bàn build bấm phím M để mở / đóng"
+        >
+          <CircleAlert className="size-5" />
+        </span>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col rounded-2xl bg-black/15 p-1.5">
+        <div className="flex items-center gap-3 px-3 pt-1 pb-2 text-[13px] font-bold text-muted">
+          <div className="flex-1">Khách</div>
+          <div title="Tiền công + tiền dư linh kiện (budget − đã chi, hiện khi đủ linh kiện)">
+            Tiền công + dư
+          </div>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Dòng 1 đơn (kiểu dòng bảng xếp hạng): avatar, tên + hạn, tiến độ / linh kiện thiếu, tiền công bên phải, nút hành động
+ * (`action`); đơn đang làm viền vàng. Bấm vào dòng để mở `detail` bên dưới, bấm lần nữa để đóng
  */
 export function OrderCard({
   c,
@@ -83,17 +126,21 @@ export function OrderCard({
   const [open, setOpen] = useState(defaultOpen)
   const { order, kind, session } = c
   const missing = session ? checkInventory(session.inventory, order).filter((x) => !x.ok) : null
-  const late = order.dueDay !== undefined && day > order.dueDay
   const pct = useProgress(c)
+  const active = kind === 'active'
+  const left = leftover(c, missing)
+  // đủ linh kiện: đã vào build (startBuild đã kiểm kho) hoặc kho đơn không thiếu món nào
+  const ready = !!session?.build || (!!missing && !missing.length)
+  const cancelled = order.cancel === 'sold'
   return (
     <div
-      // viền vẽ bên trong card (border) cho khỏi bị khung cuộn cắt; đơn đang làm nền + viền xanh
       className={cn(
-        'rounded-xl border-2 px-3 py-2',
-        kind === 'active' ? 'border-green/70 bg-green/15' : 'border-transparent bg-panel-2',
+        'rounded-xl px-3 py-2',
+        active ? 'bg-[#3a3418] ring-2 ring-yellow ring-inset' : 'bg-panel-2',
+        cancelled && 'opacity-70',
       )}
     >
-      {/* bấm phần đầu card để mở / đóng chi tiết */}
+      {/* bấm phần đầu dòng để mở / đóng chi tiết */}
       <div
         role="button"
         tabIndex={0}
@@ -103,69 +150,59 @@ export function OrderCard({
         onClick={() => setOpen(!open)}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpen(!open)}
       >
-        <CustomerAvatar avatar={order.avatar} customer={order.customer} className="size-12" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1 font-extrabold">
-            {order.customer}
-            <Badge solid tone={KIND_TONE[kind]}>
-              {KIND_TEXT[kind]}
-            </Badge>
+        <CustomerAvatar
+          avatar={order.avatar}
+          customer={order.customer}
+          className="size-11 ring-2 ring-white/15"
+        />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span
+              className={cn('truncate font-head text-base font-extrabold', active && 'text-yellow')}
+            >
+              {order.customer}
+            </span>
             <TimeBadge order={order} day={day} />
-            {order.type === 'kit' && (
-              <Badge solid tone="orange" className="ml-0">
-                Kit khách gửi
-              </Badge>
-            )}
           </div>
-          {/* nhãn mờ + giá trị đậm cho dễ quét mắt */}
-          <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted">
-            <span>
-              Layout <b className="text-ink">{LAYOUTS[order.layout].name}</b>
-            </span>
-            <span>
-              Công <b className="text-green">{fmt(order.labor)}</b>
-            </span>
-            <span>
-              Budget <b className="text-ink">{fmt(order.budget)}</b>
-            </span>
-            {order.dueDay !== undefined && (
-              <span>
-                Hạn <b className={late ? 'text-red' : 'text-ink'}>ngày {order.dueDay}</b>
-              </span>
-            )}
-          </div>
-          <div className="text-xs">
-            {session?.build ? (
-              pct >= 1 ? (
-                <span className="inline-flex items-center gap-1.5 text-green">
-                  <StepDot state="done">✓</StepDot> Đã build xong
-                </span>
-              ) : (
-                <span className="text-muted">
-                  Đã build <b className="text-ink">{Math.round(pct * 100)}%</b>
-                </span>
-              )
-            ) : missing && !missing.length ? (
-              <b className="text-green">Đủ linh kiện, vào build ngay</b>
-            ) : missing ? (
-              <span className="text-muted">
-                Thiếu: <b className="text-yellow">{missing.map((m) => CATS[m.cat]).join(', ')}</b>
-              </span>
+          {/* trạng thái: đủ / không đủ linh kiện; khách huỷ kèo vì bị bán đồ thì báo đỏ */}
+          <div className="truncate text-xs font-bold">
+            {cancelled ? (
+              <span className="text-red">Khách huỷ kèo vì phát hiện bạn bán đồ của khách</span>
+            ) : ready ? (
+              <span className="text-green">Đủ linh kiện</span>
             ) : (
-              <span className="text-muted">Nhận đơn rồi mua linh kiện còn thiếu</span>
+              <span className="text-yellow">Không đủ linh kiện</span>
             )}
           </div>
         </div>
-        {/* bấm nút hành động không mở / đóng card */}
+        {/* tiền công + tiền dư linh kiện (đủ linh kiện mới biết), lố budget thì trừ đỏ */}
+        <div
+          className="flex items-baseline gap-1 font-head text-xl font-extrabold whitespace-nowrap"
+          title={
+            left === null
+              ? 'Tiền công (đủ linh kiện mới tính được tiền dư)'
+              : `Tiền công ${fmt(order.labor)} + dư linh kiện ${fmt(left)}`
+          }
+        >
+          <span className="text-green">{fmt(order.labor)}</span>
+          {left !== null && (
+            <>
+              <span className="text-muted">{left < 0 ? '−' : '+'}</span>
+              <span className={left < 0 ? 'text-red' : 'text-green'}>{fmt(Math.abs(left))}</span>
+            </>
+          )}
+        </div>
+        {/* bấm nút hành động không mở / đóng dòng */}
         <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {action}
+          {/* đơn khách đã huỷ kèo: không làm tiếp được */}
+          {!cancelled && action}
           <ChevronDown
             className={cn('size-5 text-muted transition-transform', open && 'rotate-180')}
             onClick={() => setOpen(!open)}
           />
         </div>
       </div>
-      {session?.build && pct < 1 && (
+      {session?.build && pct < 1 && !cancelled && (
         <ProgressBar value={pct} tone={progressTone(pct)} className="mt-2" />
       )}
       {open && <div className="mt-2">{detail}</div>}

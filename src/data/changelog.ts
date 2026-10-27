@@ -13,6 +13,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.12',
+    date: '2026-10-27',
+    commits: [],
+    title: 'Giao diện kiểu bảng xếp hạng, Mezzenger mới, giá BIN, khách huỷ kèo',
+    items: [
+      'Bảng xếp hạng, Mezzenger, Đánh giá, Hội Phím Cơ, Kho, Danh sách đơn, Shopii cùng 1 kiểu: đầu app có icon + tiêu đề vàng, tab lọc đứng yên, bỏ badge',
+      'Bảng xếp hạng: điểm âm / uy tín âm không lên bảng, mở bảng tự cuộn tới dòng của mình',
+      'Mezzenger: trạng thái là đồ vật gắn lên thẻ (phong bì đơn mới, ghim đang làm, kẹp giấy + hạn giao, tem chờ gửi, dấu ĐÃ GIAO / HUỶ), nút lọc, đơn đã gửi còn hiện tới hết ngày',
+      'Kết thúc ngày: icon trên desktop + nút trong Mezzenger, mở popup tổng kết ngày',
+      'Avatar mới (DiceBear Moods, chớp mắt) cho khách, người chơi, người bán',
+      'Danh sách đơn: tiền công + tiền dư linh kiện, dòng Đủ / Không đủ linh kiện',
+      'Bán đồ khách gửi của đơn đã nhận mà bị phát hiện thì khách huỷ kèo (−3 uy tín)',
+      'Fast bid: hết giờ không tự bán (chốt hoặc bùng bid → bị ban chợ), giá BIN thắng ngay, bình luận mới',
+      'Hội Phím Cơ: bài thu gọn được, hashtag # in nghiêng',
+      'Shopii: sale theo sự kiện, tìm kiếm có debounce, cột trái ghim',
+      'Tray mount: khoét lỗ vít qua plate + PCB, ốc nằm sẵn trong khay; thả board / dán feet xong tự qua bước',
+      'Ảnh đơn keycap 1 màu đúng như lúc build',
+    ],
+  },
+  {
     version: '0.1.11',
     date: '2026-10-27',
     commits: ['7fe2d67'],

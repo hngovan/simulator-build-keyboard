@@ -156,6 +156,8 @@ export interface ProductOption {
   label: string
   swatch: string
   price: number
+  /** giá gốc trước khi sale (Shopii ngày sale, `data/sale.ts`) */
+  was?: number
   item: PartItem | SupplyItem | ToolItem
   hint?: string
   /** nhóm option cấp 1 (vd chất liệu case); thẻ sản phẩm chọn nhóm trước rồi mới chọn option (màu) */
@@ -172,6 +174,8 @@ export interface Product {
   tool?: ToolItem
   /** nhãn nhỏ góc dưới trái ảnh sản phẩm (vd loại switch Linear / Tactile) */
   badge?: string
+  /** % giảm giá hôm nay (ngày sale Shopii) */
+  sale?: number
   options: ProductOption[]
 }
 export interface GroupPost {
@@ -227,6 +231,8 @@ export interface Order {
   days: number
   /** ngày phải giao (đặt khi nhận đơn) */
   dueDay?: number
+  /** khách huỷ kèo giữa chừng: 'sold' = phát hiện shop đem đồ khách gửi đi bán ở chợ (đơn còn hiện tới hết ngày) */
+  cancel?: 'sold'
   /** đơn kit theo thiết kế bàn phím mở (Bakeneko 60, Planck...) */
   featured?: string
   customer: string

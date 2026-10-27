@@ -469,5 +469,6 @@ export function useModelThumb(kind: ThumbKind | null, type: string | undefined) 
       alive = false
     }
   }, [kind, type, key])
-  return shot?.key === key ? shot.url : null
+  // undefined = đang chụp (lần đầu tải model), null = không có model 3D (dùng ảnh vẽ)
+  return !key ? null : shot?.key === key ? shot.url : undefined
 }

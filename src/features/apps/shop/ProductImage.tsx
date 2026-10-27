@@ -4,7 +4,7 @@ import { SUPPLIES } from '@/data/supplies'
 import { PartArt } from '@/components/art/PartArt'
 import { SupplyArt, ToolArt } from '@/components/art/ToolArt'
 import { cn } from '@/lib/format'
-import { CloseButton, ViewHint } from '@/components/ui'
+import { CloseButton, ThumbLoading, ViewHint } from '@/components/ui'
 import type {
   CaseItem,
   KeycapItem,
@@ -115,6 +115,8 @@ export function ProductImage({
         <div className={cn(frame, 'relative')}>
           {thumb ? (
             <img src={thumb} alt={product.name} className="h-full w-full object-contain" />
+          ) : thumb === undefined ? (
+            <ThumbLoading />
           ) : (
             <PartArt category="keycap" color={swatch} />
           )}
@@ -150,15 +152,12 @@ export function ProductImage({
           onClick={() => setViewing(true)}
           className={cn(
             frame,
-            'group relative w-full shadow-[0_2px_6px_rgba(0,0,0,0.25)] transition-shadow duration-200 hover:shadow-[0_6px_18px_rgba(0,0,0,0.55)]',
+            // rê chuột chỉ hiện kính lúp (ViewHint), không nhô ảnh / đổ bóng
+            'group relative w-full',
           )}
         >
           {caseThumb ? (
-            <img
-              src={caseThumb}
-              alt={product.name}
-              className="h-full w-full object-contain transition-transform group-hover:scale-105"
-            />
+            <img src={caseThumb} alt={product.name} className="h-full w-full object-contain" />
           ) : (
             <span className="animate-bob text-2xl">⌨️</span>
           )}
@@ -173,6 +172,13 @@ export function ProductImage({
           />
         )}
       </>
+    )
+  // ảnh model 3D đang chụp (lần đầu tải tài nguyên): khung loading thay ảnh vẽ tạm
+  if ((caseItem ? caseThumb : thumb) === undefined)
+    return (
+      <div className={frame}>
+        <ThumbLoading />
+      </div>
     )
   if (thumb)
     return (
