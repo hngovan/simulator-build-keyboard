@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import { SCREW_STEPS, STEP_INFO, stabUnits, stepProgress } from '@/data/steps'
+import { SCREW_STEPS, STEP_INFO, isOptionalStep, stabUnits, stepProgress } from '@/data/steps'
 import { SCREW_FULL, SWITCHES, TOOLS, TRAY_COLORS, partSpent, screwLevel } from '@/data/parts'
 import {
   JOINTS_PER_KEY,
@@ -330,7 +330,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (s.build.stepIdx >= s.ctx.steps.length - 1) return
       // đang ở bước cũ (đã quay lại, chưa làm gì mới): đi tiếp theo nhánh đã làm
       if (s.future.length > 1) return s.forwardToStep(s.build.stepIdx + 1)
-      const optional = step === 'stabMod' || step === 'switchLube' || step === 'foam'
+      const optional = isOptionalStep(step, s.order)
       const [done, total] = stepProgress(step, s.build, s.ctx, SCREW_FULL)
       // hàn dở (đã hàn ít nhất 1 phím) vẫn cho đi tiếp: phím chưa hàn / cháy sẽ lộ ra lúc test hoặc khách báo lỗi
       const soft = step === 'solder' && done > 0
@@ -358,7 +358,15 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       commit(snap)
       get().patchBuild({ foam: true })
     },
-    wrapRing: once('ring', { ring: true }),
+    // cuốn O-ring: trừ 1 vòng dây đang chọn (độ cứng quyết định độ nhún / tiếng), hoàn tác trả lại
+    wrapRing: () => {
+      const s = at('ring')
+      if (!s || s.build.ring) return
+      const snap = snapshot()
+      if (!s.useSupply(s.oringPick, 1)) return
+      commit(snap)
+      get().patchBuild({ ring: s.oringPick })
+    },
     dropInCase: once('caseIn', { inCase: true }),
     // đậy case chỉ 1 thao tác: đậy xong tự sang bước vặn vít (không bắt bấm "Bước tiếp theo")
     closeCase: () => {

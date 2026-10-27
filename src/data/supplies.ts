@@ -26,6 +26,8 @@ export interface SupplyDef {
   spell?: number
   /** feet cao su dán đáy case (bước `feet`): 1 vỉ 4 cái */
   feet?: true
+  /** dây O-ring silicon cuốn quanh board (bước `ring`, O-ring / OG mount): độ cứng Shore A (30 mềm → 70 cứng) */
+  oring?: { shore: number }
   /** tấm foam Poron lót giữa PCB và plate (bước `foam`): bán tấm nguyên, lót thì cắt theo layout */
   pcbFoam?: true
 }
@@ -47,6 +49,33 @@ const FEET_COLORS: [id: string, name: string, color: string][] = [
   ['feetPurple', 'tím', '#6b4a9c'],
 ]
 export const FEET_IDS = FEET_COLORS.map(([id]) => id)
+
+/** dây O-ring silicon theo độ cứng: trắng 30A (mềm, nhún nhiều) → đen 50A → đỏ 70A (cứng, chắc tay) */
+const ORING_DEFS: [id: string, shore: number, name: string, color: string, desc: string][] = [
+  ['oring30', 30, 'trắng', '#f1f0ea', 'Mềm nhất: board nhún sâu, tiếng trầm êm, gõ mềm tay'],
+  ['oring50', 50, 'đen', '#1f2024', 'Độ cứng vừa: cân bằng giữa nhún và chắc, dùng đa số build'],
+  ['oring70', 70, 'đỏ', '#c8341f', 'Cứng nhất: board ít nhún, tiếng chắc, cao hơn chút'],
+]
+export const ORING_IDS = ORING_DEFS.map(([id]) => id)
+
+function oringDefs(): Record<string, SupplyDef> {
+  return Object.fromEntries(
+    ORING_DEFS.map(([id, shore, name, color, desc]) => [
+      id,
+      {
+        name: `Dây O-ring ${shore}A (${name})`,
+        unit: 'vòng',
+        color,
+        packs: [
+          [1, 30],
+          [5, 120],
+        ],
+        desc: `Dây O-ring silicon cuốn quanh viền board (O-ring / OG mount), 1 vòng / bàn phím. ${desc}`,
+        oring: { shore },
+      },
+    ]),
+  )
+}
 
 /** Vỉ 4 feet bán cầu mỗi màu, cùng giá */
 function feetDefs(): Record<string, SupplyDef> {
@@ -100,6 +129,8 @@ export const SUPPLIES: Record<string, SupplyDef> = {
   },
   // feet cao su: chỉ khác màu → Shopii gộp 1 sản phẩm, chọn màu bằng option (`FEET_IDS`)
   ...feetDefs(),
+  // dây O-ring: chỉ khác độ cứng → Shopii gộp 1 sản phẩm, chọn độ cứng bằng option (`ORING_IDS`)
+  ...oringDefs(),
   foamPoron: {
     name: 'Foam Poron lót PCB (đen)',
     unit: 'tấm',

@@ -125,3 +125,18 @@
 - Shopii (`shopProducts`, parts.ts): bỏ feet khỏi vòng vật tư, thêm 1 sản phẩm `sup-feet` "Feet cao su", option = màu ("Đen · 4 cái").
   Ảnh sản phẩm vật tư theo option đang chọn (ProductImage `type` = id vật tư của option) → feet đổi màu theo option.
 - Cảnh: màu feet = `SUPPLIES[id].color` (bỏ bảng `FOOT_COLOR` trong Case.tsx). `FeetPanel` chỉ hiện màu đang có trong kho + màu đang chọn.
+
+## Dây O-ring 3 độ cứng (2026-10-27)
+
+- Người dùng: "thêm model dây oring 3 độ cứng: trắng là 30A => đen là 50A => đỏ là 70A, thêm vào shopii và đơn hàng khách yêu cầu"
+  (ảnh dây O-ring silicon nhiều màu).
+- Vật tư `oring30` / `oring50` / `oring70` (supplies.ts `ORING_DEFS` → `oringDefs()`, `SupplyDef.oring.shore`, `ORING_IDS`), 1 vòng 30k
+  / 5 vòng 120k. Shopii gộp 1 sản phẩm "Dây O-ring silicon" (vòng gộp chung với feet trong `shopProducts`: mảng `merged`), option
+  "30A (trắng) · 1 vòng"; ảnh = 2 vòng torus đúng màu (`createORings`, modelThumb). Nhóm lọc "Dây O-ring".
+- Bước `ring` (O-ring / OG mount): `wrapRing` trừ 1 vòng `oringPick` (shopSlice, mặc định 50A), `build.ring` = id dây (save cũ `true` =
+  50A). `RingPanel` (ModPanels, BenchHud) chọn độ cứng + số còn + nhắc khách đòi; `SiliconeRing` tô màu dây. Âm (`soundProfile`
+  `ring`): lệch theo Shore so với 50A (loud ±0,0025 / pitch ±0,003 mỗi A: 30A êm trầm, 70A chắc cao).
+- Đơn: `Order.oring` — đơn kit gửi case O-ring / OG mount 60% dặn độ cứng; đơn mua đủ (không đòi đích danh case) ~12% đòi luôn
+  `mount = 'oring'` + độ cứng (budget +30k). Khách nhắn câu dây O-ring, OrderSpec có dòng Mount + "Dây O-ring". `checkInventory` case
+  phải làm được `order.mount`; mua case thì tự chọn mount khách đòi (`firstMount(..., want)`). Chấm "Dây O-ring … như khách dặn" 5 điểm.
+  Chạy thử 400 đợt đơn: ~15% đơn có `oring`; bước ring trừ vật tư + vòng trắng quanh board (ảnh).

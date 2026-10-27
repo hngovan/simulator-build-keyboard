@@ -519,6 +519,12 @@
   `ScrewGhost` (LineDashed vàng: 2 vòng đáy / đỉnh đầu ốc `HEAD_R` / `HEAD_H` + 6 cạnh đứng) ở miệng lỗ; vòng vàng "bấm đây" hạ xuống miệng
   lỗ. Bấm lần đầu thì ốc hiện ra ở trên rồi vặn xuống như cũ. Áp dụng mọi bước vặn vào (caseScrew / topScrew / trayScrew / stabScrew).
 - Sửa lỗi kèm: vật liệu `BitRecess` dùng chung module → ốc bay ra chỉnh opacity làm mờ lây mọi con; giờ tạo riêng mỗi con (`useMemo`).
+- **Foam Alice cắt lỗi ở góc phải** (2026-10-27, người dùng: "foam cut layout alice gốc bên phải ngoài cùng đang bị lỗi sửa lại thành hình
+  vuông"): lỗ phím góc trên phải lấn ra ngoài viền foam → tam giác hoá vỡ thành mảnh tam giác. `foamGeometry` (Foam.tsx) giờ = viền tấm
+  (`boardOutline`) trừ các lỗ phím bằng `polygon-clipping.difference` → lỗ chạm mép thành rãnh vuông khoét vào mép; mọi layout.
+- **Plate Alice không hiện ở bước đặt plate** (người dùng: "từ bước lót foam đến bước đặt plate lên thì không hiển thị gì"): `AlicePlate`
+  (Board.tsx) lấy `nodes['alice-plate'].geometry` → lúc chạy ra geometry rỗng (không có position), plate chờ đặt / đã đặt vô hình.
+  Đổi sang lấy mesh đầu tiên trong `scene` của GLB. Kiểm bằng playwright: mesh plate ghost Alice có hình, ảnh chụp thấy plate.
 - **Ốc case mica** (người dùng: "ốc case mica ghép đang bị ngắn"): `Screw` có `shaft` (thân ren dài thêm); `ScrewSet` bước
   `caseScrew` / `caseOpen` của case mica vít từ trên → thân dài tới cách mặt đáy 0,06u (xuyên mọi lớp tới tấm đáy).
 - Ren ốc mica (2026-10-27, "ren ốc dài từ trên xuống dưới mới đúng, hiện chỉ có 1 nửa ren"; "ren vừa thêm nhỏ hơn vít gốc";
@@ -531,3 +537,13 @@
 - Mũi tên vàng ở bước vặn / tháo vít (2026-10-27, "bước tháo vít case chưa có hướng dẫn mũi tên"): `ScrewSet` chọn con chưa xong
   gần giữa board nhất (|x| nhỏ nhất, giữa khung hình, không bị khung HUD 2 bên che), `Screw` prop `hint` → `HintArrow` trên đầu ốc
   (ẩn khi rê chuột / đang vặn). Áp dụng mọi bước vít (caseOpen / stabScrew / topScrew / trayScrew / caseScrew).
+- **Plate sandwich case mica** (2026-10-27, người dùng: "plate đang bị lệch lỗ với case alice mica... sandwich mount thì plate phải có
+  viền dài ra liền 1 đường ko có các cạnh gá như vậy, cạnh gá như này là gasket"): Alice luôn dùng plate CAD Blossom (tai gasket, lỗ
+  riêng không khớp vít case mica). Giờ `ctx.mount === 'sandwich'` + case mica dựng bằng code: `plateGeometry` (Board.tsx) lấy viền
+  `sandwichPlateShape` (caseShell.ts: chữ nhật bo góc đúng cỡ ngoài case W × D, khoét lỗ `caseScrewHoles`) thay viền layout, Alice
+  cũng khoét lỗ phím bằng code (bỏ `AlicePlate`). Case trên mica (Case.tsx) tách 2 chồng lớp: `Y.split → Y.plateBot` và `0 → Y.caseTop`
+  để chừa khe cho plate làm 1 lớp kẹp giữa (không đè lớp mica). Mọi case mica (sandwich) đều đổi theo. Chụp kiểm aliceMica (playwright).
+- **Keycap mũi tên lên / xuống thành ô vuông** (2026-10-27, người dùng: "ICON mũi tên lên xuống bị lỗi"): font Nunito có ← → nhưng
+  thiếu ↑ ↓. `CapOverlay` (Keycap.tsx) in '→' xoay ±90° (`ARROW_SPIN`) cho 2 phím này, mọi layout.
+- **Khoá xoay camera khi hàn** (2026-10-27, người dùng: "đang hàn thì khoá góc quay màn hình ko cho quay trái quay phải gì cả"):
+  `Controls` (Bench.tsx) `enableRotate={false}` suốt bước `solder` (cả 2 chế độ chuột / cảm ứng); vẫn kéo khung nhìn + zoom được.

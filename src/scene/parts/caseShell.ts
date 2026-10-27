@@ -54,6 +54,13 @@ const punch = (shape: THREE.Shape, pockets: Pocket[]) => {
   return shape
 }
 
+/**
+ * Plate sandwich (case mica): tấm liền cùng viền ngoài bo góc với các lớp mica, kẹp giữa 2 lớp, khoét lỗ vít case
+ * xuyên qua viền (không tai gá gasket). Shape nằm XY, chưa đùn
+ */
+export const sandwichPlateShape = (W: number, D: number, holes: Pocket[]) =>
+  punch(roundedRect(new THREE.Shape(), W, D, OUTER_R) as THREE.Shape, holes)
+
 /** trần hốc: đĩa lấp phần trên lỗ khoét, chừa lại đúng độ sâu hốc từ mặt đáy y0 */
 const pocketCeilings = (pockets: Pocket[], y0: number, top: number) =>
   pockets.map((p) =>

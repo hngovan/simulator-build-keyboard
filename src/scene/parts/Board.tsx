@@ -4,17 +4,19 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import { PLATES } from '@/data/parts'
-import { Y, stabSpan } from '@/data/steps'
+import { CASE_MARGIN, CASE_WALL, Y, caseScrewHoles, stabSpan } from '@/data/steps'
 import type { Key, StepId } from '@/types'
 import { playClick } from '@/sound'
 import { Drop, lerpTo } from '../common/anim'
 import { MM } from '../models/Switch'
 import { useHover } from '../common/useHover'
 import { Gaskets, HotswapSockets, SiliconeRing } from './BoardDetails'
+import { SUPPLIES } from '@/data/supplies'
 import { KeySlot } from './KeySlot'
 import { PcbFoam } from './Foam'
 import { PcbSurface } from './PcbSurface'
 import { boardOutline } from './boardOutline'
+import { sandwichPlateShape } from './caseShell'
 import { ScrewSet } from './Screw'
 import { SolderPad } from './SolderPad'
 import { HintArrow } from '../stations/StationKit'
@@ -48,9 +50,13 @@ function plateGeometry(
   cadCutouts?: [number, number][][],
   /** lỗ cắt plate universal (ai03 Plate Generator): [x, z] theo u quanh tâm layout */
   universal?: [number, number][][],
+  /** sandwich mount: viền ngoài tấm liền theo case mica (thay viền layout) */
+  sandwich?: THREE.Shape,
 ) {
   // viền plate theo layout (Alice: 2 nửa xoay), nhỏ hơn PCB 0.01u mỗi cạnh
-  const { shapes, shapeOf } = boardOutline(keys, width, depth, 0.01, outline)
+  const { shapes, shapeOf } = sandwich
+    ? { shapes: [sandwich], shapeOf: () => sandwich }
+    : boardOutline(keys, width, depth, 0.01, outline)
   let shape = shapes[0]
   // trục y của hình = -z của cảnh (do xoay -90° quanh x)
   // lỗ chữ nhật tâm (x, z) nửa cạnh hx × hz, xoay rot quanh tâm (phím xoay như Alice)
@@ -218,7 +224,9 @@ export function Board() {
   }
 
   const plate = PLATES[plateMat]
-  const aliceCAD = ctx.layout === 'alice'
+  // sandwich (case mica): plate kẹp giữa các lớp mica → viền liền cùng case + lỗ vít case, Alice cũng không dùng plate gasket CAD
+  const sandwich = ctx.mount === 'sandwich' && ctx.caseDef.material === 'mica' && !ctx.caseDef.model
+  const aliceCAD = ctx.layout === 'alice' && !sandwich
   const standard60CAD =
     ctx.layout === '60' &&
     (ctx.variant.backspace ?? '2u') === '2u' &&
@@ -234,8 +242,15 @@ export function Board() {
         standard60CAD ? plate60Cutouts : undefined,
         // 60 / 75 / TKL / full: plate universal có lỗ cho mọi variant
         standard60CAD || ctx.outline ? undefined : plateUniversal[ctx.layout],
+        sandwich
+          ? sandwichPlateShape(
+              ctx.width + 2 * (CASE_MARGIN + CASE_WALL),
+              ctx.depth + 2 * (CASE_MARGIN + CASE_WALL),
+              caseScrewHoles(ctx.caseDef, ctx.width, ctx.depth),
+            )
+          : undefined,
       ),
-    [ctx, standard60CAD],
+    [ctx, standard60CAD, sandwich],
   )
   const at = (name: StepId) => ctx.steps.indexOf(name)
   return (
@@ -303,7 +318,11 @@ export function Board() {
       <Gaskets />
       {(b.ring || step === 'ring') && (
         <group onPointerDown={onBoard}>
-          <SiliconeRing ghost={!b.ring} between={ctx.mount === 'oring'} />
+          <SiliconeRing
+            ghost={!b.ring}
+            between={ctx.mount === 'oring'}
+            color={SUPPLIES[typeof b.ring === 'string' ? b.ring : 'oring50']?.color}
+          />
         </group>
       )}
       {/* mũi tên vàng chỉ vòng silicon chờ gá (cạnh trước) */}

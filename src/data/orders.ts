@@ -10,6 +10,7 @@ import type {
 } from '@/types'
 import { LAYOUTS, getLayout, randomVariant, variantText } from './layouts'
 import { repTier } from './reputation'
+import { ORING_IDS, SUPPLIES } from './supplies'
 import { makePost } from './market'
 import {
   CASES,
@@ -249,8 +250,18 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
       : undefined
   const plateMaterial = !kit?.plate && Math.random() < 0.3 ? pick(plateIds()) : undefined
   const want = { caseId, stabType, plateMaterial }
+  // ~25% khách muốn lót foam Poron PCB (tiền 1 tấm foam tính vào budget)
+  const foam = Math.random() < 0.25
+  // dây O-ring: đơn kit gửi case O-ring / OG mount → 60% khách dặn độ cứng dây; đơn mua đủ (không đòi đích danh case)
+  // ~12% đòi luôn O-ring mount + đúng độ cứng dây (shop chọn case có O-ring mount)
+  if (!kit && !caseId && Math.random() < 0.12) mount = 'oring'
+  const oring =
+    (mount === 'oring' || mount === 'og') && (!kit || Math.random() < 0.6)
+      ? pick(ORING_IDS)
+      : undefined
   const budget = round100(
-    estimateCost(layout, kit, keycapKit, switchType, want) * (1.25 + Math.random() * 0.4),
+    (estimateCost(layout, kit, keycapKit, switchType, want) + (foam ? 60 : 0) + (oring ? 30 : 0)) *
+      (1.25 + Math.random() * 0.4),
   )
   const solder = (kit?.pcb?.type ?? pcbType) === 'solder' ? keys.length * 3 : 0
   const extra =
@@ -305,6 +316,11 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
     lines.push('Nhớ lube switch giúp mình nha, lube đúng loại mỡ nhé (switch lube sẵn thì thôi).')
   if (lubePref === 'none') lines.push('Mình thích tiếng sạn gốc của switch, đừng lube switch nhé!')
   if (keys.some((k) => k.stab)) lines.push('Stab phải êm, không được lạch cạch đâu đó!')
+  if (foam) lines.push('Lót giúp mình tấm foam Poron giữa PCB và plate nhé, cho gõ thock hơn.')
+  if (oring)
+    lines.push(
+      `${kit ? '' : 'Build O-ring mount giúp mình, '}dây O-ring phải là loại ${SUPPLIES[oring].name.replace('Dây O-ring ', '')} nha${SUPPLIES[oring].oring!.shore < 50 ? ', mình thích gõ nhún mềm' : SUPPLIES[oring].oring!.shore > 50 ? ', mình thích gõ chắc tay' : ''}.`,
+    )
   lines.push(
     `Budget linh kiện tầm ${budget.toLocaleString('vi-VN')}k, tiền công ${labor.toLocaleString('vi-VN')}k.`,
   )
@@ -335,6 +351,8 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
     ...(caseId ? { caseId } : {}),
     ...(stabType ? { stabType } : {}),
     ...(plateMaterial ? { plateMaterial } : {}),
+    ...(foam ? { foam: true as const } : {}),
+    ...(oring ? { oring } : {}),
     budget,
     labor,
     lines,

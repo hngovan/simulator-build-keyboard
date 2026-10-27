@@ -3,6 +3,7 @@ import { useGame, useBuild, useCtx } from '@/store'
 import { STABS, SWITCHES, TOOLS } from '@/data/parts'
 import {
   FEET_IDS,
+  ORING_IDS,
   FOAM_ID,
   JOINTS_PER_KEY,
   LUBE_IDS,
@@ -474,6 +475,56 @@ export function FeetPanel() {
           {have >= left && <Muted>Màu khác còn đủ, đổi màu để dán tiếp.</Muted>}
           <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
             Mua feet ở Shopii
+          </Button>
+        </Alert>
+      )}
+    </HudPanel>
+  )
+}
+
+/** Bảng bước cuốn O-ring: chọn độ cứng dây (trắng 30A / đen 50A / đỏ 70A, số còn trong kho), khách đòi thì nhắc */
+export function RingPanel() {
+  const build = useBuild()
+  const supplies = useGame((s) => s.supplies)
+  const pick = useGame((s) => s.oringPick)
+  const want = useGame((s) => s.order?.oring)
+  const setOringPick = useGame((s) => s.setOringPick)
+  const openShop = useGame((s) => s.openShop)
+  const done = typeof build.ring === 'string' ? build.ring : build.ring ? 'oring50' : null
+  return (
+    <HudPanel id="ring" title="⭕ Dây O-ring">
+      <div className="text-xs">
+        {done
+          ? `Đã cuốn ${SUPPLIES[done].name}`
+          : 'Chọn dây rồi click vào board để cuốn quanh viền'}
+      </div>
+      {want && (
+        <Alert tone="yellow" title={`Khách muốn ${SUPPLIES[want].name}`}>
+          {done && done !== want && (
+            <Muted>Đang cuốn loại khác, khách sẽ chấm trượt mục này.</Muted>
+          )}
+        </Alert>
+      )}
+      <HudSection id="ring.pick" title="Độ cứng dây">
+        <div className="flex flex-wrap gap-1">
+          {ORING_IDS.map((id) => (
+            <OptionChip
+              key={id}
+              active={pick === id}
+              disabled={!!done}
+              swatch={SUPPLIES[id].color}
+              onClick={() => setOringPick(id)}
+            >
+              {SUPPLIES[id].name.replace('Dây O-ring ', '')} ({supplies[id] ?? 0})
+            </OptionChip>
+          ))}
+        </div>
+        <Muted>{SUPPLIES[pick].desc.replace(/^.*bàn phím\. /, '')}</Muted>
+      </HudSection>
+      {!done && (supplies[pick] ?? 0) < 1 && (
+        <Alert tone="yellow" title={`Hết ${SUPPLIES[pick].name.toLowerCase()}`}>
+          <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
+            Mua dây O-ring ở Shopii
           </Button>
         </Alert>
       )}

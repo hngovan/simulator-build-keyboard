@@ -40,6 +40,7 @@ function supplyGroup(p: Product) {
   if (!sp) return 'Khác'
   if (sp.solder) return 'Thiếc hàn'
   if (sp.feet) return 'Feet cao su'
+  if (sp.oring) return 'Dây O-ring'
   const fit = sp.fit ?? {}
   if (fit.linear || fit.tactile || fit.clicky) return 'Lube switch'
   if (fit.housing || fit.wire) return 'Lube stab'

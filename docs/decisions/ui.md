@@ -466,3 +466,35 @@
 - Hết switch ở bảng lube: Alert "Hết switch" + nút "Mua ở Shopii" (`openShop('switch')`, chỉ chữ).
 - 2026-10-27, "bỏ icon trong btn bước tiếp theo": nút sang bước ở khung hướng dẫn (Objective, BenchHud) bỏ "→" ở mọi trạng thái
   ("Bước tiếp theo" / "Bỏ qua" / "Bỏ dở, còn N phím"). Nút ở bảng lube (ModPanels: "Bỏ qua lube →", "Xong, đi lắp switch →") chưa đổi.
+
+## Đối chiếu linh kiện: số cần / số trong kho (2026-10-27)
+
+- Người dùng: "ở mục switch KaihBox Jade x 230 này là số lượng còn lại trong kho => phải ghi thêm số lượng khách cần / số lượng kho".
+- `OrderDetail` (OrderApp.tsx) `partLabel`: Switch = "<tên> · cần <số phím − đã cắm> / kho <còn>"; Stab = "Stab <tên> · cần <stabNeed>
+  / kho <stabStock>" (dạng `stabText`, vd 4× 2u + 1× 7u). Món khác giữ `itemName`. Chụp kiểm: "Gateron Silent Hồng · cần 84 / kho 230".
+- **Nút "Kết thúc ngày" hiện số đơn xong** (2026-10-27, người dùng: "hiện thị tổng số đơn hoàn thành ngày hôm nay ở button kết thúc ngày
+  => bỏ icon đi"): Messenger.tsx nút cuối danh sách hội thoại = "Kết thúc ngày · xong N đơn" (N = `packed.length`, đơn đóng gói trong ngày,
+  cả đã gửi lẫn chưa gửi; `nextDay` xoá `packed`), bỏ icon `Moon` và phần "· gửi N đơn".
+
+## Hỏi lại khi đóng gói: liệt kê mục còn thiếu (2026-10-27)
+
+- Người dùng: "chưa làm xong đơn mà bấm gói thì có popup hỏi bạn có chắc chắn muốn đóng gói đơn này ko vẫn còn 1 số bước chưa hoàn
+  thành => nếu thiếu các bước khách yêu cầu or mình cố tình bỏ qua".
+- `useDeliverIssues` (BenchHud.tsx): `missing` = bước bắt buộc chưa xong (kèm tiến độ), `requested` = yêu cầu khách chưa đạt (lube
+  `want` chưa lube đủ / `none` mà đã lube / sai dây O-ring), `skipped` = bước tuỳ chọn bỏ qua (mod stab còn mod cần, lube khi tuỳ shop,
+  foam không yêu cầu, test chưa hết phím). Nút "Đóng gói đơn này" hỏi lại khi có bất kỳ mục nào; `ConfirmDeliver` "Chắc chắn đóng gói
+  đơn này?" với 3 khung Alert (đỏ / đỏ / vàng) liệt kê. Popup "Phím đã xong" (`TestDone`) vẫn theo bước bắt buộc như cũ.
+- **Khung xem 3D Shopii không hiện gói số lượng** (2026-10-27, người dùng: "trong preview chỉ hiển thị màu và loại thôi, ko hiển thị kiểu
+  1 vòng oring 5 vòng oring"): ProductCard `picker` gộp option vật tư gộp (nhãn "loại · gói", `isPack`) theo id vật tư (`kindOf`) → mỗi
+  loại 1 chip, nhãn bỏ phần " · N vòng"; bấm chip đổi loại giữ cỡ gói đang chọn (`pickKind`). Gói chọn ở ô đổ xuống trên thẻ.
+  Stab vẫn hiện từng option (bộ / lẻ khác dây). Chụp kiểm Dây O-ring (playwright): 3 chip 30A / 50A / 70A.
+
+## Bảng đơn ở bàn build hiện mount + phím tắt đầu vít (2026-10-27)
+
+- Người dùng: "kiểu mount ko được mô tả trong menu lúc build ?? đơn của chị linh". `OrderSpec` thêm prop `mount` (bàn build truyền
+  `ctx.mount`): luôn có dòng Mount = mount đang build, khách đòi thì ghi "(khách yêu cầu)" / "· khách cần …". Sửa kèm lỗi do lần thêm
+  dòng "Dây O-ring" chen giữa `if / else` Mount – Case (đơn có O-ring mất dòng Case, đơn kit gửi case thừa dòng Case).
+- Người dùng: "ở đoạn đổi đầu vít thêm phím tắt lần lượt từ trái qua phải là 1 2 3 4". `BitPicker`: `useBenchKey('Digit1'…'Digit4')`
+  → chữ thập / lục giác / Torx / dẹt (`PICK_BIT`), số nhỏ ở góc mỗi ô + tooltip "(phím n)". Chạy thử: phím 3 → torx, phím 2 → hex.
+- **Bỏ tiêu đề bảng đầu vít** (2026-10-27, người dùng: "chữ chọn đầu vít và icon bỏ đi ko cần"): `BitPicker` bỏ dòng "🪛 Chọn đầu vít",
+  chỉ còn ô "Mặt ốc" + 4 nút đầu vít.

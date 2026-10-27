@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Badge, Button, OptionChip, OptionSelect, QtyInput, SoundBars } from '@/components/ui'
 import { stabStock } from '@/data/parts'
 import { fmt } from '@/lib/format'
-import type { Product, ProductOption, StabItem, ToolItem } from '@/types'
+import type { Product, ProductOption, StabItem, SupplyItem, ToolItem } from '@/types'
 import { ProductImage } from './ProductImage'
 import { useGame } from '@/store'
 
@@ -19,6 +19,8 @@ const STAB_SIZES = [
 ] as const
 /** món mua nhiều lần được cộng dồn (switch / stab / vật tư / sách phép): có ô số lượng */
 const STACKABLE: Product['cat'][] = ['switch', 'stab', 'supply', 'spell']
+/** option vật tư gộp nhiều loại (nhãn "loại · số gói") */
+const isPack = (o: ProductOption) => 'n' in o.item && o.label.includes(' · ')
 /** Thẻ sản phẩm: chọn option (màu / chất liệu / số lượng) rồi mua */
 export function ProductCard({ product, onBuy }: Props) {
   const [sel, setSel] = useState(0)
@@ -35,6 +37,16 @@ export function ProductCard({ product, onBuy }: Props) {
     const g = groups[gi]
     const same = product.options.findIndex((o) => o.group === g && o.label === opt.label)
     setSel(same >= 0 ? same : product.options.findIndex((o) => o.group === g))
+  }
+  // vật tư gộp (dây O-ring...): mỗi loại nhiều gói (1 / 5 vòng) → khung 3D chỉ chọn màu / loại, gói chọn ở ô đổ xuống
+  const kindOf = (o: ProductOption) =>
+    isPack(o) ? (o.item as SupplyItem).id : product.cat === 'stab' ? o.label : o
+  const chips = shown.filter(([o], k) => shown.findIndex(([x]) => kindOf(x) === kindOf(o)) === k)
+  // đổi loại: giữ cỡ gói đang chọn nếu loại mới có
+  const pickKind = (o: ProductOption, i: number) => {
+    const pack = isPack(opt) ? (opt.item as SupplyItem).n : 0
+    const same = shown.find(([x]) => kindOf(x) === kindOf(o) && (x.item as SupplyItem).n === pack)
+    setSel(same ? same[1] : i)
   }
   const tools = useGame((s) => s.tools)
   const owned = useGame((s) => s.solderOwned)
@@ -70,14 +82,14 @@ export function ProductCard({ product, onBuy }: Props) {
           (product.cat === 'stab' ||
             new Set(shown.map(([o]) => `${o.swatch}|${(o.item as { type?: string }).type ?? ''}`))
               .size > 1) &&
-          shown.map(([o, i]) => (
+          chips.map(([o, i]) => (
             <OptionChip
               key={o.label}
-              active={i === sel}
+              active={kindOf(o) === kindOf(opt)}
               swatch={o.swatch}
-              onClick={() => setSel(i)}
+              onClick={() => pickKind(o, i)}
             >
-              {o.label}
+              {isPack(o) ? o.label.split(' · ')[0] : o.label}
             </OptionChip>
           ))
         }

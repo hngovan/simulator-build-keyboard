@@ -1,5 +1,5 @@
 import { LAYOUTS, getLayout } from './layouts'
-import { SUPPLIES } from './supplies'
+import { SUPPLIES, type SupplyDef } from './supplies'
 import type {
   KeycapMaterial,
   SwitchKind,
@@ -1755,7 +1755,15 @@ function soundProfile(
     lubeFrac = 0,
     lubeType,
     foam = false,
-  }: { caseId?: string; lubeFrac?: number; lubeType?: string | null; foam?: boolean } = {},
+    ring,
+  }: {
+    caseId?: string
+    lubeFrac?: number
+    lubeType?: string | null
+    foam?: boolean
+    /** dây O-ring đã cuốn (O-ring / OG mount) */
+    ring?: string
+  } = {},
 ): SoundProfile {
   const sw = SWITCHES[switchType]
   const zero = { dl: 0, dp: 0 }
@@ -1768,6 +1776,12 @@ function soundProfile(
   if (foam) {
     loud -= 0.05
     pitch -= 0.08
+  }
+  // dây O-ring: mềm (30A) board nhún sâu → êm + trầm hơn; cứng (70A) ít nhún → chắc, cao hơn chút (50A làm chuẩn)
+  const shore = ring ? SUPPLIES[ring]?.oring?.shore : undefined
+  if (shore) {
+    loud += (shore - 50) * 0.0025
+    pitch += (shore - 50) * 0.003
   }
   // mỡ càng đặc (độ hợp switch thấp, vd BDZ / Permatex) thì tiếng càng nhũn, bị trì
   const thick =
@@ -1796,6 +1810,7 @@ export function buildSound(
     lubeFrac: build && nKeys ? build.lubed / nKeys : 0,
     lubeType: build?.lubeType,
     foam: !!build?.foam,
+    ring: typeof build?.ring === 'string' ? build.ring : undefined,
   })
 }
 
@@ -1954,8 +1969,8 @@ export function buildCatalog(): Product[] {
     })
   }
   for (const [id, sp] of Object.entries(SUPPLIES)) {
-    // feet: các màu gộp chung 1 sản phẩm (đẩy sau vòng này)
-    if (sp.feet) continue
+    // feet / dây O-ring: các loại gộp chung 1 sản phẩm (đẩy sau vòng này)
+    if (sp.feet || sp.oring) continue
     products.push({
       id: `sup-${id}`,
       // sách phép bán ở mục riêng
@@ -1972,24 +1987,36 @@ export function buildCatalog(): Product[] {
     })
   }
   const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
-  // feet cao su: 1 sản phẩm, option = màu (mỗi màu là 1 vật tư riêng trong kho)
-  const feet = Object.entries(SUPPLIES).filter(([, sp]) => sp.feet)
-  if (feet.length)
+  // vật tư chỉ khác màu / độ cứng gộp chung 1 sản phẩm, option = từng loại (mỗi loại là 1 vật tư riêng trong kho)
+  const merged: { id: string; name: string; test: (sp: SupplyDef) => boolean; prefix: string }[] = [
+    { id: 'sup-feet', name: 'Feet cao su', test: (sp) => !!sp.feet, prefix: 'Feet cao su ' },
+    {
+      id: 'sup-oring',
+      name: 'Dây O-ring silicon',
+      test: (sp) => !!sp.oring,
+      prefix: 'Dây O-ring ',
+    },
+  ]
+  for (const m of merged) {
+    const list = Object.entries(SUPPLIES).filter(([, sp]) => m.test(sp))
+    if (!list.length) continue
     products.push({
-      id: 'sup-feet',
+      id: m.id,
       cat: 'supply',
-      name: 'Feet cao su',
-      desc: feet[0][1].desc,
-      supply: feet[0][0],
-      options: feet.flatMap(([id, sp]) =>
+      name: m.name,
+      desc: list[0][1].desc.replace(/ (Mềm|Độ cứng|Cứng) .*$/, ''),
+      supply: list[0][0],
+      options: list.flatMap(([id, sp]) =>
         sp.packs.map(([n, price]) => ({
-          label: `${capitalize(sp.name.replace('Feet cao su ', ''))} · ${n} ${sp.unit}`,
+          label: `${capitalize(sp.name.replace(m.prefix, ''))} · ${n} ${sp.unit}`,
           swatch: sp.color,
           price,
           item: { id, n },
+          hint: sp.desc,
         })),
       ),
     })
+  }
   for (const [kind, levels] of Object.entries(TOOLS) as [ToolKind, ToolDef[]][]) {
     levels.forEach((t, level) => {
       if (t.none || !t.price) return
@@ -2225,14 +2252,21 @@ function checkParts(inv: Inventory, order: Order, installedSwitches: number): In
     {
       cat: 'case',
       // khách đòi đúng case nào thì phải đúng case đó
-      ok: !!c && caseFits(c, order.layout) && (!order.caseId || inv.case!.id === order.caseId),
+      // khách đòi kiểu mount (vd O-ring mount) thì case phải làm được mount đó
+      ok:
+        !!c &&
+        caseFits(c, order.layout) &&
+        (!order.caseId || inv.case!.id === order.caseId) &&
+        (!order.mount || c.mounts.includes(order.mount)),
       msg: !c
         ? 'Chưa có case'
         : !caseFits(c, order.layout)
           ? `Case không vừa layout ${lay.name}`
           : order.caseId && inv.case!.id !== order.caseId
             ? `Khách cần case ${CASES[order.caseId]?.name ?? order.caseId}, đang có ${c.name}`
-            : 'OK',
+            : order.mount && !c.mounts.includes(order.mount)
+              ? `Khách cần ${MOUNTS[order.mount].name}, case ${c.name} không làm được`
+              : 'OK',
     },
     {
       cat: 'pcb',

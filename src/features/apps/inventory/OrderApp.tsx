@@ -5,6 +5,7 @@ import {
   MOUNTS,
   PLATELESS_MOUNTS,
   SOUND_WISH,
+  STABS,
   SWITCHES,
   buildSound,
   checkInventory,
@@ -12,6 +13,9 @@ import {
   itemName,
   partSpent,
   soundLabel,
+  stabNeed,
+  stabStock,
+  stabText,
   switchOk,
 } from '@/data/parts'
 import {
@@ -31,7 +35,8 @@ import { cn, fmt } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
 import { OrderCard, useOrderEntries, type OrderEntry } from '@/components/game/OrderCard'
 import { buildContext } from '@/data/steps'
-import type { BuildState, Inventory } from '@/types'
+import type { BuildState, Inventory, PartCategory } from '@/types'
+import { getLayout } from '@/data/layouts'
 
 /**
  * Chọn loại switch dùng cho đơn đang làm (khách không đòi đích danh 1 loại): các loại đang có (đơn + kho chung) hợp loại
@@ -91,6 +96,18 @@ function OrderDetail({ c }: { c: OrderEntry }) {
       ? buildSound(inventory, mount, build, ctx?.keys.length)
       : null
   const over = spent > order.budget
+  // switch / stab: ghi số khách cần / số đang có trong kho đơn (switch đã cắm thì chỉ còn cần phần chưa cắm)
+  const keys = getLayout(order.layout, order.variant).keys
+  const placed = build ? Object.keys(build.switches).length : 0
+  const partLabel = (cat: PartCategory) => {
+    const sw = inventory.switch
+    if (cat === 'switch' && sw)
+      return `${SWITCHES[sw.type]?.name ?? sw.type} · cần ${Math.max(0, keys.length - placed)} / kho ${sw.count}`
+    const st = inventory.stab
+    if (cat === 'stab' && st && keys.some((k) => k.stab))
+      return `Stab ${STABS[st.type].name} · cần ${stabText(stabNeed(keys))} / kho ${stabText(stabStock(st))}`
+    return itemName(cat, inventory[cat])
+  }
 
   return (
     <div className="flex flex-col">
@@ -115,7 +132,7 @@ function OrderDetail({ c }: { c: OrderEntry }) {
                 <td className="p-1.5 align-top font-bold">{CATS[x.cat]}</td>
                 <td className="p-1.5 align-top text-ink">
                   {/* chưa có món này thì chỉ hiện lý do thiếu */}
-                  {inventory[x.cat] && itemName(x.cat, inventory[x.cat])}
+                  {inventory[x.cat] && partLabel(x.cat)}
                   {provided[x.cat] && (
                     <Badge solid tone="green">
                       Khách gửi
@@ -157,7 +174,8 @@ function OrderDetail({ c }: { c: OrderEntry }) {
             {caseDef.pieces === 2 ? '2 mảnh: phải tháo vít mở case và vặn lại khi xong' : '1 mảnh'}
           </Muted>
           {/* plateless: bỏ plate, switch hàn thẳng PCB (chỉ PCB hàn + tray mount) */}
-          {(plateless || (active && !build && !provided.plate && !order.plateMaterial)) && (
+          {(plateless ||
+            (active && !build && !provided.plate && !order.plateMaterial && !order.foam)) && (
             <div className="mt-2 flex items-center gap-2.5 rounded-xl bg-panel-2 px-2.5 py-2">
               {active && !build ? (
                 <Toggle checked={plateless} onChange={s.setPlateless} label="Plateless" />

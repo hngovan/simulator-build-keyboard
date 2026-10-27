@@ -13,6 +13,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.11',
+    date: '2026-10-27',
+    commits: [],
+    title: 'Dây O-ring 3 độ cứng, foam theo yêu cầu khách, plate sandwich mica',
+    items: [
+      'Dây O-ring silicon 3 độ cứng (trắng 30A / đen 50A / đỏ 70A) bán ở Shopii, chọn khi gá vòng; khách có thể dặn độ cứng',
+      'Foam PCB: khách yêu cầu thì bắt buộc lót, không thì bước tuỳ chọn',
+      'Case mica sandwich (cả Alice): plate là tấm liền cùng viền case, lỗ vít khớp lỗ case, không còn tai gasket',
+      'Keycap mũi tên lên / xuống hiện đúng ký hiệu',
+      'Đang hàn thì khoá xoay camera',
+      'Nút Kết thúc ngày hiện số đơn đã xong trong ngày',
+      'Khung xem 3D Shopii chỉ chọn màu / loại, không hiện gói số lượng; bỏ tiêu đề bảng chọn đầu vít',
+    ],
+  },
+  {
     version: '0.1.10',
     date: '2026-10-26',
     commits: ['6431fdb'],

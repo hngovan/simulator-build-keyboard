@@ -254,6 +254,10 @@ export interface Order {
   caseId?: string
   stabType?: string
   plateMaterial?: string
+  /** khách đòi O-ring mount với đúng độ cứng dây O-ring (id vật tư ORING_IDS) */
+  oring?: string
+  /** khách muốn lót foam Poron PCB: bước `foam` thành bắt buộc (không có = tuỳ shop, bỏ qua được) */
+  foam?: true
   budget: number
   labor: number
   lines: string[]
@@ -322,7 +326,8 @@ export interface BuildState {
   /** mũi hàn đen do vừa hàn cháy: phải lau vào bùi nhùi mới hàn tiếp được */
   tipDirty?: boolean
   gaskets: Record<number, true>
-  ring: boolean
+  /** đã cuốn vòng O-ring: id dây (ORING_IDS, độ cứng); `true` = bản lưu cũ (coi như dây 50A) */
+  ring: boolean | string
   /** feet đã dán: số hốc → loại feet (id vật tư); bản lưu cũ không có */
   feet?: Record<number, string>
   inCase: boolean

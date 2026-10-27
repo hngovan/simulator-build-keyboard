@@ -1,4 +1,4 @@
-import { OPTIONAL_STEPS, stepProgress } from '@/data/steps'
+import { isOptionalStep, stepProgress } from '@/data/steps'
 import { SOUND_WISH, TOOLS, buildSound, soundMatch } from '@/data/parts'
 import { stabQuality, switchLubeEval } from '@/data/mods'
 import { SUPPLIES } from '@/data/supplies'
@@ -49,7 +49,7 @@ export function scoreDelivery({
 }: ScoreInput): DeliveryResult {
   let done = 0
   let total = 0
-  for (const st of ctx.steps.filter((x) => !OPTIONAL_STEPS.includes(x))) {
+  for (const st of ctx.steps.filter((x) => !isOptionalStep(x, order))) {
     const [d, t] = stepProgress(st, build, ctx, screwClicks)
     done += Math.min(d, t)
     total += t
@@ -142,6 +142,20 @@ export function scoreDelivery({
     },
     lubeCheck,
     { label: `Test phím (${nTest}/${nKeys})`, pts: 5, got: (5 * nTest) / nKeys },
+    // khách dặn đúng độ cứng dây O-ring
+    ...(order.oring
+      ? [
+          {
+            label: `Dây O-ring ${SUPPLIES[order.oring].name.replace('Dây O-ring ', '')} như khách dặn`,
+            pts: 5,
+            got: build.ring === order.oring ? 5 : 0,
+          },
+        ]
+      : []),
+    // khách dặn lót foam Poron PCB
+    ...(order.foam
+      ? [{ label: 'Lót foam PCB như khách dặn', pts: 5, got: build.foam ? 5 : 0 }]
+      : []),
     {
       label: over ? `Lố ngân sách ${over}k` : `Trong ngân sách (${spent}/${order.budget}k)`,
       pts: 10,

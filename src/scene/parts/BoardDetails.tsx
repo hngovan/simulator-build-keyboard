@@ -96,7 +96,16 @@ export function Gaskets() {
 
 /** Vòng silicon quanh board. O-ring mount: cuốn quanh viền, kẹp trong khe giữa PCB và plate (lòi ra ngoài 1 chút).
  * OG mount: ôm cả mép PCB + plate. ghost = bản xem trước chưa lắp */
-export function SiliconeRing({ ghost, between }: { ghost: boolean; between: boolean }) {
+export function SiliconeRing({
+  ghost,
+  between,
+  color = '#3d3f46',
+}: {
+  ghost: boolean
+  between: boolean
+  /** màu dây O-ring đã cuốn (trắng 30A / đen 50A / đỏ 70A) */
+  color?: string
+}) {
   const ctx = useCtx()
   // O-ring: cao bằng khe PCB–plate, tâm ngay mép board
   const t = 0.12
@@ -121,7 +130,7 @@ export function SiliconeRing({ ghost, between }: { ghost: boolean; between: bool
           {ghost ? (
             <meshBasicMaterial color="#ffd84a" transparent opacity={0.35} />
           ) : (
-            <meshStandardMaterial color="#3d3f46" roughness={0.85} />
+            <meshStandardMaterial color={color} roughness={0.6} />
           )}
         </RoundedBox>
       ))}

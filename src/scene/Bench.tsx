@@ -195,10 +195,13 @@ function Controls() {
   const pan = useGame((s) => s.camMode === 'pan')
   // đang giữ chuột thao tác (hàn...) thì khoá camera
   const locked = useCamLock((s) => s.locked)
+  // bước hàn: khoá góc quay (chỉ kéo khung nhìn / zoom), khỏi lỡ tay xoay khi rê mỏ hàn
+  const solder = useStep() === 'solder'
   return (
     <OrbitControls
       makeDefault
       enabled={!locked}
+      enableRotate={!solder}
       screenSpacePanning={false}
       // lại gần sát keycap (1u = 19mm) nhưng vẫn dừng trên mặt bàn / bàn phím
       minDistance={1.8}

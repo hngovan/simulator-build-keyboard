@@ -1,5 +1,5 @@
 import { useGame, useBuild, useCtx } from '@/store'
-import { STEP_INFO, stepProgress } from '@/data/steps'
+import { stepProgress, stepTitle } from '@/data/steps'
 import { SCREW_FULL } from '@/data/parts'
 import { HudPanel, StepDot } from '@/components/ui'
 import { cn } from '@/lib/format'
@@ -12,6 +12,7 @@ import { deadKey } from '@/store/scoring'
  */
 export function StepList() {
   const ctx = useCtx()
+  const order = useGame((s) => s.order)
   const build = useBuild()
   const clicks = SCREW_FULL
   const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
@@ -66,7 +67,7 @@ export function StepList() {
             <StepDot state={state} alert={alert}>
               {i + 1}
             </StepDot>
-            <span>{STEP_INFO[st].title}</span>
+            <span>{stepTitle(st, order)}</span>
             {canAhead && <span className="ml-auto text-xs">↷</span>}
             {t > 1 && state !== 'todo' && state !== 'ahead' && (
               <span className="ml-auto text-xs">

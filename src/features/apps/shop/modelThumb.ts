@@ -127,6 +127,23 @@ function createFoamSheet(color: string) {
   return sheet
 }
 
+/** Dây O-ring silicon: 2 vòng tròn lồng nhau nằm nghiêng (như ảnh dây O-ring bán lẻ) */
+function createORings(color: string) {
+  const group = new THREE.Group()
+  const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.55 })
+  for (const [r, x, z] of [
+    [1.05, 0, 0],
+    [0.55, -0.35, 0.25],
+  ]) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.055, 16, 64), mat)
+    ring.rotation.x = Math.PI / 2
+    ring.position.set(x, 0, z)
+    group.add(ring)
+  }
+  group.rotation.set(0.75, -0.3, 0.1)
+  return group
+}
+
 export async function buildScene(kind: ThumbKind, type: string) {
   const group = new THREE.Group()
   const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x = 0) => {
@@ -184,6 +201,7 @@ export async function buildScene(kind: ThumbKind, type: string) {
     if (SUPPLIES[type]?.spell) return createScroll(SUPPLIES[type].name)
     if (SUPPLIES[type]?.feet) return createFeetStrip(SUPPLIES[type].color)
     if (SUPPLIES[type]?.pcbFoam) return createFoamSheet(SUPPLIES[type].color)
+    if (SUPPLIES[type]?.oring) return createORings(SUPPLIES[type].color)
     if (type === 'urgo') {
       // hộp băng cá nhân "Band Aid Box" (Logansryche, Sketchfab, CC BY 4.0): model lệch xa gốc, căn tâm về 0
       const box = (await glbScene('/models/supplies/band-aid-box.glb')).clone(true)

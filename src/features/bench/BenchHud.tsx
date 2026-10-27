@@ -3,12 +3,14 @@ import { useGame, useBuild, useCtx } from '@/store'
 import {
   autoFlip,
   NO_FLIP_STEPS,
-  OPTIONAL_STEPS,
+  isOptionalStep,
+  stepTitle,
   SCREW_STEPS,
   STEP_INFO,
   stepProgress,
 } from '@/data/steps'
-import { SCREW_FULL, TOOLS, screwLevel } from '@/data/parts'
+import { SCREW_FULL, SWITCHES, TOOLS, screwLevel } from '@/data/parts'
+import { SUPPLIES } from '@/data/supplies'
 import { FlipVertical2, ListOrdered, Monitor, PackageCheck, Undo2 } from 'lucide-react'
 import { Alert, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
 import { cn } from '@/lib/format'
@@ -16,12 +18,12 @@ import { OrderSpec } from '@/components/game/OrderSpec'
 import { StatusChips } from '@/components/game/StatusChips'
 import type { ScrewStep, StepId, ToolKind } from '@/types'
 import { StepList } from './StepList'
-import { FeetPanel, FoamPanel, LubePanel, SolderPanel, StabModPanel } from './ModPanels'
+import { FeetPanel, FoamPanel, LubePanel, RingPanel, SolderPanel, StabModPanel } from './ModPanels'
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
 import { CamModeButton, ResetCamButton } from './CamModeButton'
 import { useBenchKey } from './useBenchKey'
-import { stabModHint } from '@/data/mods'
+import { stabModHint, stabModRules } from '@/data/mods'
 import { OrderPicker } from './EmptyBenchHud'
 
 // Dụng cụ đang dùng ở mỗi bước (hiện ở thanh nhiệm vụ)
@@ -42,17 +44,77 @@ const STEP_TOOL: Partial<Record<StepId, ToolKind>> = {
 function useBuildComplete() {
   const ctx = useCtx()
   const build = useBuild()
+  const order = useGame((s) => s.order)
   const clicks = SCREW_FULL
   return ctx.steps
-    .filter((st) => !OPTIONAL_STEPS.includes(st))
+    .filter((st) => !isOptionalStep(st, order))
     .every((st) => {
       const [d, t] = stepProgress(st, build, ctx, clicks)
       return d >= t
     })
 }
 
-/** Hỏi lại trước khi giao bàn phím chưa build xong cho khách */
-function ConfirmDeliver({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+interface DeliverIssues {
+  /** bước bắt buộc chưa xong */
+  missing: string[]
+  /** yêu cầu của khách chưa đạt (lube, dây O-ring...) */
+  requested: string[]
+  /** bước tuỳ chọn đã bỏ qua / làm dở (mod stab, lube, foam, test) */
+  skipped: string[]
+}
+
+/** Những gì còn thiếu trước khi đóng gói: bước bắt buộc, yêu cầu của khách, bước tuỳ chọn bị bỏ qua */
+function useDeliverIssues(): DeliverIssues {
+  const ctx = useCtx()
+  const build = useBuild()
+  const order = useGame((s) => s.order)
+  const swType = useGame((s) => s.inventory.switch?.type)
+  const stabType = useGame((s) => s.inventory.stab?.type)
+  const missing: string[] = []
+  const requested: string[] = []
+  const skipped: string[] = []
+  const has = (st: StepId) => ctx.steps.includes(st)
+  for (const st of ctx.steps.filter((x) => !isOptionalStep(x, order))) {
+    const [d, t] = stepProgress(st, build, ctx, SCREW_FULL)
+    if (d < t) missing.push(`${stepTitle(st, order)}${t > 1 ? ` (${Math.min(d, t)}/${t})` : ''}`)
+  }
+  const n = ctx.keys.length
+  const prelubed = !!(swType && SWITCHES[swType]?.prelubed)
+  if (order?.lubePref === 'want' && !prelubed && build.lubed < n)
+    requested.push(`Khách muốn lube switch: mới lube ${build.lubed}/${n} con`)
+  if (order?.lubePref === 'none' && build.lubed > 0)
+    requested.push('Khách dặn KHÔNG lube switch nhưng đã lube')
+  if (order?.oring && has('ring') && build.ring !== order.oring)
+    requested.push(`Khách muốn dây O-ring ${SUPPLIES[order.oring].name.replace('Dây O-ring ', '')}`)
+  if (has('stabMod') && stabType) {
+    const todo = stabModRules(stabType).filter((r) => r.needed && !build.stabMods[r.kind])
+    if (todo.length) skipped.push(`Mod stab: còn ${todo.map((r) => r.label).join(', ')}`)
+  }
+  if (has('switchLube') && order?.lubePref === 'any' && !prelubed && build.lubed < n)
+    skipped.push(`Lube switch: ${build.lubed}/${n} con`)
+  if (has('foam') && isOptionalStep('foam', order) && !build.foam) skipped.push('Lót foam PCB')
+  const tested = Object.keys(build.tested).length
+  if (has('test') && tested < n) skipped.push(`Test phím: ${tested}/${n} phím`)
+  return { missing, requested, skipped }
+}
+
+/** Hỏi lại trước khi đóng gói khi còn bước chưa xong / yêu cầu của khách chưa đạt / bước bị bỏ qua: liệt kê từng mục */
+function ConfirmDeliver({
+  issues,
+  onCancel,
+  onConfirm,
+}: {
+  issues: DeliverIssues
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const list = (items: string[]) => (
+    <ul className="list-disc pl-5 text-sm">
+      {items.map((t) => (
+        <li key={t}>{t}</li>
+      ))}
+    </ul>
+  )
   return (
     <div
       className="fixed inset-0 z-[30] grid animate-fade-in place-items-center bg-black/55 p-4"
@@ -60,12 +122,23 @@ function ConfirmDeliver({ onCancel, onConfirm }: { onCancel: () => void; onConfi
     >
       <HudCard className="flex w-[min(460px,100%)] flex-col gap-3">
         <h3 className="font-head text-xl font-extrabold text-yellow">
-          📮 Giao bàn phím chưa xong?
+          📮 Chắc chắn đóng gói đơn này?
         </h3>
-        <Alert title="Bàn phím vẫn chưa build xong">
-          Giao lúc này khách sẽ chấm điểm thấp và có thể ảnh hưởng tới uy tín của bạn. Bạn không
-          muốn làm tới cùng cho khách sao?
-        </Alert>
+        {issues.missing.length > 0 && (
+          <Alert title="Bàn phím vẫn chưa build xong">{list(issues.missing)}</Alert>
+        )}
+        {issues.requested.length > 0 && (
+          <Alert title="Chưa đúng yêu cầu của khách">{list(issues.requested)}</Alert>
+        )}
+        {issues.skipped.length > 0 && (
+          <Alert tone="yellow" title="Các bước đã bỏ qua">
+            {list(issues.skipped)}
+          </Alert>
+        )}
+        <div className="text-sm text-muted">
+          Giao lúc này khách có thể chấm điểm thấp và ảnh hưởng tới uy tín của bạn. Bạn không muốn
+          làm tới cùng cho khách sao?
+        </div>
         <div className="flex justify-end gap-2">
           <Button tone="red" onClick={onConfirm}>
             Vẫn giao
@@ -83,7 +156,8 @@ const noop = () => {}
 
 function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }) {
   const started = useBuild().stepIdx > 0
-  const complete = useBuildComplete()
+  const issues = useDeliverIssues()
+  const clean = !issues.missing.length && !issues.requested.length && !issues.skipped.length
   const [confirming, setConfirming] = useState(false)
   const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
   const canUndo = useGame((s) => s.history.length > 0 && !s.stabAnim)
@@ -134,13 +208,14 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
           tone="orange"
           icon={<PackageCheck />}
           label="Đóng gói đơn này"
-          onClick={() => (complete ? deliver() : setConfirming(true))}
+          onClick={() => (clean ? deliver() : setConfirming(true))}
           disabled={!started}
         />
       </div>
       <StatusChips />
       {confirming && (
         <ConfirmDeliver
+          issues={issues}
           onCancel={() => setConfirming(false)}
           onConfirm={() => {
             setConfirming(false)
@@ -159,7 +234,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const info = STEP_INFO[step]
   const [done, total] = stepProgress(step, build, ctx, SCREW_FULL)
   const finished = done >= total
-  const optional = step === 'stabMod' || step === 'switchLube' || step === 'foam'
+  const optional = isOptionalStep(step, s.order)
   // hàn dở vẫn đi tiếp được (nút đỏ cảnh báo), khớp nextStep
   const soft = step === 'solder' && done > 0 && !finished
   const last = build.stepIdx >= ctx.steps.length - 1
@@ -208,7 +283,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
           className="flex items-center gap-2 font-head text-xl font-extrabold text-yellow transition-opacity hover:opacity-85 max-md:text-lg max-md:whitespace-nowrap"
         >
           <span>
-            {info.title}{' '}
+            {stepTitle(step, s.order)}{' '}
             {total > 1 && (
               <b>
                 {done}/{total}
@@ -334,6 +409,8 @@ export function BenchHud() {
       <FeetPanel />
     ) : step === 'foam' ? (
       <FoamPanel />
+    ) : step === 'ring' ? (
+      <RingPanel />
     ) : step === 'test' ? (
       <SoundMeter />
     ) : null
@@ -344,7 +421,7 @@ export function BenchHud() {
       {/* 2 cột HUD: mỗi thẻ bấm tiêu đề để thu gọn / mở, thân cuộn riêng */}
       <div className="fixed top-16 left-3 z-[5] flex max-h-[calc(100vh-160px)] w-[300px] flex-col gap-2 text-sm max-md:top-[116px] max-md:max-h-[calc(100dvh-300px)] max-md:w-[min(280px,calc(100vw-24px))] max-md:text-[13px] [&_.text-base]:text-lg [&_.text-xs]:text-sm">
         <HudPanel id="order" title={`Đơn của ${order.customer}`} className="shrink-0">
-          <OrderSpec order={order} compact />
+          <OrderSpec order={order} compact mount={ctx.mount} />
         </HudPanel>
         <StepList />
       </div>

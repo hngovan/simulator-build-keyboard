@@ -397,6 +397,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const model = order ? caseModelOf(caseDef, order.layout, order.variant) : caseDef.model
   const two = caseDef.pieces === 2
   const mica = caseDef.material === 'mica'
+  const sandwich = ctx.mount === 'sandwich'
   const wood = caseDef.material === 'wood'
   const W = ctx.width + 2 * (CASE_MARGIN + CASE_WALL)
   const D = ctx.depth + 2 * (CASE_MARGIN + CASE_WALL)
@@ -544,7 +545,28 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
           }
           {...top.bind}
         >
-          {mica ? (
+          {mica && sandwich ? (
+            // sandwich: chừa đúng khe plate (plate viền liền là 1 lớp kẹp giữa) → lớp dưới plate + lớp trên plate
+            <>
+              <Layers
+                W={W}
+                D={D}
+                y0={Y.split}
+                y1={Y.plateBot}
+                mat={mat(top.hover)}
+                holes={screwHoles}
+              />
+              <Layers
+                W={W}
+                D={D}
+                y0={0}
+                y1={Y.caseTop}
+                mat={mat(top.hover)}
+                holes={screwHoles}
+                cutouts={cutouts}
+              />
+            </>
+          ) : mica ? (
             <Layers
               W={W}
               D={D}

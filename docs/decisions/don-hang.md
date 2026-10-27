@@ -419,3 +419,11 @@ bấm phá sản, new game".
 - App Chi tiết đơn: `SwitchPick` dưới dòng Switch (đơn đang làm, khách không đòi đích danh `switchType`, chưa cắm switch nào):
   `OptionSelect` các loại đang có (đơn + kho chung, hợp `switchOk`) kèm số con → `takeStock`. Chạy thử (playwright, store): mua A 700k
   rồi B 1.400k → B vào kho; chọn B "Đã chi" 940k, chọn lại A 470k (layout 47/70 con).
+
+## Foam PCB: khách yêu cầu thì bắt buộc, không thì tuỳ chọn (2026-10-27)
+
+- Người dùng: "ở bước lót foam lên pcb không phải yêu cầu thì mới làm còn không thì bước này là option có thể tiếp tục or bỏ qua".
+- `Order.foam?: true` (types.ts): ~25% đơn (`orders.ts`, +60k vào budget, khách nhắn "Lót giúp mình tấm foam Poron..."), OrderSpec dòng
+  "Foam PCB". `isOptionalStep(step, order)` (steps.ts) thay `OPTIONAL_STEPS.includes`: đơn có `foam` thì bước `foam` bắt buộc (nextStep
+  buildSlice, Objective + `useBuildComplete` BenchHud, độ hoàn chỉnh `scoreDelivery`); `stepTitle` ghi "Lót foam PCB (khách yêu cầu)".
+  Chấm thêm "Lót foam PCB như khách dặn" 5 điểm. Đơn đòi foam thì không bật plateless (`setPlateless` + Toggle ở Chi tiết đơn).

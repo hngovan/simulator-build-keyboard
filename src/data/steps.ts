@@ -99,6 +99,12 @@ export const BIT_LABELS: Record<ScrewBit, string> = {
   flat: 'Dẹt',
 }
 export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'foam', 'switchLube', 'test']
+/** Bước tuỳ chọn với đơn này: khách đòi lót foam (`order.foam`) thì bước `foam` bắt buộc */
+export const isOptionalStep = (step: StepId, order?: { foam?: true } | null) =>
+  OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam)
+/** Tên bước theo đơn: foam khách yêu cầu thì ghi rõ thay cho "(tuỳ chọn)" */
+export const stepTitle = (step: StepId, order?: { foam?: true } | null) =>
+  step === 'foam' && order?.foam ? 'Lót foam PCB (khách yêu cầu)' : STEP_INFO[step].title
 export const CASE_WALL = 0.45
 export const CASE_MARGIN = 0.15
 

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { LAYOUTS, variantText } from '@/data/layouts'
+import { SUPPLIES } from '@/data/supplies'
 import {
   CASES,
   CASE_COLORS,
@@ -54,7 +55,16 @@ function KitBox({ order, compact }: { order: Order; compact?: boolean }) {
 }
 
 /** Bảng tóm tắt yêu cầu của khách; đơn kit thì liệt kê đồ khách gửi trên đầu */
-export function OrderSpec({ order, compact }: { order: Order; compact?: boolean }) {
+export function OrderSpec({
+  order,
+  compact,
+  mount,
+}: {
+  order: Order
+  compact?: boolean
+  /** kiểu mount đang build (bàn build): luôn hiện dòng Mount, ghi chú nếu khách đòi mount khác */
+  mount?: string | null
+}) {
   const vt = variantText(order.variant)
   const rows: [string, ReactNode][] = [
     ['Layout', `${LAYOUTS[order.layout].name}${vt.length ? ' · ' + vt.join(' · ') : ''}`],
@@ -74,8 +84,16 @@ export function OrderSpec({ order, compact }: { order: Order; compact?: boolean 
   // kit chỉ có 1 vài món: món nào khách không gửi thì hiện yêu cầu như đơn mua đủ
   const k = order.kit
   if (!k) rows.push(['Loại đơn', 'Mua từ A → Z'])
-  if (k?.case) rows.push(['Mount', order.mount ? MOUNTS[order.mount].name : '—'])
-  else
+  // mount: đang build thì hiện mount đã chọn; khách gửi case / đòi mount (vd O-ring) thì hiện yêu cầu
+  const want = order.mount
+  if (mount)
+    rows.push([
+      'Mount',
+      `${MOUNTS[mount].name}${want ? (want === mount ? ' (khách yêu cầu)' : ` · khách cần ${MOUNTS[want].name}`) : ''}`,
+    ])
+  else if (k?.case || want) rows.push(['Mount', want ? MOUNTS[want].name : '—'])
+  if (order.oring) rows.push(['Dây O-ring', SUPPLIES[order.oring].name.replace('Dây O-ring ', '')])
+  if (!k?.case)
     rows.push([
       'Case',
       [
@@ -91,6 +109,7 @@ export function OrderSpec({ order, compact }: { order: Order; compact?: boolean 
   if (order.stabType && !k?.stab) rows.push(['Stab', STABS[order.stabType].name])
   rows.push(
     ['Lube switch', LUBE_PREF[order.lubePref]],
+    ['Foam PCB', order.foam ? 'Khách muốn lót foam' : 'Tuỳ shop'],
     ['Budget linh kiện', fmt(order.budget)],
     ['Tiền công', fmt(order.labor)],
   )

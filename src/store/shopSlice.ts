@@ -119,6 +119,9 @@ export interface ShopSlice {
   /** loại feet đang dán ở bước dán feet (FEET_IDS) */
   feetPick: string
   setFeetPick: (id: string) => void
+  /** loại dây O-ring đang chọn ở bước cuốn O-ring (ORING_IDS) */
+  oringPick: string
+  setOringPick: (id: string) => void
   setMount: (mount: string) => void
   /** bật / tắt plateless cho đơn đang làm (chưa vào build): plate đang có cất về kho chung */
   setPlateless: (on: boolean) => void
@@ -169,8 +172,11 @@ function freshSession(order: Order, day: number): JobSession {
   }
 }
 /** mount mặc định của case: đang plateless thì ưu tiên mount không cần plate */
-const firstMount = (mounts: string[], inv: Inventory) =>
-  (isPlateless(inv.plate) && mounts.find((m) => PLATELESS_MOUNTS.includes(m))) || mounts[0]
+const firstMount = (mounts: string[], inv: Inventory, want?: string | null) =>
+  // khách đòi mount (vd O-ring) mà case làm được thì chọn luôn mount đó
+  (want && mounts.includes(want) && want) ||
+  (isPlateless(inv.plate) && mounts.find((m) => PLATELESS_MOUNTS.includes(m))) ||
+  mounts[0]
 
 /** Cất đơn đang làm (nếu có) thành 1 job */
 const stashActive = (s: GameState): Job[] =>
@@ -239,6 +245,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   lubePick: { switch: 'g0', housing: 'g2', wire: 'bdz', spring: 'gpl105' },
   solderPick: 'solder6337',
   feetPick: 'feetBlack',
+  oringPick: 'oring50',
 
   // ---------- đơn hàng ----------
   acceptOrder: (id) => {
@@ -472,7 +479,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       spent: s.spent + price,
       spare,
       ...(cat === 'case'
-        ? { mount: firstMount(CASES[(item as CaseItem).id].mounts, s.inventory) }
+        ? { mount: firstMount(CASES[(item as CaseItem).id].mounts, s.inventory, s.order.mount) }
         : {}),
     })
     s.toast(
@@ -702,6 +709,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   setLubePick: (kind, id) => set((s) => ({ lubePick: { ...s.lubePick, [kind]: id } })),
   setSolderPick: (solderPick) => set({ solderPick }),
   setFeetPick: (feetPick) => set({ feetPick }),
+  setOringPick: (oringPick) => set({ oringPick }),
   setMount: (mount) => {
     const s = get()
     if (s.build) return
@@ -721,6 +729,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (s.provided.plate) return s.toast('Khách đã gửi plate, phải dùng plate đó', 'bad')
     if (s.order.plateMaterial)
       return s.toast('Khách đòi đúng chất liệu plate, không bỏ plate được', 'bad')
+    if (s.order.foam)
+      return s.toast('Khách muốn lót foam giữa PCB và plate, không bỏ plate được', 'bad')
     const mounts = s.inventory.case ? CASES[s.inventory.case.id].mounts : PLATELESS_MOUNTS
     const mount = s.order.mount ?? mounts.find((m) => PLATELESS_MOUNTS.includes(m))
     if (!mount || !PLATELESS_MOUNTS.includes(mount))

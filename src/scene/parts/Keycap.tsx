@@ -77,6 +77,9 @@ function legendPlane(cap: THREE.Object3D) {
   return { y: a + over + 0.012, tilt: Math.atan(-b) }
 }
 
+/** Nunito không có glyph ↑ ↓ (hiện ô vuông) → in '→' xoay */
+const ARROW_SPIN: Record<string, number> = { '↑': Math.PI / 2, '↓': -Math.PI / 2 }
+
 function CapOverlay({
   k,
   color,
@@ -101,14 +104,18 @@ function CapOverlay({
   return (
     <>
       {k.label && (
-        <Text
+        <group
           position={[0, legend?.y ?? height - dish + 0.015, LEGEND_Z]}
           rotation-x={-Math.PI / 2 + (legend?.tilt ?? 0)}
-          fontSize={k.label.length > 1 ? 0.2 : 0.3}
-          color={col.legend}
         >
-          {k.label}
-        </Text>
+          <Text
+            rotation-z={ARROW_SPIN[k.label] ?? 0}
+            fontSize={k.label.length > 1 ? 0.2 : 0.3}
+            color={col.legend}
+          >
+            {ARROW_SPIN[k.label] === undefined ? k.label : '→'}
+          </Text>
+        </group>
       )}
       {testing && !tested && (
         <UntestedOutline w={k.w - inset * 2 - 0.08} h={k.h - inset * 2 - 0.08} y={height + 0.02} />

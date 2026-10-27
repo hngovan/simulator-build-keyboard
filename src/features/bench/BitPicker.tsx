@@ -2,8 +2,11 @@ import { useGame } from '@/store'
 import { BIT_LABELS, SCREW_BITS } from '@/data/steps'
 import { cn } from '@/lib/format'
 import type { ScrewBit, ScrewStep } from '@/types'
+import { useBenchKey } from './useBenchKey'
 
 const BITS = Object.keys(BIT_LABELS) as ScrewBit[]
+/** phím tắt 1 2 3 4 = đầu vít từ trái qua phải */
+const PICK_BIT = BITS.map((b) => () => useGame.getState().setScrewBit(b))
 
 /** Hình mặt đầu vít nhìn từ mũi (cũng là hình rãnh trên đầu ốc) */
 function BitIcon({ bit, className }: { bit: ScrewBit; className?: string }) {
@@ -41,6 +44,10 @@ export function BitPicker({ step }: { step: ScrewStep }) {
   const swapAt = useGame((s) => s.bitSwapAt)
   const setScrewBit = useGame((s) => s.setScrewBit)
   const need = SCREW_BITS[step]
+  useBenchKey('Digit1', PICK_BIT[0])
+  useBenchKey('Digit2', PICK_BIT[1])
+  useBenchKey('Digit3', PICK_BIT[2])
+  useBenchKey('Digit4', PICK_BIT[3])
   return (
     <div className="fixed top-16 left-1/2 z-[5] flex -translate-x-1/2 items-center gap-3 rounded-2xl border-2 border-line bg-[rgba(14,16,24,0.92)] px-3 py-2 shadow-[0_6px_0_#0006]">
       <div className="flex flex-col items-center gap-0.5 text-xs text-muted">
@@ -49,21 +56,28 @@ export function BitPicker({ step }: { step: ScrewStep }) {
       </div>
       <div className="h-12 w-px bg-line" />
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-extrabold">🪛 Chọn đầu vít</span>
         <div className="flex gap-1.5">
-          {BITS.map((b) => (
+          {BITS.map((b, i) => (
             <button
               key={b}
               type="button"
               onClick={() => setScrewBit(b)}
-              title={b === bit ? `Đang lắp đầu ${BIT_LABELS[b]}` : `Lắp đầu vít ${BIT_LABELS[b]}`}
+              title={
+                b === bit
+                  ? `Đang lắp đầu ${BIT_LABELS[b]}`
+                  : `Lắp đầu vít ${BIT_LABELS[b]} (phím ${i + 1})`
+              }
               className={cn(
-                'flex w-[72px] flex-col items-center gap-0.5 rounded-xl border-2 px-1.5 py-1 text-xs font-bold',
+                'relative flex w-[72px] flex-col items-center gap-0.5 rounded-xl border-2 px-1.5 py-1 text-xs font-bold',
                 b === bit
                   ? 'border-green bg-green/15 text-[#9fe6b6]'
                   : 'border-transparent bg-panel-2 hover:border-yellow',
               )}
             >
+              {/* số phím tắt ở góc trái trên */}
+              <span className="absolute top-0.5 left-1.5 text-[10px] font-extrabold text-muted">
+                {i + 1}
+              </span>
               {/* key theo lần thay để icon nảy lên mỗi lần lắp đầu mới */}
               <BitIcon
                 key={b === bit ? swapAt : 0}

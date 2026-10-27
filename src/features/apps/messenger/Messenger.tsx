@@ -9,7 +9,6 @@ import {
   Handshake,
   Keyboard,
   MapPin,
-  Moon,
   Truck,
   X,
 } from 'lucide-react'
@@ -401,13 +400,8 @@ export function Messenger() {
           )}
         </div>
         <div className="flex h-16 shrink-0 items-center border-t border-white/10 px-3">
-          <Button
-            tone="green"
-            className="flex w-full items-center justify-center gap-2"
-            onClick={nextDay}
-          >
-            <Moon className="size-4" />
-            Kết thúc ngày{unsent.length ? ` · gửi ${unsent.length} đơn` : ''}
+          <Button tone="green" className="w-full" onClick={nextDay}>
+            Kết thúc ngày · xong {packed.length} đơn
           </Button>
         </div>
       </div>

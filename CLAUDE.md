@@ -123,6 +123,8 @@ vào `window.__r3f` để debug trong console.
   Top mount (case 2 mảnh): `topCase` (úp case trên lên plate) → `topScrew` (lật board, vặn vít từ dưới vào vách case trên) →
   `caseIn` (case trên nhấc theo board) → `caseScrew`, không có `caseClose`. O-ring mount (case 1 mảnh): vòng `ring` kẹp giữa PCB
   và plate, gá trước bước plate, không gasket.
+  Dây O-ring là vật tư 3 độ cứng (`ORING_IDS`: trắng 30A / đen 50A / đỏ 70A, `oringPick`, `build.ring` = id dây, âm theo Shore);
+  đơn có thể đòi `oring` (+ `mount` O-ring với đơn mua đủ).
   Stab plate-mount: gài vào plate (lắp sau bước plate, cao hơn PCB), mọi chất liệu plate đều được.
   Plateless: plate ảo `PLATELESS` (`'none'` trong `PLATES`, không bán: `plateIds()`), bật ở app Danh sách đơn (`setPlateless`);
   cần PCB hàn + stab không plate-mount (`platelessIssue`) + mount tray (`PLATELESS_MOUNTS`); `buildContext` bỏ bước `foam` / `plate`.
