@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.11',
     date: '2026-10-27',
-    commits: [],
+    commits: ['7fe2d67'],
     title: 'Dây O-ring 3 độ cứng, foam theo yêu cầu khách, plate sandwich mica',
     items: [
       'Dây O-ring silicon 3 độ cứng (trắng 30A / đen 50A / đỏ 70A) bán ở Shopii, chọn khi gá vòng; khách có thể dặn độ cứng',
