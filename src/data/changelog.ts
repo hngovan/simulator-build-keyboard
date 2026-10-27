@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.12',
     date: '2026-10-27',
-    commits: [],
+    commits: ['1ce1ce1'],
     title: 'Giao diện kiểu bảng xếp hạng, Mezzenger mới, giá BIN, khách huỷ kèo',
     items: [
       'Bảng xếp hạng, Mezzenger, Đánh giá, Hội Phím Cơ, Kho, Danh sách đơn, Shopii cùng 1 kiểu: đầu app có icon + tiêu đề vàng, tab lọc đứng yên, bỏ badge',
