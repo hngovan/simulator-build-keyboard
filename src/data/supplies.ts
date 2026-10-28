@@ -1,4 +1,5 @@
 // Vật tư tiêu hao: mua 1 lần dùng cho nhiều đơn. packs: [số lượt dùng, giá k]
+import type { SkillSpec } from './skillCheck'
 
 /** Mục đích dùng lube */
 export type LubeUse = 'linear' | 'tactile' | 'clicky' | 'housing' | 'wire' | 'spring'
@@ -19,7 +20,7 @@ export interface SupplyDef {
   warn?: Partial<Record<LubeUse, string>>
   /**
    * cuộn thiếc hàn: speed = xếp hạng (nhỏ = xịn), shine = độ bóng mối hàn 0..1,
-   * slow = giây chảy chậm thêm, burnChance = tỉ lệ ẩn cháy chân dù nhả đúng vùng xanh (không hiện cho người chơi)
+   * slow = thiếc chảy chậm (skill check hàn hẹp vùng xanh, `solderSkill`), burnChance = tỉ lệ ẩn cháy chân dù nhả đúng vùng xanh (không hiện cho người chơi)
    */
   solder?: { speed: number; shine: number; slow?: number; burnChance?: number }
   /** sách phép (mục Shopii "Sách phép"): số switch cộng thêm mỗi lần mở / mỗi mẻ lube, mỗi lần dùng trừ 1 */
@@ -392,25 +393,17 @@ export const SOLDER_IDS = Object.keys(SUPPLIES)
 export const JOINTS_PER_KEY = 2
 
 /** Cửa sổ hàn (giây thật): bút hàn thiếc chảy sau 2–2,5s, 3s là cháy; trạm hàn 1–2s, 3s cháy */
-const SOLDER_WINDOW = {
-  pen: { melt: [2, 2.5], burn: 3 },
-  station: { melt: [1, 2], burn: 3 },
+/** skill check hàn: bút hàn kim chạy nhanh hơn + vùng xanh hẹp hơn trạm hàn */
+const SOLDER_SKILL = {
+  pen: { width: 0.2, speed: 0.9 },
+  station: { width: 0.28, speed: 0.75 },
 } as const
 
-/** Khoảng thiếc chảy + mốc cháy theo dụng cụ; thiếc chảy chậm (thiếc đểu) cộng thêm vào cả 2 mốc */
-export function solderWindow(station: boolean, wire: string) {
-  const w = station ? SOLDER_WINDOW.station : SOLDER_WINDOW.pen
+/** Độ khó 1 lần hàn theo dụng cụ; thiếc chảy chậm (thiếc đểu, `slow`) thu hẹp vùng xanh */
+export function solderSkill(station: boolean, wire: string): SkillSpec {
+  const w = station ? SOLDER_SKILL.station : SOLDER_SKILL.pen
   const slow = SUPPLIES[wire]?.solder?.slow ?? 0
-  return { melt: [w.melt[0] + slow, w.melt[1] + slow] as const, burn: w.burn + slow }
-}
-
-/**
- * Thời gian hàn 1 phím (giây): ready = lúc thiếc chảy, nằm trong khoảng chảy theo seed 0..1 (cố định theo phím);
- * nhả trong [ready, burn) là đạt; giữ tới burn là cháy xém chân
- */
-export function solderTiming(station: boolean, wire: string, seed = 0.5) {
-  const { melt, burn } = solderWindow(station, wire)
-  return { ready: melt[0] + (melt[1] - melt[0]) * seed, burn }
+  return { width: w.width * (1 - slow * 0.5), speed: w.speed }
 }
 
 /** Độ hợp + ghi chú của 1 loại lube cho 1 mục đích */

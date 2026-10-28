@@ -6,6 +6,8 @@ import { PLATES } from '@/data/parts'
 import {
   CASE_MARGIN,
   CASE_WALL,
+  TOP_HOLE,
+  TOP_NOTCH,
   TOP_TAB,
   TRAY_HOLE,
   Y,
@@ -106,17 +108,23 @@ function plateGeometry(
     hole.absarc(x, -z, TRAY_HOLE.plate, 0, Math.PI * 2, false)
     target.holes.push(hole)
   }
-  // tai liền mép plate (viền plate lùi 0.01u), không chồng lên phần plate
+  // tai liền mép plate (viền plate lùi 0.01u), thò qua khe board – vách vào hốc vách case trên (chừa khe 0.01u)
   const tabShapes = tabs.map(({ x, z }) => {
     const s = Math.sign(z)
-    const z0 = s * (depth / 2 - 0.01)
-    const z1 = s * (depth / 2 + CASE_MARGIN - 0.01)
-    return new THREE.Shape([
+    // plate phủ kín lòng case (top mount dựng bằng code): tai nối từ sát mép plate, không chồng lên plate
+    const z0 = s * (sandwich ? depth / 2 + CASE_MARGIN - TOP_PLATE_GAP - 0.005 : depth / 2 - 0.01)
+    const z1 = s * (depth / 2 + CASE_MARGIN + TOP_NOTCH.d - 0.01)
+    const tab = new THREE.Shape([
       new THREE.Vector2(x - TOP_TAB / 2, -z0),
       new THREE.Vector2(x + TOP_TAB / 2, -z0),
       new THREE.Vector2(x + TOP_TAB / 2, -z1),
       new THREE.Vector2(x - TOP_TAB / 2, -z1),
     ])
+    // lỗ vít M2 xuyên tai
+    const hole = new THREE.Path()
+    hole.absarc(x, -z, TOP_HOLE.r, 0, Math.PI * 2, false)
+    tab.holes.push(hole)
+    return tab
   })
   return new THREE.ExtrudeGeometry([...shapes, ...tabShapes], {
     depth: -Y.plateBot,
@@ -125,6 +133,8 @@ function plateGeometry(
 }
 
 const NO_HOLES: Point[] = []
+/** plate top mount phủ kín lòng case: khe tới mặt trong thành case (u) */
+const TOP_PLATE_GAP = 0.02
 
 /** plate gasket Blossom từ DXF gốc (`bun run gen:plate-blossom`, mm theo tâm board): viền + tai gasket + lỗ switch / stab */
 let blossomGeo: THREE.BufferGeometry | null = null
@@ -243,6 +253,7 @@ export function Board() {
     (ctx.variant.rshift ?? '2.75u') === '2.75u'
   // tray mount: vít xuyên plate + PCB bắt vào trụ đồng đáy case (vị trí đã dò không chạm lỗ switch / stab)
   const trayHoles = ctx.mount === 'tray' ? ctx.screws.trayScrew : NO_HOLES
+  const topFull = ctx.mount === 'top' && !ctx.caseDef.model
   const plateGeo = useMemo(
     () =>
       plateGeometry(
@@ -259,11 +270,18 @@ export function Board() {
               ctx.depth + 2 * (CASE_MARGIN + CASE_WALL),
               caseScrewHoles(ctx.caseDef, ctx.width, ctx.depth),
             )
-          : undefined,
+          : topFull
+            ? // top mount (case dựng bằng code): plate phủ kín lòng case, chừa khe nhỏ tới thành (không hở khe board – vách)
+              sandwichPlateShape(
+                ctx.width + 2 * (CASE_MARGIN - TOP_PLATE_GAP),
+                ctx.depth + 2 * (CASE_MARGIN - TOP_PLATE_GAP),
+                [],
+              )
+            : undefined,
         trayHoles,
         ctx.mount === 'top' ? ctx.screws.topScrew : NO_HOLES,
       ),
-    [ctx, standard60CAD, sandwich, trayHoles],
+    [ctx, standard60CAD, sandwich, topFull, trayHoles],
   )
   const at = (name: StepId) => ctx.steps.indexOf(name)
   return (

@@ -97,8 +97,8 @@ export interface ToolDef {
   quality?: number
   /** độ bền: dùng được bao nhiêu lần thì hỏng (phải mua lại) */
   life?: number
-  /** tua vít: giây giữ chuột tới khi vít chặt (`lo`, ngẫu nhiên trong khoảng) + độ rộng vùng chặt (`ok`), quá là tuôn ren */
-  torque?: { lo: [number, number]; ok: [number, number] }
+  /** tua vít: skill check vặn vào — bề rộng vùng xanh (phần thanh) + tốc độ kim (lượt / giây) */
+  torque?: { width: number; speed: number }
 }
 
 // Giá: nghìn đồng (k)
@@ -1681,15 +1681,15 @@ export const TOOLS: Record<ToolKind, ToolDef[]> = {
       name: 'Tua vít thường',
       clicks: 3,
       price: 0,
-      desc: 'Giữ chuột để vặn: lực lên chậm, dễ canh',
-      torque: { lo: [1, 1.6], ok: [0.6, 0.9] },
+      desc: 'Vặn chậm, kim lực chạy chậm + vùng xanh rộng, dễ canh',
+      torque: { width: 0.24, speed: 0.7 },
     },
     {
       name: 'Tua vít điện',
       clicks: 1,
       price: 350,
-      desc: 'Vặn nhanh nhưng lực lên gắt, dễ tuôn ren nếu giữ lâu',
-      torque: { lo: [0.45, 0.8], ok: [0.18, 0.35] },
+      desc: 'Vặn nhanh nhưng lực gắt: kim chạy nhanh, vùng xanh hẹp, dễ trượt ren',
+      torque: { width: 0.15, speed: 1.2 },
     },
   ],
   // hold = giây giữ mỏ hàn tới khi thiếc chảy đủ (nhân hệ số loại thiếc, cộng thời gian lấy thiếc)

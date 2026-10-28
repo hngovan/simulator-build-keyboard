@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg'
 
 /** độ dày 1 lớp mica (u, ~3mm) và khe giữa 2 lớp */
 export const MICA_LAYER = 0.15
@@ -21,6 +22,26 @@ function roundedRect(path: THREE.Path, w: number, d: number, r: number) {
   path.lineTo(x, y + r)
   path.quadraticCurveTo(x, y, x + r, y)
   return path
+}
+
+/** hốc khoét vào mặt trong vách (top mount: tai plate thò vào): tâm x, cạnh trước (`side` 1) / sau (−1), rộng `w`, sâu vào vách `d` */
+export interface WallNotch {
+  x: number
+  side: 1 | -1
+  w: number
+  d: number
+}
+
+/** lỗ tròn đứng khoan vào vỏ (u): tâm x, z, bán kính `r`, từ y0 tới y1 (lỗ vít xuyên / lỗ ren / hốc chìm đầu ốc) */
+export interface WallBore {
+  x: number
+  z: number
+  /** bán kính ở y0 */
+  r: number
+  /** bán kính ở y1 (hốc côn countersink); không có = lỗ trụ */
+  r1?: number
+  y0: number
+  y1: number
 }
 
 /**
@@ -50,6 +71,25 @@ export function ledgeGeometry(W: number, D: number, y0: number, y1: number, wall
   })
   g.rotateX(-Math.PI / 2)
   g.translate(0, y0, 0)
+  return g
+}
+
+/** trừ các khối `cuts` khỏi `base` (CSG), giải phóng hình gốc */
+function carve(base: THREE.BufferGeometry, cuts: THREE.BufferGeometry[]) {
+  const ev = new Evaluator()
+  ev.attributes = ['position', 'normal', 'uv']
+  ev.useGroups = false
+  let brush = new Brush(base.index ? base.toNonIndexed() : base)
+  brush.updateMatrixWorld()
+  for (const c of cuts) {
+    const cut = new Brush(c.index ? c.toNonIndexed() : c)
+    cut.updateMatrixWorld()
+    brush = ev.evaluate(brush, cut, SUBTRACTION)
+    c.dispose()
+  }
+  base.dispose()
+  const g = brush.geometry
+  g.clearGroups()
   return g
 }
 
@@ -99,6 +139,11 @@ export function caseShellGeometry(
   wall: number,
   floorTop?: number,
   pockets: Pocket[] = [],
+  /** hốc lõm vào mặt trong vách từ đáy y0 lên tới `notchTop` (trần hốc liền vỏ) */
+  notches: WallNotch[] = [],
+  notchTop = y1,
+  /** lỗ khoan đứng vào vỏ (lỗ vít xuyên, lỗ ren, hốc chìm đầu ốc) */
+  bores: WallBore[] = [],
 ) {
   const b = SHELL_BEVEL
   const extrude = (shape: THREE.Shape, h: number, bottom: number, segs = 6) => {
@@ -115,7 +160,25 @@ export function caseShellGeometry(
     g.translate(0, bottom + b, 0)
     return g
   }
-  const ring = extrude(ringShape(W, D, wall, false, b), y1 - y0, y0)
+  const shell = extrude(ringShape(W, D, wall, false, b), y1 - y0, y0)
+  // khoét bằng CSG trên vỏ liền khối (như phay CNC): hốc tai plate từ đáy lên trần `notchTop`, lỗ vít / lỗ ren
+  const cuts = [
+    ...notches.map((n) =>
+      new THREE.BoxGeometry(n.w, notchTop - y0 + 0.02, n.d + 0.02).translate(
+        n.x,
+        (y0 - 0.02 + notchTop) / 2,
+        n.side * (D / 2 - wall + n.d / 2 - 0.01),
+      ),
+    ),
+    ...bores.map((h) =>
+      new THREE.CylinderGeometry(h.r1 ?? h.r, h.r, h.y1 - h.y0, 28).translate(
+        h.x,
+        (h.y0 + h.y1) / 2,
+        h.z,
+      ),
+    ),
+  ]
+  const ring = cuts.length ? carve(shell, cuts) : shell
   if (floorTop === undefined) return ring
   // sàn nằm lọt trong ruột vành, cùng mặt đáy → nhìn ngoài là 1 khối
   // góc sàn bo theo góc ruột (INNER_R) cho khít, không hở 4 góc

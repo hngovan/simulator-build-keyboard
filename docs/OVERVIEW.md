@@ -140,28 +140,28 @@ Danh sách thực tế do `buildContext()` sinh theo case / stab / PCB / mount. 
 tự thường gặp; `stabScrew` nằm trước `plate` với stab screw-in, còn stab plate-mount được lắp sau
 `plate`.
 
-| Bước         | Việc cần làm                                                               | Khi nào                      |
-| ------------ | -------------------------------------------------------------------------- | ---------------------------- |
-| `unbox`      | Click thùng hàng để mở                                                     | Luôn có                      |
-| `caseOpen`   | Tháo vít, nhấc nắp case trên                                               | Case 2 mảnh                  |
-| `stabMod`    | Clip chân stem, Holee mod, lube housing/slider/wire, lắp slider + wire     | Có phím cần stab; tuỳ chọn   |
-| `stab`       | Click vị trí phím dài (≥ 2u) để lắp stab                                   | Layout có stab               |
-| `stabScrew`  | Vặn 2 vít cho mỗi stab                                                     | Stab screw-in                |
-| `plate`      | Click board để đặt plate lên                                               | Luôn có                      |
-| `switchLube` | Mở từng switch rồi lube theo mẻ; có thể lube lò xo                         | Tuỳ chọn                     |
-| `switch`     | Click lỗ trên plate để cắm switch                                          | Luôn có                      |
-| `solder`     | Giữ chuột trên chân, nhả trong vùng xanh; tránh giữ quá lâu                | PCB hàn (không phải hotswap) |
-| `gasket`     | Click các vị trí quanh plate để dán gasket                                 | Mount gasket / OG            |
-| `ring`       | Click board cuốn vòng O-ring (sau lắp switch / hàn, kẹp giữa PCB và plate) | Mount O-ring / OG            |
-| `feet`       | Case tự lật úp, click 4 hốc dưới đáy để dán feet cao su (đen / trắng)      | Luôn có, trước khi lắp case  |
-| `caseIn`     | Click case để thả board vào                                                | Luôn có                      |
-| `topCase`    | Úp case trên xuống plate                                                   | Top mount (case 2 mảnh)      |
-| `topScrew`   | Board tự lật, vặn vít từ dưới giữ plate vào case trên                      | Top mount (case 2 mảnh)      |
-| `trayScrew`  | Vặn vít giữ PCB vào standoff đáy case                                      | Mount tray                   |
-| `caseClose`  | Click nắp case để đậy lại                                                  | Case 2 mảnh (trừ top mount)  |
-| `caseScrew`  | Vặn vít khoá 2 mảnh case                                                   | Case 2 mảnh                  |
-| `keycap`     | Click switch để cắm keycap                                                 | Luôn có                      |
-| `test`       | Gõ bàn phím thật hoặc click phím 3D; phím đã test có chấm xanh             | Luôn có, tính điểm riêng     |
+| Bước         | Việc cần làm                                                                    | Khi nào                      |
+| ------------ | ------------------------------------------------------------------------------- | ---------------------------- |
+| `unbox`      | Click thùng hàng để mở                                                          | Luôn có                      |
+| `caseOpen`   | Tháo vít, nhấc nắp case trên                                                    | Case 2 mảnh                  |
+| `stabMod`    | Clip chân stem, Holee mod, lube housing/slider/wire, lắp slider + wire          | Có phím cần stab; tuỳ chọn   |
+| `stab`       | Click vị trí phím dài (≥ 2u) để lắp stab                                        | Layout có stab               |
+| `stabScrew`  | Vặn 2 vít cho mỗi stab                                                          | Stab screw-in                |
+| `plate`      | Click board để đặt plate lên                                                    | Luôn có                      |
+| `switchLube` | Mở từng switch rồi lube theo mẻ; có thể lube lò xo                              | Tuỳ chọn                     |
+| `switch`     | Click lỗ trên plate để cắm switch                                               | Luôn có                      |
+| `solder`     | Bấm chân cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (vàng = hoàn hảo) | PCB hàn (không phải hotswap) |
+| `gasket`     | Click các vị trí quanh plate để dán gasket                                      | Mount gasket / OG            |
+| `ring`       | Click board cuốn vòng O-ring (sau lắp switch / hàn, kẹp giữa PCB và plate)      | Mount O-ring / OG            |
+| `feet`       | Case tự lật úp, click 4 hốc dưới đáy để dán feet cao su (đen / trắng)           | Luôn có, trước khi lắp case  |
+| `caseIn`     | Click case để thả board vào                                                     | Luôn có                      |
+| `topCase`    | Úp case trên xuống plate                                                        | Top mount (case 2 mảnh)      |
+| `topScrew`   | Board tự lật, vặn vít từ dưới giữ plate vào case trên                           | Top mount (case 2 mảnh)      |
+| `trayScrew`  | Vặn vít giữ PCB vào standoff đáy case                                           | Mount tray                   |
+| `caseClose`  | Click nắp case để đậy lại                                                       | Case 2 mảnh (trừ top mount)  |
+| `caseScrew`  | Vặn vít khoá 2 mảnh case                                                        | Case 2 mảnh                  |
+| `keycap`     | Click switch để cắm keycap                                                      | Luôn có                      |
+| `test`       | Gõ bàn phím thật hoặc click phím 3D; phím đã test có chấm xanh                  | Luôn có, tính điểm riêng     |
 
 `OPTIONAL_STEPS` gồm `stabMod`, `switchLube`, `test`: không tính vào độ hoàn thiện khi chấm điểm,
 nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, còn test có 5 điểm riêng.
@@ -246,8 +246,8 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 
 ### Hàn, lube, mod stab, vít, keycap
 
-- **Hàn**: cần mỏ hàn (bút 60W hoặc trạm) và thiếc. Giữ chuột trên chân, nhả khi vùng xanh hiện;
-  giữ quá lâu, hụt quá 3 lần hoặc thiếc đểu (15% ẩn) sẽ làm cháy chân và đen mũi hàn. Mũi đen phải
+- **Hàn**: cần mỏ hàn (bút 60W hoặc trạm) và thiếc. Bấm chân cho kim nhiệt chạy qua lại, bấm lần nữa / Space dừng trong vùng xanh
+  (vàng = hoàn hảo, cộng điểm khi giao); dừng ở đỏ phải, hụt (đỏ trái) quá 3 lần hoặc thiếc đểu (15% ẩn) sẽ làm cháy chân và đen mũi hàn. Mũi đen phải
   lau vào bùi nhùi mới hàn tiếp; có thể dùng bút rã hàn hút thiếc cháy rồi hàn lại.
 - **Lube switch**: phải mở switch bằng đồ mở trước (tách housing, stem, lò xo), rồi lube theo mẻ. Số switch
   mỗi lần mở / mỗi mẻ = bậc chứng chỉ thợ; có phép thì thợ lõ thành 10, middle / senior cộng thêm 10 (15 / 20) (Shopii → Sách phép, bán riêng: **Phép mở switch**
@@ -256,11 +256,13 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 - **Mod stab**: làm theo mũi tên vàng — clip chân stem (cần kìm cắt) → Holee mod bằng Urgo → phết
   mỡ housing + slider → lắp slider → phết mỡ wire → lắp wire. Mẫu stab đời mới có thể đã clip sẵn
   hoặc đã lube sẵn; làm thừa / sai bước có thể bị chặn hoặc mất điểm.
-- **Vít**: chọn đầu vít (chữ thập, lục giác, Torx) ở `BitPicker`; sai đầu vít không bị chặn nữa mà tuôn ren ngay.
-  Bước tháo vít: click (tua vít thường 3 click / con, điện 1 click). Bước vặn vào: **giữ chuột**, thanh lực chạy, nhả trong
-  vùng xanh là chặt, nhả sớm thì vít mới vào 1 phần, giữ quá là tuôn ren. Vùng xanh ngẫu nhiên mỗi lần theo tua vít
-  (`ToolDef.torque`: tay lên chậm dễ canh, điện nhanh gắt). Tuôn ren vít ăn vào case PC / mica / acrylic thì 35% nứt case.
-  Giao: nứt case → đền khách 80% budget linh kiện; tuôn ren → 20% khách không để ý, còn lại đền 30% (budget + công).
+- **Vít**: chọn đầu vít (chữ thập, lục giác, Torx) ở `BitPicker`; sai đầu vít không bị chặn nữa mà trượt ren; trượt 3 lần trên 1 vít (`STRIP_TRIES`) mới tuôn ren.
+  Bước tháo vít: click (tua vít thường 3 click / con, điện 1 click). Bước vặn vào: **skill check** — bấm vít cho kim lực chạy qua lại,
+  bấm lần nữa / Space dừng: xanh là chặt (vàng = hoàn hảo), đỏ trái vít mới vào 1 phần, đỏ phải là trượt ren. Vùng xanh ngẫu nhiên
+  mỗi lần, rộng / tốc độ kim theo tua vít (`ToolDef.torque`: tay chậm dễ canh, điện nhanh hẹp). Tuôn ren vít ăn vào case PC / mica / acrylic thì 35% nứt case.
+  Vít stab tuôn ren = stab hỏng: mua stab cùng cỡ rồi bấm vít đỏ để thay, hoặc cứ giao.
+  Giao: case nứt / vít case (ngàm case, top mount, tray mount) tuôn ren → đền 80% giá case, −2 uy tín; stab tuôn ren → đền bộ stab mới.
+  Tuôn ren: 20% khách không để ý (hỏng ≤ 1/3 số lỗ cùng loại thì 30%); nứt thì luôn bị phát hiện.
   Vít đáy / vít stab có thể tự lật board.
 - **Keycap**: cắm theo bộ đã mua; số phím mỗi lần click phụ thuộc chứng chỉ thợ. Kiểm tra kỹ màu
   và profile vì đây là điểm chấm trực tiếp.

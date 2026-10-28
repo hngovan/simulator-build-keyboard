@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type * as THREE from 'three'
 import { useGame, useBuild, useCtx } from '@/store'
 import { SCREW_FULL, screwLevel } from '@/data/parts'
-import { Y } from '@/data/steps'
+import { Y, caseScrewShaft } from '@/data/steps'
 import { playClick } from '@/sound'
 import { Clickable } from '../stations/StationKit'
 import { bowlY, createScrewTray } from '../models/screwTrayModel'
@@ -16,8 +16,8 @@ const rand = (i: number, k: number) => {
 }
 
 /**
- * Ốc case đã tháo (bước `caseOpen`) mà chưa vặn lại (`caseScrew`) + ốc tray mount kèm case chưa bắt (`trayScrew`, bấm lần
- * đầu là lấy ra khỏi khay): có khay đựng ốc (`tools.screwTray`) thì nằm gọn trong lòng khay, không có thì vương vãi trên bàn. Đặt góc sau bên trái thảm (sau case, không chồng lên case trên đang tháo).
+ * Ốc case đã tháo (bước `caseOpen`) mà chưa vặn lại (`caseScrew`) + ốc tray mount / ốc M2 top mount kèm case chưa bắt
+ * (`trayScrew` / `topScrew`, bấm lần đầu là lấy ra khỏi khay): có khay đựng ốc (`tools.screwTray`) thì nằm gọn trong lòng khay, không có thì vương vãi trên bàn. Đặt góc sau bên trái thảm (sau case, không chồng lên case trên đang tháo).
  * Bấm khay để đổi màu (`nextTrayColor`). Khay chỉ để gọn, không tăng chỉ số
  */
 export function ScrewTray() {
@@ -59,14 +59,18 @@ export function ScrewTray() {
   const back = ctx.screws.caseScrew.filter((s) => (b.screws[s.id] ?? 0) > 0).length
   const n = Math.max(0, removed - back)
   // đúng ốc trên case: cùng model / cỡ với bước tháo vít, case mica vít xuyên mọi lớp thì dài như lúc bắt (ScrewSet)
-  const shaft =
-    ctx.caseDef.material === 'mica' && ctx.screwSide === 'top' ? Y.caseTop - Y.floorBot - 0.06 : 0
+  const shaft = caseScrewShaft(ctx.caseDef)
   // ốc tray mount chưa bắt (chưa bấm lần nào)
   const trayLeft =
     ctx.mount === 'tray' ? ctx.screws.trayScrew.filter((s) => !b.screws[s.id]).length : 0
+  // ốc M2 top mount kèm case chưa bắt: nằm sẵn trên khay tới bước bắt plate vào case trên
+  const topLeft = ctx.steps.includes('topScrew')
+    ? ctx.screws.topScrew.filter((s) => !b.screws[s.id]).length
+    : 0
   const len = screwLength('caseOpen', shaft)
   const trayLen = screwLength('trayScrew', TRAY_SHAFT)
-  const total = n + trayLeft
+  const topLen = screwLength('topScrew')
+  const total = n + trayLeft + topLeft
   const spots = useMemo(
     () =>
       Array.from({ length: total }, (_, i) => {
@@ -78,10 +82,10 @@ export function ScrewTray() {
         }
         // xếp song song trong lòng khay, đầu ốc so le (thân xen kẽ nhau cho sát); hàng ngoài tì lên thành lòng chảo
         const z = (i - (total - 1) / 2) * 0.22
-        const l = i < n ? len : trayLen
+        const l = i < n ? len : i < n + trayLeft ? trayLen : topLen
         return { x: 0, y: bowlY(Math.hypot(l / 2, z)), z, rot: i % 2 ? Math.PI : 0 }
       }),
-    [n, total, hasTray, len, trayLen],
+    [n, trayLeft, total, hasTray, len, trayLen, topLen],
   )
   if (!hasTray && !total) return null
   return (
@@ -103,8 +107,10 @@ export function ScrewTray() {
         <group key={i} position={[p.x, p.y, p.z]} rotation-y={p.rot}>
           {i < n ? (
             <LooseScrew step="caseOpen" shaft={shaft} />
-          ) : (
+          ) : i < n + trayLeft ? (
             <LooseScrew step="trayScrew" shaft={TRAY_SHAFT} />
+          ) : (
+            <LooseScrew step="topScrew" />
           )}
         </group>
       ))}

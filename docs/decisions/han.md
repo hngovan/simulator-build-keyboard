@@ -55,3 +55,16 @@
 - Khoá camera khi hàn (2026-10-25, "trong lúc hàn thì khoá cam, không xoay lung tung"): `useCamLock` (`scene/common/camLock.ts`)
   bật khi `SolderPad` đang `holding` (giữ mỏ hàn / bút hút thiếc trên chân), nhả / hàn xong / cháy / rời ô thì tắt (cleanup effect);
   `Controls` trong Bench.tsx đặt `OrbitControls enabled={!locked}` (không xoay / kéo / zoom). Dùng lại được cho thao tác giữ chuột khác.
+
+## Hàn bằng skill check thay giữ chuột (2026-10-28)
+
+- Người dùng: hỏi cơ chế "chọn điểm xanh trong thanh đỏ" rồi "làm gì giữ chuột cho người chơi thả" → chọn: cả vặn vít + hàn, kim chạy qua lại
+  liên tục, có vùng vàng hoàn hảo.
+- `data/skillCheck.ts` (`makeCheck` vùng xanh ngẫu nhiên chừa đỏ trái ≥ 0,2 / phải ≥ 0,12, vàng = 30% vùng xanh; `needleAt` kim tam giác;
+  `judge` → perfect / ok / low / high), `scene/common/skill.ts` (1 lần thử chạy 1 lúc, `startSkill` / `stopSkill`, bấm chuột trái bất kỳ
+  (capture) hoặc Space dừng, `skillBusy` chặn cú bấm dừng kim bị tính là bấm vật khác), `components/game/SkillBar.tsx` (kim vẽ bằng rAF).
+- SolderPad: bấm chân → `startSkill(solderSkill(station, wire))`; low → `failSolderKey` (hụt, 3 lần cháy), high → cháy, ok / perfect → `solderKey(..., perfect)`
+  (`build.perfect` gồm cả phím phép hàn ké). Thiếc chảy / xém theo vị trí kim. Hút thiếc cháy: bấm 1 lần, bút hút tự chạy 1,4s.
+  Bỏ `solderWindow` / `solderTiming` / `HeatBar`; `solderSkill`: bút 0,2 / 0,9, trạm 0,28 / 0,75, thiếc đểu `slow` hẹp vùng xanh (× 1 − slow / 2).
+- Chấm điểm: check "Thao tác hoàn hảo (vùng vàng) n/N" thưởng ≤ `PERFECT_BONUS` 5 (N = vít bước vặn vào + phím hàn).
+- Đã thử (playwright `pw/tray.mjs`, tofu60redux tray + PCB hàn): bấm chân hiện thanh đỏ / xanh / vàng + kim, bấm lần 2 ra mối đạt.

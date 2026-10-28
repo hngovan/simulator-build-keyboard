@@ -38,9 +38,9 @@ const INTRO = [
   'Ở dưới là việc cần làm ngay bây giờ, mũi tên vàng chỉ chỗ cần bấm. Lỡ tay thì Ctrl + Z hoàn tác nhé!',
 ]
 
-/** bước vặn vít vào: giữ chuột canh lực (thanh lực), quá tay là tuôn ren / nứt case → đền khách */
+/** bước vặn vít vào: skill check canh lực, quá tay là trượt ren / nứt case → đền khách */
 const TORQUE_LINE =
-  'Giữ chuột lên vít để siết, nhả khi thanh lực vào vùng xanh. Giữ quá là tuôn ren, case PC / mica / acrylic còn có thể nứt, giao đi là phải đền khách đó 😱'
+  'Bấm vít cho kim lực chạy qua lại, bấm lần nữa (hoặc Space) dừng trong vùng xanh, trúng vàng là hoàn hảo. Dừng ở đỏ bên phải là trượt ren, 3 lần là tuôn, case PC / mica / acrylic còn có thể nứt, giao đi là phải đền khách đó 😱'
 
 /** case mica: nhiều tấm mica cắt laser chồng lên nhau, vít xuyên qua mọi lớp (không phải case 2 mảnh) */
 const MICA_LINES: Partial<Record<StepId, string[]>> = {
@@ -90,7 +90,7 @@ const STEP_LINES: Record<StepId, string[]> = {
   ],
   solder: [
     'Board đã lật rồi, giờ hàn switch vào PCB nhé 🔥',
-    'Giữ chuột lên chân switch, nhả khi thanh nhiệt vào vùng xanh. Giữ lâu quá là cháy chân đó!',
+    'Bấm chân switch cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (vàng là hoàn hảo). Dừng ở đỏ bên phải là cháy chân đó!',
     'Hàn cháy thì mũi hàn bị đen: lau vào bùi nhùi rồi hút thiếc hàn lại chân cháy.',
   ],
   gasket: ['Gasket mount: dán các miếng đệm silicon quanh plate cho phím gõ êm và nhún nhẹ.'],
@@ -103,7 +103,10 @@ const STEP_LINES: Record<StepId, string[]> = {
     'Chọn feet đen hay trắng ở bảng bên phải, mỗi hốc dán 1 cái nha.',
   ],
   topCase: ['Top mount: úp case trên xuống plate trước. Click vào case trên nhé.'],
-  topScrew: ['Board đã lật: vặn vít từ dưới lên để giữ plate vào case trên.', TORQUE_LINE],
+  topScrew: [
+    'Case trên úp rồi thì bấm Q (hoặc bấm vào case) lật cả cụm lên, vặn ốc M2 từ dưới qua tai plate vào case trên.',
+    TORQUE_LINE,
+  ],
   caseIn: ['Giờ thả board vào case. Click vào case để đặt board xuống.'],
   trayScrew: [
     'Tray mount: vặn các vít giữ PCB vào standoff dưới đáy case. Nhớ đổi đúng đầu vít Torx!',

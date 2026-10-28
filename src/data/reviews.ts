@@ -29,8 +29,12 @@ const TEXTS = {
     'Case PC đẹp vậy mà nứt luôn chỗ bắt vít, may shop còn chịu đền',
   ],
   strip: [
-    'Vít tuôn ren lỏng lẻo hết, vặn lại không ăn. Ẩu quá!',
-    'Mở ra kiểm tra thấy vít toét ren, shop đền tiền mà vẫn bực',
+    'Vít case tuôn ren lỏng lẻo, gõ cứ lọc xọc. Ẩu quá!',
+    'Mở ra kiểm tra thấy lỗ ốc case toét ren, shop đền tiền mà vẫn bực',
+  ],
+  stab: [
+    'Stab lỏng lẻo, vít tuôn ren vặn không ăn, space kêu lạch cạch 😤',
+    'Mở ra thấy vít stab toét ren, may shop đền bộ stab mới',
   ],
   late: ['Hẹn mà trễ {n} ngày, chờ mòn mỏi 😮‍💨', 'Phím được nhưng giao trễ {n} ngày, mất điểm'],
   decline: [
@@ -57,8 +61,8 @@ const base = (order: Order, day: number) => ({
   avatar: order.avatar,
 })
 
-/** uy tín khi giao hàng: sao − 3, trễ mỗi ngày −1 */
-export const shipRep = (r: DeliveryResult) => r.stars - 3 - (r.late ?? 0)
+/** uy tín khi giao hàng: sao − 3, trễ mỗi ngày −1, case hỏng trừ thêm `repLoss` */
+export const shipRep = (r: DeliveryResult) => r.stars - 3 - (r.late ?? 0) - (r.repLoss ?? 0)
 
 /** Khách nhận hàng: đánh giá theo sao, trễ hạn thì phàn nàn trễ */
 export function shipReview(order: Order, r: DeliveryResult, day: number): Review {

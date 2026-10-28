@@ -21,7 +21,7 @@ const FILTERS: [Filter, string, LucideIcon][] = [
 ]
 /** cách chấm sao (khớp `scoreDelivery` trong store/scoring.ts + `shipRep` trong data/reviews.ts) */
 const HOW_SCORED =
-  'Điểm giao hàng /100: âm thanh, màu keycap / case, mount, build, mối hàn, stab, lube, test phím, ngân sách; nút lỗi −15, linh kiện lỗi −8. Sao: ≥90 = 5★, ≥75 = 4★, ≥55 = 3★, ≥35 = 2★, khách báo lỗi nút tối đa 2★. Uy tín +(sao − 3), trễ mỗi ngày −1'
+  'Điểm giao hàng /100: âm thanh, màu keycap / case, mount, build, mối hàn, stab, lube, test phím, ngân sách, thao tác hoàn hảo (vùng vàng, thưởng tối đa +5); nút lỗi −15, linh kiện lỗi −8. Sao: ≥90 = 5★, ≥75 = 4★, ≥55 = 3★, ≥35 = 2★, khách báo lỗi nút tối đa 2★. Uy tín +(sao − 3), trễ mỗi ngày −1, case hỏng (nứt / tuôn ren) −2'
 
 // Đánh giá của khách (style giống bảng xếp hạng): sao trung bình + danh sách mới nhất trước
 export function ReviewsApp() {

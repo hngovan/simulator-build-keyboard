@@ -6,6 +6,7 @@ import { NO_FLIP_STEPS, autoFlip } from '@/data/steps'
 import { lerpTo } from '../common/anim'
 import { Board } from './Board'
 import { Case } from './Case'
+import { useCaseSplit } from './caseSplit'
 
 /** Bàn phím (case + board) — tự lật khi cần thao tác mặt đáy, hoặc khi người chơi bấm "Lật xem đáy" */
 export function Assembly() {
@@ -19,7 +20,10 @@ export function Assembly() {
   const showCase = caseOnly || stepIdx >= ctx.steps.indexOf('caseIn')
   const topEarly = ctx.steps.includes('topCase') && stepIdx >= ctx.steps.indexOf('topCase')
   // Auto-flipped work steps must still let the player flip back to inspect the top.
-  const flipped = NO_FLIP_STEPS.includes(step) ? false : autoFlip(step, ctx) ? !viewFlip : viewFlip
+  // case 2 mảnh vừa tháo hết vít đáy: lật ngửa lại cho thấy case trên nhấc ra (tách 2 mảnh)
+  const split = useCaseSplit()
+  const flipped =
+    NO_FLIP_STEPS.includes(step) || split ? false : autoFlip(step, ctx) ? !viewFlip : viewFlip
   useFrame((_, dt) => {
     if (!ref.current) return
     const r = ref.current.rotation

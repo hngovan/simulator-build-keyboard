@@ -160,3 +160,31 @@
 - Đã thử (Vite dev + Playwright): giữ chuột hiện thanh lực, quá vùng → tuôn ren; qua store: nhả sớm 0,5s → 1,5/3, nhả 1,3s → chặt,
   sai đầu vít → tuôn, hoàn tác vẫn giữ dấu tuôn; refund 30% × (3.400 + 1.050) = 1.335k, nứt 80% × 3.400 = 2.720k.
   Headless render ~2,4s/khung nên không canh nhả vùng xanh bằng chuột thật được.
+
+## Trượt ren 3 lần mới tuôn (2026-10-28)
+
+- Người dùng: "tuôn ren phải cho thử 3 lần mới bị, 1 lần thì hơi khó tính quá".
+- `STRIP_TRIES = 3` (steps.ts); `strip()` trong buildSlice đếm `build.slips[id]` (sai đầu vít hoặc giữ quá vùng xanh đều tính, cộng dồn
+  theo từng vít): lần 1–2 chỉ toast "Trượt ren (sai đầu vít / quá tay) n/3", vít giữ nguyên tiến độ; lần 3 mới tuôn ren như cũ
+  (ghi `stripped`, có thể nứt case giòn). `slips` giữ qua hoàn tác giống `stripped` (không lách bằng undo).
+
+## Tuôn ren: stab hỏng thay được, case đền theo giá case (2026-10-28)
+
+- Người dùng: stab tuôn ren = stab hỏng → mua cái khác thay hoặc assem nốt gửi khách; khách phát hiện (case lỏng ren / gõ lọc xọc ở ngàm case,
+  lỗ ốc top mount, tray mount; stab lỏng) thì đền: stab đền nguyên bộ mới, case đền 80% giá + trừ uy tín. Hỏi lại thì chọn: thay stab
+  hỏng bằng stab dư, 80% giá case, giữ 20% không để ý, −2 uy tín. Thêm: hỏng ít lỗ (1–2/6) thì 30% không phát hiện.
+- `ScrewPoint.key` (vít stab → id phím); `replaceStab(screwId)` (buildSlice): cần `stabStock[cỡ] > stabNeed[cỡ]` (cỡ `stabSize`), trừ 1 stab
+  trong `inventory.stab`, xoá screws / stripped / slips mọi vít của stab đó (vặn lại). Không ghi history. `afterScrew` không tự sang bước
+  khi còn vít stab tuôn ren. Screw.tsx: vòng đỏ ở vít tuôn ren, vít stab đỏ bấm được (`fixable`).
+- `scoreDelivery`: bỏ `CRACK_REFUND` / `STRIP_REFUND`; case (nứt hoặc tuôn ren bị phát hiện) → `CASE_REFUND` 0,8 × `CASES[id].price`,
+  `repLoss = CASE_DAMAGE_REP` (2, cộng vào `shipRep`), check −25 nứt / −15 tuôn; stab → `STABS[type].price`, −10, `damage: 'stab'`
+  (đánh giá `TEXTS.stab`). Lỗ case gộp open-i = close-i; tỉ lệ = lỗ hỏng / lỗ cùng loại (case, top, tray) lấy max, ≤ 1/3 → 30% thoát.
+- Đã thử bằng bun test tạm (store vanilla + scoreDelivery): 3 lần mới tuôn, thay stab trừ đúng cỡ + reset vít, hết dư thì báo;
+  1/6 lỗ tray rng 0,25 thoát, 3/6 đền 80% giá case + repLoss 2, stab đền giá bộ.
+
+## Vặn vít vào bằng skill check (2026-10-28)
+
+- Cùng yêu cầu với hàn (xem `han.md`): `ToolDef.torque` đổi thành `{ width, speed }` (tay 0,24 / 0,7, điện 0,15 / 1,2), `torqueSpec(level)`
+  thay `torqueWindow`; `tightenScrew(id, result)`: low → vít vào thêm 1/3 (tối đa 90%), high / sai đầu vít → trượt ren, ok / perfect → chặt
+  (perfect ghi `build.perfect`). Screw.tsx bỏ giữ chuột / `TorqueBar`, tua vít quay liên tục khi kim chạy, `SkillBar` trên vít.
+- Ốc top mount đổi đầu vít lục giác (đầu trụ lục giác chìm). Đã thử: vít tray bấm thật + Space dừng vùng xanh → vít chặt.

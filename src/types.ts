@@ -342,6 +342,10 @@ export interface BuildState {
   closed: boolean
   /** vít bị tuôn ren (vặn sai đầu vít / quá lực); hoàn tác không gỡ được */
   stripped?: Record<string, true>
+  /** skill check trúng vùng vàng (hoàn hảo): id vít vặn vào / id phím hàn → cộng điểm khi giao */
+  perfect?: Record<string, true>
+  /** số lần trượt ren chưa tới mức tuôn (`STRIP_TRIES`) theo id vít; hoàn tác không gỡ được */
+  slips?: Record<string, number>
   /** case nứt (tuôn ren vít bắt vào case PC / mica / acrylic); hoàn tác không gỡ được */
   cracked?: boolean
   keycaps: Record<string, true>
@@ -368,6 +372,8 @@ export interface Point {
 }
 export interface ScrewPoint extends Point {
   id: string
+  /** vít stab: id phím của stab (tuôn ren = stab đó hỏng, thay stab mới) */
+  key?: string
 }
 
 export interface BuildContext {
@@ -455,10 +461,12 @@ export interface DeliveryResult {
   late?: number
   /** nút khách báo lỗi (nhãn phím): chưa hàn / hàn cháy, hoặc lỗi ẩn do không test hết trước khi giao */
   defects?: string[]
-  /** hỏng do vặn vít khách phát hiện (case nứt / tuôn ren) */
-  damage?: 'crack' | 'strip'
+  /** hỏng do vặn vít khách phát hiện: case nứt / case tuôn ren (lỏng, gõ lọc xọc) / stab tuôn ren (lỏng) */
+  damage?: 'crack' | 'strip' | 'stab'
   /** tiền đền khách vì hỏng (trừ khi gửi đơn) */
   refund?: number
+  /** uy tín bị trừ thêm vì case hỏng (ngoài phần theo sao) */
+  repLoss?: number
 }
 
 export interface Toast {

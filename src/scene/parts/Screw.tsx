@@ -4,12 +4,20 @@ import { Html, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, useCtx, useStep } from '@/store'
 import { SCREW_FULL, screwLevel } from '@/data/parts'
-import { SCREW_BITS, SCREW_STEPS, Y, torqueWindow } from '@/data/steps'
-import { cn } from '@/lib/format'
+import {
+  SCREW_BITS,
+  SCREW_HEADS,
+  SCREW_STEPS,
+  Y,
+  caseScrewShaft,
+  torqueSpec,
+  type ScrewHead,
+} from '@/data/steps'
 import type { ScrewBit, ScrewPoint, ScrewStep } from '@/types'
-import { playDrill, playScrew } from '@/sound'
+import { playClick, playDrill, playScrew } from '@/sound'
 import { useHover } from '../common/useHover'
-import { useCamLock } from '../common/camLock'
+import { cancelSkill, skillBusy, startSkill, useSkill } from '../common/skill'
+import { SkillBar } from '@/components/game/SkillBar'
 import { BIT_SWAP_MS, BitDriver, SCREW_SPIN, SPIN_MS } from '../models/HandTools'
 import { MM } from '../models/Switch'
 import { HintArrow } from '../stations/StationKit'
@@ -31,7 +39,7 @@ interface ScrewProps extends ScrewPoint {
   mouth?: number
 }
 
-type ScrewStyle = 'countersunk' | 'socket' | 'button'
+type ScrewStyle = ScrewHead
 const SCREW_MODELS: Record<ScrewStyle, string> = {
   countersunk: '/models/screws/countersunk-m3x10.glb',
   socket: '/models/screws/socket-cap-m2x6.glb',
@@ -42,14 +50,10 @@ Object.values(SCREW_MODELS).forEach((url) => useGLTF.preload(url))
 const HEAD_H: Record<ScrewStyle, number> = { countersunk: 0, socket: 2, button: 1.65 }
 /** bán kính đầu ốc (mm): ốc tháo ra nằm ngang tì đầu xuống mặt khay / bàn */
 const HEAD_R: Record<ScrewStyle, number> = { countersunk: 3, socket: 1.9, button: 2.85 }
-const SCREW_STYLES: Record<ScrewStep, ScrewStyle> = {
-  caseOpen: 'countersunk',
-  stabScrew: 'button',
-  topScrew: 'button',
-  trayScrew: 'socket',
-  // cùng bộ ốc lúc tháo case (caseOpen) vặn lại: cùng kiểu đầu ốc
-  caseScrew: 'countersunk',
-}
+/** kiểu đầu ốc theo bước (dùng chung với lỗ khoét trên case: `SCREW_HEADS` trong steps.ts) */
+const SCREW_STYLES = SCREW_HEADS
+/** rút ngắn ốc theo bước (tỉ lệ cả chiều dài, giữ đầu ốc): vít stab M3×8 → 2/3; vít top mount M2×6 → M2×4 */
+const SCREW_SHORT: Partial<Record<ScrewStep, number>> = { stabScrew: 2 / 3, topScrew: 6 / 8 }
 
 /**
  * Ren xoắn của model ốc (đo từ GLB bằng gltf-transform, đơn vị mm, đỉnh đầu ốc ở y = 0): đường kính ngoài / chân ren, bước ren,
@@ -310,10 +314,14 @@ function Screw({
   const toolLv = useGame((s) => screwLevel(s.tools, s.screwPick))
   const turnScrew = useGame((s) => s.turnScrew)
   const tightenScrew = useGame((s) => s.tightenScrew)
+  const replaceStab = useGame((s) => s.replaceStab)
+  const stripped = useGame((s) => !!s.build?.stripped?.[id])
   // tiến độ tính theo mức đầy chung (tay 3 nấc, điện 1 click = đầy)
   const clicks = SCREW_FULL
   const done = turns >= clicks
-  const { hover, bind } = useHover(interactive && !done)
+  // vít stab tuôn ren: bấm để thay stab hỏng
+  const fixable = interactive && stripped && id.startsWith('stab-')
+  const { hover, bind } = useHover(interactive && (!done || fixable))
   const ref = useRef<THREE.Group>(null)
   const { scene } = useGLTF(SCREW_MODELS[style])
   const model = useMemo(() => {
@@ -338,28 +346,10 @@ function Screw({
   }, [model])
   const spinMs = toolLv ? SPIN_MS.electric : SPIN_MS.manual
   const p = Math.min(1, turns / clicks)
-  // vặn vào: giữ chuột siết, lực (giây) chạy theo thanh; vùng chặt ngẫu nhiên theo tua vít mỗi lần bấm
-  const hold = useRef<{ at: number; base: number; lo: number; hi: number } | null>(null)
-  const [held, setHeld] = useState<{ t: number; lo: number; hi: number } | null>(null)
+  // vặn vào: bấm cho kim lực chạy (skill check, vùng xanh theo tua vít), bấm lần nữa / Space dừng; tua vít quay trong lúc chờ
+  const skill = useSkill((s) => (s.active?.id === id ? s.active.check : null))
   const [spinTick, setSpinTick] = useState(0)
-  const holding = !!held
-  useEffect(() => {
-    if (!holding) return
-    useCamLock.setState({ locked: true })
-    return () => useCamLock.setState({ locked: false })
-  }, [holding])
-  const holdTime = () => {
-    const h = hold.current
-    return h ? h.base + (performance.now() - h.at) / 1000 : 0
-  }
-  const release = () => {
-    const h = hold.current
-    if (!h) return
-    const t = holdTime()
-    hold.current = null
-    setHeld(null)
-    tightenScrew(id, t, h)
-  }
+  useEffect(() => () => cancelSkill(id), [id])
   // tháo: trồi lên theo ren (thân ốc ~0.4u) · vặn: lún từ 0.25 xuống mặt
   const liftAt = (q: number) => (mode === 'tighten' ? (1 - q) * 0.25 : q * 0.4)
   const dir = mode === 'tighten' ? -1 : 1
@@ -396,17 +386,10 @@ function Screw({
     }
     const k = Math.min(1, (now - a.at) / spinMs)
     shown.current = a.from + (p - a.from) * (toolLv ? k : ease(k))
-    const h = hold.current
-    if (h) {
-      const t = holdTime()
-      shown.current = Math.min(1, t / h.lo)
-      a.from = shown.current
-      setHeld({ t, lo: h.lo, hi: h.hi })
-      // tua vít quay liên tục: mỗi nhịp quay 1 lần
-      const tick = Math.floor(((now - h.at) / spinMs) * (toolLv ? 1 : 1.5))
+    if (skill) {
+      // tua vít quay liên tục trong lúc chạy kim: mỗi nhịp quay 1 lần
+      const tick = Math.floor(((now - skill.at) / spinMs) * (toolLv ? 1 : 1.5))
       if (tick !== spinTick) setSpinTick(tick)
-      // giữ quá vùng chặt: tuôn ren ngay, không chờ nhả chuột
-      if (t >= h.hi) release()
     }
     const lift = liftAt(shown.current)
     const t = outAt.current === null ? 0 : Math.min(1, Math.max(0, (now - outAt.current) / OUT_MS))
@@ -440,7 +423,7 @@ function Screw({
     return () => clearTimeout(t)
   }, [turns, spinMs])
   const [showTool, setShowTool] = useState(false)
-  const want = hover || busy || !!held
+  const want = hover || busy || !!skill
   useEffect(() => {
     const t = setTimeout(() => setShowTool(want), want ? 0 : 200)
     return () => clearTimeout(t)
@@ -453,23 +436,24 @@ function Screw({
         ref={ref}
         position-y={y + liftAt(p)}
         onPointerDown={(e) => {
-          if (!interactive || done || hold.current) return
+          if (fixable) {
+            e.stopPropagation()
+            return replaceStab(id)
+          }
+          if (!interactive || done || skillBusy()) return
           e.stopPropagation()
           if (toolLv) playDrill()
           else playScrew()
           if (mode === 'remove') return turnScrew(id)
-          const win = torqueWindow(toolLv)
           // sai đầu vít: trượt toét ren ngay khi siết
-          if (bit !== requiredBit) return tightenScrew(id, 0, win)
-          hold.current = { at: performance.now(), base: (turns / clicks) * win.lo, ...win }
-          setHeld({ t: hold.current.base, ...win })
+          if (bit !== requiredBit) return tightenScrew(id, 'high')
+          startSkill(id, torqueSpec(toolLv), (r) => {
+            if (r !== 'low') playClick(r === 'high' ? 300 : 900)
+            tightenScrew(id, r)
+          })
         }}
-        onPointerUp={release}
         onPointerOver={bind.onPointerOver}
-        onPointerOut={() => {
-          bind.onPointerOut()
-          release()
-        }}
+        onPointerOut={bind.onPointerOut}
       >
         {/* vặn vào mà chưa bấm lần nào: chỉ khung nét đứt ở miệng lỗ (ốc chưa tra), bấm mới tra ốc vào rồi vặn */}
         {mode === 'tighten' && turns === 0 && (
@@ -505,11 +489,20 @@ function Screw({
             <meshBasicMaterial color="#ffd84a" transparent opacity={0.8} />
           </mesh>
         )}
+        {interactive && stripped && (
+          // vít tuôn ren: vòng đỏ (vít stab: bấm để thay stab)
+          <mesh position-y={0.04} rotation-x={-Math.PI / 2}>
+            <ringGeometry args={[0.15, hover ? 0.24 : 0.2, 24]} />
+            <meshBasicMaterial color="#ff4a4a" transparent opacity={0.85} />
+          </mesh>
+        )}
         {/* mũi tên vàng chỉ con vít tiếp theo (rê chuột vào / đang vặn thì ẩn cho thấy tua vít) */}
-        {hint && interactive && !done && !hover && !busy && !held && <HintArrow at={[0, 0.3, 0]} />}
-        {held && (
+        {hint && interactive && !done && !hover && !busy && !skill && (
+          <HintArrow at={[0, 0.3, 0]} />
+        )}
+        {skill && (
           <Html center position={[0, 0.3, 0]} zIndexRange={[6, 6]}>
-            <TorqueBar t={held.t} lo={held.lo} hi={held.hi} />
+            <SkillBar check={skill} />
           </Html>
         )}
       </group>
@@ -522,47 +515,19 @@ function Screw({
   )
 }
 
-/** px mỗi giây trên thanh lực */
-const TORQUE_PX = 110
-
-/** Thanh lực vặn (giây giữ chuột): vàng = đang siết, xanh = nhả là chặt, đỏ = tuôn ren */
-function TorqueBar({ t, lo, hi }: { t: number; lo: number; hi: number }) {
-  const end = hi + 0.3
-  const pct = (x: number) => `${Math.min(100, (x / end) * 100)}%`
-  const zone = t < lo ? 'turn' : t < hi ? 'ok' : 'strip'
-  return (
-    <div
-      className="pointer-events-none -translate-y-12 select-none"
-      style={{ width: end * TORQUE_PX }}
-    >
-      <div className="relative h-4 overflow-hidden border-2 border-black/60 bg-[#1b1f28]">
-        <div
-          className={cn('absolute inset-y-0', zone === 'turn' ? 'bg-green/20' : 'bg-green/75')}
-          style={{ left: pct(lo), width: `calc(${pct(hi)} - ${pct(lo)})` }}
-        />
-        <div className="absolute inset-y-0 right-0 bg-red/45" style={{ left: pct(hi) }} />
-        <div
-          className={cn(
-            'relative h-full',
-            zone === 'turn' ? 'bg-yellow' : zone === 'ok' ? 'bg-green' : 'bg-red',
-          )}
-          style={{ width: pct(t) }}
-        />
-      </div>
-    </div>
-  )
-}
-
 /** Bộ vít của 1 bước. flip: vít bắt từ mặt dưới (đầu vít hướng xuống) */
 export function ScrewSet({
   step,
   y,
   flip,
   mouth,
+  active = true,
 }: {
   step: ScrewStep
   y: number
   flip?: boolean
+  /** vặn được chưa (vd top mount: phải lật cụm lên mới vặn) */
+  active?: boolean
   /** độ cao miệng lỗ (vít chìm trong lỗ, vd vít tray dưới plate) */
   mouth?: number
 }) {
@@ -570,12 +535,10 @@ export function ScrewSet({
   const cur = useStep()
   const bit = useGame((s) => s.screwBit)
   const requiredBit = SCREW_BITS[step]
-  // case mica xếp lớp: vít từ mặt trên xuyên mọi tấm, dài tới gần tấm đáy (không chỉ ăn vài lớp trên)
+  // vít case: mica xuyên mọi tấm tới gần tấm đáy; bắt từ đáy xuyên thành case dưới ăn lên lỗ ren case trên
   const longShaft =
-    (step === 'caseScrew' || step === 'caseOpen') &&
-    ctx.caseDef.material === 'mica' &&
-    ctx.screwSide === 'top'
-      ? y - Y.floorBot - 0.06
+    step === 'caseScrew' || step === 'caseOpen'
+      ? caseScrewShaft(ctx.caseDef)
       : step === 'trayScrew'
         ? TRAY_SHAFT
         : 0
@@ -594,14 +557,13 @@ export function ScrewSet({
       z={flip ? -sc.z : sc.z}
       y={flip ? 0 : y}
       mode={SCREW_STEPS[step]}
-      interactive={cur === step}
+      interactive={cur === step && active}
       bit={bit}
       requiredBit={requiredBit}
       style={SCREW_STYLES[step]}
       shaft={longShaft}
-      hint={sc.id === next}
-      // vít stab: model M3×8 lòi lên quá cao qua PCB → ngắn còn 2/3
-      short={step === 'stabScrew' ? 2 / 3 : 1}
+      hint={active && sc.id === next}
+      short={SCREW_SHORT[step] ?? 1}
       mouth={flip ? undefined : mouth}
     />
   ))
@@ -659,7 +621,7 @@ export const TRAY_SHAFT = Y.pcbTop - Y.pcbBot + 0.12
 
 export function screwLength(step: ScrewStep, shaft = 0) {
   const style = SCREW_STYLES[step]
-  return Math.max(-THREADS[style].end, HEAD_H[style] + shaft / MM) * MM
+  return Math.max(-THREADS[style].end * (SCREW_SHORT[step] ?? 1), HEAD_H[style] + shaft / MM) * MM
 }
 
 /**
@@ -669,13 +631,15 @@ export function screwLength(step: ScrewStep, shaft = 0) {
 export function LooseScrew({ step, shaft = 0 }: { step: ScrewStep; shaft?: number }) {
   const style = SCREW_STYLES[step]
   const { scene } = useGLTF(SCREW_MODELS[style])
+  const short = SCREW_SHORT[step] ?? 1
   const model = useMemo(() => {
     const copy = scene.clone(true)
     copy.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) o.castShadow = true
     })
+    if (short < 1) shortenScrew(copy, style, short)
     return copy
-  }, [scene])
+  }, [scene, short, style])
   const mat = useMemo(() => {
     let m: THREE.Material | undefined
     model.traverse((o) => {

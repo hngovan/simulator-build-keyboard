@@ -9,16 +9,17 @@ import {
   SPELL_DESOLDER,
   SPELL_SOLDER,
   SUPPLIES,
-  solderTiming,
+  solderSkill,
   spellBonus,
   spellSolderKeys,
 } from '@/data/supplies'
 import { Y } from '@/data/steps'
 import type { Key, SolderJoint } from '@/types'
 import { playSolder, playDesolder } from '@/sound'
-import { cn } from '@/lib/format'
 import { useHover } from '../common/useHover'
-import { useCamLock } from '../common/camLock'
+import { cancelSkill, skillBusy, startSkill, useSkill } from '../common/skill'
+import { SkillBar } from '@/components/game/SkillBar'
+import { needleAt } from '@/data/skillCheck'
 import { HintArrow } from '../stations/StationKit'
 import { useSolderHint } from './solderHint'
 import { SolderingIron } from '../models/HandTools'
@@ -57,10 +58,6 @@ function lightFrom(id: string | null) {
   useSolderLit.setState({ lit: new Set([id, ...extra.map((k) => k.id)]) })
 }
 
-/** số 0..1 cố định theo mã phím */
-const seedOf = (id: string) =>
-  ([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % 1000) / 999
-
 /** mối hàn bản lưu cũ (true) coi như thiếc thường, đạt */
 const jointOf = (j: SolderJoint | true | undefined): SolderJoint | null =>
   j === true ? { wire: 'solder6337', burnt: false } : (j ?? null)
@@ -92,48 +89,10 @@ function SolderFeed({ color, time }: { color: string; time: number }) {
   )
 }
 
-/** px mỗi giây trên thanh nhiệt */
-const PX_PER_S = 46
-
-/** Thanh tiến độ hàn theo giây thật: vàng = đang nung, xanh = nhả là đạt, đỏ = cháy xém; vạch từng giây */
-function HeatBar({ t, ready, burn }: { t: number; ready: number; burn: number }) {
-  const end = burn + 0.5
-  const pct = (x: number) => `${Math.min(100, (x / end) * 100)}%`
-  const zone = t < ready ? 'heat' : t < burn ? 'ok' : 'burnt'
-  const ticks = Array.from({ length: Math.floor(end) + 1 }, (_, i) => i)
-  return (
-    <div
-      className="pointer-events-none -translate-y-14 select-none"
-      style={{ width: end * PX_PER_S }}
-    >
-      <div className="relative h-4 overflow-hidden border-2 border-black/60 bg-[#1b1f28]">
-        {/* vùng đạt: xanh nhạt khi chưa nung tới, tới nơi thì xanh đậm; vùng cháy đỏ */}
-        <div
-          className={cn(
-            'absolute inset-y-0 transition-colors',
-            zone === 'heat' ? 'bg-green/20' : 'bg-green/75',
-          )}
-          style={{ left: pct(ready), width: `calc(${pct(burn)} - ${pct(ready)})` }}
-        />
-        <div className="absolute inset-y-0 right-0 bg-red/45" style={{ left: pct(burn) }} />
-        <div
-          className={cn(
-            'relative h-full',
-            zone === 'heat' ? 'bg-yellow' : zone === 'ok' ? 'bg-green' : 'bg-red',
-          )}
-          style={{ width: pct(t) }}
-        />
-        {ticks.map((i) => (
-          <div key={i} className="absolute inset-y-0 w-px bg-black/50" style={{ left: pct(i) }} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 /**
- * Chân hàn ở mặt dưới PCB: giữ chuột để nung, thiếc chảy dần ra 2 chân.
- * Nhả khi thanh tiến độ vào vùng xanh là đạt; nhả sớm thì thiếc chưa ăn (làm lại); giữ quá vạch thì cháy xém
+ * Chân hàn ở mặt dưới PCB: bấm để nung (skill check, kim nhiệt chạy qua lại), thiếc chảy dần ra 2 chân theo kim.
+ * Bấm lần nữa / Space dừng kim: xanh là đạt (vàng = hoàn hảo), đỏ trái thiếc chưa ăn (hụt), đỏ phải cháy xém.
+ * Mối cháy: bấm 1 lần là bút hút thiếc tự hút
  */
 export function SolderPad({ k }: { k: Key }) {
   // chọn giá trị gốc trong store rồi mới đổi (jointOf tạo object mới, đặt trong selector sẽ render lặp vô hạn)
@@ -147,15 +106,13 @@ export function SolderPad({ k }: { k: Key }) {
   const { solderKey, failSolderKey, canSolder, canDesolder, desolderKey } = useGame.getState()
   const station = ironLv >= 2
   // lúc thiếc chảy khác nhau một chút giữa các phím (cố định theo phím)
-  const { ready, burn } = solderTiming(station, wire, seedOf(k.id))
+  const skill = useSkill((s) => (s.active?.id === k.id ? s.active.check : null))
+  useEffect(() => () => cancelSkill(k.id), [k.id])
+  // đang hút thiếc (bấm 1 lần là tự chạy hết)
   const [holding, setHolding] = useState(false)
-  // đang giữ mỏ hàn / bút hút thiếc trên chân: khoá camera cho khỏi xoay lung tung theo chuột
-  useEffect(() => {
-    if (!holding) return
-    useCamLock.setState({ locked: true })
-    return () => useCamLock.setState({ locked: false })
-  }, [holding])
   const [t, setT] = useState(0)
+  // vị trí kim nhiệt 0..1 khi đang hàn (vẽ thiếc chảy / xém theo kim)
+  const [pos, setPos] = useState(0)
   const time = useRef(0)
   const active = useRef(false)
   const suctionPlayed = useRef(false)
@@ -174,44 +131,32 @@ export function SolderPad({ k }: { k: Key }) {
     setT(0)
   }
   useFrame((_, dt) => {
-    if (!active.current || (done && !removing)) return
+    if (skill) {
+      time.current += dt
+      setT(time.current)
+      return setPos(needleAt(skill))
+    }
+    if (!active.current || !removing) return
     time.current += dt
     setT(time.current)
-    if (removing) {
-      if (time.current >= removeDuration * 0.65 && !suctionPlayed.current) {
-        suctionPlayed.current = true
-        playDesolder()
-      }
-      if (time.current >= removeDuration) {
-        stop()
-        desolderKey(k.id)
-      }
-      return
+    if (time.current >= removeDuration * 0.65 && !suctionPlayed.current) {
+      suctionPlayed.current = true
+      playDesolder()
     }
-    if (time.current >= burn) {
+    if (time.current >= removeDuration) {
       stop()
-      solderKey(k.id, true)
+      desolderKey(k.id)
     }
   })
-  const release = () => {
-    if (!active.current) return
-    const held = time.current
-    stop()
-    if (removing) return
-    if (held >= ready) solderKey(k.id, false)
-    else failSolderKey(k.id)
-    lightFrom(null)
-  }
-
-  // thiếc chảy: bắt đầu ở 30% thời gian nung, đầy khi tới vạch đạt
-  const progress = holding && !removing ? Math.min(1, t / ready) : 0
+  const heating = !!skill
+  // thiếc chảy theo kim: đầy khi kim tới vùng xanh, quá vùng xanh thì xém dần
+  const progress = heating ? Math.min(1, pos / skill.lo) : 0
   const transfer = THREE.MathUtils.smoothstep(progress, 0.44, 0.58)
   const lift = Math.sin(transfer * Math.PI) * 0.16
   const toolX = THREE.MathUtils.lerp(PINS[0][0], PINS[1][0], transfer) / 19.05
   const toolZ = -THREE.MathUtils.lerp(PINS[0][1], PINS[1][1], transfer) / 19.05
-  const heat = holding ? Math.min(1, t / ready) : 0
-  const scorch =
-    holding && !removing ? THREE.MathUtils.clamp((t - ready) / (burn - ready), 0, 1) : 0
+  const heat = heating ? Math.min(1, pos / skill.lo) : 0
+  const scorch = heating ? THREE.MathUtils.clamp((pos - skill.hi) / (1 - skill.hi), 0, 1) : 0
   const shine = SUPPLIES[joint?.wire ?? wire]?.solder?.shine ?? 0.65
   const wireColor = SUPPLIES[wire]?.color ?? '#c9ccd0'
   const blob = joint?.burnt
@@ -225,22 +170,30 @@ export function SolderPad({ k }: { k: Key }) {
         rotation-x={-Math.PI / 2}
         position-y={0.002}
         onPointerDown={(e) => {
+          if (skillBusy() || active.current) return
           e.stopPropagation()
-          if (!active.current && (removing ? canDesolder() : !done && canSolder())) {
+          if (removing) {
+            if (!canDesolder()) return
             active.current = true
+            time.current = 0
             setHolding(true)
-            playSolder()
+            return
           }
+          if (done || !canSolder()) return
+          playSolder()
+          startSkill(k.id, solderSkill(station, wire), (r) => {
+            lightFrom(null)
+            if (r === 'low') failSolderKey(k.id)
+            else solderKey(k.id, r === 'high', 'overheat', r === 'perfect')
+          })
         }}
-        onPointerUp={release}
         onPointerOver={(e) => {
           bind.onPointerOver(e)
           if (!done) lightFrom(k.id)
         }}
         onPointerOut={() => {
           bind.onPointerOut()
-          lightFrom(null)
-          release()
+          if (!skill) lightFrom(null)
         }}
       >
         <planeGeometry args={[0.8, 0.8]} />
@@ -252,7 +205,7 @@ export function SolderPad({ k }: { k: Key }) {
         />
       </mesh>
       {/* mũi tên vàng chỉ phím cần hàn / hút thiếc tiếp theo (ẩn khi đang giữ mỏ hàn) */}
-      {hinted && !holding && <HintArrow at={[0, 0.35, 0]} size={1.5} />}
+      {hinted && !holding && !heating && <HintArrow at={[0, 0.35, 0]} size={1.5} />}
       {PINS.map(([px, pz], index) => {
         const melt = THREE.MathUtils.smoothstep(
           progress,
@@ -304,12 +257,12 @@ export function SolderPad({ k }: { k: Key }) {
           </group>
         )
       })}
-      {holding && !removing && (
+      {heating && (
         <group position={[toolX + 0.025, 0.025 + lift, toolZ]}>
           <SolderFeed color={wireColor} time={t} />
         </group>
       )}
-      {(hover || holding) && (!done || removing) && (
+      {(hover || holding || heating) && (!done || removing) && (
         <group position={[toolX, 0.01 + lift, toolZ]} scale={1.8}>
           <SolderingIron heat={Math.min(1, heat + scorch)} station={station} dirty={dirty} />
         </group>
@@ -322,21 +275,22 @@ export function SolderPad({ k }: { k: Key }) {
       {hover && removing && !holding && (
         <Html center position={[0, 0.4, 0]}>
           <div className="pointer-events-none text-xs whitespace-nowrap text-yellow">
-            Giữ chuột để hút thiếc cháy
+            Bấm để hút thiếc cháy
           </div>
         </Html>
       )}
-      {holding && (
+      {holding && removing && (
         <Html center position={[0, 0.3, 0]} zIndexRange={[6, 6]}>
-          {removing ? (
-            <div className="pointer-events-none w-[200px] -translate-y-14">
-              <div className="h-4 border-2 border-black/60 bg-[#1b1f28]">
-                <div className="h-full bg-sky-400" style={{ width: `${removeProgress * 100}%` }} />
-              </div>
+          <div className="pointer-events-none w-[200px] -translate-y-14">
+            <div className="h-4 border-2 border-black/60 bg-[#1b1f28]">
+              <div className="h-full bg-sky-400" style={{ width: `${removeProgress * 100}%` }} />
             </div>
-          ) : (
-            <HeatBar t={t} ready={ready} burn={burn} />
-          )}
+          </div>
+        </Html>
+      )}
+      {skill && (
+        <Html center position={[0, 0.3, 0]} zIndexRange={[6, 6]}>
+          <SkillBar check={skill} />
         </Html>
       )}
     </group>

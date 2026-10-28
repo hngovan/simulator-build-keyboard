@@ -3,6 +3,7 @@ import { useGame, useBuild, useCtx } from '@/store'
 import {
   autoFlip,
   NO_FLIP_STEPS,
+  TOP_FLIP_STEPS,
   isOptionalStep,
   stepTitle,
   SCREW_STEPS,
@@ -235,7 +236,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const info = STEP_INFO[step]
   const [done, total] = stepProgress(step, build, ctx, SCREW_FULL)
   const finished = done >= total
-  const optional = isOptionalStep(step, s.order)
+  const optional = isOptionalStep(step, s.order, ctx.steps)
   // hàn dở vẫn đi tiếp được (nút đỏ cảnh báo), khớp nextStep
   const soft = step === 'solder' && done > 0 && !finished
   const last = build.stepIdx >= ctx.steps.length - 1
@@ -253,16 +254,20 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const hint =
     step === 'switch' && !s.inventory.switch?.count
       ? '⚠️ Hết switch! Về máy tính mua thêm.'
-      : // chỉ nhắc khi người chơi tự lật ra mặt kia (bước tự lật như hàn / vặn vít đáy thì mặt đáy là mặt thao tác)
-        canFlip && s.viewFlip
-        ? isFlipped
-          ? 'Đang xem mặt đáy — bấm "Lật lại mặt trên" để thao tác.'
-          : 'Đang xem mặt trên — bấm "Lật xem đáy" để thao tác.'
-        : step === 'stabMod' && s.inventory.stab
-          ? stabModHint(s.inventory.stab.type)
-          : step === 'caseIn' && build.inCase && ctx.steps[build.stepIdx + 1] === 'caseClose'
-            ? 'Board đã vào case: click vào case trên để đậy lại'
-            : info.hint
+      : step === 'topScrew'
+        ? s.viewFlip
+          ? info.hint
+          : 'Bấm Q (hoặc bấm vào case) để lật cả cụm lên, ốc top mount vặn từ mặt dưới'
+        : // chỉ nhắc khi người chơi tự lật ra mặt kia (bước tự lật như hàn / vặn vít đáy thì mặt đáy là mặt thao tác)
+          canFlip && s.viewFlip
+          ? isFlipped
+            ? 'Đang xem mặt đáy — bấm "Lật lại mặt trên" để thao tác.'
+            : 'Đang xem mặt trên — bấm "Lật xem đáy" để thao tác.'
+          : step === 'stabMod' && s.inventory.stab
+            ? stabModHint(s.inventory.stab.type)
+            : step === 'caseIn' && build.inCase && ctx.steps[build.stepIdx + 1] === 'caseClose'
+              ? 'Board đã vào case: click vào case trên để đậy lại'
+              : info.hint
   // thu gọn: chỉ còn tiêu đề + tiến độ + nút bước sau (nhớ trạng thái như các panel HUD)
   const [open, toggle] = useOpen('objective')
   return (
@@ -391,7 +396,7 @@ export function BenchHud() {
   const order = useGame((s) => s.order!)
   const viewFlip = useGame((s) => s.viewFlip)
   const step = ctx.steps[build.stepIdx]
-  const canFlip = !NO_FLIP_STEPS.includes(step)
+  const canFlip = !NO_FLIP_STEPS.includes(step) || (TOP_FLIP_STEPS.includes(step) && !build.closed)
   const isFlipped = canFlip && (autoFlip(step, ctx) ? !viewFlip : viewFlip)
   const side =
     step === 'stabMod' ? (

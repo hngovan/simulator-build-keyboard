@@ -10,7 +10,7 @@ import {
   SOLDER_IDS,
   SUPPLIES,
   lubeUseFit,
-  solderWindow,
+  solderSkill,
   spellBonus,
   spellRun,
   SPELL_LUBE,
@@ -347,7 +347,7 @@ export function SolderPanel() {
   const wear = useGame((s) => s.wear.desolder ?? 0)
   const pump = TOOLS.desolder[tools.desolder ?? 0]
   const good = joints.length - burnt
-  const { melt, burn } = solderWindow(tools.solder >= 2, pick)
+  const skill = solderSkill(tools.solder >= 2, pick)
   // dụng cụ có độ bền: hiện số lần dùng còn lại (hết thì hỏng, phải mua lại)
   const wearAll = useGame((s) => s.wear)
   const tool = (t: { name: string; none?: boolean; life?: number }, kind?: ToolKind) => {
@@ -409,10 +409,11 @@ export function SolderPanel() {
         {tool(cleaner, 'tipCleaner')}
         {tool(pump)}
         {!pump.none && <Muted>Bút hút thiếc: {Math.max(0, 1000 - wear)}/1000 lượt còn lại</Muted>}
-        {burnt > 0 && <Muted>Giữ chuột trên mối cháy để hút thiếc, lau mũi hàn rồi hàn lại.</Muted>}
+        {burnt > 0 && <Muted>Bấm mối cháy để hút thiếc, lau mũi hàn rồi hàn lại.</Muted>}
         {!iron.none && (
           <Muted>
-            Mỗi phím: thiếc chảy sau {melt[0]}–{melt[1]}s, tới {burn}s là cháy chân
+            Mỗi phím: bấm cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (rộng{' '}
+            {Math.round(skill.width * 100)}% thanh, vàng = hoàn hảo); đỏ phải là cháy chân
           </Muted>
         )}
       </HudSection>

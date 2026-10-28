@@ -13,6 +13,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.14',
+    date: '2026-10-28',
+    commits: [],
+    title: 'Skill check vặn vít / hàn, top mount chuẩn, lỗ vít case thật, tuôn ren thay stab',
+    items: [
+      'Hàn + vặn vít vào: bấm cho kim chạy qua lại trên thanh đỏ, bấm lần nữa / Space dừng ở vùng xanh, trúng vàng hoàn hảo được thưởng điểm khi giao',
+      'Tuôn ren: trượt 3 lần mới tuôn; stab tuôn ren = stab hỏng, có stab dư thì bấm vít đỏ để thay; case hỏng đền 80% giá case + trừ 2 uy tín',
+      'Top mount: plate phủ kín lòng case có tai khoét lỗ M2, case trên khoét hốc + lỗ ren liền khối, ốc M2×4 lục giác có sẵn trên khay',
+      'Úp case trên xong tự sang bước bắt vít, bấm Q / bấm case để lật lên vặn (có mũi tên), không bỏ qua được bước lắp plate',
+      'Q lật riêng case trên ở bước úp / đậy để xem mặt trong',
+      'Lỗ vít case 2 mảnh nằm giữa thành case, xuyên thành case dưới (hốc côn cho ốc đầu bằng), lỗ ren ở case trên',
+      'Mở hết vít đáy thì case tách 2 mảnh (case trên nhấc lên)',
+    ],
+  },
+  {
     version: '0.1.13',
     date: '2026-10-27',
     commits: ['9af5d9f'],

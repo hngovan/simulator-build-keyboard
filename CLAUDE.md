@@ -122,18 +122,24 @@ vào `window.__r3f` để debug trong console.
 - Các action trong `buildSlice` cập nhật `build` qua `patchBuild` (không tự chuyển bước; người chơi bấm
   `nextStep`; riêng `dropInCase` case 1 mảnh thả xong, `placeFoot` dán xong feet cuối, `turnScrew` bắt đủ vít bước vặn vào (chờ `SPIN_MS`) thì tự sang bước kế) → bước `test` → `deliver()` gọi `scoreDelivery`, trừ uy tín theo số ngày trễ hạn.
 - Hàn (PCB solder): cần mỏ hàn (`tools.solder` ≥ 1) + thiếc (`SOLDER_IDS` trong supplies, chọn ở `solderPick`).
-  Giữ chuột trên chân: `solderTiming` cho vạch đạt / cháy; cháy thì `tipDirty`, phải lau bùi nhùi
+  Hàn + vặn vít vào = skill check (`data/skillCheck.ts`, `scene/common/skill.ts`, thanh `components/game/SkillBar`): bấm cho kim chạy qua lại,
+  bấm lần nữa / Space dừng; đỏ trái = thiếu (hụt / vít vào 1 phần), xanh đạt, vàng hoàn hảo (`build.perfect`, thưởng ≤ 5 điểm khi giao),
+  đỏ phải = quá (cháy / trượt ren). Hàn cháy thì `tipDirty`, phải lau bùi nhùi
   (`tipCleaner`, `cleanTip`). Dụng cụ có độ bền (`ToolDef.life`, đếm ở `wear`, hết thì về "chưa có"): bút hàn 300, trạm 1000, bùi nhùi 1000.
   Đồ hàn trên bàn: `SolderKit` (model ở `public/models/solder/`, `bun run convert:solder-tools`).
-  Thời gian hàn theo giây thật (`solderWindow`): bút hàn chảy 2–2,5s / cháy 3s, trạm hàn 1–2s / 3s,
-  thiếc đểu +0,5s (`slow`) và `burnChance` ẩn 15%. Bút / trạm đã mua đổi qua lại được (`solderOwned`).
+  Độ khó hàn (`solderSkill`): bút hàn vùng xanh 20% thanh / kim 0,9 lượt/s, trạm 28% / 0,75, thiếc đểu (`slow`) hẹp vùng xanh
+  và `burnChance` ẩn 15%. Hút thiếc cháy: bấm 1 lần là bút hút tự chạy. Bút / trạm đã mua đổi qua lại được (`solderOwned`).
   Thiếc đểu có `burnChance` (cháy dù nhả đúng vùng xanh). Bàn mod stab bày đúng số stab của layout (`stabUnits`).
-  Đầu vít đang lắp (`screwBit`) lưu trong Profile. Sai đầu vít không chặn: tuôn ren (`build.stripped`, hoàn tác không gỡ).
-  Bước vặn vào giữ chuột canh lực (`tightenScrew`, `torqueWindow` theo `ToolDef.torque`, `TorqueBar` trong Screw.tsx), quá vùng xanh
-  = tuôn ren; vít ăn vào case PC / mica / acrylic (`CASE_SCREW_STEPS`, `brittleCase`) `CRACK_CHANCE` nứt case (`build.cracked`).
-  Giao: `DeliveryResult.refund` (nứt 80% budget, tuôn ren bị phát hiện 30% budget + công, `STRIP_UNNOTICED` 20% thoát), `payout()`.
+  Đầu vít đang lắp (`screwBit`) lưu trong Profile. Sai đầu vít không chặn: trượt ren, `STRIP_TRIES` 3 lần / vít mới tuôn ren (`build.slips` → `build.stripped`, hoàn tác không gỡ).
+  Bước vặn vào là skill check canh lực (`tightenScrew(id, result)`, `torqueSpec` theo `ToolDef.torque` {width, speed}: tay 24% / 0,7,
+  điện 15% / 1,2), đỏ phải = trượt ren (3 lần thì tuôn); vít ăn vào case PC / mica / acrylic (`CASE_SCREW_STEPS`, `brittleCase`) `CRACK_CHANCE` nứt case (`build.cracked`).
+  Vít stab tuôn ren = stab hỏng (vòng đỏ, không tự sang bước): có stab dư cùng cỡ thì bấm vít đỏ thay (`replaceStab`, vặn lại cả stab).
+  Giao: `DeliveryResult.refund` + `repLoss` (case nứt / vít case-top-tray tuôn ren bị phát hiện: 80% giá case `CASE_REFUND`, −2 uy tín
+  `CASE_DAMAGE_REP`; stab tuôn ren: đền nguyên giá bộ stab). Khách không để ý tuôn ren 20% (`STRIP_UNNOTICED`), hỏng ≤ 1/3 số lỗ
+  cùng loại thì 30% (`STRIP_FEW_UNNOTICED`); nứt luôn bị phát hiện. `payout()`.
   PCB khoét 2 lỗ chân housing mỗi bên stab (`stabHoles` trong steps.ts, khớp chốt model CAD); vít screw-in bắt vào lỗ nhỏ.
-  Top mount (case 2 mảnh): `topCase` (úp case trên lên plate) → `topScrew` (lật board, vặn vít từ dưới vào vách case trên) →
+  Top mount (case 2 mảnh): `topCase` (úp case trên lên plate, xong tự sang bước) → `topScrew` (người chơi lật bằng Q / bấm case, vặn ốc M2×4
+  từ dưới qua lỗ tai plate vào lỗ ren trong hốc vách case trên: `TOP_NOTCH` / `TOP_HOLE`, ốc có sẵn trên khay) →
   `caseIn` (case trên nhấc theo board) → `caseScrew`, không có `caseClose`. O-ring mount (case 1 mảnh): vòng `ring` kẹp giữa PCB
   và plate, gá trước bước plate, không gasket.
   Dây O-ring là vật tư 3 độ cứng (`ORING_IDS`: trắng 30A / đen 50A / đỏ 70A, `oringPick`, `build.ring` = id dây, âm theo Shore);
@@ -186,8 +192,9 @@ vào `window.__r3f` để debug trong console.
   (HHKB, WKL) có khối chặn liền case (`blockerGaps`).
 - Gờ trong lòng case (case dựng bằng code, `Ledge` / `TopBosses` trong Case.tsx): O-ring / OG có gờ đỡ vòng, gasket 2 mảnh có gờ đỡ + gờ đè,
   top mount plate có tai + vấu case trên. Case CAD 2 mảnh (Blossom, Catto HHKB; gasket mount): `CaseModel part`, `CaseDef.screws` / `gaskets` (mm) theo model.
-- Case 1 mảnh dựng bằng code chơi được tray / O-ring / OG; case 2 mảnh có lỗ vít (`caseScrewHoles`: nhôm / PC / acrylic ở đáy,
-  mica xuyên mọi tấm). Mica: tấm trên mặt plate khoét theo `keyRegions` (khung chặn liền tấm, không `Blockers` rời).
+- Case 1 mảnh dựng bằng code chơi được tray / O-ring / OG; case 2 mảnh có lỗ vít ở giữa thành case: nhôm / PC / acrylic bắt từ đáy
+  (`caseBores` khoét CSG: hốc chìm + lỗ xuyên thành case dưới, lỗ ren case trên; tháo hết vít thì tách 2 mảnh `useCaseSplit`), mica xuyên mọi tấm
+  (`caseScrewHoles`). Vỏ khoét bằng `three-bvh-csg` (`caseShellGeometry` notches / bores). Top mount: plate phủ kín lòng case, không bỏ qua bước plate. Mica: tấm trên mặt plate khoét theo `keyRegions` (khung chặn liền tấm, không `Blockers` rời).
 - Shopii gộp case cùng dòng (`CASE_LINES`): 1 sản phẩm, chọn chất liệu (`ProductOption.group`) rồi màu; id case giữ riêng.
 - Shopii: cột trái ghim (tìm kiếm chung mọi mục, "Đang sale", mục hàng, bộ lọc trong mục). Sale linh kiện cứ 3 ngày 1 lần (`data/sale.ts`:
   `isSaleDay` ngày chia hết 3, ~60% linh kiện giảm 5–30% cố định theo ngày + id, `withSale` → `ProductOption.was` + `Product.sale`), budget khách không đổi.

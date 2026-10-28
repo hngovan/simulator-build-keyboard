@@ -1,11 +1,14 @@
 import {
-  CRACK_REFUND,
-  STRIP_REFUND,
+  CASE_DAMAGE_REP,
+  CASE_REFUND,
+  CASE_SCREW_STEPS,
+  STRIP_FEW_UNNOTICED,
+  SCREW_STEPS,
   STRIP_UNNOTICED,
   isOptionalStep,
   stepProgress,
 } from '@/data/steps'
-import { SOUND_WISH, TOOLS, buildSound, soundMatch } from '@/data/parts'
+import { CASES, SOUND_WISH, STABS, TOOLS, buildSound, soundMatch } from '@/data/parts'
 import { stabQuality, switchLubeEval } from '@/data/mods'
 import { SUPPLIES } from '@/data/supplies'
 import type {
@@ -15,7 +18,11 @@ import type {
   Inventory,
   Order,
   ScoreCheck,
+  ScrewStep,
 } from '@/types'
+
+/** điểm thưởng tối đa khi mọi lần vặn vít vào / hàn đều trúng vùng vàng skill check */
+const PERFECT_BONUS = 5
 
 /** giao khi chưa test hết phím: tỉ lệ khách phát hiện 1 nút lỗi */
 export const UNTESTED_FAIL = 0.05
@@ -171,6 +178,21 @@ export function scoreDelivery({
       got: Math.max(0, 10 - (over / order.budget) * 40),
     },
   ]
+  // skill check trúng vùng vàng (vặn vít vào + hàn): điểm thưởng theo tỉ lệ thao tác hoàn hảo
+  const skillIds = [
+    ...ctx.steps
+      .filter((st): st is ScrewStep => SCREW_STEPS[st as ScrewStep] === 'tighten')
+      .flatMap((st) => ctx.screws[st].map((sc) => sc.id)),
+    ...(ctx.steps.includes('solder') ? ctx.keys.map((k) => k.id) : []),
+  ]
+  if (skillIds.length) {
+    const n = skillIds.filter((id) => build.perfect?.[id]).length
+    checks.push({
+      label: `Thao tác hoàn hảo (vùng vàng) ${n}/${skillIds.length}`,
+      pts: PERFECT_BONUS,
+      got: (PERFECT_BONUS * n) / skillIds.length,
+    })
+  }
   // nút lỗi khách báo lại: PCB hàn còn phím chưa hàn / hàn cháy thì chắc chắn lỗi đúng các nút đó;
   // không thì giao khi chưa test hết phím có UNTESTED_FAIL khách gặp 1 nút lỗi trong số phím chưa test
   const label = (k: { label: string; id: string; w: number }) =>
@@ -185,24 +207,52 @@ export function scoreDelivery({
       pts: 0,
       got: -15,
     })
-  // hỏng do vặn vít: case nứt thì khách thấy ngay, đền phần giá trị phím; tuôn ren thì có thể khách không để ý,
-  // phát hiện thì đền phần giá trị đơn (linh kiện + công)
-  const strips = Object.keys(build.stripped ?? {}).length
+  // hỏng do vặn vít: case nứt thì khách thấy ngay; tuôn ren thì có thể khách không để ý.
+  // case hỏng (nứt / ngàm case, lỗ ốc top mount lỏng gõ lọc xọc) đền 80% giá case + trừ uy tín; stab tuôn ren (lỏng) đền bộ stab mới
+  const stripped = Object.keys(build.stripped ?? {})
+  const stabStrips = stripped.filter((id) => id.startsWith('stab-')).length
+  // lỗ ren case (ngàm case, lỗ ốc top mount, lỗ tray mount): tháo / vặn lại case cùng 1 lỗ (open-i = close-i)
+  const holes = (ids: string[]) => new Set(ids.map((id) => id.replace(/^(open|close)-/, 'case-')))
+  const caseIds = stripped.filter((id) => !id.startsWith('stab-'))
+  const caseStrips = holes(caseIds).size
+  // tỉ lệ lỗ hỏng cao nhất trong từng loại lỗ: hỏng ít (≤ 1/3) khách khó để ý hơn
+  const ratio = Math.max(
+    0,
+    ...[['open', 'close'], ['top'], ['tray']].map((pre) => {
+      const all = holes(
+        CASE_SCREW_STEPS.flatMap((st) => ctx.screws[st].map((sc) => sc.id)).filter((id) =>
+          pre.includes(id.split('-')[0]),
+        ),
+      )
+      const bad = holes(caseIds.filter((id) => pre.includes(id.split('-')[0])))
+      return all.size ? bad.size / all.size : 0
+    }),
+  )
+  const unnoticed = ratio <= 1 / 3 ? STRIP_FEW_UNNOTICED : STRIP_UNNOTICED
   let damage: DeliveryResult['damage']
   let refund = 0
-  if (build.cracked) {
-    damage = 'crack'
-    refund = Math.round(order.budget * CRACK_REFUND)
+  let repLoss = 0
+  const casePrice = inventory.case ? (CASES[inventory.case.id]?.price ?? 0) : 0
+  const caseHit = build.cracked || (caseStrips > 0 && rng() >= unnoticed)
+  if (caseHit) {
+    damage = build.cracked ? 'crack' : 'strip'
+    const r = Math.round(casePrice * CASE_REFUND)
+    refund += r
+    repLoss += CASE_DAMAGE_REP
     checks.push({
-      label: `Case nứt khi vặn vít: đền khách ${Math.round(CRACK_REFUND * 100)}% giá trị phím (${refund}k)`,
+      label: build.cracked
+        ? `Case nứt khi vặn vít: đền khách ${Math.round(CASE_REFUND * 100)}% giá case (${r}k), −${CASE_DAMAGE_REP} uy tín`
+        : `Khách phát hiện ${caseStrips} vít case tuôn ren, gõ lọc xọc: đền ${Math.round(CASE_REFUND * 100)}% giá case (${r}k), −${CASE_DAMAGE_REP} uy tín`,
       pts: 0,
-      got: -25,
+      got: build.cracked ? -25 : -15,
     })
-  } else if (strips && rng() >= STRIP_UNNOTICED) {
-    damage = 'strip'
-    refund = Math.round((order.budget + order.labor) * STRIP_REFUND)
+  }
+  if (stabStrips && inventory.stab && rng() >= STRIP_UNNOTICED) {
+    damage ??= 'stab'
+    const r = STABS[inventory.stab.type]?.price ?? 0
+    refund += r
     checks.push({
-      label: `Khách phát hiện ${strips} vít tuôn ren: đền ${Math.round(STRIP_REFUND * 100)}% giá trị đơn (${refund}k)`,
+      label: `Khách phát hiện stab tuôn ren, lỏng không vặn được: đền bộ stab mới (${r}k)`,
       pts: 0,
       got: -10,
     })
@@ -228,5 +278,6 @@ export function scoreDelivery({
     labor: Math.round((order.labor * score) / 100),
     ...(defects.length ? { defects } : {}),
     ...(damage ? { damage, refund } : {}),
+    ...(repLoss ? { repLoss } : {}),
   }
 }

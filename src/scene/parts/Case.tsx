@@ -17,9 +17,14 @@ import {
   CASE_WALL,
   GASKET,
   LEDGE_GAP,
+  TOP_FLIP_STEPS,
+  TOP_HOLE,
+  TOP_NOTCH,
   TOP_TAB,
   Y,
+  caseBores,
   caseScrewHoles,
+  caseScrewY,
   ringFrame,
 } from '@/data/steps'
 import { BLOCKER_SKIN, BLOCKER_TOP, blockerGaps, keyRegions } from '@/data/layouts'
@@ -29,6 +34,7 @@ import { lerpTo } from '../common/anim'
 import { useHover } from '../common/useHover'
 import { CaseMaterial, WEIGHT_METALS, woodBoxGeometry, woodUV } from '../materials'
 import { ScrewSet } from './Screw'
+import { useCaseSplit } from './caseSplit'
 import { HintArrow } from '../stations/StationKit'
 import {
   caseShellGeometry,
@@ -37,6 +43,8 @@ import {
   micaLayerGeometry,
   micaLayerKind,
   micaStackPlan,
+  type WallBore,
+  type WallNotch,
 } from './caseShell'
 import { caseModelOf } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
@@ -98,17 +106,35 @@ function Walls({
   wood,
   floorTop,
   pockets,
-}: ShellProps & { floorTop?: number; pockets?: FootPocket[] }) {
+  notches,
+  notchTop,
+  bores,
+}: ShellProps & {
+  floorTop?: number
+  pockets?: FootPocket[]
+  /** hốc khoét mặt trong vách từ đáy lên tới `notchTop` (top mount) */
+  notches?: WallNotch[]
+  notchTop?: number
+  /** lỗ khoan đứng (lỗ vít xuyên / lỗ ren / hốc chìm đầu ốc) */
+  bores?: WallBore[]
+}) {
+  const key = JSON.stringify([notches ?? [], bores ?? []])
   const geometry = useMemo(() => {
-    const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floorTop, pockets)
+    const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floorTop, pockets, ...cuts(key, notchTop))
     return wood ? woodUV(g) : g
-  }, [W, D, y0, y1, floorTop, wood, pockets])
+  }, [W, D, y0, y1, floorTop, wood, pockets, key, notchTop])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
       {mat}
     </mesh>
   )
+}
+
+/** khoét vỏ theo khoá JSON (hốc / lỗ khoan, ghi nhớ theo nội dung chứ không theo mảng mới mỗi lần vẽ) */
+const cuts = (key: string, notchTop?: number) => {
+  const [notches, bores] = JSON.parse(key) as [WallNotch[], WallBore[]]
+  return [notches, notchTop, bores] as const
 }
 
 /**
@@ -279,11 +305,10 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
   })
 }
 
-/** gờ / vấu lấn vào vách bao nhiêu (giấu mép ngoài trong vách) */
+/** gờ lấn vào vách bao nhiêu (giấu mép ngoài trong vách) */
 const LEDGE_IN = 0.02
-/** dày gờ đỡ / gờ chặn trên gasket, cao vấu top mount (u) */
+/** dày gờ đỡ / gờ chặn trên gasket (u) */
 const LEDGE_H = 0.1
-const BOSS_H = 0.14
 
 /**
  * Gờ chạy quanh lòng case (case dựng bằng code): từ mặt vách vào tới cách mép board `LEDGE_GAP`, không chạm PCB / plate.
@@ -303,22 +328,27 @@ function Ledge({ y0, y1, mat }: { y0: number; y1: number; mat: ReactNode }) {
   )
 }
 
-/** Top mount: vấu liền vách case trên ngay trên tai plate, vít từ dưới xuyên tai plate bắt vào vấu */
-function TopBosses({ mat }: { mat: ReactNode }) {
-  const ctx = useCtx()
-  const d = CASE_MARGIN + LEDGE_IN - LEDGE_GAP
-  return ctx.screws.topScrew.map((p) => (
-    <mesh
-      key={p.id}
-      position={[p.x, BOSS_H / 2, Math.sign(p.z) * (ctx.depth / 2 + LEDGE_GAP + d / 2)]}
-      castShadow
-      receiveShadow
-    >
-      <boxGeometry args={[TOP_TAB, BOSS_H, d]} />
-      {mat}
+/** top mount: độ sâu lỗ ren M2 khoan lên từ trần hốc tai plate (u) */
+const TOP_TAP_DEPTH = 0.15
+
+/** đáy lỗ ren tối (lòng lỗ khoan CSG trong vỏ được chiếu sáng, nhìn không ra độ sâu): đĩa đen ở cuối lỗ, mặt hướng xuống */
+function BoreEnds({ holes }: { holes: { x: number; z: number; r: number; y: number }[] }) {
+  return holes.map((h, i) => (
+    <mesh key={i} position={[h.x, h.y - 0.002, h.z]} rotation-x={Math.PI / 2}>
+      <circleGeometry args={[h.r, 24]} />
+      <meshBasicMaterial color="#060607" />
     </mesh>
   ))
 }
+
+/** hốc trong vách case trên cho tai plate top mount: đúng chỗ vít, sâu `TOP_NOTCH.d`, trần ngang mặt plate (y = 0) */
+const topNotches = (screws: { x: number; z: number }[]): WallNotch[] =>
+  screws.map((p) => ({
+    x: p.x,
+    side: p.z > 0 ? 1 : -1,
+    w: TOP_TAB + 2 * TOP_NOTCH.gap,
+    d: TOP_NOTCH.d,
+  }))
 
 /** standoff tray mount: trụ đồng M2 (u), lỗ ren tối ở đỉnh */
 const STANDOFF_R = 0.1
@@ -466,6 +496,23 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const D = ctx.depth + 2 * (CASE_MARGIN + CASE_WALL)
   // case 2 mảnh: lỗ vít ở đáy (nhôm / PC / acrylic) hoặc xuyên mọi lớp (mica ghép)
   const screwHoles = useMemo(() => caseScrewHoles(caseDef, ctx.width, ctx.depth), [ctx, caseDef])
+  // case 2 mảnh bắt vít từ đáy: lỗ xuyên + hốc chìm đầu ốc ở case dưới, lỗ ren ở case trên; top mount thêm lỗ ren trần hốc tai plate
+  const bores = useMemo(() => caseBores(caseDef, ctx.screws.caseOpen), [ctx, caseDef])
+  const topBores = useMemo(
+    () => [
+      ...bores.top,
+      ...(ctx.steps.includes('topScrew')
+        ? ctx.screws.topScrew.map(({ x, z }) => ({
+            x,
+            z,
+            r: TOP_HOLE.tap,
+            y0: -0.02,
+            y1: TOP_TAP_DEPTH,
+          }))
+        : []),
+    ],
+    [ctx, bores],
+  )
   const floorPockets = useMemo(
     () => (mica ? ctx.feet : [...ctx.feet, ...screwHoles]),
     [ctx, mica, screwHoles],
@@ -487,10 +534,23 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
       (topMount && stepIdx >= at('topCase')))
   const placing = ((step === 'caseClose' || step === 'topCase') && !closed) || closeNext
   // case trên chờ đậy / úp lơ lửng; top mount: case trên đã bắt vít vào plate nên nhấc lên cùng board khi thả vào case
-  const topY = placing || (topMount && step === 'caseIn' && !inCase) ? 2.6 : 0
+  // mở case: tháo hết vít đáy thì case trên nhấc lên lơ lửng (đã tách 2 mảnh)
+  const split = useCaseSplit()
+  const topY = placing || split || (topMount && step === 'caseIn' && !inCase) ? 2.6 : 0
   const bottom = useHover(step === 'caseIn')
-  const top = useHover(placing)
-  useFrame((_, dt) => lerpTo(topRef, 'y', topY, dt, 6))
+  // top mount đã úp case trên, chưa lật cụm lên: bấm case trên (hoặc Q) để lật, vít ở mặt dưới
+  const viewFlip = useGame((s) => s.viewFlip)
+  const needFlip = topMount && step === 'topScrew' && !viewFlip
+  const top = useHover(placing || needFlip)
+  // Q ở bước úp / đậy: lật riêng case trên đang lơ lửng quanh tâm của nó (xem mặt trong), đậy xuống thì lật về
+  const topFlip = viewFlip && placing && !!step && TOP_FLIP_STEPS.includes(step)
+  const flipRef = useRef<THREE.Group>(null)
+  const topMid = (Y.split + Y.caseTop) / 2
+  useFrame((_, dt) => {
+    lerpTo(topRef, 'y', topY, dt, 6)
+    const r = flipRef.current?.rotation
+    if (r) r.x += ((topFlip ? Math.PI : 0) - r.x) * Math.min(1, dt * 5)
+  })
 
   const mat = (hover: boolean) => (
     <CaseMaterial material={caseDef.material} color={color} hover={hover} />
@@ -520,7 +580,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const coded = !model && !mica
   const ring = ctx.mount === 'oring' || ctx.mount === 'og' ? ringFrame(ctx.mount === 'oring') : null
   const gasket = coded && two && ctx.mount === 'gasket'
-  const screwY = screwSide === 'top' ? Y.caseTop : Y.floorBot
+  const screwY = caseScrewY(caseDef)
   const onClick = (target: StepId, action: () => void) => (e: ThreeEvent<PointerEvent>) => {
     if (step !== target) return
     e.stopPropagation()
@@ -570,6 +630,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               pockets={floorPockets}
               mat={bottomMat(bottom.hover)}
               wood={wood && !lower}
+              bores={bores.bottom}
             />
           )}
           <RubberFeet pockets={ctx.feet} />
@@ -617,7 +678,9 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
           position-y={topY}
           onPointerDown={
             topMount
-              ? onClick('topCase', placeTopCase)
+              ? needFlip
+                ? onClick('topScrew', useGame.getState().toggleFlip)
+                : onClick('topCase', placeTopCase)
               : closeNext
                 ? onClick('caseIn', () => {
                     nextStep()
@@ -627,80 +690,96 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
           }
           {...top.bind}
         >
-          {model ? (
-            // case CAD 2 mảnh: nắp (node "case") + khung chặn, đi cùng case trên
-            <>
-              <CaseModel model={model} origin={ctx.origin} weight={caseDef.weight} part="top">
-                <CaseMaterial
-                  material={caseDef.material}
-                  color={color}
-                  hover={top.hover}
-                  doubleSide
+          <group ref={flipRef} position-y={topMid}>
+            <group position-y={-topMid}>
+              {model ? (
+                // case CAD 2 mảnh: nắp (node "case") + khung chặn, đi cùng case trên
+                <>
+                  <CaseModel model={model} origin={ctx.origin} weight={caseDef.weight} part="top">
+                    <CaseMaterial
+                      material={caseDef.material}
+                      color={color}
+                      hover={top.hover}
+                      doubleSide
+                    />
+                  </CaseModel>
+                  <Blockers
+                    keys={ctx.keys}
+                    width={ctx.width}
+                    depth={ctx.depth}
+                    mat={mat(top.hover)}
+                    wood={wood}
+                    top={BLOCKER_TOP}
+                  />
+                </>
+              ) : mica && sandwich ? (
+                // sandwich: chừa đúng khe plate (plate viền liền là 1 lớp kẹp giữa) → lớp dưới plate + lớp trên plate
+                <>
+                  <Layers
+                    W={W}
+                    D={D}
+                    y0={Y.split}
+                    y1={Y.plateBot}
+                    mat={mat(top.hover)}
+                    holes={screwHoles}
+                  />
+                  <Layers
+                    W={W}
+                    D={D}
+                    y0={0}
+                    y1={Y.caseTop}
+                    mat={mat(top.hover)}
+                    holes={screwHoles}
+                    cutouts={cutouts}
+                  />
+                </>
+              ) : mica ? (
+                <Layers
+                  W={W}
+                  D={D}
+                  y0={Y.split}
+                  y1={Y.caseTop}
+                  mat={mat(top.hover)}
+                  holes={screwHoles}
+                  cutouts={cutouts}
                 />
-              </CaseModel>
-              <Blockers
-                keys={ctx.keys}
-                width={ctx.width}
-                depth={ctx.depth}
-                mat={mat(top.hover)}
-                wood={wood}
-                top={BLOCKER_TOP}
-              />
-            </>
-          ) : mica && sandwich ? (
-            // sandwich: chừa đúng khe plate (plate viền liền là 1 lớp kẹp giữa) → lớp dưới plate + lớp trên plate
-            <>
-              <Layers
-                W={W}
-                D={D}
-                y0={Y.split}
-                y1={Y.plateBot}
-                mat={mat(top.hover)}
-                holes={screwHoles}
-              />
-              <Layers
-                W={W}
-                D={D}
-                y0={0}
-                y1={Y.caseTop}
-                mat={mat(top.hover)}
-                holes={screwHoles}
-                cutouts={cutouts}
-              />
-            </>
-          ) : mica ? (
-            <Layers
-              W={W}
-              D={D}
-              y0={Y.split}
-              y1={Y.caseTop}
-              mat={mat(top.hover)}
-              holes={screwHoles}
-              cutouts={cutouts}
-            />
-          ) : (
-            <>
-              <Walls W={W} D={D} y0={Y.split} y1={Y.caseTop} mat={mat(top.hover)} wood={wood} />
-              {gasket && (
-                // gasket: gờ case trên đè lên mặt trên miếng gasket (plate kẹp giữa 2 gờ)
-                <Ledge y0={GASKET.t} y1={GASKET.t + LEDGE_H} mat={mat(top.hover)} />
+              ) : (
+                <>
+                  <Walls
+                    W={W}
+                    D={D}
+                    y0={Y.split}
+                    y1={Y.caseTop}
+                    mat={mat(top.hover)}
+                    wood={wood}
+                    notches={topMount ? topNotches(ctx.screws.topScrew) : undefined}
+                    notchTop={0}
+                    bores={topBores}
+                  />
+                  {gasket && (
+                    // gasket: gờ case trên đè lên mặt trên miếng gasket (plate kẹp giữa 2 gờ)
+                    <Ledge y0={GASKET.t} y1={GASKET.t + LEDGE_H} mat={mat(top.hover)} />
+                  )}
+                  <BoreEnds holes={topBores.map((b) => ({ ...b, y: b.y1 }))} />
+                  <Blockers
+                    keys={ctx.keys}
+                    width={ctx.width}
+                    depth={ctx.depth}
+                    mat={mat(top.hover)}
+                    wood={wood}
+                    top={Y.caseTop}
+                  />
+                </>
               )}
-              {topMount && <TopBosses mat={mat(top.hover)} />}
-              <Blockers
-                keys={ctx.keys}
-                width={ctx.width}
-                depth={ctx.depth}
-                mat={mat(top.hover)}
-                wood={wood}
-                top={Y.caseTop}
-              />
-            </>
-          )}
+            </group>
+          </group>
           {/* đậy / úp case trên: mũi tên vàng chỉ mép trước case trên đang lơ lửng */}
-          {placing && <HintArrow at={[0, Y.caseTop + 0.05, frontZ]} size={1.6} />}
+          {(placing || needFlip) && !topFlip && (
+            <HintArrow at={[0, Y.caseTop + 0.05, frontZ]} size={1.6} />
+          )}
           {/* top mount: vít từ dưới xuyên tai plate bắt vào vấu case trên, đi cùng case trên */}
           {topMount && stepIdx >= at('topScrew') && (
-            <ScrewSet step="topScrew" y={Y.plateBot} flip />
+            <ScrewSet step="topScrew" y={Y.plateBot} flip active={viewFlip} />
           )}
         </group>
       )}

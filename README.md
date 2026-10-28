@@ -121,7 +121,7 @@ Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phả
 - Stab plate-mount gài được mọi plate. **Plateless** (bật ở app Danh sách đơn): bỏ plate, bắt buộc PCB hàn + Tray mount. **Foam Poron** lót PCB (Shopii → Lube & vật tư) là bước tuỳ chọn trước plate, tiếng thock hơn.
 - Mỗi ngày phải nhận ít nhất 1 đơn mới qua ngày được; đơn đã nhận mà cả ngày không làm gì thì khách report, đền 20% tiền công.
 - Trước khi lắp board vào case phải dán 4 feet cao su vào hốc dưới đáy case: mua feet đen / trắng ở Shopii → Lube & vật tư (1 lần mua = 4 cái).
-- Hàn đúng vùng xanh và đừng giữ quá lâu; lau mũi hàn khi bị cháy. Lube switch thì mở vỏ trước; mod stab theo đúng mẫu; chọn đúng đầu vít (sai là tuôn ren) và giữ chuột vặn, nhả khi thanh lực vào vùng xanh — quá tay là tuôn ren / nứt case, giao đi phải đền khách.
+- Hàn / vặn vít vào: bấm cho kim chạy, bấm lần nữa (hoặc Space) dừng trong vùng xanh, trúng vàng là hoàn hảo; lau mũi hàn khi bị cháy. Lube switch thì mở vỏ trước; mod stab theo đúng mẫu; chọn đúng đầu vít (sai là trượt ren, 3 lần thì tuôn) và dừng kim lực trong vùng xanh — quá tay là tuôn ren / nứt case, giao đi phải đền khách.
 - Test bằng bàn phím thật hoặc click phím 3D; càng nhiều phím được test càng cao điểm.
 - Bấm **Đóng gói đơn này** để chấm điểm, sau đó gửi khách trong Mezzenger (hoặc để **Kết thúc ngày** gửi nốt).
 - Tiền nhận gồm budget linh kiện (mua rẻ hơn thì phần dư vào túi) + tiền công theo điểm; lố ngân sách thì shop chịu phần lố và bị trừ điểm.

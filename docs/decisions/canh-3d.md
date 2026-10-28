@@ -692,3 +692,53 @@
   feet: dưới hốc dán tiếp theo (`group rotation-x π` như vít đáy, case lật úp thì chỉ xuống); caseIn (chưa thả): trên giữa vách trước case
   dưới (`frontZ`, cao `wallTop` / `BLOCKER_TOP` case CAD); đậy / úp case trên (`placing`): trên vách trước case trên đang lơ lửng.
   Chụp kiểm plastic60 (feet, thả board) + gasket60 (đậy case).
+
+## Q lật case trên ở bước úp / đậy case 2 mảnh (2026-10-28)
+
+- Người dùng: "ở bước case 2 mảnh bấm q thì phải lật được mặt top case lại, hiện tại ko lật được" (`topCase` / `caseClose` nằm trong
+  `NO_FLIP_STEPS` nên Q bị tắt).
+- `TOP_FLIP_STEPS` (steps.ts): ở 2 bước này, khi case trên còn lơ lửng (`!build.closed`) thì `canFlip` (BenchHud) bật lại; Assembly vẫn
+  không lật board, chỉ Case.tsx xoay nhóm case trên quanh tâm `(Y.split + Y.caseTop) / 2` theo `viewFlip` (lerp như Assembly), ẩn mũi tên khi lật.
+  Bấm úp / đậy lúc đang lật: case tự lật về khi hạ xuống; `placeTopCase` reset `viewFlip` (closeCase sang bước qua `nextStep` đã reset).
+
+## Top mount: hốc vách case trên + ốc M2 + tự lật để vặn (2026-10-28)
+
+- Người dùng: plate top mount phải có tai khoét lỗ, case trên có lỗ lõm để bắt plate, ốc ngắn M2×3 / M2×4 (lớn hơn M2.5) có sẵn trên khay;
+  sau đó chỉ ảnh: lỗ không được nằm trên khối vấu lồi ra mà lõm vào trong vách; úp case xong phải lật (Q / bấm case) mới vặn, có mũi tên.
+- `TOP_NOTCH` (sâu 0,22u vào vách, rộng hơn tai 0,02u mỗi bên), `TOP_HOLE` (tâm lỗ cách mép board `CASE_MARGIN + d / 2`, lỗ tai r 1,05mm,
+  lỗ ren r 0,8mm). `caseShellGeometry(..., notches, notchTop)`: ruột vành có hốc chữ nhật (`notchedRect`, `WallNotch`) từ đáy lên,
+  khối lấp phần trên `notchTop` (= 0, mặt plate) làm trần hốc. Bỏ `TopBosses` (khối vấu) → `TopTapHoles` (miệng vát + lòng lỗ tối ở trần hốc).
+- Tai plate (`plateGeometry` tabs) dài vào hốc + khoét lỗ M2. Ốc `topScrew`: model socket M2×6 rút còn M2×4 (`SCREW_SHORT`, dùng chung
+  ScrewSet / `screwLength` / `LooseScrew`), vẫn đầu chữ thập. ScrewTray bày sẵn ốc top mount chưa bắt.
+- `topScrew` bỏ khỏi `autoFlip`; `placeTopCase` úp xong tự `nextStep`; chưa lật (`!viewFlip`) thì vít không bấm được (`ScrewSet active`),
+  bấm case trên = `toggleFlip`, mũi tên vàng ở mép trước case, hint Objective / thoại Keeb-chan nhắc bấm Q.
+- Đã chụp kiểm (playwright, scratchpad `pw/top.mjs`, gasket60 top mount): hốc + lỗ ren khi lật case trên, sau úp chưa lật có mũi tên, Q lật thấy 6 vít.
+
+## Vỏ case khoét CSG liền khối, lỗ vít case xuyên thành, tách 2 mảnh, plate top mount phủ kín (2026-10-28)
+
+- Người dùng (chỉ ảnh): lỗ vít bot case chỉ là hốc nông, nằm lọt vào trong lòng case (cách mép board 0,4u) → vít không ăn vào đâu; hốc top mount
+  trông như cắt rồi nhét khối vào; mở hết vít đáy phải tách 2 mảnh; dán feet chỉ hiện case dưới; top mount không được bỏ qua plate;
+  khe hở PCB – thành case khi lật bước bắt vít top mount là sai.
+- `caseShellGeometry(..., notches, notchTop, bores)`: vỏ bo mép đùn 1 lần rồi trừ khối bằng `three-bvh-csg` (`carve`, chuyển sang
+  dependencies): hốc tai plate (box từ đáy lên `notchTop`) + lỗ khoan đứng `WallBore`. Bỏ cách ghép khối lấp trần hốc.
+- `caseScrewPoints`: vít luôn ở giữa thành case (`depth / 2 + CASE_MARGIN + CASE_WALL / 2`), cả bắt từ đáy. `CASE_BORE` (M3 đầu bằng: hốc chìm
+  r 3,2mm sâu 0,05u, lỗ xuyên r 1,7mm hết thành case dưới, lỗ ren r 1,25mm sâu 0,16u ở mặt dưới thành case trên), `boredCase` (2 mảnh dựng bằng code,
+  không mica, bắt từ đáy), `caseBores`, `caseScrewY` (đầu ốc chìm trong hốc), `caseScrewShaft` (thân ren xuyên thành dưới ăn lên case trên; dùng ở
+  ScrewSet / ScrewTray). `caseScrewHoles` giờ chỉ cho mica bắt từ trên (hốc nông dưới sàn bỏ). orderThumb khoét giống bàn build.
+- Vít top mount tách khỏi vít case (`topScrewPoints`: mỗi cạnh n + 1 vít, né vít case đủ xa để hốc không cắt lỗ ren); lỗ ren M2 khoan CSG từ trần hốc,
+  đáy lỗ tối `BoreEnds` (thay `TopTapHoles`).
+- `useCaseSplit` (`scene/parts/caseSplit.ts`): bước `caseOpen` tháo hết vít (chờ con cuối bay ra) thì cụm lật ngửa (Assembly) + case trên nhấc lên 2,6u.
+  Bước feet vốn chỉ vẽ case dưới.
+- `isOptionalStep(step, order, steps)`: `plate` không bỏ qua được khi có `topCase` (kể cả đơn dev); `placeTopCase` chặn khi `!build.plate`.
+- Plate top mount (case dựng bằng code, `topFull` trong Board.tsx): viền plate = chữ nhật bo góc lòng case trừ `TOP_PLATE_GAP` 0,02u, tai nối từ mép plate.
+- Đã chụp kiểm (playwright `pw/top.mjs`, gasket60 top): tách 2 mảnh, lỗ xuyên + hốc chìm ở đáy, hốc tai plate liền khối có lỗ ren, plate phủ kín khi lật.
+
+## Miệng lỗ vít theo kiểu đầu ốc (2026-10-28)
+
+- Người dùng: ốc trụ (lục giác chìm) → lỗ âm counterbore; chữ thập / lục giác / dẹt đầu bằng → countersink. Ốc top mount dùng đầu trụ lục giác
+  hoặc chữ thập đầu dẹt (mặt tì phẳng), không đầu côn.
+- `SCREW_HEADS` (steps.ts, chuyển từ `SCREW_STYLES` trong Screw.tsx, Screw.tsx dùng lại) + `HEAD_MM`; `caseHeadHole(head)`: đầu bằng → hốc côn 90°
+  (`WallBore.r1`, CylinderGeometry 2 bán kính) từ r đầu + 0,2mm xuống bằng lỗ xuyên, đầu ốc phẳng mặt đáy (`caseScrewY` = `Y.floorBot`); đầu trụ /
+  tròn → hốc trụ sâu cao đầu + 0,3mm, đầu ốc chìm. Vít case hiện là M3 đầu bằng lục giác → countersink.
+- Ốc top mount: socket M2×4 (đầu trụ phẳng), đầu vít đổi `SCREW_BITS.topScrew` chữ thập → lục giác cho khớp ốc lục giác chìm.
+- Chụp kiểm: đáy case thấy hốc côn + lỗ xuyên, vặn xong đầu ốc bằng phẳng mặt đáy.

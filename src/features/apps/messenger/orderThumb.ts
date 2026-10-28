@@ -2,9 +2,17 @@ import { useEffect, useState } from 'react'
 import * as THREE from 'three'
 import { BLOCKER_SKIN, BLOCKER_TOP, blockerGaps, getLayout, keyRegions } from '@/data/layouts'
 import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS, caseFits, caseModelOf } from '@/data/parts'
-import { CASE_MARGIN, CASE_WALL, Y, caseScrewHoles, feetPockets } from '@/data/steps'
+import {
+  CASE_MARGIN,
+  CASE_WALL,
+  Y,
+  caseBores,
+  caseScrewHoles,
+  caseScrewPoints,
+  feetPockets,
+} from '@/data/steps'
 import { MM } from '@/scene/models/Switch'
-import { caseShellGeometry, micaStack } from '@/scene/parts/caseShell'
+import { caseShellGeometry, micaStack, type WallBore } from '@/scene/parts/caseShell'
 import { WEIGHT_METALS, WOOD_TEX, prepWood, woodTexFor, woodUV } from '@/scene/materials'
 import { boardOutline, outlineSlab } from '@/scene/parts/boardOutline'
 import { capGeometry, keycapModel, keycapShape, stretchCap } from '@/scene/models/keycapShape'
@@ -223,7 +231,15 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
       )
     } else {
       // vỏ liền 1 khối (vành + sàn đáy) như bàn build; case 2 mảnh: phần dưới (đáy riêng màu) + vành trên
-      const shell = (y0: number, y1: number, mat: THREE.Material, floor?: number) => {
+      // case 2 mảnh bắt vít từ đáy: lỗ xuyên + hốc chìm đầu ốc (case dưới), lỗ ren (case trên)
+      const bores = caseBores(def, caseScrewPoints(width, depth, 'bottom'))
+      const shell = (
+        y0: number,
+        y1: number,
+        mat: THREE.Material,
+        floor?: number,
+        cut: WallBore[] = [],
+      ) => {
         // phần có sàn (đáy) thì khoét 4 hốc feet CNC như bàn build
         const g = caseShellGeometry(
           W,
@@ -233,12 +249,15 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
           CASE_WALL,
           floor,
           floor === undefined ? [] : [...pockets, ...screwHoles],
+          [],
+          undefined,
+          cut,
         )
         group.add(new THREE.Mesh(def.material === 'wood' ? woodUV(g) : g, mat))
       }
       if (def.pieces === 2) {
-        shell(Y.floorBot, Y.split, bottomMat, Y.floorTop)
-        shell(Y.split, Y.caseTop, caseMat)
+        shell(Y.floorBot, Y.split, bottomMat, Y.floorTop, bores.bottom)
+        shell(Y.split, Y.caseTop, caseMat, undefined, bores.top)
       } else shell(Y.floorBot, Y.caseTop, def.bottom ? bottomMat : caseMat, Y.floorTop)
     }
   }
