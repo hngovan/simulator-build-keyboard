@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.14',
     date: '2026-10-28',
-    commits: [],
+    commits: ['1532256'],
     title: 'Skill check vặn vít / hàn, top mount chuẩn, lỗ vít case thật, tuôn ren thay stab',
     items: [
       'Hàn + vặn vít vào: bấm cho kim chạy qua lại trên thanh đỏ, bấm lần nữa / Space dừng ở vùng xanh, trúng vàng hoàn hảo được thưởng điểm khi giao',
