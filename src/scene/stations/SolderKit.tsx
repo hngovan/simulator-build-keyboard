@@ -9,6 +9,7 @@ import { TOOLS } from '@/data/parts'
 import { JOINTS_PER_KEY, SUPPLIES } from '@/data/supplies'
 import { Y } from '@/data/steps'
 import { HintArrow, MissingSlot, Part } from './StationKit'
+import { HINT_COLOR } from '../common/hoverOutline'
 import { useSolderHint } from '../parts/solderHint'
 import { DesolderPump } from '../models/DesolderPump'
 import { createSolderSpool } from '../models/solderSpool'
@@ -71,7 +72,7 @@ function Pen() {
 
 /**
  * Đồ hàn bày cạnh board ở bước hàn: bút hàn 60W hoặc trạm hàn (có giá lò xo, mỏ hàn nối dây vào trạm),
- * giá bùi nhùi đồng và cuộn thiếc dựng đứng. Thiếu mỏ hàn / bùi nhùi / hết thiếc thì để ô vàng nét đứt,
+ * giá bùi nhùi đồng và cuộn thiếc dựng đứng. Thiếu mỏ hàn / bùi nhùi / hết thiếc thì để ô xanh nét đứt,
  * bấm để mở Shopii mua
  */
 export function SolderKit() {
@@ -187,10 +188,10 @@ export function SolderKit() {
           {dirty && (
             <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
               <ringGeometry args={[1.1, 1.3, 32]} />
-              <meshBasicMaterial color="#ffcc2e" transparent opacity={0.9} />
+              <meshBasicMaterial color={HINT_COLOR} transparent opacity={0.9} />
             </mesh>
           )}
-          {/* mũi tên vàng: mũi hàn đen thì chỉ vào bùi nhùi để lau */}
+          {/* mũi tên xanh: mũi hàn đen thì chỉ vào bùi nhùi để lau */}
           {hint === 'clean' && !cleaning && <HintArrow at={[0, 2.2, 0]} size={3} />}
         </Part>
       ) : (

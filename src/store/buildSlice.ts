@@ -931,6 +931,9 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     placeGasket: (i) => {
       const s = at('gasket')
       if (!s || s.build.gaskets[i]) return
+      // dải gasket dán lên tai / mép plate: chưa lắp plate (lỡ bỏ qua, đổi case giữa chừng) thì không dán được
+      if (!s.build.plate)
+        return s.toast('Chưa lắp plate: gasket dán lên tai plate, quay lại bước lắp plate', 'bad')
       // chụp trước khi trừ vật tư: hoàn tác thì trả lại dải Poron (đủ phủ hết tai, mặt trên + dưới)
       const snap = snapshot()
       if (!s.useSupply(GASKET_ID, gasketStrips(s.ctx.gaskets[i]))) return

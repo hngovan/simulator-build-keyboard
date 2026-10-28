@@ -20,6 +20,15 @@ import {
   type InventoryCheck,
 } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
+import {
+  SHIP_SPEEDS,
+  arriveDay,
+  arrivedParcels,
+  parcelId,
+  shipPrice,
+  toolOnWay,
+  type ShipSpeed,
+} from '@/data/shipping'
 import type {
   Paid,
   CaseItem,
@@ -27,6 +36,8 @@ import type {
   GroupPost,
   Inventory,
   Order,
+  Parcel,
+  ParcelItem,
   PartCategory,
   PartItem,
   StabItem,
@@ -118,6 +129,15 @@ export interface ShopSlice {
   isMarketBanned: () => boolean
   buySupply: (id: string, n: number, price: number, scamRate?: number) => BuyResult
   buyTool: (kind: ToolKind, level: number, price?: number, scamRate?: number) => BuyResult
+  /**
+   * Đặt hàng Shopii: kiểm tra + trừ tiền ngay (giá gốc `item.price` × hệ số tốc độ giao), hàng thành kiện
+   * (`parcels`) tới cửa theo ngày; ra cửa nhận (`pickupParcel`) mới vào kho
+   */
+  orderParcel: (item: ParcelItem, speed: ShipSpeed) => BuyResult
+  /** nhận kiện đã tới cửa: cấp các món trong kiện rồi xoá kiện */
+  pickupParcel: (id: string) => void
+  /** huỷ kiện đặt trong hôm nay (chưa nhận): hoàn đủ tiền */
+  cancelParcel: (id: string) => void
   useSupply: (id: string, n: number) => boolean
   setLubePick: (kind: keyof LubePick, id: string) => void
   /** loại thiếc đang dùng ở bước hàn */
@@ -207,6 +227,172 @@ export const stashActive = (s: GameState): Job[] =>
         },
       ]
     : s.jobs
+
+/**
+ * lý do món không vào thẳng đơn đang làm được (null = được). Không chặn mua: có tiền là mua, món không vào đơn được
+ * thì cất kho chung (người dùng: "khách gửi kệ khách, mua thì có tiền cứ mua")
+ */
+function partBlock(s: GameState, cat: PartCategory): string | null {
+  if (!s.order || s.result) return 'Nhận đơn trước rồi hãy mua đồ nhé'
+  if (s.provided[cat]) return 'Khách đã gửi món này trong kit rồi'
+  if (s.build && KIT_PARTS.includes(cat as (typeof KIT_PARTS)[number]))
+    return 'Đã bắt đầu build, không thay được món này nữa'
+  return null
+}
+
+/** Linh kiện đã trả tiền về tay: vào đơn đang làm (gộp / thay món cũ, món cũ cất kho chung). Gọi sau `partBlock` */
+function receivePart(
+  get: () => GameState,
+  set: (p: Partial<GameState>) => void,
+  cat: PartCategory,
+  item: PartItem,
+  price: number,
+) {
+  const s = get()
+  if (!s.order) return
+  const sw = item as SwitchItem
+  // đơn đã có switch dùng được (hợp yêu cầu / đã cắm lên board) mà mua loại khác: không tự thay switch của đơn,
+  // lô mới vào kho chung (giữ tiền đã trả) — chọn loại dùng cho đơn ở app Chi tiết đơn
+  const curSw = s.inventory.switch
+  const swToSpare =
+    cat === 'switch' &&
+    !!curSw &&
+    curSw.type !== sw.type &&
+    ((!curSw.flaw && curSw.count > 0 && switchOk(curSw.type, s.order)) ||
+      (!!s.build && Object.keys(s.build.switches).length > 0))
+  if (swToSpare) {
+    set({
+      spare: addPart(s.spare, 'switch', { ...sw, paid: price, paidN: sw.count }),
+      spent: s.spent + price,
+    })
+    s.toast(
+      `📦 Đã nhận: ${itemName(cat, item)} → cất vào kho chung (đơn đang dùng ${SWITCHES[curSw!.type]?.name ?? curSw!.type}, đổi ở Chi tiết đơn)`,
+      'good',
+    )
+    return
+  }
+  // ghi giá đã trả lên món (gộp cùng loại thì cộng dồn) → "Đã chi linh kiện" (`partSpent`)
+  const units =
+    cat === 'switch' ? sw.count : cat === 'stab' ? stabTotal(stabStock(item as StabItem)) : 1
+  const cur = s.inventory[cat] as Paid | null
+  const paid = (merge: boolean): Paid => ({
+    paid: (merge ? (cur?.paid ?? 0) : 0) + price,
+    paidN: (merge ? (cur?.paidN ?? 0) : 0) + units,
+  })
+  let value: PartItem = { ...item, ...paid(false) }
+  let spare = s.spare
+  if (cat === 'switch' && s.inventory.switch?.type === sw.type)
+    value = { ...sw, count: s.inventory.switch.count + sw.count, ...paid(true) }
+  // stab cùng loại thì cộng dồn (bộ + lẻ), khác loại thì thay bộ cũ
+  const st = item as StabItem
+  if (cat === 'stab' && s.inventory.stab?.type === st.type) {
+    const have = stabStock(s.inventory.stab)
+    const add = stabStock(st)
+    value = { type: st.type, ...addStab(have, add), ...paid(true) }
+  }
+  // đã có món khác loại (mua thay): món cũ (đã trả tiền) cất vào kho chung, không mất
+  const old = s.inventory[cat]
+  const merged =
+    (cat === 'switch' && s.inventory.switch?.type === sw.type) ||
+    (cat === 'stab' && s.inventory.stab?.type === st.type)
+  if (old && !merged) spare = addPart(spare, cat, old)
+  // switch / stab cùng loại trong kho chung tự gộp vào
+  let fromSpare = 0
+  if (cat === 'switch' && spare.switches[sw.type]) {
+    const r = takeSwitches(spare, sw.type, value as SwitchItem)
+    fromSpare = r.n
+    value = r.item
+    spare = r.spare
+  }
+  if (cat === 'stab' && !st.flaw && spare.stabs[st.type]) {
+    const extra = spare.stabs[st.type]
+    const have = stabStock(value as StabItem)
+    fromSpare = stabTotal(stabStock(extra))
+    value = { ...(value as StabItem), ...addStab(have, stabStock(extra)) }
+    spare = { ...spare, stabs: without(spare.stabs, st.type) }
+  }
+  set({
+    inventory: { ...s.inventory, [cat]: value },
+    spent: s.spent + price,
+    spare,
+    ...(cat === 'case'
+      ? { mount: firstMount(CASES[(item as CaseItem).id].mounts, s.inventory, s.order.mount) }
+      : {}),
+  })
+  s.toast(
+    `📦 Đã nhận: ${itemName(cat, item)}${fromSpare ? ` (+${fromSpare} trong kho chung)` : ''}`,
+    'good',
+  )
+}
+
+/** số món đã trả tiền của linh kiện (switch: số con, stab: số stab, còn lại 1) → `paidN` */
+const paidUnits = (cat: PartCategory, item: PartItem) =>
+  cat === 'switch'
+    ? (item as SwitchItem).count
+    : cat === 'stab'
+      ? stabTotal(stabStock(item as StabItem))
+      : 1
+
+/** lý do không đặt mua dụng cụ được: đã có (hoặc bản tốt hơn) / đang trên đường giao; null = được */
+function toolBlock(s: GameState, kind: ToolKind, level: number): string | null {
+  const have =
+    kind === 'solder'
+      ? s.solderOwned[level] !== undefined || s.tools.solder === level
+      : s.tools[kind] >= level
+  if (have) return 'Bạn đã có dụng cụ này hoặc bản tốt hơn'
+  if (toolOnWay(s.parcels, kind, level))
+    return 'Dụng cụ này đang trên đường giao rồi, ra cửa nhận nhé'
+  return null
+}
+
+/** Nhận 1 món trong kiện hàng (tiền đã trả lúc đặt) */
+function receiveParcelItem(
+  get: () => GameState,
+  set: (p: Partial<GameState>) => void,
+  it: ParcelItem,
+  job: string | undefined,
+) {
+  const s = get()
+  if (it.kind === 'part') {
+    // đơn lúc đặt vẫn đang làm (và còn nhận món này được): nhận như mua cũ
+    if (s.order && s.order.id === job && !partBlock(s, it.cat))
+      return receivePart(get, set, it.cat, it.item, it.price)
+    // đơn đã chuyển vào danh sách chờ / bị huỷ / đã giao: cất kho chung, đơn đang làm tự lấy món hợp
+    set({
+      spare: addPart(s.spare, it.cat, {
+        ...it.item,
+        paid: it.price,
+        paidN: paidUnits(it.cat, it.item),
+      }),
+    })
+    s.toast(`📦 Đã nhận: ${itemName(it.cat, it.item)} → cất vào kho chung`, 'good')
+    return get().fillActive()
+  }
+  if (it.kind === 'supply') {
+    set({ supplies: { ...s.supplies, [it.id]: (s.supplies[it.id] ?? 0) + it.n } })
+    return s.toast(`🧴 Đã nhận: ${SUPPLIES[it.id].name} (+${it.n} ${SUPPLIES[it.id].unit})`, 'good')
+  }
+  const tool = TOOLS[it.tool][it.level]
+  // lúc chờ giao đã có bản này / tốt hơn (vd mua tay ở Hội Phím Cơ): hoàn tiền
+  const have =
+    it.tool === 'solder'
+      ? s.solderOwned[it.level] !== undefined || s.tools.solder === it.level
+      : s.tools[it.tool] >= it.level
+  if (have) {
+    set({ money: s.money + it.price })
+    return s.toast(`Đã có ${tool.name} rồi, Shopii hoàn ${it.price}k`, 'good')
+  }
+  if (it.tool === 'solder')
+    set({
+      solderOwned: {
+        ...s.solderOwned,
+        ...(s.tools.solder > 0 ? { [s.tools.solder]: s.wear.solder ?? 0 } : {}),
+        [it.level]: 0,
+      },
+    })
+  set({ tools: { ...get().tools, [it.tool]: it.level }, wear: { ...get().wear, [it.tool]: 0 } })
+  s.toast(`🔧 Đã nhận ${tool.name}`, 'good')
+}
 
 export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set, get) => ({
   lastSolderPurchase: null,
@@ -300,7 +486,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   switchJob: (id) => {
     const s = get()
     if (s.stabAnim || s.lubeAnim || s.order?.id === id) return
-    if (s.result) return s.toast('Bấm "Kết thúc ngày" trước rồi làm đơn tiếp nhé', 'bad')
+    if (s.result)
+      return s.toast('Ra lịch trên tường bấm "Kết thúc ngày" trước rồi làm đơn tiếp nhé', 'bad')
     if (s.jobs.find((j) => j.order.id === id)?.order.cancel)
       return s.toast('Khách đã huỷ kèo đơn này rồi', 'bad')
     const jobs = stashActive(s)
@@ -403,7 +590,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       acceptedToday: 0,
       dayStart: { money, rep },
       worked: [],
-      screen: 'pc',
+      // kết thúc ngày ở lịch treo tường: ở nguyên trong phòng
     })
     for (const { o, fine } of fines)
       s.notify(
@@ -419,6 +606,13 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     }
     if (get().order || get().jobs.length) s.toast('🛒 Hội Phím Cơ có đợt hàng pass mới hôm nay')
     if (isSaleDay(day)) s.toast('🔥 Hôm nay Shopii sale linh kiện, giảm 5–30%!', 'good')
+    // kiện Shopii tới cửa hôm nay (không tự nhận: ra cửa bấm thùng hàng)
+    const arrived = arrivedParcels(get().parcels, day).filter((p) => p.arrive === day)
+    if (arrived.length)
+      s.notify(
+        '📦 Có hàng tới cửa',
+        `${arrived.map((p) => p.label).join(', ')}. Ra cửa phòng bấm thùng hàng để nhận`,
+      )
     s.addReviews([
       ...unsent.map((p) => shipReview(p.order, p.result, s.day)),
       ...cancelled.map((j) => cancelReview(j.order, s.day, -CANCEL_REP)),
@@ -429,89 +623,21 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   buy: (cat, item, price, scamRate = 0) => {
     const s = get()
     const fail = (msg: string): BuyResult => (s.toast(msg, 'bad'), 'fail')
-    if (!s.order || s.result) return fail('Nhận đơn trước rồi hãy mua đồ nhé')
-    if (s.provided[cat]) return fail('Khách đã gửi món này trong kit rồi')
-    if (s.build && KIT_PARTS.includes(cat as (typeof KIT_PARTS)[number]))
-      return fail('Đã bắt đầu build, không thay được món này nữa')
-    const sw = item as SwitchItem
-    // đơn đã có switch dùng được (hợp yêu cầu / đã cắm lên board) mà mua loại khác: không tự thay switch của đơn,
-    // lô mới vào kho chung (giữ tiền đã trả) — chọn loại dùng cho đơn ở app Chi tiết đơn
-    const curSw = s.inventory.switch
-    const swToSpare =
-      cat === 'switch' &&
-      !!curSw &&
-      curSw.type !== sw.type &&
-      ((!curSw.flaw && curSw.count > 0 && switchOk(curSw.type, s.order)) ||
-        (!!s.build && Object.keys(s.build.switches).length > 0))
     if (s.money < price) return fail('Không đủ tiền!')
     set({ money: s.money - price })
     if (Math.random() < scamRate) {
       s.toast(`😱 Seller bùng hàng! Mất trắng ${price}k`, 'bad')
       return 'scam'
     }
-    if (swToSpare) {
+    const err = partBlock(get(), cat)
+    if (!err) receivePart(get, set, cat, item, price)
+    else {
+      // không vào đơn đang làm được (khách gửi rồi, đã build, chưa nhận đơn): cất kho chung
       set({
-        spare: addPart(s.spare, 'switch', { ...sw, paid: price, paidN: sw.count }),
-        spent: s.spent + price,
+        spare: addPart(get().spare, cat, { ...item, paid: price, paidN: paidUnits(cat, item) }),
       })
-      s.toast(
-        `📦 Đã nhận: ${itemName(cat, item)} → cất vào kho chung (đơn đang dùng ${SWITCHES[curSw!.type]?.name ?? curSw!.type}, đổi ở Chi tiết đơn)`,
-        'good',
-      )
-      return 'ok'
+      s.toast(`📦 Đã nhận: ${itemName(cat, item)} → cất vào kho chung`, 'good')
     }
-    // ghi giá đã trả lên món (gộp cùng loại thì cộng dồn) → "Đã chi linh kiện" (`partSpent`)
-    const units =
-      cat === 'switch' ? sw.count : cat === 'stab' ? stabTotal(stabStock(item as StabItem)) : 1
-    const cur = s.inventory[cat] as Paid | null
-    const paid = (merge: boolean): Paid => ({
-      paid: (merge ? (cur?.paid ?? 0) : 0) + price,
-      paidN: (merge ? (cur?.paidN ?? 0) : 0) + units,
-    })
-    let value: PartItem = { ...item, ...paid(false) }
-    let spare = s.spare
-    if (cat === 'switch' && s.inventory.switch?.type === sw.type)
-      value = { ...sw, count: s.inventory.switch.count + sw.count, ...paid(true) }
-    // stab cùng loại thì cộng dồn (bộ + lẻ), khác loại thì thay bộ cũ
-    const st = item as StabItem
-    if (cat === 'stab' && s.inventory.stab?.type === st.type) {
-      const have = stabStock(s.inventory.stab)
-      const add = stabStock(st)
-      value = { type: st.type, ...addStab(have, add), ...paid(true) }
-    }
-    // đã có món khác loại (mua thay): món cũ (đã trả tiền) cất vào kho chung, không mất
-    const old = s.inventory[cat]
-    const merged =
-      (cat === 'switch' && s.inventory.switch?.type === sw.type) ||
-      (cat === 'stab' && s.inventory.stab?.type === st.type)
-    if (old && !merged) spare = addPart(spare, cat, old)
-    // switch / stab cùng loại trong kho chung tự gộp vào
-    let fromSpare = 0
-    if (cat === 'switch' && spare.switches[sw.type]) {
-      const r = takeSwitches(spare, sw.type, value as SwitchItem)
-      fromSpare = r.n
-      value = r.item
-      spare = r.spare
-    }
-    if (cat === 'stab' && !st.flaw && spare.stabs[st.type]) {
-      const extra = spare.stabs[st.type]
-      const have = stabStock(value as StabItem)
-      fromSpare = stabTotal(stabStock(extra))
-      value = { ...(value as StabItem), ...addStab(have, stabStock(extra)) }
-      spare = { ...spare, stabs: without(spare.stabs, st.type) }
-    }
-    set({
-      inventory: { ...s.inventory, [cat]: value },
-      spent: s.spent + price,
-      spare,
-      ...(cat === 'case'
-        ? { mount: firstMount(CASES[(item as CaseItem).id].mounts, s.inventory, s.order.mount) }
-        : {}),
-    })
-    s.toast(
-      `📦 Đã nhận: ${itemName(cat, item)}${fromSpare ? ` (+${fromSpare} trong kho chung)` : ''}`,
-      'good',
-    )
     return 'ok'
   },
   takeStock: (key) => {
@@ -715,6 +841,65 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     set({ tools: { ...get().tools, [kind]: level }, wear: { ...get().wear, [kind]: 0 } })
     s.toast(`🔧 Đã mua ${tool.name}`, 'good')
     return 'ok'
+  },
+  orderParcel: (item, speed) => {
+    const s = get()
+    const fail = (msg: string): BuyResult => (s.toast(msg, 'bad'), 'fail')
+    let label: string
+    let job: string | undefined
+    if (item.kind === 'part') {
+      label = itemName(item.cat, item.item)
+      // món vào được đơn đang làm thì gắn đơn (lúc nhận vào thẳng đơn), không thì nhận xong cất kho chung
+      job = partBlock(s, item.cat) ? undefined : s.order!.id
+    } else if (item.kind === 'supply') label = SUPPLIES[item.id].name
+    else {
+      const err = toolBlock(s, item.tool, item.level)
+      if (err) return fail(err)
+      label = TOOLS[item.tool][item.level].name
+    }
+    const cost = shipPrice(item.price, speed)
+    if (s.money < cost) return fail('Không đủ tiền!')
+    const arrive = arriveDay(s.day, speed)
+    const parcel: Parcel = {
+      id: parcelId(),
+      ordered: s.day,
+      arrive,
+      speed,
+      label,
+      items: [{ ...item, price: cost }],
+      ...(job ? { job } : {}),
+    }
+    set({
+      money: s.money - cost,
+      parcels: [...s.parcels, parcel],
+      // mua đồ cho đơn = hôm nay đã làm đơn đó (luật qua ngày)
+      ...(job && !s.worked.includes(job) ? { worked: [...s.worked, job] } : {}),
+    })
+    const how = `giao ${SHIP_SPEEDS[speed].name}`
+    s.toast(
+      arrive <= s.day
+        ? `🚚 Đã đặt ${label} — ${how}, hàng tới cửa ngay`
+        : `🚚 Đã đặt ${label} — ${how}, tới ngày ${arrive}`,
+      'good',
+    )
+    return 'ok'
+  },
+  pickupParcel: (id) => {
+    const s = get()
+    const p = s.parcels.find((x) => x.id === id)
+    if (!p) return
+    if (p.arrive > s.day) return s.toast(`Kiện ${p.label} chưa tới, hẹn ngày ${p.arrive}`, 'bad')
+    set({ parcels: s.parcels.filter((x) => x !== p) })
+    for (const it of p.items) receiveParcelItem(get, set, it, p.job)
+  },
+  cancelParcel: (id) => {
+    const s = get()
+    const p = s.parcels.find((x) => x.id === id)
+    if (!p) return
+    if (p.ordered !== s.day) return s.toast('Chỉ huỷ được kiện đặt trong hôm nay', 'bad')
+    const refund = p.items.reduce((a, it) => a + it.price, 0)
+    set({ parcels: s.parcels.filter((x) => x !== p), money: s.money + refund })
+    s.toast(`Đã huỷ đặt ${p.label}, hoàn ${refund}k`, 'good')
   },
   // Trừ vật tư, trả về false nếu không đủ
   useSupply: (id, n) => {

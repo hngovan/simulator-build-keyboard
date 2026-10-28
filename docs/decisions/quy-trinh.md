@@ -70,3 +70,7 @@
   `import.meta.env.DEV && order.dev`): chip lọc chất liệu (`CASE_MATERIALS`, giờ export) → chip case vừa layout (`caseFits`) → ô màu → chip
   mount. `setDevCase` / `setDevCaseColor` (devBuild.ts): đổi case dựng lại `ctx`, giữ nguyên `build`, đứng lại đúng bước đang làm nếu
   danh sách bước mới còn bước đó; xoá undo / redo (ảnh chụp cũ lệch bước). Chụp kiểm: plastic60 tray đang lắp switch → gasket60 đỏ.
+- **Đơn dev không bỏ qua bước plate khi có gasket (2026-10-28)**: người dùng: "bước dán gasket ko thể làm nếu ko gắn plate được => ko thể bỏ".
+  `isOptionalStep` (steps.ts): `plate` bắt buộc khi danh sách bước có `topCase` (đã có) hoặc `gasket` (mới). `placeGasket` chặn khi
+  `!build.plate` (lỡ bỏ qua / đổi case dev giữa chừng) + toast nhắc quay lại bước lắp plate. Kiểm playwright: gasket60 ở bước plate chưa đặt
+  bấm tiếp → đứng yên; plastic60 tray vẫn bỏ qua được; dán gasket khi chưa có plate → không dán, có plate → dán được.

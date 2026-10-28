@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useGame } from '@/store'
 
 /**
- * Phím tắt bàn build (R đổi kéo / xoay, Space về góc nhìn mặc định, M danh sách đơn): bỏ qua khi đang gõ ô nhập
+ * Phím tắt bàn build (Space về góc nhìn mặc định, M danh sách đơn): bỏ qua khi đang gõ ô nhập
  * hoặc ở bước test (mọi phím là phím đang test)
  */
 export function useBenchKey(code: string, run: () => void) {

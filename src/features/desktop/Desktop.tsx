@@ -1,9 +1,7 @@
-import { useState } from 'react'
 import { useGame } from '@/store'
 import { Window } from '@/components/ui'
-import { APPS, APP_IDS, BENCH_ICON, END_DAY_ICON } from './apps'
+import { APPS, APP_IDS, STAND_ICON } from './apps'
 import { DesktopIcon } from './DesktopIcon'
-import { EndDayDialog } from './EndDayDialog'
 import { Taskbar } from './Taskbar'
 import { Wallpaper } from './Wallpaper'
 
@@ -12,10 +10,8 @@ export function Desktop() {
   const windows = useGame((s) => s.windows)
   const minimized = useGame((s) => s.minimized)
   const hasOffer = useGame((s) => s.offers.length > 0)
-  const hasBuild = useGame((s) => !!s.build)
   const wallpaper = useGame((s) => s.wallpaper)
-  const { openApp, minimizeApp, closeApp, goBench } = useGame.getState()
-  const [endDay, setEndDay] = useState(false)
+  const { openApp, minimizeApp, closeApp, standUp } = useGame.getState()
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -30,16 +26,8 @@ export function Desktop() {
             onOpen={() => openApp(id)}
           />
         ))}
-        {/* kết thúc ngày: popup tổng kết, chọn kết thúc hoặc làm tiếp */}
-        <DesktopIcon app={END_DAY_ICON} onOpen={() => setEndDay(true)} />
-        {/* mobile: bàn build nằm chung lưới icon (máy tính thì đứng riêng góc phải) */}
-        <span className="md:hidden">
-          <DesktopIcon app={BENCH_ICON} badge={hasBuild} onOpen={goBench} />
-        </span>
-      </div>
-      {/* lối tắt bàn build đứng riêng ở góc phải trên cùng */}
-      <div className="absolute top-4 right-4 z-[2] max-md:hidden">
-        <DesktopIcon app={BENCH_ICON} badge={hasBuild} onOpen={goBench} />
+        {/* đứng dậy đi lại trong phòng: sang bàn build, lấy hàng ở cửa, kết thúc ngày ở lịch treo tường (không còn icon ra thẳng bàn build) */}
+        <DesktopIcon app={STAND_ICON} onOpen={() => standUp('pc')} />
       </div>
 
       {windows.map((id, z) => {
@@ -68,7 +56,6 @@ export function Desktop() {
       })}
 
       <Taskbar />
-      {endDay && <EndDayDialog onClose={() => setEndDay(false)} />}
     </div>
   )
 }

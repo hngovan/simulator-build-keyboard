@@ -124,7 +124,7 @@ function passes(at: THREE.Vector3, size: number) {
 /**
  * Các switch đã mở xếp lưới ở hàng trước, đủ số con đã mở: housing dưới, stem đầy đủ (đầu + thân) nổi phía trên,
  * housing trên đặt ngửa ngay sau; con đã lube có lớp mỡ trên stem + hốc housing.
- * InstancedMesh (88–104 con vẫn nhẹ); rê chuột vào con nào (khi bấm lube được) thì viền vàng con đó
+ * InstancedMesh (88–104 con vẫn nhẹ); rê chuột vào con nào (khi bấm lube được) thì viền xanh con đó
  */
 function OpenedSwitches({
   type,
@@ -621,7 +621,7 @@ export function LubeStation() {
   const k = ctx.width / 12
   const busy = !!anim
 
-  // đồ còn thiếu: ô nét đứt vàng như bàn mod stab, bấm để mở Shopii đúng mục
+  // đồ còn thiếu: ô nét đứt xanh như bàn mod stab, bấm để mở Shopii đúng mục
   const supplies = useGame((s) => s.supplies)
   const noBrush = useGame((s) => TOOLS.brush[s.tools.brush].none)
   const openShop = useGame((s) => s.openShop)
@@ -629,7 +629,7 @@ export function LubeStation() {
     build.lubed < total && anim?.kind !== 'switch' && (supplies[pick.switch] ?? 0) <= 0
   const noOil = !build.springLube && anim?.kind !== 'spring' && (supplies[pick.spring] ?? 0) < total
 
-  // mũi tên vàng chỉ việc tiếp theo: mở hết switch trước (chưa có đồ mở thì lube luôn con đã mở), rồi lube từng mẻ, cuối cùng lắc lò xo
+  // mũi tên xanh chỉ việc tiếp theo: mở hết switch trước (chưa có đồ mở thì lube luôn con đã mở), rồi lube từng mẻ, cuối cùng lắc lò xo
   const canLube = !busy && opened > build.lubed && build.lubed < total
   // số con 1 mẻ lube thật (giống lubeBatch): còn giới hạn bởi số con chờ lube + mỡ còn lại
   const lubeN = Math.min(opener.n ?? 1, certN, opened - build.lubed, supplies[pick.switch] ?? 0)

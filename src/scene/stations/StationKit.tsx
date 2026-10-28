@@ -4,7 +4,7 @@ import { Line } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import { useFrame, type GroupProps, type ThreeEvent } from '@react-three/fiber'
 import { useHover } from '../common/useHover'
-import { useHoverOutline } from '../common/hoverOutline'
+import { HINT_COLOR, HINT_HOVER, useHoverOutline } from '../common/hoverOutline'
 import { CuttingMat } from '../common/CuttingMat'
 
 /** Chữ nằm trên mặt bàn */
@@ -73,7 +73,7 @@ export function MissingSlot({
   onAct: () => void
 }) {
   const { hover, bind } = useHover(true)
-  const color = hover ? '#ffe07a' : '#ffcc2e'
+  const color = hover ? HINT_HOVER : HINT_COLOR
   const y = 0.02
   const outline: [number, number, number][] = [
     [-w / 2, y, -d / 2],
@@ -152,7 +152,7 @@ export function alongPass(points: THREE.Vector3[], q: number) {
   return points[i].clone().lerp(points[i + 1], f - i)
 }
 
-/** Vùng click được: đổi con trỏ + viền vàng quanh vật khi rê chuột (như màn hình PC) */
+/** Vùng click được: đổi con trỏ + viền xanh quanh vật khi rê chuột (như màn hình PC) */
 export function Clickable({
   active,
   onAct,
@@ -184,7 +184,7 @@ export function Clickable({
   )
 }
 
-/** Mũi tên vàng nhấp nhô chỉ thao tác tiếp theo */
+/** Mũi tên xanh nhấp nhô chỉ thao tác tiếp theo */
 export function HintArrow({ at, size = 1 }: { at: [number, number, number]; size?: number }) {
   const ref = useRef<THREE.Mesh>(null)
   useFrame(({ clock }) => {
@@ -194,7 +194,7 @@ export function HintArrow({ at, size = 1 }: { at: [number, number, number]; size
   return (
     <mesh ref={ref} position={at} rotation-x={Math.PI} scale={size}>
       <coneGeometry args={[0.12, 0.3, 12]} />
-      <meshBasicMaterial color="#ffcc2e" />
+      <meshBasicMaterial color={HINT_COLOR} />
     </mesh>
   )
 }

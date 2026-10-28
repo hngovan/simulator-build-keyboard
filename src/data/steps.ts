@@ -148,14 +148,15 @@ export const BIT_LABELS: Record<ScrewBit, string> = {
 export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'foam', 'switchLube', 'test']
 /**
  * Bước tuỳ chọn với đơn này: khách đòi lót foam (`order.foam`) thì bước `foam` bắt buộc; đơn build thử (dev) bỏ qua được mọi bước,
- * trừ lắp plate của top mount (`steps` có `topCase`: không plate thì không có gì bắt vào case trên)
+ * trừ lắp plate khi bước sau cần plate (`steps` có `topCase`: không plate thì không có gì bắt vào case trên; có `gasket`: dải gasket
+ * dán lên tai plate)
  */
 export const isOptionalStep = (
   step: StepId,
   order?: { foam?: true; dev?: true } | null,
   steps?: StepId[],
 ) =>
-  step === 'plate' && steps?.includes('topCase')
+  step === 'plate' && (steps?.includes('topCase') || steps?.includes('gasket'))
     ? false
     : !!order?.dev || (OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam))
 /** Tên bước theo đơn: foam khách yêu cầu thì ghi rõ thay cho "(tuỳ chọn)" */

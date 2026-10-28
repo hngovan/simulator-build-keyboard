@@ -5,6 +5,7 @@ import { GASKET, Y, ringFrame } from '@/data/steps'
 import { GASKET_ID, SUPPLIES } from '@/data/supplies'
 import { playClick } from '@/sound'
 import { useHover } from '../common/useHover'
+import { HINT_COLOR } from '../common/hoverOutline'
 import { HintArrow } from '../stations/StationKit'
 
 const socketGeo = new THREE.BoxGeometry(0.5, 0.09, 0.28)
@@ -70,7 +71,7 @@ function Gasket({
           {placed ? (
             <meshStandardMaterial color={SUPPLIES[GASKET_ID].color} roughness={0.95} />
           ) : (
-            <meshBasicMaterial color="#ffd84a" transparent opacity={hover ? 0.9 : 0.45} />
+            <meshBasicMaterial color={HINT_COLOR} transparent opacity={hover ? 0.9 : 0.45} />
           )}
         </mesh>
       ))}
@@ -84,7 +85,7 @@ export function Gaskets() {
   const step = useStep()
   const placed = useGame((s) => s.build?.gaskets ?? {})
   const placeGasket = useGame((s) => s.placeGasket)
-  // mũi tên vàng chỉ miếng gasket chưa dán đầu tiên (như bàn mod stab)
+  // mũi tên xanh chỉ miếng gasket chưa dán đầu tiên (như bàn mod stab)
   const next = step === 'gasket' ? ctx.gaskets.find((_, i) => !placed[i]) : undefined
   return (
     <>
@@ -140,7 +141,7 @@ export function SiliconeRing({
           position={[x, 0, z]}
         >
           {ghost ? (
-            <meshBasicMaterial color="#ffd84a" transparent opacity={0.35} />
+            <meshBasicMaterial color={HINT_COLOR} transparent opacity={0.35} />
           ) : (
             <meshStandardMaterial color={color} roughness={0.6} />
           )}

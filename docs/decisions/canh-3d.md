@@ -742,3 +742,83 @@
   tròn → hốc trụ sâu cao đầu + 0,3mm, đầu ốc chìm. Vít case hiện là M3 đầu bằng lục giác → countersink.
 - Ốc top mount: socket M2×4 (đầu trụ phẳng), đầu vít đổi `SCREW_BITS.topScrew` chữ thập → lục giác cho khớp ốc lục giác chìm.
 - Chụp kiểm: đáy case thấy hốc côn + lỗ xuyên, vặn xong đầu ốc bằng phẳng mặt đáy.
+
+## Kéo bàn mod stab bị ngược lưỡi (2026-10-28)
+
+- Người dùng: "cây kéo trên bàn build đang bị ngược lưỡi" (ảnh: 2 lưỡi hẹp ở đinh tán, mũi bè).
+- Nguyên nhân: model "Loop scissors" để thân lưỡi (`Tapered cutting blade`) nằm lấn vào phía trong, mép ngoài đi qua tâm đinh tán →
+  2 lưỡi chồng nhau, phần lộ ra hẹp ở gốc / bè ở mũi. Gốc rễ: model dùng **cùng 1 hình lưỡi** cho 2 bên (chỉ xoay ±25°), không đối xứng gương.
+  Sửa trong `Scissors` (`scene/models/ModTools.tsx`): chỉ lật lưỡi ".001" (bên trái trên bàn) qua trục dọc (`scale.z *= -1`),
+  lưỡi không hậu tố giữ nguyên → 2 lưỡi đối xứng gương, mép cắt thẳng + mũi nhọn quay **vào trong** (khép lại 2 mép cắt gặp nhau).
+  Đã sai 2 lần: lật cả 2 lưỡi (lưỡi trái vẫn lệch) → chỉ lật lưỡi phải (đối xứng nhưng mũi nhọn hướng ra ngoài, "sao mà cắt").
+  2 cặp đối xứng gương khác nhau ở phía mũi nhọn: chọn cặp mũi ở mép trong.
+- Lỗi kèm theo: three bỏ dấu chấm trong tên node ("blade.001" → "blade001") nên `endsWith('.001')` không khớp, cả 2 nửa gom vào 1 nhóm
+  (nửa kia rỗng) → `setScissors` xoay cả cây kéo thay vì khép 2 lưỡi. Đổi sang `/\.?001$/`; đã thử mở / khép nửa / khép kín đúng chiều.
+
+## Phòng đi lại kiểu PC Building Simulator (2026-10-28)
+
+- Người dùng: "đi lại được trong căn phòng như tựa game pc builder simulator", bàn build + bàn máy tính (lót chuột 90 × 40),
+  góc làm việc cạnh cửa sổ có rèm, đi lại lấy hàng giao tới, lịch lớn trên tường (sale, đơn, số ngày) bấm → kết thúc ngày /
+  quay lại; bỏ nút kết thúc ngày trên máy tính. Sau đó chỉnh theo ảnh mẫu PCBS: rèm **lá** (không phải rèm vải), **ít nắng thôi**,
+  tường **xám xanh**, CPU **dưới gầm bàn** kéo dây lên màn hình, ô cửa cạnh bàn máy tính ra **hành lang** nhận hàng, chậu cây nhỏ +
+  chỗ để thùng hàng bên phải hành lang, **ghế đôn thấp**, 2 bàn **sát nhau** dưới cửa sổ lớn, **kệ bàn phím ra sau lưng**.
+- Chế độ: `screen = 'bench'` + `walk` (metaSlice, không lưu). `standUp(from)` (icon "Đứng dậy" desktop, nút xanh BenchHud /
+  EmptyBenchHud, nút Mezzenger "Đứng dậy ra lịch"); `goBench` / bay vào PC thì `walk = false`. Bench.tsx: `walk` thì thay OrbitControls bằng
+  `WalkControls`; CameraRig / EmptyBench bỏ qua đặt camera khi đang đi; `PcZoom` chạy được không có OrbitControls (lookAt).
+- `scene/room/`: toàn bộ toạ độ ở `roomLayout.ts` (m × M; ROOM / ROOM_BOUNDS dời từ Room.tsx sang). Gốc vẫn = tâm bàn build
+  (đồ build không đổi). Bàn máy tính `PC_DESK` sát trái bàn build cùng dựa tường sau (PcDesk dựng dài theo z rồi xoay −90°);
+  màn hình 27" (`SCREEN` 0,6 × 0,35, `screenEye` lùi 0,53m), `MONITOR_AT` theo bàn máy tính.
+- Đi: WASD / mũi tên, Shift chạy, kéo chuột / 1 ngón nhìn (không pointer lock để còn bấm đồ vật), bấm sàn tự đi tới.
+  Va chạm: kẹp vào vùng gần nhất trong `WALK_AREAS` (phòng / hành lang / ô cửa) rồi đẩy ra khỏi `BLOCKS` (2 bàn, kệ, bàn gỗ); ghế không cản.
+  Đứng dậy / ngồi xuống bay camera 0,7s (`useRoom.fly`, `sitAtBench`). Đi lại thì useKeyboardTest không bắt phím (WASD không tính test).
+- Vật bấm: `RoomSpot` (viền xanh + HUD "Bấm: ..."; bấm = click có `e.delta ≤ 6`). Bàn build khi đi: hộp vô hình `BenchSeat`
+  (xoá pháp tuyến để viền hover bỏ qua) chặn bấm nhầm đồ build, bấm → ngồi vào.
+- Tự dựng (Sketchfab cần đăng nhập, Poly Haven không có): bàn máy tính + hộc tủ + dây cáp, lót chuột, cửa sổ + rèm lá (`RoomWindow`:
+  lá nghiêng 1,2 rad, vệt nắng = lăng trụ cộng sáng qua 1/9 số khe, opacity rất thấp), ghế đôn (`Stool`), lịch (canvas), thùng hàng.
+  Đèn spot ngoài cửa sổ đã thử rồi bỏ: không đổ bóng nên chiếu xuyên tường, vệt chéo gắt trên tường / màn hình.
+  Dùng model Poly Haven mới: `WoodenTable_03` (bàn gỗ tường phải), `modern_ceiling_lamp_01` (đáy chao 2,05m cho khỏi ngang mắt).
+- Tường: bỏ ảnh màu be, giữ normal / roughness, màu `WALL_COLOR` `#8796a3`. Tường trái dày 10cm khoét ô cửa (`LeftWall`, `DOORWAY`);
+  hành lang `HALL` (sàn, trần, tường, cửa chính `Door x` dời từ tường trước ra cuối hành lang).
+- Kệ bàn phím: giữ toạ độ dựng cũ, bọc cả khối trong group xoay 180° sang tường trước; đồng hồ dời x = 0,2.
+- Bổ sung (người dùng: "chưa đi lại được bằng phím điều hướng / wasd, như 1 nhân vật đi lại"): WASD trong chế độ đi đã chạy (thử
+  playwright), nhưng trước đó phải bấm "Đứng dậy" và vào game là ở desktop. Sửa: `newGame` / `continueGame` vào thẳng phòng
+  (`screen 'bench'` + `walk`, đứng dậy từ máy tính, toast nhắc phím); đang ngồi bàn build bấm WASD / mũi tên thì tự `standUp('bench')`
+  (`Controls` trong Bench.tsx; bỏ qua bước test, đang gõ, bảng chọn đơn / popup); `nextDay` không đưa về desktop nữa (ở nguyên phòng).
+- Tranh "Ếch ngồi đáy giếng" ký tên keeb (`FrogPainting`, vẽ canvas, chữ ký font Caveat) treo tường sau bên phải lịch.
+- Hành lang (người dùng: "hành lang ngắn quá, cửa ở cuối hành lang đối diện, gần chậu cây là cửa sổ rèm lá"): `HALL.z0` −2,0
+  (dài ~5,2m, chạy ra sau phòng); cửa chính ở đầu xa (`Door` nhận `x / z / rot`, xoay 180°), hàng giao tới xếp cạnh cửa chính;
+  đầu gần chậu cây là cửa sổ rèm lá (`RoomWindow size={HALL_WINDOW}`), đơn chờ gửi + chậu cây giữ nguyên chỗ.
+- Trần phòng + hành lang đổi từ kem `#efeae2` sang xám tro `CEILING_COLOR` `#a3a7ab` (người dùng: "trần nhà phải màu xám tro").
+
+## Phòng to hơn, hành lang, tranh, đồ bàn máy tính (2026-10-28, tiếp)
+
+- Phòng 3,6 → 4,8 × 4,6m (`HALF_W`, `BACK_M`, `FRONT_M` trong roomLayout, bỏ số cứng 1.8 / 3.197); hành lang dài ~7m (`HALL.z0` −3),
+  ô cửa phòng ↔ hành lang `DOORWAY` z 0,7–1,6. Cuối hành lang: cửa gỗ 6 ô sơn xanh + tay gạt + công tắc (`HallProps` `PanelDoor`)
+  ở **tường bên trái cuối hành lang** (theo ảnh mẫu), kệ sắt xanh 3 tầng (`MetalRack`) để hàng giao tới (`DoorParcels` xếp lên tầng)
+  - ghế đôn. Phào chân tường (`Wall` `skirt`). Trần cùng màu sơn tường (`CEILING_COLOR = WALL_COLOR`).
+- Tranh: canvas dùng chung `CanvasPainting` (khung + viền giấy + chữ ký Caveat `signature`): ếch đáy giếng, tờ "300k" (tiền meme
+  không có thật, không vẽ chân dung, `banknoteArt`), graffiti QMK keycap (`qmkArt`, tường trái cạnh bàn máy tính).
+  Khung Poly Haven CC0 (`ModelPainting`, đặt lại UV mặt tranh 0..1): "Phượng hoàng tái sinh" tự vẽ (`phoenixArt`) trong khung mạ
+  `fancy_picture_frame_02` trên bàn gỗ tường phải, + `fancy01` / `hanging02` / `hanging03` giữ tranh gốc.
+- Sân vườn 3D ngoài cửa sổ (khoét lỗ tường thật + mặt tường ngoài + cỏ / cây / hàng rào + cầu trời, camera far 9000) đã làm rồi
+  **gỡ** theo người dùng ("nặng máy quá"): cửa sổ dùng ảnh vẽ canvas (trời, cây xa, bãi cỏ, hàng rào trắng, bụi hoa) dán sau kính.
+  Cửa sổ tường trước (cạnh tủ trưng phím) cũng **xoá** theo người dùng; còn cửa sổ trên bàn máy tính + cuối hành lang.
+- Bàn máy tính: CPU dời khỏi chân bàn (z −0,29); lót chuột in biển hiệu Topre (vẽ lại canvas `topreArt`; có `public/textures/mousepad.png`
+  thì dùng ảnh đó). Bàn phím / chuột = model người dùng đưa: Topre Realforce 87U (quét 3,9 triệu tam giác, 123MB) + Razer DeathAdder
+  (kèm lót chuột → ẩn mesh `pad|light`), `bun run convert:desk-gear` (gltf-transform optimize: simplify 2%, meshopt; nén texture
+  sharp lỗi nên bỏ) → `public/models/desk/` 1,6MB + 3,3MB; `DeskGear` co theo chiều dài thật (36,5cm / 12,7cm). File gốc ở
+  `assets/user-desk/` (gitignore).
+- Tốc độ đi 1,5 → 2,2 m/s (chạy 3,4).
+- Chuột DeathAdder đổi sang tay phải (hệ bàn máy tính: người ngồi phía +x nhìn −x → tay phải là −z), bàn phím dời sang trái.
+- Trần trông nâu tối dù cùng màu sơn: mặt trần quay xuống, đèn chính chiếu từ trên không rọi tới → `Ceiling` dùng chung vân trát +
+  `WALL_COLOR` và giả pháp tuyến như tường.
+- Chậu cây trên bàn build → đèn tay đòn Poly Haven `desk_lamp_arm_01` (tải lại bằng `fetch-room.mjs desk_lamp_arm_01`; hằng `LAMP`),
+  kẹp mép sau góc phải. Dây điện + ổ cắm tường dùng chung (`room/Wiring.tsx` `Cable` / `Outlet`): đèn cắm ổ tường sau, máy tính cắm ổ sau bàn.
+- Esc khi đang ngồi bàn build (không phải bước test, không có popup) → `standUp('bench')` ra phòng; đi lại / máy tính thì Esc mở Cài đặt như cũ.
+
+## Kìm cắt + kéo bàn mod stab to hơn (2026-10-28)
+
+- Người dùng: "kìm cắt và kéo hơi nhỏ so với stab, sửa để giống tỉ lệ thật hơn". Stab trên bàn mod phóng `B = 2`, kéo cũ ~1,4u
+  (kéo thật 20cm × 2 sẽ dài hơn nửa bàn) → thêm `TOOL_K = 1.8` trong StabModStation: scale group kìm / kéo, khoảng mũi ↔ chốt
+  (vị trí nghỉ, điểm kẹp chân stab `0.65 × TOOL_K`, điểm cắt băng Urgo `0.4 × TOOL_K`), ngưỡng `clipperHit`, ô "Thiếu kìm cắt",
+  bề rộng bàn. Phần gạc bỏ đi `PAD_AWAY` dời sang x −6,3 cho khỏi nằm dưới kéo.

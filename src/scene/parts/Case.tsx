@@ -49,6 +49,7 @@ import {
 import { caseModelOf } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { MM } from '../models/Switch'
+import { HINT_COLOR, HINT_HOVER } from '../common/hoverOutline'
 
 interface ShellProps {
   W: number
@@ -248,7 +249,7 @@ const FOOT_DOME = new SphereGeometry(1, 20, 10, 0, Math.PI * 2, Math.PI / 2, Mat
 /**
  * Feet cao su dán vào hốc dưới đáy case (`ctx.feet`: case CAD = hốc dò sẵn `caseFeet.json`, case dựng bằng code =
  * 4 hốc CNC). Feet bán cầu theo màu đã dán (`build.feet`, màu = `SUPPLIES[id].color`), lồi ra ~1,5mm dưới đáy.
- * Bước `feet` (case lật úp): hốc chưa dán có vòng vàng, click để dán 1 cái loại đang chọn
+ * Bước `feet` (case lật úp): hốc chưa dán có vòng xanh, click để dán 1 cái loại đang chọn
  */
 function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
   const step = useStep()
@@ -262,7 +263,7 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
     const lit = hover === i || next === i
     return (
       <group key={i} position={[p.x, Y.floorBot, p.z]}>
-        {/* mũi tên vàng chỉ hốc dán tiếp theo: dưới đáy, mũi hướng vào đáy (case đang lật úp thì chỉ xuống) */}
+        {/* mũi tên xanh chỉ hốc dán tiếp theo: dưới đáy, mũi hướng vào đáy (case đang lật úp thì chỉ xuống) */}
         {i === next && hover !== i && (
           <group rotation-x={Math.PI}>
             <HintArrow at={[0, 0.05, 0]} size={1.6} />
@@ -292,7 +293,7 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
           >
             <circleGeometry args={[p.r * 1.3, 32]} />
             <meshBasicMaterial
-              color={hover === i ? '#ffffff' : '#ffcc2e'}
+              color={hover === i ? HINT_HOVER : HINT_COLOR}
               transparent
               opacity={lit ? 0.75 : 0.35}
               side={DoubleSide}
@@ -634,7 +635,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
             />
           )}
           <RubberFeet pockets={ctx.feet} />
-          {/* thả board vào case: mũi tên vàng chỉ mép trước case dưới (bấm case) */}
+          {/* thả board vào case: mũi tên xanh chỉ mép trước case dưới (bấm case) */}
           {step === 'caseIn' && !inCase && (
             <HintArrow at={[0, (model ? BLOCKER_TOP : wallTop) + 0.05, frontZ]} size={1.6} />
           )}
@@ -773,7 +774,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               )}
             </group>
           </group>
-          {/* đậy / úp case trên: mũi tên vàng chỉ mép trước case trên đang lơ lửng */}
+          {/* đậy / úp case trên: mũi tên xanh chỉ mép trước case trên đang lơ lửng */}
           {(placing || needFlip) && !topFlip && (
             <HintArrow at={[0, Y.caseTop + 0.05, frontZ]} size={1.6} />
           )}

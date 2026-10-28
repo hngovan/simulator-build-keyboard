@@ -519,3 +519,46 @@ giá BIN nghĩa là giá chiến thắng, người đăng có thể thêm giá B
   (chưa build) mà case / PCB khách gửi đã bị bán → `inventory.case = null`, `buildContext` đọc `inv.case!.id`. Thêm `contextFor()` (steps.ts:
   thiếu mount / case / PCB thì null), dùng ở `OrderCard` (`useProgress`) + `OrderDetail` (OrderApp). Các chỗ gọi `buildContext` trong store
   chỉ chạy khi đã có `build` (case / PCB đã lên bàn, không bán được) nên giữ nguyên. Lỗi có cả ở đơn thường bán case / PCB sau khi chọn mount.
+
+## Shopii hẹn ngày giao: kiện hàng chờ ở cửa (2026-10-28)
+
+- Người dùng: "bây h mua hàng phải hẹn ngày giao hàng: giao hàng nhanh thì giá cao hơn, giao hàng chậm thì giá sẽ thấp hơn".
+  Game chuyển sang kiểu PC Building Simulator (đi lại trong phòng): phiên này làm dữ liệu + store + UI Shopii, phiên khác làm cảnh 3D
+  (thùng hàng ở cửa phòng, bấm để nhận → `pickupParcel(id)`).
+- `src/data/shipping.ts`: `ShipSpeed` = `express` (Hoả tốc, tới cửa trong ngày, ×1.25) / `fast` (Nhanh, ngày mai, ×1) / `saver`
+  (Tiết kiệm, sau 2 ngày, ×0.9) trong `SHIP_SPEEDS` (+ `SHIP_ORDER`); `shipPrice` (làm tròn k như giá sale, tối thiểu 1k), `arriveDay`,
+  `arriveText` ("Hôm nay" / "Ngày X"), `arrivedParcels(parcels, day)` (arrive ≤ day), `toolOnWay` (dụng cụ đang giao), `parcelId`.
+- `types.ts`: `Parcel { id, ordered, arrive, speed, label, items, job? }`, `ParcelItem` = part { cat, item, price } / supply { id, n, price } /
+  tool { tool, level, price } (`price` = tiền đã trả sau hệ số). `Profile.parcels` (START [], `snapshot()`, `SAVED_KEYS`; save cũ thiếu
+  thì `...START` cho [] nên không nâng rev).
+- `shopSlice`: `orderParcel(item, speed)` kiểm tra như mua cũ (linh kiện: `partBlock` = có đơn đang làm, món khách không gửi, chưa vào
+  build với case / PCB / plate / stab; dụng cụ: `toolBlock` = chưa có, không đang trên đường giao), trừ tiền ngay (`item.price` × mult),
+  tạo kiện (linh kiện ghi `job` = đơn đang làm, đánh dấu `worked`). `pickupParcel(id)` chỉ nhận kiện đã tới (`arrive <= day`):
+  linh kiện mà đơn `job` vẫn đang làm (và `partBlock` cho phép) thì `receivePart` (thân `buy` cũ, tách ra hàm ngoài) — không thì cất kho chung
+  (`addPart`, giữ `paid` / `paidN`) rồi `fillActive()`; vật tư cộng `supplies`; dụng cụ cấp như `buyTool` (mỏ hàn: thêm `solderOwned`, dùng luôn),
+  đã có bản đó / tốt hơn (vd mua tay ở chợ lúc chờ) thì Shopii hoàn tiền. `cancelParcel(id)`: kiện đặt trong hôm nay (chưa nhận) huỷ được,
+  hoàn đủ — thay cho "hoàn tác mua máy hàn" ở Shopii (đặt hàng không đụng `lastSolderPurchase`; undo đó giờ chỉ còn cho `buyTool` tay ở Hội
+  Phím Cơ). `nextDay` báo `notify` "📦 Có hàng tới cửa" các kiện tới đúng hôm nay; kiện không tự nhận.
+- Giữ nguyên nhận ngay: `buy` / `buySupply` / `buyTool` (Hội Phím Cơ `buyPost`, test `scripts/solder-purchase.test.ts`), đăng bán, `devBuild.ts`.
+- UI: `ProductCard` chọn tốc độ giao bằng 3 `OptionChip` (tooltip mô tả + giá), giá hiện đã nhân hệ số, dòng "Giao tới cửa: Hôm nay / Ngày X",
+  nút "Đặt mua"; tốc độ chọn lần trước nhớ cho thẻ khác (biến module); dụng cụ đang giao thì nút "Đang giao" (mờ). `onBuy(product, opt, qty, speed)`,
+  speed null = chỉ đổi mỏ hàn đã có. Shopii cột trái thêm `TabChip` "Đơn đang giao" (đếm kiện) → `ParcelList.tsx` (khuôn bảng xếp hạng: tên kiện,
+  tốc độ, ngày tới / "Đã tới cửa — ra cửa nhận" dòng viền vàng, nút Huỷ kiện đặt hôm nay, tiền đã trả xanh bên phải).
+- `ModPanels` `SolderPanel`: nút bút / trạm hàn chưa có giờ bấm được = đặt Hoả tốc (`orderParcel(..., 'express')`) + toast nhắc ra cửa nhận;
+  đang giao thì mờ. `ToolWarn` ghi "(đang giao...)" khi dụng cụ thiếu đã đặt. `OrderPicker` (EmptyBenchHud) đồ thiếu đã đặt cho đơn đó ghi
+  "đang giao, tới cửa thì ra nhận". Guide: mẹo `parcel` (có kiện ở cửa), mẹo `parts` + câu `PICK` nói đặt Shopii / tốc độ giao.
+- Chưa làm (phiên cảnh 3D): thùng hàng ở cửa + gọi `pickupParcel`. `lossReason` (thua vì hết tiền) chưa tính tiền đã trả cho kiện đang giao
+  (kiện linh kiện cần đơn đang làm nên lúc "rảnh tay" hiếm khi còn).
+
+## Mua linh kiện không bị chặn nữa (2026-10-28)
+
+- Người dùng: "sao có msg khách đã gửi món này khi tôi mua sale ... khách gửi kệ khách, mua thì có tiền cứ mua ai cấm".
+- `partBlock` (shopSlice) giờ chỉ quyết định món **vào thẳng đơn đang làm** hay **cất kho chung**, không chặn mua nữa:
+  - Shopii `orderParcel`: món vào được đơn thì kiện gắn `job` (nhận vào đơn), không thì kiện không gắn đơn → nhận xong cất kho chung.
+  - Mua ngay (`buy`, chợ Hội Phím Cơ qua `buyPost`): trả tiền, vào đơn nếu được, không thì `addPart` kho chung (giữ `paid`).
+  - Lý do cất kho: khách đã gửi món đó trong kit, đơn đã bắt đầu build (case / PCB / plate / stab), chưa nhận đơn nào.
+- Bài pass Hội Phím Cơ vẫn 1 bài = 1 món (mua xong `sold`), đó là đồ cũ duy nhất. `takeStock` (lấy từ kho vào đơn) vẫn chặn đúng như cũ.
+- Món đang sale chỉ mua được 1 lần (người dùng: "mỗi món sale chỉ mua được 1 lần, mua xong disable"): `Profile.saleBought`
+  `{ day, ids }` (START, snapshot, `SAVED_KEYS`; sang ngày khác thì danh sách cũ hết hiệu lực). Shopii `onBuy` đặt được hàng
+  (`orderParcel` 'ok') mà sản phẩm có `sale` thì ghi `product.id`; `ProductCard` khoá nút "Đã mua sale" (tooltip giải thích).
+  Tính theo sản phẩm Shopii (case gộp dòng = 1 sản phẩm: mua 1 option là hết lượt cả dòng). Đã thử trên trình duyệt (ngày 3).

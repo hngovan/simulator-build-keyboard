@@ -2,10 +2,13 @@ import { useEffect, type RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-/** màu viền hover, giống màn hình PC trên bàn */
-const HOVER_COLOR = '#ffd84a'
+/** màu tương tác trong cảnh 3D (viền hover, mũi tên hướng dẫn, chỗ chờ đặt / bấm): xanh lá như `--color-green` */
+export const HINT_COLOR = '#3ecf6e'
+/** sáng hơn khi rê chuột */
+export const HINT_HOVER = '#8af5ac'
+const HOVER_COLOR = HINT_COLOR
 
-// vỏ ngược (inverted hull): đẩy đỉnh ra theo pháp tuyến, chỉ vẽ mặt sau → viền vàng quanh vật.
+// vỏ ngược (inverted hull): đẩy đỉnh ra theo pháp tuyến, chỉ vẽ mặt sau → viền xanh quanh vật.
 // Độ dày tính theo khoảng cách camera nên nhìn gần / xa đều mảnh như nhau
 export const OUTLINE_MAT = new THREE.ShaderMaterial({
   uniforms: { color: { value: new THREE.Color(HOVER_COLOR) }, width: { value: 0.004 } },
@@ -60,7 +63,7 @@ const outlinable = (o: THREE.Object3D): o is THREE.Mesh =>
   !!o.geometry?.attributes.normal &&
   !('text' in o)
 
-/** Viền vàng quanh mọi mesh trong group khi `show` (vật tương tác được đang được rê chuột) */
+/** Viền xanh quanh mọi mesh trong group khi `show` (vật tương tác được đang được rê chuột) */
 export function useHoverOutline(ref: RefObject<THREE.Object3D>, show: boolean) {
   useEffect(() => {
     const root = ref.current

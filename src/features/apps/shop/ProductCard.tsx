@@ -1,7 +1,16 @@
 import { useState } from 'react'
 import { Badge, Button, OptionChip, QtyInput, SoundBars, Tooltip } from '@/components/ui'
 import { stabStock } from '@/data/parts'
-import { fmt } from '@/lib/format'
+import { cn, fmt } from '@/lib/format'
+import {
+  SHIP_ORDER,
+  SHIP_SPEEDS,
+  arriveDay,
+  arriveText,
+  shipPrice,
+  toolOnWay,
+  type ShipSpeed,
+} from '@/data/shipping'
 import type { Product, ProductOption, StabItem, SupplyItem, ToolItem } from '@/types'
 import { OptionFilter } from './OptionFilter'
 import { ProductImage } from './ProductImage'
@@ -9,8 +18,13 @@ import { useGame } from '@/store'
 
 interface Props {
   product: Product
-  onBuy: (product: Product, option: ProductOption, qty: number) => void
+  /** speed = null: chỉ đổi sang mỏ hàn đã có (không đặt hàng) */
+  onBuy: (product: Product, option: ProductOption, qty: number, speed: ShipSpeed | null) => void
 }
+
+/** tốc độ giao chọn lần trước: thẻ mới mở lấy luôn */
+let lastSpeed: ShipSpeed = 'fast'
+const rememberSpeed = (v: ShipSpeed) => (lastSpeed = v)
 
 /** cỡ stab hiện thành nhãn trên ảnh */
 const STAB_SIZES = [
@@ -57,6 +71,20 @@ export function ProductCard({ product, onBuy }: Props) {
       : null
   const equipped = !!solderItem && tools.solder === solderItem.level
   const canEquip = !!solderItem && owned[solderItem.level] !== undefined
+  // giao hàng: nhanh đắt, chậm rẻ; giá hiện theo tốc độ đang chọn
+  const day = useGame((s) => s.day)
+  // món đang sale chỉ mua được 1 lần trong ngày sale
+  const saleDone = useGame(
+    (s) => !!product.sale && s.saleBought?.day === s.day && s.saleBought.ids.includes(product.id),
+  )
+  const parcels = useGame((s) => s.parcels)
+  const [speed, setSpeedState] = useState(lastSpeed)
+  const setSpeed = (v: ShipSpeed) => (rememberSpeed(v), setSpeedState(v))
+  const toolItem = product.cat === 'tool' || product.cat === 'cert' ? (opt.item as ToolItem) : null
+  const onWay = !!toolItem && !canEquip && toolOnWay(parcels, toolItem.kind, toolItem.level)
+  const shipping = !equipped && !canEquip
+  const base = opt.price * (stackable ? qty : 1)
+  const total = shipping ? shipPrice(base, speed) : base
   return (
     <div className="flex flex-col gap-1.5 rounded-xl bg-panel-2 p-2.5 hover:ring-2 hover:ring-yellow hover:ring-inset">
       <ProductImage
@@ -136,23 +164,61 @@ export function ProductCard({ product, onBuy }: Props) {
           <QtyInput value={qty} onChange={setQty} />
         </div>
       )}
-      <div className="mt-auto flex items-center justify-between gap-2">
-        {/* ngày sale: giá gốc gạch ngang + % giảm */}
+      {/* tốc độ giao: Hoả tốc tới cửa trong ngày (đắt), Tiết kiệm chậm 2 ngày (rẻ) */}
+      {shipping && !onWay && (
+        <div className="mt-auto flex flex-col gap-1">
+          <div className="flex gap-1">
+            {SHIP_ORDER.map((k) => (
+              <OptionChip
+                key={k}
+                active={speed === k}
+                title={`${SHIP_SPEEDS[k].desc} · ${fmt(shipPrice(base, k))}`}
+                onClick={() => setSpeed(k)}
+                className="flex-1 justify-center px-1"
+              >
+                {SHIP_SPEEDS[k].name}
+              </OptionChip>
+            ))}
+          </div>
+          <div className="text-xs font-bold text-muted">
+            Giao tới cửa: {arriveText(arriveDay(day, speed), day)}
+          </div>
+        </div>
+      )}
+      <div
+        className={cn('flex items-center justify-between gap-2', (!shipping || onWay) && 'mt-auto')}
+      >
+        {/* ngày sale: giá gốc gạch ngang + % giảm (giá đã tính phí giao theo tốc độ) */}
         <span className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
-          <span className="font-head text-xl font-extrabold text-green">
-            {fmt(opt.price * (stackable ? qty : 1))}
-          </span>
+          <span className="font-head text-xl font-extrabold text-green">{fmt(total)}</span>
           {opt.was !== undefined && (
-            <s className="text-xs font-bold text-muted">{fmt(opt.was * (stackable ? qty : 1))}</s>
+            <s className="text-xs font-bold text-muted">
+              {fmt(shipping ? shipPrice(opt.was * (stackable ? qty : 1), speed) : opt.was)}
+            </s>
           )}
         </span>
         <Button
           tone="orange"
           size="sm"
-          disabled={equipped}
-          onClick={() => onBuy(product, opt, stackable ? qty : 1)}
+          disabled={equipped || onWay || saleDone}
+          title={
+            saleDone
+              ? 'Mỗi món sale chỉ mua được 1 lần'
+              : onWay
+                ? 'Đang trên đường giao, xem ở Đơn đang giao'
+                : undefined
+          }
+          onClick={() => onBuy(product, opt, stackable ? qty : 1, shipping ? speed : null)}
         >
-          {equipped ? 'Đang dùng' : canEquip ? 'Dùng máy này' : 'Mua ngay'}
+          {saleDone
+            ? 'Đã mua sale'
+            : equipped
+              ? 'Đang dùng'
+              : canEquip
+                ? 'Dùng máy này'
+                : onWay
+                  ? 'Đang giao'
+                  : 'Đặt mua'}
         </Button>
       </div>
     </div>

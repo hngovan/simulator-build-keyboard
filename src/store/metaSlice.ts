@@ -10,6 +10,7 @@ import { emptyInventory } from './shopSlice'
 import { compactHistory } from './buildSlice'
 import type { GameState } from '.'
 import { applyAudioSettings, stopBgm } from '@/sound'
+import { useRoom } from '@/scene/room/roomStore'
 
 type Screen = 'title' | 'pc' | 'bench'
 export type AppId =
@@ -48,8 +49,10 @@ export interface MetaSlice extends Profile {
   /** đang bay camera vào màn hình máy tính trên bàn (xong thì về desktop), không lưu */
   pcZoom: boolean
   zoomToPC: () => void
-  /** chuột trái: xoay camera (orbit) hay kéo khung nhìn (bàn tay, như app chỉnh sửa) */
-  camMode: 'orbit' | 'pan'
+  /** đang đi lại trong phòng (góc nhìn người, WASD) thay vì ngồi ở bàn build; không lưu */
+  walk: boolean
+  /** đứng dậy đi lại trong phòng, bắt đầu từ chỗ đang ngồi (máy tính / bàn build) */
+  standUp: (from: 'pc' | 'bench') => void
   /** mục Shopii đang xem (ô đồ còn thiếu trên bàn mod mở thẳng tới mục cần mua) */
   shopCat: ShopCategory
   /** hội thoại đang mở ở Mezzenger (id đơn); đóng gói xong thì mở thẳng hội thoại đơn đó để gửi */
@@ -76,7 +79,6 @@ export interface MetaSlice extends Profile {
   closeApp: (id: AppId) => void
   toggleFlip: () => void
   resetCam: () => void
-  setCamMode: (mode: 'orbit' | 'pan') => void
   setAudio: (audio: Partial<AudioSettings>) => void
   returnToTitle: () => void
   save: () => void
@@ -106,6 +108,9 @@ export interface Notice {
   title: string
   text: string
 }
+
+/** nhắc cách đi lại khi vào game */
+const WALK_HINT = '🚶 WASD / phím mũi tên để đi lại, bấm màn hình máy tính để xem đơn'
 
 let toastId = 0
 /** số đánh giá giữ lại trong bản lưu */
@@ -169,6 +174,8 @@ function snapshot(s: GameState): SaveData {
     guideHidden: s.guideHidden,
     inbox: s.inbox,
     unread: s.unread,
+    parcels: s.parcels,
+    saleBought: s.saleBought,
     session: {
       offers,
       jobs: jobs.map((j) => ({
@@ -206,7 +213,11 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   viewFlip: false,
   camKey: 0,
   pcZoom: false,
-  camMode: 'orbit',
+  walk: false,
+  standUp: (from) => {
+    useRoom.setState({ spot: from, goal: null, fly: null })
+    set({ screen: 'bench', walk: true, pcZoom: false, benchPicker: false })
+  },
   shopCat: 'case',
   groupTab: 'feed',
   messengerPick: null,
@@ -266,7 +277,9 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       worked: [],
       name: name.trim() || 'Thợ phím',
       lastSolderPurchase: null,
-      screen: 'pc',
+      // vào game là đứng trong phòng (kiểu PC Building Simulator), bấm màn hình máy tính mới vào desktop
+      screen: 'bench',
+      walk: true,
       windows: ['messenger'],
       minimized: [],
       offers: randomOffers(),
@@ -281,8 +294,10 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       ctx: null,
       result: null,
     })
+    useRoom.setState({ spot: 'pc', goal: null, fly: null })
     get().save()
     get().toast(`Chào mừng ${get().name} tới xưởng phím! 🎉`, 'good')
+    get().toast(WALK_HINT)
   },
   continueGame: () => {
     const save = loadSave()
@@ -319,20 +334,23 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       // bản lưu cũ chưa có mã lượt chơi
       runId: profile.runId || newRunId(),
       gameOver: null,
-      screen: 'pc',
+      screen: 'bench',
+      walk: true,
       windows: ['messenger'],
       minimized: [],
     })
     // ctx là dữ liệu dẫn xuất: dựng lại từ đơn + kho đồ
     const s = get()
     if (s.build && s.order && s.mount) set({ ctx: buildContext(s.order, s.inventory, s.mount) })
+    useRoom.setState({ spot: 'pc', goal: null, fly: null })
     s.toast(`Chào mừng ${save.name} quay lại! Ngày ${save.day}`, 'good')
+    s.toast(WALK_HINT)
   },
   goPC: () => set({ screen: 'pc', pcZoom: false }),
   // ở bàn build: camera bay tới màn hình rồi mới về desktop (PcZoom trong Bench.tsx)
   zoomToPC: () => (get().screen === 'bench' ? set({ pcZoom: true }) : get().goPC()),
   // chưa có build thì vào bàn trống, bấm ô vàng để chọn đơn
-  goBench: () => set({ screen: 'bench', benchPicker: false, benchShort: null }),
+  goBench: () => set({ screen: 'bench', walk: false, benchPicker: false, benchShort: null }),
   openApp: (id) =>
     set((s) => ({
       windows: [...s.windows.filter((w) => w !== id), id],
@@ -360,7 +378,6 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     })),
   toggleFlip: () => set((s) => ({ viewFlip: !s.viewFlip })),
   resetCam: () => set((s) => ({ camKey: s.camKey + 1 })),
-  setCamMode: (camMode) => set({ camMode }),
   setAudio: (audio) => {
     set((s) => ({ audio: { ...s.audio, ...audio } }))
     applyAudioSettings(get().audio)

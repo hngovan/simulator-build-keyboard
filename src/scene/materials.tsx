@@ -130,7 +130,7 @@ export function CaseMaterial({
 }) {
   const hex = CASE_COLORS[color].hex
   const side = doubleSide ? THREE.DoubleSide : THREE.FrontSide
-  const emissive = hover ? '#554400' : '#000000'
+  const emissive = hover ? '#0f4a22' : '#000000'
   switch (material) {
     case 'anod':
       return (

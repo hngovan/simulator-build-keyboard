@@ -103,9 +103,13 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/com
 1. **Title** (`features/title/TitleScreen.tsx`): chơi mới thì nhập tên thợ; nếu đã có bản lưu thì
    có nút tiếp tục kèm ngày và số tiền.
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar. Chơi mới mở sẵn
-   Mezzenger. Icon **Bàn build** đưa sang cảnh 3D (`screen = 'bench'`). Icon **Kết thúc ngày** mở popup
-   tổng kết ngày (tiền / uy tín so đầu ngày, đơn nhận / từ chối / xong, việc sẽ xảy ra khi qua ngày), chọn
-   kết thúc hoặc tiếp tục làm (`EndDayDialog`).
+   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: icon **Đứng dậy** (hoặc Esc)
+   rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD / phím mũi tên, kéo chuột nhìn, bấm sàn đi tới;
+   đang ngồi bàn build bấm WASD / mũi tên cũng tự đứng dậy).
+   Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
+   hành lang (hàng Shopii giao tới + đơn đóng gói chờ gửi, bấm thùng để nhận / gửi). **Kết thúc ngày** chỉ còn ở
+   lịch treo tường: bấm lịch → popup lịch chi tiết (sale, hạn đơn, hàng tới) → "Kết thúc ngày" mở popup tổng kết
+   (`EndDayDialog`) hoặc "Quay lại làm việc".
 3. **Mezzenger**: hội thoại đơn mới, đơn chờ gửi và đơn đã gửi. Có thể xem chi tiết yêu cầu (tin ngắn + bảng
    tóm tắt), nhận đơn, từ chối, gửi hàng, xem điểm chấm.
 4. **Shopii**: mua case, PCB, plate, stab, switch, keycap, vật tư, dụng cụ, chứng chỉ thợ và sách phép.
@@ -122,7 +126,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/com
 
 ### Bàn build 3D
 
-- Bấm icon **Bàn build** khi chưa có build sẽ mở bàn trống; bấm ô vàng trên bàn để mở bảng chọn
+- Đứng dậy rồi bấm vào bàn build trong phòng (`screen = 'bench'`); chưa có build thì là bàn trống, bấm ô vàng trên bàn để mở bảng chọn
   đơn. Chọn đơn: `buildOrder` nhận đơn mới hoặc chuyển sang đơn đã nhận, kiểm tra kho; đủ đồ thì tự
   chọn mount và gọi `startBuild`, thiếu thì liệt kê món còn thiếu kèm nút mua ở Shopii.
 - Khi đang build, bấm **Danh sách đơn** để xem tiến độ, đổi đơn hoặc làm tiếp. Đổi đơn thì kho đồ,
@@ -241,8 +245,8 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 - Mount quyết định các bước phụ: `gasket` (gasket / OG), `ring` (O-ring: sau lắp switch / hàn, case 1 mảnh; OG: sau gasket), `trayScrew`
   (tray), `topCase` + `topScrew` (top mount: plate bắt vít vào case trên rồi cả cụm thả vào case dưới, không có `caseClose`).
   Mount cũng ảnh hưởng âm thanh và điểm khớp tiếng.
-- Khi kho đã đủ và tương thích, bấm **Ra bàn build** (hoặc icon Bàn build) để vào cảnh 3D. Làm theo
-  HUD: click đúng bộ phận, kéo chuột xoay / di chuyển, cuộn để zoom.
+- Khi kho đã đủ và tương thích, bấm **Ra bàn build** ở Mezzenger hoặc đứng dậy sang bàn build để vào cảnh 3D. Làm theo
+  HUD: click đúng bộ phận, kéo chuột di chuyển khung nhìn (camera không xoay, nút lật để xem đáy), cuộn để zoom.
 
 ### Hàn, lube, mod stab, vít, keycap
 

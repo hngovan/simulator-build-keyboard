@@ -13,6 +13,9 @@ import { Desktop } from '@/features/desktop/Desktop'
 import { BenchHud } from '@/features/bench/BenchHud'
 import { BenchLoader } from '@/features/bench/BenchLoader'
 import { EmptyBenchHud } from '@/features/bench/EmptyBenchHud'
+import { RoomHud } from '@/features/room/RoomHud'
+import { CalendarDialog } from '@/features/room/CalendarDialog'
+import { useRoom } from '@/scene/room/roomStore'
 import { ShelfViewer } from '@/features/bench/ShelfViewer'
 import { Bench } from '@/scene/Bench'
 import { applyAudioSettings, startBgm, stopBgm } from '@/sound'
@@ -22,6 +25,10 @@ export default function App() {
   const hasBuild = useGame((s) => !!s.build)
   // đang bay camera vào màn hình máy tính: ẩn HUD cho thấy rõ màn hình
   const zooming = useGame((s) => s.pcZoom)
+  // đang đi lại trong phòng (không ngồi ở bàn build)
+  const walk = useGame((s) => s.walk)
+  // bấm lịch treo tường (đi lại hay ngồi bàn build đều mở được)
+  const calendar = useRoom((r) => r.calendar)
   const guide = useGame((s) => !s.guideHidden)
   const audio = useGame((s) => s.audio)
   // fast bid ở Hội Phím Cơ: bot ghé bid / bình luận, hết giờ thì chốt bán (kể cả khi không mở tab chợ)
@@ -49,9 +56,10 @@ export default function App() {
       {screen === 'bench' && (
         <>
           <Bench />
-          {!zooming && (hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
-          {!zooming && guide && <BenchDialog />}
+          {!zooming && (walk ? <RoomHud /> : hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
+          {!zooming && !walk && guide && <BenchDialog />}
           <ShelfViewer />
+          {calendar && <CalendarDialog />}
           <BenchLoader />
         </>
       )}

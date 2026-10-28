@@ -18,6 +18,7 @@ import {
   type LubeUse,
 } from '@/data/supplies'
 import { stabModRules } from '@/data/mods'
+import { shipPrice, toolOnWay } from '@/data/shipping'
 import { stabSets } from '@/data/steps'
 import type { LubePick } from '@/store/shopSlice'
 import type { ToolKind } from '@/types'
@@ -118,14 +119,18 @@ function ModRow({ index, state, name, req, onDo }: ModRowProps) {
 function ToolWarn({ kinds }: { kinds: ('brush' | 'clipper' | 'opener')[] }) {
   const tools = useGame((s) => s.tools)
   const openShop = useGame((s) => s.openShop)
+  const parcels = useGame((s) => s.parcels)
   const missing = kinds.filter((k) => TOOLS[k][tools[k]].none)
   if (!missing.length) return null
-  // khung cảnh báo nổi bật (thay dòng chữ đỏ nhỏ), kèm nút mở Shopii đúng mục dụng cụ
+  // khung cảnh báo nổi bật (thay dòng chữ đỏ nhỏ), kèm nút mở Shopii đúng mục dụng cụ; đã đặt thì nhắc ra cửa nhận
   return (
     <Alert title="Thiếu dụng cụ">
       <ul className="list-disc pl-5">
         {missing.map((k) => (
-          <li key={k}>{TOOLS[k][1].name}</li>
+          <li key={k}>
+            {TOOLS[k][1].name}
+            {toolOnWay(parcels, k, 1) && ' (đang giao, tới cửa thì ra nhận)'}
+          </li>
         ))}
       </ul>
       <Button size="sm" tone="red" onClick={() => openShop('tool')}>
@@ -336,6 +341,9 @@ export function SolderPanel() {
   const pick = useGame((s) => s.solderPick)
   const setSolderPick = useGame((s) => s.setSolderPick)
   const buyTool = useGame((s) => s.buyTool)
+  const orderParcel = useGame((s) => s.orderParcel)
+  const toast = useGame((s) => s.toast)
+  const parcels = useGame((s) => s.parcels)
   const solderOwned = useGame((s) => s.solderOwned)
   const lastPurchase = useGame((s) => s.lastSolderPurchase)
   const undoPurchase = useGame((s) => s.undoSolderPurchase)
@@ -378,7 +386,7 @@ export function SolderPanel() {
       )}
       <HudSection id="solder.tools" title="Dụng cụ">
         {tool(iron, 'solder')}
-        {/* đổi qua lại bút hàn / trạm hàn đã mua; chưa mua thì mờ đi (mua ở Shopii) */}
+        {/* đổi qua lại bút hàn / trạm hàn đã mua; chưa có thì bấm đặt Hoả tốc (ra cửa nhận) */}
         <div className="flex flex-wrap gap-1">
           {TOOLS.solder.map((item, level) => {
             if (item.none) return null
@@ -386,14 +394,30 @@ export function SolderPanel() {
             const owned = using || solderOwned[level] !== undefined
             const left =
               (item.life ?? 0) - (using ? (wearAll.solder ?? 0) : (solderOwned[level] ?? 0))
+            // chưa có: đặt Hoả tốc (tới cửa trong ngày), ra cửa nhận rồi mới dùng
+            const coming = !owned && toolOnWay(parcels, 'solder', level)
+            const express = shipPrice(item.price, 'express')
             return (
               <Button
                 key={level}
                 size="sm"
                 tone={using ? 'green' : 'default'}
-                disabled={!owned || using}
-                title={owned ? `Còn ${left}/${item.life} lần` : 'Chưa có'}
-                onClick={() => buyTool('solder', level)}
+                disabled={using || coming}
+                title={
+                  owned
+                    ? `Còn ${left}/${item.life} lần`
+                    : coming
+                      ? 'Đang giao, ra cửa nhận hàng'
+                      : `Chưa có · đặt Hoả tốc ${fmt(express)}, tới cửa ngay`
+                }
+                onClick={() => {
+                  if (owned) return void buyTool('solder', level)
+                  const res = orderParcel(
+                    { kind: 'tool', tool: 'solder', level, price: item.price },
+                    'express',
+                  )
+                  if (res === 'ok') toast('📦 Hàng hoả tốc đã tới cửa phòng, ra cửa nhận nhé')
+                }}
               >
                 {using ? '✓ ' : ''}
                 {SOLDER_SHORT[level]}

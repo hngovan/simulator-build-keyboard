@@ -2,7 +2,7 @@ import { useGame, type GameState } from '@/store'
 import { TOOLS } from '@/data/parts'
 
 /**
- * Mũi tên vàng bước hàn (như bàn mod stab) chỉ việc tiếp theo:
+ * Mũi tên xanh bước hàn (như bàn mod stab) chỉ việc tiếp theo:
  * có phím cháy + bút hút thiếc → phím cháy đầu tiên; mũi hàn đen → 'clean' (bùi nhùi);
  * còn lại → phím chưa hàn đầu tiên (thứ tự hàng → cột). null = không chỉ gì
  */

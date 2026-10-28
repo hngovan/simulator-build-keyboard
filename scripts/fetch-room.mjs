@@ -1,5 +1,6 @@
 // Tải model + texture phòng làm việc từ Poly Haven (CC0) và đóng gói cho game.
 // Dùng: bun run fetch:room
+// Chỉ tải vài model (không tải texture, không ghi đè CREDITS.md): node scripts/fetch-room.mjs <id> <id>...
 //
 // Model glTF 1k (gltf + bin + texture) được tải vào thư mục tạm riêng rồi gộp thành 1 file .glb
 // trong public/models/room/. Texture sàn / tường (jpg 1k) lưu vào public/textures/room/.
@@ -17,9 +18,22 @@ const MODELS = [
   'Shelf_01',
   'painted_wooden_chair_01',
   'hanging_picture_frame_01',
+  'hanging_picture_frame_02',
+  'hanging_picture_frame_03',
+  'fancy_picture_frame_01',
+  'fancy_picture_frame_02',
   'wall_clock',
+  // phòng đi lại được: bàn máy tính, bàn workbench, tủ chứa hàng, đèn trần
+  'metal_office_desk',
+  'WoodenTable_03',
+  'drawer_cabinet',
+  'modern_wooden_cabinet',
+  'modern_ceiling_lamp_01',
+  'desk_lamp_arm_01',
   // thùng hàng ở bước mở hộp
+  // sân vườn nhìn qua cửa sổ: cây, bụi, hoa, cỏ
 ]
+const ONLY = process.argv.slice(2)
 /** texture: id → các map cần (tên khoá trong API Poly Haven) */
 const TEXTURES = {
   laminate_floor_02: ['Diffuse', 'nor_gl', 'Rough'],
@@ -49,7 +63,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sbk-room-'))
 const io = new NodeIO()
 const credits = []
 
-for (const id of MODELS) {
+for (const id of ONLY.length ? ONLY : MODELS) {
   const [info, files] = await Promise.all([
     getJson(`${API}/info/${id}`),
     getJson(`${API}/files/${id}`),
@@ -71,7 +85,7 @@ for (const id of MODELS) {
   credits.push(`- ${info.name} (\`${id}\`) — ${Object.keys(info.authors).join(', ')}`)
 }
 
-for (const [id, maps] of Object.entries(TEXTURES)) {
+for (const [id, maps] of ONLY.length ? [] : Object.entries(TEXTURES)) {
   const [info, files] = await Promise.all([
     getJson(`${API}/info/${id}`),
     getJson(`${API}/files/${id}`),
@@ -86,6 +100,10 @@ for (const [id, maps] of Object.entries(TEXTURES)) {
 }
 
 fs.rmSync(tmp, { recursive: true, force: true })
+if (ONLY.length) {
+  console.log(credits.join('\n'))
+  process.exit(0)
+}
 fs.writeFileSync(
   path.join(OUT_MODELS, 'CREDITS.md'),
   `# Nguồn model phòng làm việc\n\nTất cả từ [Poly Haven](https://polyhaven.com), giấy phép CC0.\n\n${credits.join('\n')}\n`,

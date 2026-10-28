@@ -21,6 +21,7 @@ import { SkillBar } from '@/components/game/SkillBar'
 import { BIT_SWAP_MS, BitDriver, SCREW_SPIN, SPIN_MS } from '../models/HandTools'
 import { MM } from '../models/Switch'
 import { HintArrow } from '../stations/StationKit'
+import { HINT_COLOR } from '../common/hoverOutline'
 
 interface ScrewProps extends ScrewPoint {
   y?: number
@@ -31,11 +32,11 @@ interface ScrewProps extends ScrewPoint {
   style: ScrewStyle
   /** thân ốc dài thêm (u) tính từ mặt bắt vít xuống: case mica xếp lớp vít xuyên tới tấm đáy */
   shaft?: number
-  /** con vít tiếp theo cần vặn / tháo: mũi tên vàng chỉ vào */
+  /** con vít tiếp theo cần vặn / tháo: mũi tên xanh chỉ vào */
   hint?: boolean
   /** rút ngắn còn tỉ lệ này của chiều dài ốc (giữ đầu ốc), vd vít stab 2/3 */
   short?: number
-  /** độ cao miệng lỗ (mặc định = y): vít tray chìm dưới plate thì khung nét đứt / vòng vàng nằm trên mặt plate cho khỏi bị che */
+  /** độ cao miệng lỗ (mặc định = y): vít tray chìm dưới plate thì khung nét đứt / vòng xanh nằm trên mặt plate cho khỏi bị che */
   mouth?: number
 }
 
@@ -273,12 +274,12 @@ function ghostGeometry(style: ScrewStyle) {
   return g
 }
 
-/** Ốc chưa tra vào lỗ (bước vặn vào, chưa bấm lần nào): khung nét đứt vàng ở miệng lỗ */
+/** Ốc chưa tra vào lỗ (bước vặn vào, chưa bấm lần nào): khung nét đứt xanh ở miệng lỗ */
 function ScrewGhost({ style }: { style: ScrewStyle }) {
   const line = useMemo(() => {
     const l = new THREE.LineSegments(
       ghostGeometry(style),
-      new THREE.LineDashedMaterial({ color: '#ffd84a', dashSize: 0.025, gapSize: 0.018 }),
+      new THREE.LineDashedMaterial({ color: HINT_COLOR, dashSize: 0.025, gapSize: 0.018 }),
     )
     l.computeLineDistances()
     return l
@@ -480,13 +481,13 @@ function Screw({
           </group>
         )}
         {interactive && !done && !hover && (
-          // ốc chưa tra: vòng vàng nằm sát miệng lỗ (quanh khung nét đứt), không lơ lửng chỗ ốc chờ
+          // ốc chưa tra: vòng xanh nằm sát miệng lỗ (quanh khung nét đứt), không lơ lửng chỗ ốc chờ
           <mesh
             position-y={mode === 'tighten' && turns === 0 ? mouth - y + 0.04 - liftAt(0) : 0.04}
             rotation-x={-Math.PI / 2}
           >
             <ringGeometry args={[0.15, 0.2, 24]} />
-            <meshBasicMaterial color="#ffd84a" transparent opacity={0.8} />
+            <meshBasicMaterial color={HINT_COLOR} transparent opacity={0.8} />
           </mesh>
         )}
         {interactive && stripped && (
@@ -496,7 +497,7 @@ function Screw({
             <meshBasicMaterial color="#ff4a4a" transparent opacity={0.85} />
           </mesh>
         )}
-        {/* mũi tên vàng chỉ con vít tiếp theo (rê chuột vào / đang vặn thì ẩn cho thấy tua vít) */}
+        {/* mũi tên xanh chỉ con vít tiếp theo (rê chuột vào / đang vặn thì ẩn cho thấy tua vít) */}
         {hint && interactive && !done && !hover && !busy && !skill && (
           <HintArrow at={[0, 0.3, 0]} />
         )}

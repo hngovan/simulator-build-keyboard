@@ -23,6 +23,11 @@ Quy tắc của người dùng:
 ## CC0 / tự dựng
 
 - Poly Haven (bàn, ghế, đèn, cây, kệ, tua vít tay...), Innerscene (hũ, hộp lò xo).
+- 2026-10-28 (phòng đi lại được): tải thêm từ Poly Haven `metal_office_desk`, `WoodenTable_03`, `drawer_cabinet`,
+  `modern_wooden_cabinet`, `modern_ceiling_lamp_01` → `public/models/room/` (`node scripts/fetch-room.mjs <id>...` chỉ tải
+  model được nêu, không tải texture, không ghi đè CREDITS.md). Ghế văn phòng, cửa sổ, rèm, cửa ra vào: Poly Haven không có,
+  Sketchfab cần token (chưa có) → chưa tải.
+- 2026-10-28 (sân vườn 3D ngoài cửa sổ): đã tải cây / bụi / cỏ Poly Haven rồi **gỡ** theo người dùng ("nặng máy quá"): xoá file, bỏ khỏi `fetch-room.mjs` + CREDITS. Cửa sổ dùng lại ảnh vẽ canvas.
 - Màn hình + CPU, thùng carton, khối chặn case: dựng bằng code.
 
 ## Nguồn file gốc
@@ -43,3 +48,8 @@ Quy tắc của người dùng:
   (`assets/community/stab-variants/`). Switch Cherry MX nhiều màu + low profile: người dùng dừng, không làm (đã hoàn tác).
 - Nhạc nền (2026-10-25): `bgm.mp3` Coffee House Bump (OatCog), `bgm-2.mp3` Chill lofi inspired (omfgdude), `bgm-3.mp3`
   A cup of tea (TAD, lofi Compilation) — đều CC0 OpenGameArt; TAD xin ghi "Tad" (CC0 không bắt buộc, vẫn ghi trong credits).
+
+- 2026-10-28: tải thêm 4 khung tranh Poly Haven (CC0): `hanging_picture_frame_02/03`, `fancy_picture_frame_01/02` → `public/models/room/` (thêm vào MODELS `scripts/fetch-room.mjs`, ghi công CREDITS.md phòng). Mặt tranh = material `*_artwork` / `*_canvas`, để thay texture tranh tự vẽ.
+- 2026-10-28: model người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**): Topre Realforce 87U, Razer DeathAdder
+  (`public/models/desk/`, gốc trong `assets/user-desk/` không commit). Lót chuột in logo Topre "COLDTOP" vẽ lại theo ảnh người dùng
+  (thương hiệu thật, chỉ dùng cá nhân).

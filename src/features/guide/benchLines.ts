@@ -29,7 +29,7 @@ const EMPTY = [
 
 const PICK = [
   'Có đơn rồi đó! Bấm ô vàng trên bàn để mở danh sách đơn đã nhận.',
-  'Chọn 1 đơn: đủ linh kiện là vào build luôn, thiếu thì mình liệt kê ra để bạn đi mua ở Shopii.',
+  'Chọn 1 đơn: đủ linh kiện là vào build luôn, thiếu thì mình liệt kê ra để bạn đặt ở Shopii, hàng tới cửa thì ra nhận nha.',
 ]
 
 const INTRO = [

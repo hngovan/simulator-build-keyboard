@@ -29,6 +29,7 @@
     "fetch:avatars": "node scripts/fetch-avatars.mjs",
     "convert:solder-tools": "node scripts/convert-solder-tools.mjs",
     "convert:hand-tools": "node scripts/convert-hand-tools.mjs",
+    "convert:desk-gear": "bunx @gltf-transform/cli@4.1.1 optimize assets/user-desk/topre_realforce_87u.glb public/models/desk/realforce-87u.glb --compress meshopt --texture-compress false --simplify-ratio 0.02 --simplify-error 0.0005 && bunx @gltf-transform/cli@4.1.1 optimize assets/user-desk/mouse_-_razer_deathadder.glb public/models/desk/deathadder.glb --compress meshopt --texture-compress false",
     "fetch:room": "node scripts/fetch-room.mjs",
     "convert:desolder-pump": "node scripts/convert-desolder-pump.mjs"
   },

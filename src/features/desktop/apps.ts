@@ -79,15 +79,12 @@ export const APPS: Record<AppId, AppDef> = {
 
 export const APP_IDS = Object.keys(APPS) as AppId[]
 
-/** Lối tắt ra bàn build (không phải cửa sổ): có build thì vào làm tiếp, chưa có thì bàn trống để chọn đơn */
-export const BENCH_ICON: Omit<AppDef, 'Component' | 'width'> = {
-  title: 'Bàn build',
-  icon: '/icons/apps/keyboard.svg',
-  color: '#2e8b57',
-}
-/** icon "Kết thúc ngày": mở popup tổng kết ngày (`EndDayDialog`), không phải cửa sổ app */
-export const END_DAY_ICON: Omit<AppDef, 'Component' | 'width'> = {
-  title: 'Kết thúc ngày',
-  icon: '/icons/apps/moon.svg',
+/**
+ * icon "Đứng dậy": rời máy tính, đi lại trong phòng (lấy hàng ở cửa, xem lịch / kết thúc ngày trên tường).
+ * Kết thúc ngày không còn ở máy tính, chỉ ở lịch treo tường
+ */
+export const STAND_ICON: Omit<AppDef, 'Component' | 'width'> = {
+  title: 'Đứng dậy',
+  icon: '/icons/apps/footprints.svg',
   color: '#34407a',
 }

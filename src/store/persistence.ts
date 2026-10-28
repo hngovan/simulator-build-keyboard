@@ -11,6 +11,7 @@ import type {
   ToolLevels,
   Review,
   NotifyItem,
+  Parcel,
   Spare,
   StepId,
 } from '@/types'
@@ -71,6 +72,10 @@ export interface Profile {
   inbox: NotifyItem[]
   /** số thông báo chưa xem (mở chuông thì về 0) */
   unread: number
+  /** kiện hàng Shopii đã đặt chưa nhận (đang giao / đã tới cửa); bản lưu cũ không có = [] */
+  parcels: Parcel[]
+  /** món đang sale đã mua trong ngày sale (mỗi món sale chỉ mua 1 lần); bản lưu cũ không có */
+  saleBought: { day: number; ids: string[] }
 }
 
 // Đơn đang làm dở (lưu lại để thoát game vào lại vẫn tiếp tục được)
@@ -282,6 +287,8 @@ export const START: Profile = {
   guideHidden: false,
   inbox: [],
   unread: 0,
+  parcels: [],
+  saleBought: { day: 0, ids: [] },
 }
 
 export function loadSave(): SaveData | null {

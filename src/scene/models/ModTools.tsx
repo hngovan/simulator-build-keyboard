@@ -74,9 +74,14 @@ export const Scissors = forwardRef<THREE.Group>(function Scissors(_, ref) {
   const halves = useMemo(() => {
     const out = [new THREE.Group(), new THREE.Group(), new THREE.Group()]
     // nửa không hậu tố: lưỡi bên +z nối qua đinh tán sang quai bên -z; nửa ".001" ngược lại
+    // (three bỏ dấu chấm trong tên node: "blade.001" → "blade001")
     for (const o of [...scene.clone(true).children[0].children]) {
       o.traverse((m) => ((m as THREE.Mesh).isMesh ? (m.castShadow = true) : null))
-      out[/pivot/i.test(o.name) ? 2 : o.name.endsWith('.001') ? 1 : 0].add(o)
+      const second = /\.?001$/.test(o.name)
+      // model dùng cùng 1 hình lưỡi cho 2 bên (không đối xứng gương): lật lưỡi ".001" qua trục dọc cho 2 lưỡi
+      // đối xứng, mép cắt thẳng + mũi nhọn quay vào trong (lưỡi không hậu tố giữ nguyên)
+      if (/blade/i.test(o.name) && second) o.scale.z *= -1
+      out[/pivot/i.test(o.name) ? 2 : second ? 1 : 0].add(o)
     }
     return out
   }, [scene])

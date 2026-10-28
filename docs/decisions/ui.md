@@ -776,3 +776,43 @@
   Ghi thêm: bán được đồ (`completeSale`), fast bid có người BIN / hết giờ có người thắng / không ai trả (`settleBids`),
   khách huỷ đơn vì trễ hạn (`nextDay`), seller bùng hàng. Toast vẫn hiện như cũ.
 - Lưu `Profile.inbox` + `unread` (START rỗng, `SAVED_KEYS`, `snapshot`); chơi mới thì xoá.
+
+## Màu tương tác cảnh 3D: vàng → xanh lá (2026-10-28)
+
+- Yêu cầu: "đổi các viền tương tác từ màu vàng thành màu xanh lá cây, tương tự mũi tên cũng được".
+- Hằng chung `HINT_COLOR` (`#3ecf6e` = `--color-green`) / `HINT_HOVER` (`#8af5ac`) trong `scene/common/hoverOutline.ts`. Đổi: viền hover
+  (`OUTLINE_MAT`, màn hình PC `Computer`, kệ case `ShelfDisplay`), `HintArrow`, ô nét đứt thiếu đồ / bàn trống (`MissingSlot`), ghost gasket /
+  vòng O-ring chờ gá (BoardDetails), hốc feet chờ dán (Case), khung nét đứt + vòng ốc chờ vặn (Screw), ô chân hàn (SolderPad), vòng lau
+  mũi hàn (SolderKit), ánh hover vật liệu case (`materials.tsx` emissive `#554400` → `#0f4a22`).
+- Giữ vàng: chữ / nhãn trong cảnh (số switch còn mở, nhãn stab), HUD 2D (nút, khung bước). Comment "viền / mũi tên vàng" đổi theo.
+
+## HUD phòng đi lại + lịch xưởng (2026-10-28)
+
+- `features/room/RoomHud`: nút Dùng máy tính / Ngồi vào bàn build / Lịch, `StatusChips`, số thùng hàng chờ ở hành lang, chữ "Bấm: ..."
+  theo vật đang rê, dòng hướng dẫn phím. Guide `BenchDialog` ẩn khi đi.
+- Kết thúc ngày bỏ khỏi máy tính: icon desktop `END_DAY_ICON` → `STAND_ICON` "Đứng dậy" (`public/icons/apps/footprints.svg`),
+  nút cuối danh sách Mezzenger → "Đứng dậy ra lịch". Tip Keeb-chan + toast đổi chữ theo.
+- Lịch: bấm tờ lịch trên tường (cả lúc ngồi bàn build) → `CalendarDialog` (render ở App khi `useRoom.calendar`): lưới 4 tuần
+  (`data/calendar.ts` `calendarDays`, dùng chung với tờ lịch canvas), ô ghi SALE / ⏰ đơn tới hạn / 📦 kiện tới, ngày qua mờ + ✕,
+  bấm ô xem việc ngày đó; "Kết thúc ngày" → `EndDayDialog`, "Quay lại làm việc" / Esc / bấm nền thì đóng.
+- Thùng ở hành lang: kiện Shopii tới (`DoorParcels` → `pickupParcel`), đơn đóng gói chờ gửi (`ShipBoxes` → `shipOrder`).
+
+## Esc ở máy tính: đứng dậy ra phòng (2026-10-28)
+
+- Yêu cầu: "bên trong màn hình máy tính cũng vậy, bây giờ ấn Esc sẽ out ra" (giống bàn build: Esc đứng dậy).
+- `useAppShortcuts`: `screen === 'pc'` → `standUp('pc')`; Cài đặt đang mở trên cùng thì Esc đóng Cài đặt trước. Đi lại trong phòng: Esc vẫn
+  mở Cài đặt. Mẹo Keeb-chan `save` (tips.ts) bỏ "Nhấn Esc để mở Cài đặt" → mở Cài đặt ở thanh dưới; README + CLAUDE.md sửa theo.
+
+## Bỏ xoay khung nhìn ở bàn build (2026-10-28)
+
+- Yêu cầu: "bỏ tính năng xoay khung nhìn luôn đi".
+- `Bench.tsx` `Controls`: `OrbitControls enableRotate={false}`, chuột trái / phải + 1 ngón = kéo khung nhìn (PAN), giữa / 2 ngón = zoom;
+  con trỏ luôn bàn tay. Bỏ `camMode` / `setCamMode` (metaSlice) + nút đổi xoay ↔ kéo + phím R (`CamModeButton`, file giữ `ResetCamButton`).
+  Góc nhìn theo bước vẫn do `CameraRig`, xem đáy bằng nút lật (`viewFlip`), Space về góc mặc định. Khung xem 3D Shopii / đơn hàng
+  (`ShopProductViewer`, `OrderViewer`) vẫn xoay để ngắm sản phẩm.
+
+## Bỏ icon "Bàn build" ở desktop (2026-10-28)
+
+- Yêu cầu: "bỏ icon ra bàn build luôn" (sau khi có phòng đi lại + Esc đứng dậy).
+- `Desktop.tsx`: bỏ 2 chỗ `BENCH_ICON` (góc phải desktop + lưới icon mobile), bỏ `BENCH_ICON` ở `apps.ts`. Ra bàn build: icon "Đứng dậy" / Esc
+  rồi bấm bàn trong phòng; nút "Ra bàn build" trong Mezzenger (`goBench`) giữ. Mẹo `ready` (tips.ts), OVERVIEW, CLAUDE.md sửa theo.

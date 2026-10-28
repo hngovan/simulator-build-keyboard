@@ -21,6 +21,7 @@ import { cancelSkill, skillBusy, startSkill, useSkill } from '../common/skill'
 import { SkillBar } from '@/components/game/SkillBar'
 import { needleAt } from '@/data/skillCheck'
 import { HintArrow } from '../stations/StationKit'
+import { HINT_COLOR } from '../common/hoverOutline'
 import { useSolderHint } from './solderHint'
 import { SolderingIron } from '../models/HandTools'
 import { DesolderPump } from '../models/DesolderPump'
@@ -198,13 +199,13 @@ export function SolderPad({ k }: { k: Key }) {
       >
         <planeGeometry args={[0.8, 0.8]} />
         <meshBasicMaterial
-          color="#ffd84a"
+          color={HINT_COLOR}
           transparent
           opacity={hover || lit ? 0.2 : 0}
           depthWrite={false}
         />
       </mesh>
-      {/* mũi tên vàng chỉ phím cần hàn / hút thiếc tiếp theo (ẩn khi đang giữ mỏ hàn) */}
+      {/* mũi tên xanh chỉ phím cần hàn / hút thiếc tiếp theo (ẩn khi đang giữ mỏ hàn) */}
       {hinted && !holding && !heating && <HintArrow at={[0, 0.35, 0]} size={1.5} />}
       {PINS.map(([px, pz], index) => {
         const melt = THREE.MathUtils.smoothstep(

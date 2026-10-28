@@ -8,15 +8,16 @@ import {
 } from '@/features/apps/messenger/orderThumb'
 import { CASES } from '@/data/parts'
 import { useHover } from '../common/useHover'
+import { HINT_COLOR } from '../common/hoverOutline'
 import { useShelfView } from './shelfView'
 
 /**
- * Viền hover chỉ ở mặt trước (như viền màn hình máy tính): khung chữ nhật vàng phẳng ôm mép trên của case,
+ * Viền hover chỉ ở mặt trước (như viền màn hình máy tính): khung chữ nhật xanh phẳng ôm mép trên của case,
  * nghiêng theo mặt case (`seat.tilt`), dày FRAME_W mét; không vẽ quanh đáy / cạnh sau / chân đỡ
  */
 const FRAME_W = 0.004
 const FRAME = new THREE.MeshBasicMaterial({
-  color: '#ffd84a',
+  color: HINT_COLOR,
   toneMapped: false,
   side: THREE.DoubleSide,
 })
@@ -182,7 +183,7 @@ export function DisplayKeyboard({
       <KeyboardStand position-x={-sx} />
       <KeyboardStand position-x={sx} />
       {model && (
-        // rê chuột: viền vàng; bấm (không phải kéo xoay camera) thì mở khung xem 3D
+        // rê chuột: viền xanh; bấm (không phải kéo khung nhìn) thì mở khung xem 3D
         <group
           {...bind}
           onPointerDown={(e: ThreeEvent<PointerEvent>) => setDown([e.clientX, e.clientY])}

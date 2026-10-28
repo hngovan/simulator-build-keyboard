@@ -14,7 +14,8 @@ export function useKeyboardTest() {
     const held = new Map<string, string>()
     const testing = () => {
       const s = useGame.getState()
-      return s.screen === 'bench' && s.step() === 'test' && s.ctx ? s : null
+      // đang đi lại trong phòng: WASD là phím đi, không tính test
+      return s.screen === 'bench' && !s.walk && s.step() === 'test' && s.ctx ? s : null
     }
     /** phím 3D ứng với mã: ưu tiên phím chưa test */
     const pick = (code: string) => {

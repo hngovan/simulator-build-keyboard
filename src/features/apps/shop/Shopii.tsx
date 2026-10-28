@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
-import { CircleAlert, Flame, LoaderCircle, PackageX, Search } from 'lucide-react'
+import { CircleAlert, Flame, LoaderCircle, PackageX, Search, Truck } from 'lucide-react'
 import { Alert, Button, SoundLegend, TabChip, Tooltip } from '@/components/ui'
 import { useGame } from '@/store'
 import { SHOP_CATS, buildCatalog, stabStock } from '@/data/parts'
@@ -15,6 +15,7 @@ import type {
   ToolItem,
 } from '@/types'
 import { ListFilterPicker } from './OptionFilter'
+import { ParcelList } from './ParcelList'
 import { ProductCard } from './ProductCard'
 import { shopFilters } from './shopFilters'
 
@@ -69,7 +70,17 @@ export function Shopii() {
   const undoPurchase = useGame((s) => s.undoSolderPurchase)
   const tools = useGame((s) => s.tools)
   const solderOwned = useGame((s) => s.solderOwned)
-  const { buy, buySupply, buyTool } = useGame.getState()
+  const { orderParcel, buyTool } = useGame.getState()
+  /** ghi món sale vừa mua (danh sách theo ngày, sang ngày khác thì làm lại) */
+  const markSale = (id: string) =>
+    useGame.setState((s) => {
+      const cur = s.saleBought?.day === s.day ? s.saleBought.ids : []
+      return { saleBought: { day: s.day, ids: [...cur, id] } }
+    })
+  // kiện đã đặt chưa nhận (khu "Đơn đang giao")
+  const parcels = useGame((s) => s.parcels)
+  const arrived = parcels.filter((p) => p.arrive <= day).length
+  const [shipView, setShipView] = useState(false)
   // mục đang xem nằm trong store để chỗ khác mở thẳng đúng mục (vd ô đồ thiếu trên bàn mod)
   const cat = useGame((s) => s.shopCat)
   const [saleView, setSaleView] = useState(false)
@@ -87,6 +98,7 @@ export function Shopii() {
   const clearSearch = () => (setQuery(''), setApplied(''))
   const setCat = (shopCat: ShopCategory) => {
     setSaleView(false)
+    setShipView(false)
     useGame.setState({ shopCat })
   }
   // bộ lọc trong mục (case theo form factor, switch theo loại, dụng cụ theo nhóm); đổi mục thì về "Tất cả"
@@ -115,7 +127,7 @@ export function Shopii() {
   )
   const onSale = stock.filter((p) => p.sale)
   const q = fold(shownQuery.trim())
-  const searching = q.length > 0
+  const searching = q.length > 0 && !shipView
   // tìm kiếm: mọi mục theo tên / mô tả · Đang sale: mọi linh kiện đang giảm · còn lại: mục đang chọn + bộ lọc trong mục
   const all = searching
     ? stock.filter((p) => fold(`${p.name} ${p.desc}`).includes(q))
@@ -138,7 +150,7 @@ export function Shopii() {
             <Search className="size-4 shrink-0 text-muted" />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => (setShipView(false), setQuery(e.target.value))}
               placeholder="Tìm sản phẩm..."
               aria-label="Tìm sản phẩm"
               className="w-full min-w-0 bg-transparent text-sm font-bold outline-none placeholder:text-muted"
@@ -146,10 +158,10 @@ export function Shopii() {
           </label>
           {sale && (
             <TabChip
-              active={saleView && !searching}
+              active={saleView && !searching && !shipView}
               count={onSale.length}
               title="Hôm nay Shopii sale linh kiện 5–30%"
-              onClick={() => (clearSearch(), setSaleView(true))}
+              onClick={() => (clearSearch(), setShipView(false), setSaleView(true))}
               className="w-full"
             >
               Đang sale
@@ -159,7 +171,7 @@ export function Shopii() {
             {(Object.entries(SHOP_CATS) as [ShopCategory, string][]).map(([id, name]) => (
               <TabChip
                 key={id}
-                active={!searching && !(saleView && sale) && cat === id}
+                active={!searching && !shipView && !(saleView && sale) && cat === id}
                 onClick={() => (clearSearch(), setCat(id))}
                 className="md:w-full"
               >
@@ -167,8 +179,21 @@ export function Shopii() {
               </TabChip>
             ))}
           </div>
+          {/* kiện đã đặt chưa nhận: đang giao / đã tới cửa */}
+          <TabChip
+            active={shipView}
+            icon={Truck}
+            count={parcels.length}
+            title={
+              arrived ? `${arrived} kiện đã tới cửa, ra cửa nhận` : 'Kiện hàng đã đặt chưa nhận'
+            }
+            onClick={() => (clearSearch(), setShipView(true))}
+            className="w-full"
+          >
+            Đơn đang giao
+          </TabChip>
           {/* bộ lọc trong mục: nút lọc + popup (cùng kiểu chọn option trong thẻ sản phẩm), mỗi dòng kèm số sản phẩm khớp */}
-          {filters.length > 0 && (
+          {filters.length > 0 && !shipView && (
             <div className="mt-1.5">
               <ListFilterPicker
                 title="Lọc sản phẩm trong mục"
@@ -187,7 +212,9 @@ export function Shopii() {
         </div>
         {/* khung bo góc có đệm; lớp cuộn bên trong không bo → thanh cuộn không bị góc bo che */}
         <div className="relative flex min-h-[260px] min-w-0 flex-1 flex-col rounded-2xl bg-black/15 p-1.5">
+          {shipView && <ParcelList />}
           <div
+            hidden={shipView}
             ref={grid}
             className="grid min-h-0 flex-1 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))] content-start gap-2 overflow-y-auto"
           >
@@ -208,21 +235,34 @@ export function Shopii() {
                 // giá đổi theo ngày sale → chọn lại option từ đầu
                 key={`${p.id}:${p.sale ?? 0}`}
                 product={p}
-                onBuy={(p, o, qty) => {
+                // đặt hàng theo tốc độ giao (trả tiền ngay, hàng tới cửa theo ngày); speed null = đổi mỏ hàn đã có
+                onBuy={(p, o, qty, speed) => {
                   const price = o.price * qty
-                  if (p.cat === 'supply' || p.cat === 'spell') {
-                    const it = o.item as SupplyItem
-                    buySupply(it.id, it.n * qty, price)
-                  } else if (p.cat === 'tool' || p.cat === 'cert') {
+                  let res: string
+                  if (p.cat === 'tool' || p.cat === 'cert') {
                     const it = o.item as ToolItem
-                    buyTool(it.kind, it.level, o.price)
-                  } else buy(p.cat as PartCategory, multiply(p.cat, o.item as PartItem, qty), price)
+                    if (!speed) return void buyTool(it.kind, it.level)
+                    res = orderParcel(
+                      { kind: 'tool', tool: it.kind, level: it.level, price: o.price },
+                      speed,
+                    )
+                  } else if (!speed) return
+                  else if (p.cat === 'supply' || p.cat === 'spell') {
+                    const it = o.item as SupplyItem
+                    res = orderParcel({ kind: 'supply', id: it.id, n: it.n * qty, price }, speed)
+                  } else {
+                    const cat = p.cat as PartCategory
+                    const item = multiply(p.cat, o.item as PartItem, qty)
+                    res = orderParcel({ kind: 'part', cat, item, price }, speed)
+                  }
+                  // món đang sale: mua 1 lần trong ngày sale rồi khoá nút (ProductCard)
+                  if (res === 'ok' && p.sale) markSale(p.id)
                 }}
               />
             ))}
           </div>
           {/* đang tìm: loading che lưới tới khi dựng xong kết quả */}
-          {searchBusy && (
+          {searchBusy && !shipView && (
             <div
               role="status"
               aria-label="Đang tìm sản phẩm"
@@ -233,7 +273,7 @@ export function Shopii() {
             </div>
           )}
           {/* không có sản phẩm: icon hết hàng nằm giữa khung sản phẩm */}
-          {!list.length && !searchBusy && (
+          {!list.length && !searchBusy && !shipView && (
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted">
               <PackageX className="size-16 opacity-70" strokeWidth={1.5} />
               <span className="font-head text-lg font-extrabold">

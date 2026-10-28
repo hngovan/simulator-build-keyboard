@@ -151,6 +151,26 @@ export interface Spare {
   items: { cat: PartCategory; item: PartItem }[]
 }
 
+// ---------- kiện hàng Shopii (đặt rồi chờ giao tới cửa) ----------
+/** 1 món trong kiện; `price` = tiền đã trả (đã tính phí giao) */
+export type ParcelItem =
+  | { kind: 'part'; cat: PartCategory; item: PartItem; price: number }
+  | { kind: 'supply'; id: string; n: number; price: number }
+  | { kind: 'tool'; tool: ToolKind; level: number; price: number }
+export interface Parcel {
+  id: string
+  /** ngày đặt */
+  ordered: number
+  /** ngày tới cửa (≤ hôm nay = đang chờ ở cửa) */
+  arrive: number
+  speed: import('./data/shipping').ShipSpeed
+  /** tên ngắn in trên nhãn thùng */
+  label: string
+  items: ParcelItem[]
+  /** id đơn đang làm lúc đặt (linh kiện) */
+  job?: string
+}
+
 // ---------- shop ----------
 export interface ProductOption {
   label: string

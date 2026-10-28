@@ -14,11 +14,15 @@ import { SolderKit } from './stations/SolderKit'
 import { ScrewTray } from './parts/ScrewTray'
 import { useSceneLoading } from './common/loadingStore'
 import { useCamLock } from './common/camLock'
-import { ROOM_BOUNDS, Room } from './Room'
+import { Room } from './Room'
+import { ROOM_BOUNDS } from './room/roomLayout'
+import { WalkControls } from './room/WalkControls'
+import { benchPose } from './common/benchPose'
 import { CuttingMat } from './common/CuttingMat'
 import { EmptyBench } from './EmptyBench'
 import { fitAspect } from './common/fitAspect'
 import { screenCenter, screenEye } from './models/computerLayout'
+import { M } from './room/roomLayout'
 
 /** Báo cảnh đã sẵn sàng khi Suspense ngoài cùng tải xong */
 function SceneReady() {
@@ -69,6 +73,18 @@ declare global {
   }
 }
 
+/** phím đi lại: đang ngồi bàn build bấm thì đứng dậy */
+const MOVE_KEYS = [
+  'KeyW',
+  'KeyA',
+  'KeyS',
+  'KeyD',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+]
+
 /** tốc độ kéo khung nhìn; dưới PAN_REF (u, khoảng cách camera → tâm nhìn, ~góc nhìn mặc định) thì bù cho khỏi chậm */
 const PAN_SPEED = 2.5
 const PAN_REF = 22
@@ -85,8 +101,9 @@ function CameraRig() {
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
   const fit = useThree((s) => fitAspect(s.size.width / s.size.height))
   useEffect(() => {
-    const w = ctx.width
-    camera.position.set(0, (w * 0.62 + 1.5) * fit, (w * 0.42 + 2.5) * fit)
+    // đang đi lại trong phòng: không kéo camera về bàn
+    if (useGame.getState().walk) return
+    camera.position.set(...benchPose(ctx.width, fit))
     controls?.target.set(0, 0, 0)
     controls?.update()
   }, [ctx, camKey, controls, camera, fit])
@@ -160,7 +177,7 @@ function CameraRig() {
   return null
 }
 
-/** Bay camera tới trước màn hình máy tính trên bàn (~0.9s) rồi chuyển sang desktop */
+/** Bay camera tới trước màn hình máy tính (~0.9s) rồi chuyển sang desktop; đang đi lại (không có OrbitControls) thì xoay hướng nhìn theo */
 function PcZoom() {
   const zoom = useGame((s) => s.pcZoom)
   const camera = useThree((s) => s.camera)
@@ -168,19 +185,31 @@ function PcZoom() {
   const anim = useRef<{ t: number; from: THREE.Vector3; look: THREE.Vector3 } | null>(null)
   useFrame((_, dt) => {
     if (!zoom) return (anim.current = null)
-    if (!controls) return
-    anim.current ??= { t: 0, from: camera.position.clone(), look: controls.target.clone() }
+    anim.current ??= {
+      t: 0,
+      from: camera.position.clone(),
+      // đi lại: điểm nhìn = 1m trước mặt
+      look:
+        controls?.target.clone() ??
+        camera.position
+          .clone()
+          .add(camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(M)),
+    }
     const a = anim.current
     // máy chậm (khung hình dài) vẫn thấy đường bay: mỗi khung tối đa 1/30s
     a.t = Math.min(1, a.t + Math.min(dt, 1 / 30) / 0.9)
     const e = a.t * a.t * (3 - 2 * a.t)
     camera.position.lerpVectors(a.from, new THREE.Vector3(...screenEye()), e)
-    controls.target.lerpVectors(a.look, new THREE.Vector3(...screenCenter()), e)
-    controls.update()
+    const look = new THREE.Vector3().lerpVectors(a.look, new THREE.Vector3(...screenCenter()), e)
+    if (controls) {
+      controls.target.copy(look)
+      controls.update()
+    } else camera.lookAt(look)
     if (a.t >= 1) {
       const s = useGame.getState()
       s.goPC()
-      // lần sau vào bàn build: camera về góc mặc định
+      // lần sau vào bàn build: camera về góc mặc định, ngồi ở bàn (không đi lại)
+      useGame.setState({ walk: false })
       s.resetCam()
     }
   })
@@ -188,20 +217,41 @@ function PcZoom() {
 }
 
 /**
- * Camera xoay 360° (cả nhìn từ dưới lên). Chế độ bàn tay: chuột trái / 1 ngón kéo khung nhìn,
- * chuột phải xoay; chế độ xoay thì ngược lại. Kéo luôn trượt theo mặt bàn
+ * Camera không xoay (góc nhìn theo bước do CameraRig đặt, lật xem đáy bằng nút lật): chuột trái / phải / 1 ngón kéo khung nhìn,
+ * cuộn / 2 ngón zoom. Kéo luôn trượt theo mặt bàn
  */
 function Controls() {
-  const pan = useGame((s) => s.camMode === 'pan')
+  const walk = useGame((s) => s.walk)
   // đang giữ chuột thao tác (hàn...) thì khoá camera
   const locked = useCamLock((s) => s.locked)
-  // bước hàn: khoá góc quay (chỉ kéo khung nhìn / zoom), khỏi lỡ tay xoay khi rê mỏ hàn
-  const solder = useStep() === 'solder'
+  // đang ngồi bàn build mà bấm WASD / mũi tên: đứng dậy đi luôn (như PC Building Simulator)
+  useEffect(() => {
+    if (walk) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!MOVE_KEYS.includes(e.code) || e.ctrlKey || e.metaKey || e.altKey) return
+      if (
+        (e.target as HTMLElement | null)?.closest(
+          'input, textarea, select, [contenteditable="true"]',
+        )
+      )
+        return
+      const s = useGame.getState()
+      // bước test (phím là phím test), đang bay vào máy tính, có bảng / popup đang mở thì thôi
+      if (s.screen !== 'bench' || s.pcZoom || s.benchPicker || s.step() === 'test') return
+      if (document.querySelector('[role="dialog"], [class*="z-[3000]"], [class*="z-[3500]"]'))
+        return
+      s.standUp('bench')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [walk])
+  // đi lại trong phòng: góc nhìn người (WASD + kéo chuột nhìn)
+  if (walk) return <WalkControls />
   return (
     <OrbitControls
       makeDefault
       enabled={!locked}
-      enableRotate={!solder}
+      enableRotate={false}
       screenSpacePanning={false}
       // lại gần sát keycap (1u = 19mm) nhưng vẫn dừng trên mặt bàn / bàn phím
       minDistance={1.8}
@@ -211,12 +261,12 @@ function Controls() {
       panSpeed={PAN_SPEED}
       zoomSpeed={1.3}
       mouseButtons={{
-        LEFT: pan ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE,
+        LEFT: THREE.MOUSE.PAN,
         MIDDLE: THREE.MOUSE.DOLLY,
-        RIGHT: pan ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN,
+        RIGHT: THREE.MOUSE.PAN,
       }}
       touches={{
-        ONE: pan ? THREE.TOUCH.PAN : THREE.TOUCH.ROTATE,
+        ONE: THREE.TOUCH.PAN,
         TWO: THREE.TOUCH.DOLLY_PAN,
       }}
     />
@@ -253,12 +303,11 @@ function Scene() {
 
 // Cảnh 3D bàn build
 export function Bench() {
-  const pan = useGame((s) => s.camMode === 'pan')
   return (
     <Canvas
       shadows
       camera={{ position: [0, 14, 11], fov: 42 }}
-      className={pan ? '!fixed inset-0 cursor-grab active:cursor-grabbing' : '!fixed inset-0'}
+      className="!fixed inset-0 cursor-grab active:cursor-grabbing"
     >
       <color attach="background" args={['#20232c']} />
       <ambientLight intensity={0.4} />

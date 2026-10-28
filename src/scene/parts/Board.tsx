@@ -349,7 +349,7 @@ export function Board() {
         <ScrewSet step="stabScrew" y={Y.pcbBot} flip />
       )}
       {at('trayScrew') >= 0 && b.inCase && (
-        // đầu ốc chìm trong lỗ plate, tì mặt PCB; khung nét đứt / vòng vàng ở miệng lỗ trên mặt plate (plateless: mặt PCB)
+        // đầu ốc chìm trong lỗ plate, tì mặt PCB; khung nét đứt / vòng xanh ở miệng lỗ trên mặt plate (plateless: mặt PCB)
         <ScrewSet
           step="trayScrew"
           y={Y.pcbTop}
@@ -366,7 +366,7 @@ export function Board() {
           />
         </group>
       )}
-      {/* mũi tên vàng chỉ vòng silicon chờ gá (cạnh trước) */}
+      {/* mũi tên xanh chỉ vòng silicon chờ gá (cạnh trước) */}
       {step === 'ring' && !b.ring && <HintArrow at={[0, 0.1, ctx.depth / 2 + 0.1]} size={1.6} />}
     </group>
   )

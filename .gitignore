@@ -9,3 +9,6 @@ server/data/
 
 .vercel
 .env*
+
+# model gốc người dùng đưa (Realforce quét 123MB), chỉ giữ bản convert ở public/models/desk
+assets/user-desk/*.glb

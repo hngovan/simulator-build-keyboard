@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 import {
   Ban,
   CalendarDays,
@@ -8,7 +7,7 @@ import {
   Check,
   EyeOff,
   ListFilter,
-  MoonStar,
+  Footprints,
   Handshake,
   Keyboard,
   MapPin,
@@ -31,7 +30,6 @@ import { Highlight } from './highlight'
 import { ResultCard } from './ResultCard'
 import { orderLook, useOrderThumb } from './orderThumb'
 import { OrderViewer } from './OrderViewer'
-import { EndDayDialog } from '@/features/desktop/EndDayDialog'
 
 /** Ảnh bàn phím ghép sẵn theo đơn; bấm để mở xem 3D chi tiết (chờ chụp xong thì hiện ô trống) */
 function OrderImage({ order, className }: { order: Order; className?: string }) {
@@ -676,7 +674,6 @@ export function Messenger() {
     ...rejected.map((o, i) => ({ kind: 'rejected' as const, order: o, angry: i >= DECLINE_FREE })),
   ]
   const [filter, setFilter] = useState<Filter>('all')
-  const [endDay, setEndDay] = useState(false)
   const shown = threads.filter((t) => inFilter(t, filter))
   // hội thoại đang mở lưu ở store: đóng gói đơn xong thì bàn build mở thẳng hội thoại đơn đó
   const pick = useGame((s) => s.messengerPick)
@@ -718,25 +715,25 @@ export function Messenger() {
           ))}
           {!threads.length ? (
             <Muted className="px-2 py-3">
-              Hết tin nhắn mới, bấm Kết thúc ngày để nhận đơn mới nhé.
+              Hết tin nhắn mới: đứng dậy ra lịch trên tường bấm Kết thúc ngày để nhận đơn mới nhé.
             </Muted>
           ) : (
             !shown.length && <Muted className="px-2 py-3">Không có hội thoại nào ở mục này.</Muted>
           )}
         </div>
-        {/* kết thúc ngày: mở popup tổng kết như icon "Kết thúc ngày" ở desktop (portal ra body, không kẹt trong cửa sổ);
+        {/* kết thúc ngày chỉ còn ở lịch treo tường trong phòng: nút đứng dậy đi ra đó;
             cao h-16 bằng thanh trả lời bên khung chat */}
         <div className="flex h-16 shrink-0 items-center px-1">
           <Button
             tone="green"
             className="flex w-full items-center justify-center gap-2 [&_svg]:size-4"
-            onClick={() => setEndDay(true)}
+            title="Kết thúc ngày ở lịch treo tường"
+            onClick={() => useGame.getState().standUp('pc')}
           >
-            <MoonStar />
-            Kết thúc ngày
+            <Footprints />
+            Đứng dậy ra lịch
           </Button>
         </div>
-        {endDay && createPortal(<EndDayDialog onClose={() => setEndDay(false)} />, document.body)}
       </div>
       <div className={cn('flex min-w-0 flex-1', !chatOpen && '@max-xl:hidden')}>
         {current ? (

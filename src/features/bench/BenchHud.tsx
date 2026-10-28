@@ -12,7 +12,7 @@ import {
 } from '@/data/steps'
 import { SCREW_FULL, SWITCHES, TOOLS, screwLevel } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
-import { FlipVertical2, ListOrdered, Monitor, PackageCheck, Undo2 } from 'lucide-react'
+import { FlipVertical2, Footprints, ListOrdered, Monitor, PackageCheck, Undo2 } from 'lucide-react'
 import { Alert, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
@@ -23,7 +23,7 @@ import { FeetPanel, FoamPanel, LubePanel, RingPanel, SolderPanel, StabModPanel }
 import { DevCasePanel } from './DevCasePanel'
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
-import { CamModeButton, ResetCamButton } from './CamModeButton'
+import { ResetCamButton } from './CamModeButton'
 import { useBenchKey } from './useBenchKey'
 import { stabModHint, stabModRules } from '@/data/mods'
 import { OrderPicker } from './EmptyBenchHud'
@@ -166,7 +166,7 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
   const { zoomToPC, toggleFlip, deliver, undo } = useGame.getState()
   // phím Q lật xem đáy / lật lại mặt trên (như nút vàng)
   useBenchKey('KeyQ', canFlip ? toggleFlip : noop)
-  // Ctrl+Z để hoàn tác (phím R đổi kéo / xoay, Space về góc nhìn mặc định: CamModeButton)
+  // Ctrl+Z để hoàn tác (Space về góc nhìn mặc định: ResetCamButton)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const s = useGame.getState()
@@ -184,6 +184,12 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
       <div className="flex gap-2">
         <IconButton tone="blue" icon={<Monitor />} label="Về máy tính" onClick={zoomToPC} />
         <IconButton
+          tone="green"
+          icon={<Footprints />}
+          label="Đứng dậy đi lại trong phòng"
+          onClick={() => useGame.getState().standUp('bench')}
+        />
+        <IconButton
           tone="yellow"
           icon={<FlipVertical2 />}
           label={isFlipped ? 'Lật lại mặt trên (Q)' : 'Lật xem đáy (Q)'}
@@ -197,7 +203,6 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
           disabled={!canUndo}
         />
         <ResetCamButton />
-        <CamModeButton />
         {/* danh sách đơn: xem tiến độ, đổi sang đơn khác (bản đang dở được cất lại nguyên trạng) */}
         <IconButton
           tone="blue"

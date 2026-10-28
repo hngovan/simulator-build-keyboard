@@ -50,15 +50,20 @@ const FEET_RAISE = 1.8 * U
 const STEM_TOP_Y = TABLE + (CAD.stem.top + 1.65) * U // đỉnh slider khi còn chân
 const BAND = v(-4.9, TABLE + 0.03, -4) // băng Urgo đầu tiên, các băng sau xếp về phía trước
 const BAND_STEP = 0.7
-const PAD_AWAY = v(-7.3, TABLE + 0.03, -1.6) // phần gạc bỏ đi: để cạnh kéo (góc trái)
+const PAD_AWAY = v(-6.3, TABLE + 0.03, -1.2) // phần gạc bỏ đi: để cạnh kéo (góc trái)
+/**
+ * phóng to kìm / kéo so với cỡ cũ cho gần tỉ lệ thật với stab (stab trên bàn đã phóng B lần; người dùng: "kìm cắt và
+ * kéo hơi nhỏ so với stab"). Không phóng đủ tỉ lệ thật (kéo 20cm × B sẽ dài hơn nửa bàn)
+ */
+const TOOL_K = 1.8
 // kéo (góc trái) và kìm (cạnh stem) nằm dọc, mũi chĩa ra sau, 2 mũi thẳng hàng ở TIP_Z (trong khung trắng):
-// mũi kéo cách đinh tán 0.68, mũi kìm cách chốt 0.65
+// mũi kéo cách đinh tán 0.68, mũi kìm cách chốt 0.65 (nhân TOOL_K)
 const TIP_Z = -3.75
-const SCISSORS_IDLE = v(-7.5, TABLE + 0.04, TIP_Z + 0.68)
+const SCISSORS_IDLE = v(-7.5, TABLE + 0.04 * TOOL_K, TIP_Z + 0.68 * TOOL_K)
 // nằm dọc giữa băng Urgo và cột slider đầu tiên, mũi chĩa lên (−z)
-const CLIPPER_IDLE = v(-2.95, TABLE + 0.09, TIP_Z + 0.45)
+const CLIPPER_IDLE = v(-2.95, TABLE + 0.09 * TOOL_K, TIP_Z + 0.45 * TOOL_K)
 /** chỉ có stab dài ở hàng đầu (housing trái lấn sang chỗ kìm): kìm dời sang bên trái kéo */
-const CLIPPER_AWAY = v(SCISSORS_IDLE.x - 1.7, TABLE + 0.09, TIP_Z + 0.45)
+const CLIPPER_AWAY = v(SCISSORS_IDLE.x - 1.7 * TOOL_K, TABLE + 0.09 * TOOL_K, TIP_Z + 0.45 * TOOL_K)
 /** góc kìm lúc nằm chờ / lúc kẹp chân (đều mũi −z: nằm dọc, đưa từ phía trước vào) */
 const CLIPPER_ROT_IDLE = Math.PI / 2
 const CLIPPER_ROT_CUT = Math.PI / 2
@@ -125,15 +130,15 @@ function layoutSets(sets: StabSet[]) {
   // kìm nằm dọc (rộng ~1.2, dài ~2.4 về trước): housing / slider hàng đầu lấn sang mép phải kìm thì dời kìm
   const clipperHit = list.some(
     (L) =>
-      L.hz < CLIPPER_IDLE.z + 2.4 &&
-      Math.min(L.hx[0] - 0.6, ...L.stand.map((p) => p.x - 0.25)) < CLIPPER_IDLE.x + 0.6,
+      L.hz < CLIPPER_IDLE.z + 2.4 * TOOL_K &&
+      Math.min(L.hx[0] - 0.6, ...L.stand.map((p) => p.x - 0.25)) < CLIPPER_IDLE.x + 0.6 * TOOL_K,
   )
   const clipper = clipperHit ? CLIPPER_AWAY : CLIPPER_IDLE
   return {
     layout: list,
     clipper,
     table: {
-      w: 2 * Math.max(TABLE_MIN.w / 2, toolX + 2.6, -Math.min(clipper.x, SCISSORS_IDLE.x) + 1),
+      w: 2 * Math.max(TABLE_MIN.w / 2, toolX + 2.6, -Math.min(clipper.x, SCISSORS_IDLE.x) + TOOL_K),
       d: 2 * Math.max(TABLE_MIN.d / 2, front),
     },
     // 2 hũ cách nhau đủ chỗ cho nhãn ("Housing + slider") nằm dưới hũ trước
@@ -421,7 +426,7 @@ function AnimatedClipper({ layout, idle }: { layout: SetLayout[]; idle: THREE.Ve
     }
     const [j, q] = slotOf(p, total)
     // tâm 2 chân (y = -0.75mm của slider còn chân); kìm chĩa mũi về -z
-    const foot = layout[j >> 1].standFeet[j & 1].clone().add(v(0, -0.75 * U, 0.65))
+    const foot = layout[j >> 1].standFeet[j & 1].clone().add(v(0, -0.75 * U, 0.65 * TOOL_K))
     const go = ease(seg(q, 0, 0.4)) * (1 - ease(seg(q, 0.6, 1)))
     g.position.lerpVectors(idle, foot, ease(seg(q, 0, 0.4))).lerp(idle, ease(seg(q, 0.6, 1)))
     g.rotation.set(0, CLIPPER_ROT_IDLE + (CLIPPER_ROT_CUT - CLIPPER_ROT_IDLE) * go, 0)
@@ -444,7 +449,7 @@ function AnimatedClipper({ layout, idle }: { layout: SetLayout[]; idle: THREE.Ve
   })
   return (
     <>
-      <group ref={ref}>
+      <group ref={ref} scale={TOOL_K}>
         <Clipper />
       </group>
       <group ref={pieces} visible={false}>
@@ -478,8 +483,8 @@ function AnimatedScissors({ layout, applied }: { layout: SetLayout[]; applied: b
     const [g, t] = p === null ? [0, applied ? 1 : 0] : slotOf(p, layout.length)
     const band = layout[g].band
     // kéo dựng đứng (mặt mở của 2 lưỡi thẳng đứng), mũi chĩa về -z, cắt ngang bề rộng băng
-    const cut1 = band.clone().add(v(-URGO.padLen / 2, LIFT, 0.4))
-    const cut2 = band.clone().add(v(URGO.padLen / 2, LIFT, 0.4))
+    const cut1 = band.clone().add(v(-URGO.padLen / 2, LIFT, 0.4 * TOOL_K))
+    const cut2 = band.clone().add(v(URGO.padLen / 2, LIFT, 0.4 * TOOL_K))
     sc.position.lerpVectors(SCISSORS_IDLE, cut1, ease(seg(t, 0.12, 0.2)))
     if (t > 0.2) sc.position.lerpVectors(cut1, cut2, ease(seg(t, 0.25, 0.32)))
     if (t > 0.37) sc.position.lerpVectors(cut2, SCISSORS_IDLE, ease(seg(t, 0.37, 0.45)))
@@ -490,7 +495,7 @@ function AnimatedScissors({ layout, applied }: { layout: SetLayout[]; applied: b
     setScissors(sc.children[0], 1 - Math.max(snip(0.2), snip(0.32)))
   })
   return (
-    <group ref={ref} position={SCISSORS_IDLE}>
+    <group ref={ref} position={SCISSORS_IDLE} scale={TOOL_K}>
       <Scissors />
     </group>
   )
@@ -588,7 +593,7 @@ export function StabModStation() {
   const rule = (k: StabModKind) => rules.find((r) => r.kind === k)!
   const k0 = ctx.width / 12
   const busy = !!anim
-  // thao tác nên làm tiếp theo (mũi tên vàng)
+  // thao tác nên làm tiếp theo (mũi tên xanh)
   const next = ORDER.find((kind) => rule(kind).needed && rule(kind).allowed && !mods[kind])
 
   const {
@@ -786,8 +791,8 @@ export function StabModStation() {
         <MissingSlot
           at={CLIPPER_AT.clone()
             .setY(TABLE)
-            .add(v(0, 0, 0.3))}
-          size={[1.2, 2.2]}
+            .add(v(0, 0, 0.3 * TOOL_K))}
+          size={[1.2 * TOOL_K, 2.2 * TOOL_K]}
           label="Thiếu kìm cắt"
           onAct={askBuy('tool')}
         />

@@ -1,4 +1,4 @@
-import { ClipboardList, Monitor, ShoppingBag, UsersRound, X } from 'lucide-react'
+import { ClipboardList, Footprints, Monitor, ShoppingBag, UsersRound, X } from 'lucide-react'
 import { useGame } from '@/store'
 import { CATS } from '@/data/parts'
 import { Button, IconButton, Muted, TitleBar, TitleButton } from '@/components/ui'
@@ -11,7 +11,7 @@ import {
   type OrderEntry,
 } from '@/components/game/OrderCard'
 import { StatusChips } from '@/components/game/StatusChips'
-import { CamModeButton, ResetCamButton } from './CamModeButton'
+import { ResetCamButton } from './CamModeButton'
 import { useBenchKey } from './useBenchKey'
 
 /**
@@ -57,13 +57,19 @@ export function OrderPicker() {
           {short ? (
             <>
               <div>
-                Đơn của <b>{short.order.customer}</b> còn thiếu linh kiện, mua đủ rồi quay lại bàn
-                build:
+                Đơn của <b>{short.order.customer}</b> còn thiếu linh kiện, mua đủ (đặt Shopii thì ra
+                cửa nhận hàng) rồi quay lại bàn build:
               </div>
               <ul className="flex flex-col gap-1">
                 {short.missing.map((m) => (
                   <li key={m.cat} className="rounded-lg bg-panel-2 px-3 py-1.5 text-sm">
                     <b>{CATS[m.cat]}</b>: <span className="text-yellow">{m.msg}</span>
+                    {/* đã đặt Shopii cho đơn này, chưa nhận */}
+                    {s.parcels.some((p) =>
+                      p.items.some(
+                        (it) => it.kind === 'part' && it.cat === m.cat && p.job === short.order.id,
+                      ),
+                    ) && <span className="text-muted"> · đang giao, tới cửa thì ra nhận</span>}
                   </li>
                 ))}
               </ul>
@@ -152,8 +158,13 @@ export function EmptyBenchHud() {
       <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
         <div className="flex gap-2">
           <IconButton tone="blue" icon={<Monitor />} label="Về máy tính" onClick={s.zoomToPC} />
+          <IconButton
+            tone="green"
+            icon={<Footprints />}
+            label="Đứng dậy đi lại trong phòng"
+            onClick={() => s.standUp('bench')}
+          />
           <ResetCamButton />
-          <CamModeButton />
         </div>
         <StatusChips />
       </div>

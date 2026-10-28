@@ -1,5 +1,5 @@
-import { useLayoutEffect, useMemo, useRef, type RefObject } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import * as THREE from 'three'
@@ -7,13 +7,50 @@ import { SCREW_STEPS, Y } from '@/data/steps'
 import { KEYCAP_COLORS, TOOLS, screwLevel } from '@/data/parts'
 import type { Key } from '@/types'
 import { useGame } from '@/store'
-import { MM } from './models/Switch'
 import { DIPLOMA_URL, createDiploma } from './models/diplomaModel'
 import { BIT_SWAP_MS, ElectricScrewdriver, ManualScrewdriver } from './models/HandTools'
 import { Clickable } from './stations/StationKit'
-import { Monitor, PcTower } from './models/Computer'
-import { MONITOR_AT, MONITOR_ROT } from './models/computerLayout'
 import { DisplayKeyboard } from './models/ShelfDisplay'
+import {
+  CALENDAR,
+  DESK,
+  FLOOR_Y,
+  FRONT_Z,
+  M,
+  DOORWAY,
+  HALL,
+  HALL_DOOR_Z,
+  HALL_WINDOW,
+  HALL_PLANT,
+  RACK,
+  BACK_M,
+  FRONT_M,
+  HALF_W,
+  WALL_T,
+  SHIP_SPOT,
+  PC_DESK,
+  ROOM,
+  ROOM_CZ,
+  WINDOW,
+  WORK_TABLE,
+} from './room/roomLayout'
+import { PcDesk } from './room/PcDesk'
+import { Stool } from './room/Stool'
+import { Cable, Outlet } from './room/Wiring'
+import { MetalRack, PanelDoor } from './room/HallProps'
+import { ModelPainting } from './room/ModelPainting'
+import { drawPhoenix } from './room/phoenixArt'
+import { drawBanknote } from './room/banknoteArt'
+import { drawQmk } from './room/qmkArt'
+import { CanvasPainting } from './room/CanvasPainting'
+import { FrogPainting } from './room/FrogPainting'
+import { RoomWindow } from './room/RoomWindow'
+import { WallCalendar } from './room/WallCalendar'
+import { DoorParcels, ShipBoxes } from './room/DoorParcels'
+import { useRoom } from './room/roomStore'
+import { sitAtBench } from './room/sitAtBench'
+import { useHoverOutline } from './common/hoverOutline'
+import { CuttingMat } from './common/CuttingMat'
 
 // Phòng làm việc quanh bàn build. Model + texture từ Poly Haven (CC0), tải bằng `bun run fetch:room`;
 // hộp đồ nghề từ Sketchfab (CC BY 4.0, xem Cài đặt → Ghi công)
@@ -22,9 +59,11 @@ const MODELS = {
   desk: `${DIR}/wooden_table_02.glb`,
   plant: `${DIR}/potted_plant_04.glb`,
   shelf: `${DIR}/Shelf_01.glb`,
-  chair: `${DIR}/painted_wooden_chair_01.glb`,
   picture: `${DIR}/hanging_picture_frame_01.glb`,
   clock: `${DIR}/wall_clock.glb`,
+  workTable: `${DIR}/WoodenTable_03.glb`,
+  lamp: `${DIR}/desk_lamp_arm_01.glb`,
+  ceilingLamp: `${DIR}/modern_ceiling_lamp_01.glb`,
 }
 Object.values(MODELS).forEach((url) => useGLTF.preload(url))
 
@@ -40,16 +79,14 @@ const WALL_TEX = {
   roughnessMap: `${TEX}/beige_wall_001_rough_1k.jpg`,
 }
 
-/** 1 mét theo đơn vị cảnh (u = 19.05mm); model Poly Haven dùng mét */
-const M = 1000 * MM
-// Kích thước model (m), đo từ file glb
-const DESK = { w: 1.134, d: 0.706, h: 0.799 }
 /** độ dày mặt bàn (m), đo bằng tia chiếu từ dưới lên */
 const DESK_TOP = 0.026
 /** font chữ viết tay cho chữ khắc dưới bàn (Caveat, SIL OFL 1.1 — public/licenses/Caveat-OFL.txt) */
 const CARVE_FONT = '/fonts/Caveat.ttf'
-const FLOOR_Y = Y.table - DESK.h * M
-/** kệ sách bên phải bàn (model rộng 1m, sâu 0.257m) */
+/**
+ * kệ sách (model rộng 1m, sâu 0.257m): toạ độ dựng như kệ dựa tường sau bên phải bàn, rồi cả khối xoay 180°
+ * sang tường trước (sau lưng khi ngồi bàn build) → tâm thật ở x = −SHELF_X (`ShelfWall`)
+ */
 const SHELF_X = (DESK.w / 2 + 0.65) * M
 /**
  * Mặt các tầng kệ, đếm từ trên xuống (m so với mặt bàn, đo bằng tia chiếu): tầng 1 = hộp đồ nghề,
@@ -187,27 +224,16 @@ const SHELF_KEYBOARDS: {
     accent: 'mint',
   },
 ]
-// Phòng 3.6m × 3.6m, cao 2.6m; tường sau sát mép sau bàn
-const ROOM = { w: 3.6 * M, d: 3.6 * M, h: 2.6 * M, back: -(DESK.d / 2 + 0.05) * M }
-const ROOM_CZ = ROOM.back + ROOM.d / 2
 /** tâm chiều sâu kệ (kệ dựa tường sau) */
 const SHELF_Z = ROOM.back + 0.13 * M
 /** mép trước chân đỡ bàn phím: lùi vào 5cm so với mép kệ (2cm cũ nhìn như sắp rớt) */
 const SHELF_FRONT = ROOM.back + 0.205 * M
-const FRONT_Z = ROOM.back + ROOM.d
-/** Vùng tâm camera được kéo tới: trong 4 bức tường, chừa 0.2m; cao từ sát sàn tới tầm kệ trên bàn */
-const PAD = 0.2 * M
-export const ROOM_BOUNDS = {
-  minX: -ROOM.w / 2 + PAD,
-  maxX: ROOM.w / 2 - PAD,
-  minZ: ROOM.back + PAD,
-  maxZ: FRONT_Z - PAD,
-  minY: FLOOR_Y + 0.05 * M,
-  maxY: 0.8 * M,
-  /** camera không được chui xuống dưới sàn */
-  floorY: FLOOR_Y + 0.03 * M,
-}
-
+/** đèn tay đòn trên bàn build (Poly Haven `desk_lamp_arm_01`, kẹp mép bàn): tâm x (m), góc xoay, ổ cắm tường sau (x, m) */
+const LAMP = { x: 0.42, rot: Math.PI / 2, outlet: 0.62 }
+/** màu sơn tường: xám xanh dịu mắt (người dùng đổi từ be) */
+const WALL_COLOR = '#8796a3'
+/** phào chân tường gỗ sẫm */
+const SKIRT = new THREE.MeshStandardMaterial({ color: '#5b4636', roughness: 0.6 })
 type MapSet = Record<keyof typeof FLOOR_TEX, THREE.Texture>
 
 /** Lặp texture theo kích thước bề mặt (1 ô = tile mét); clone để mỗi bề mặt có repeat riêng */
@@ -339,7 +365,7 @@ function ShelfToolBox(props: JSX.IntrinsicElements['group']) {
 
 /**
  * Tua vít đang dùng nằm thẳng trên mặt bàn, chỉ ở bước vặn / tháo vít. Đã mua tua vít điện thì bày thêm cây còn lại
- * bên cạnh: rê chuột viền vàng, bấm để đổi sang dùng cây đó (`setScrewPick`)
+ * bên cạnh: rê chuột viền xanh, bấm để đổi sang dùng cây đó (`setScrewPick`)
  */
 function DeskTools(props: JSX.IntrinsicElements['group']) {
   // mặt tì vô hình ngang mặt bàn cho RestOn bắn tia xuống
@@ -410,67 +436,41 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
 function Wall({
   maps,
   w,
+  h = ROOM.h,
   position,
   rotationY = 0,
+  skirt = true,
 }: {
   maps: MapSet
   w: number
+  /** cao (mặc định hết chiều cao phòng; mảng tường trên ô cửa thì thấp) */
+  h?: number
   position: [number, number, number]
   rotationY?: number
+  /** phào chân tường (mảng tường trên ô cửa không có) */
+  skirt?: boolean
 }) {
-  const t = useTiled(maps, w, ROOM.h, 1.5)
+  const t = useTiled(maps, w, h, 1.5)
   // Đèn chính chiếu 1 hướng nên tường quay khác hướng bị tối / lệch màu. Giữ màu tường trước mặt
   // (sau bàn, pháp tuyến +z) làm chuẩn: các tường khác nhận đèn như thể cũng quay mặt về +z
   const geo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(w, ROOM.h)
+    const g = new THREE.PlaneGeometry(w, h)
     const n = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), -rotationY)
     const normals = g.getAttribute('normal')
     for (let i = 0; i < normals.count; i++) normals.setXYZ(i, n.x, n.y, n.z)
     return g
-  }, [w, rotationY])
+  }, [w, h, rotationY])
   return (
-    <mesh geometry={geo} position={position} rotation-y={rotationY} receiveShadow>
-      <meshStandardMaterial {...t} />
-    </mesh>
-  )
-}
-
-/** Cửa ra vào trên bức tường sau lưng người chơi, nhìn từ bên trong phòng. */
-function Door() {
-  const w = 0.9 * M
-  const h = 2.1 * M
-  const z = FRONT_Z - 0.08
-  const frame = '#eee7d9'
-  return (
-    <group position={[0, FLOOR_Y, z]}>
-      <mesh position-y={h / 2} castShadow>
-        <boxGeometry args={[w, h, 0.1 * M]} />
-        <meshStandardMaterial color="#826248" roughness={0.76} />
+    <group position={position} rotation-y={rotationY}>
+      <mesh geometry={geo} receiveShadow>
+        {/* tường sơn xám xanh: bỏ ảnh màu be, giữ vân trát (normal / roughness) */}
+        <meshStandardMaterial {...t} map={null} color={WALL_COLOR} />
       </mesh>
-      {[w * -0.33, 0, w * 0.33].map((x) => (
-        <mesh key={x} position={[x, h * 0.5, -0.06 * M]}>
-          <boxGeometry args={[0.018 * M, h * 0.88, 0.012 * M]} />
-          <meshStandardMaterial color="#6c4d36" roughness={0.8} />
+      {skirt && (
+        <mesh position={[0, -h / 2 + 0.045 * M, 0.008 * M]} material={SKIRT} receiveShadow>
+          <boxGeometry args={[w, 0.09 * M, 0.016 * M]} />
         </mesh>
-      ))}
-      {[-1, 1].map((side) => (
-        <mesh key={side} position={[side * (w / 2 + 0.035 * M), h / 2, -0.07 * M]}>
-          <boxGeometry args={[0.07 * M, h + 0.08 * M, 0.08 * M]} />
-          <meshStandardMaterial color={frame} roughness={0.8} />
-        </mesh>
-      ))}
-      <mesh position={[0, h + 0.04 * M, -0.07 * M]}>
-        <boxGeometry args={[w + 0.14 * M, 0.08 * M, 0.08 * M]} />
-        <meshStandardMaterial color={frame} roughness={0.8} />
-      </mesh>
-      <mesh position={[w * 0.35, h * 0.48, -0.12 * M]} rotation-x={Math.PI / 2}>
-        <cylinderGeometry args={[0.035 * M, 0.035 * M, 0.025 * M, 16]} />
-        <meshStandardMaterial color="#d2b06f" metalness={0.85} roughness={0.25} />
-      </mesh>
-      <mesh position={[0, 0.008 * M, -0.19 * M]} rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[1.1 * M, 0.52 * M]} />
-        <meshStandardMaterial color="#48413a" roughness={1} />
-      </mesh>
+      )}
     </group>
   )
 }
@@ -526,6 +526,215 @@ function ShelfDiploma(props: JSX.IntrinsicElements['group']) {
   )
 }
 
+/**
+ * Bàn build khi đang đi lại: hộp vô hình phủ mặt bàn chặn bấm nhầm đồ trên bàn, rê chuột viền xanh cả bàn,
+ * bấm thì camera bay về góc nhìn bàn build rồi ngồi xuống làm (thoát chế độ đi lại)
+ */
+function BenchSeat() {
+  const walk = useGame((s) => s.walk)
+  const desk = useRef<THREE.Group>(null)
+  const [hover, setHover] = useState(false)
+  useHoverOutline(desk, hover && walk)
+  const box = useMemo(() => {
+    const g = new THREE.BoxGeometry(DESK.w * M, 0.4 * M, DESK.d * M)
+    // không có pháp tuyến: viền hover bỏ qua hộp vô hình này
+    g.deleteAttribute('normal')
+    return g
+  }, [])
+  return (
+    <>
+      <group ref={desk}>
+        <Model url={MODELS.desk} position-y={FLOOR_Y} />
+      </group>
+      {walk && (
+        <mesh
+          geometry={box}
+          position-y={Y.table + 0.18 * M}
+          onPointerOver={(e: ThreeEvent<PointerEvent>) => {
+            e.stopPropagation()
+            setHover(true)
+            document.body.style.cursor = 'pointer'
+            useRoom.setState({ hover: 'Ngồi vào bàn build' })
+          }}
+          onPointerOut={() => {
+            setHover(false)
+            document.body.style.cursor = 'auto'
+            useRoom.setState({ hover: null })
+          }}
+          onPointerDown={(e: ThreeEvent<PointerEvent>) => e.stopPropagation()}
+          onClick={(e: ThreeEvent<MouseEvent>) => {
+            e.stopPropagation()
+            if (e.delta <= 6) sitAtBench()
+          }}
+        >
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
+    </>
+  )
+}
+
+/**
+ * Trần sơn cùng màu + vân trát như tường. Mặt trần quay xuống nên đèn chính (chiếu từ trên) không rọi tới → tối, ngả nâu;
+ * giả pháp tuyến như tường (nhận đèn như mặt quay +z) cho trần ra đúng màu sơn
+ */
+function Ceiling({
+  maps,
+  w,
+  d,
+  position,
+}: {
+  maps: MapSet
+  w: number
+  d: number
+  position: [number, number, number]
+}) {
+  const t = useTiled(maps, w, d, 1.5)
+  const geo = useMemo(() => {
+    const g = new THREE.PlaneGeometry(w, d)
+    // xoay x π/2: trục y của mặt phẳng thành +z thế giới
+    const normals = g.getAttribute('normal')
+    for (let i = 0; i < normals.count; i++) normals.setXYZ(i, 0, 1, 0)
+    return g
+  }, [w, d])
+  return (
+    <mesh geometry={geo} rotation-x={Math.PI / 2} position={position}>
+      <meshStandardMaterial {...t} map={null} color={WALL_COLOR} />
+    </mesh>
+  )
+}
+
+/** 1 mảng tường dọc trục z ở x (tường hông), từ z0 tới z1, đáy cao y0 so với sàn (m); face = hướng mặt (+1 / −1 theo x) */
+function SideWall({
+  maps,
+  x,
+  z0,
+  z1,
+  y0 = 0,
+  y1 = ROOM.h / M,
+  face,
+}: {
+  maps: MapSet
+  x: number
+  z0: number
+  z1: number
+  y0?: number
+  y1?: number
+  face: 1 | -1
+}) {
+  return (
+    <Wall
+      maps={maps}
+      w={(z1 - z0) * M}
+      h={(y1 - y0) * M}
+      position={[x * M, FLOOR_Y + ((y0 + y1) / 2) * M, ((z0 + z1) / 2) * M]}
+      rotationY={(face * Math.PI) / 2}
+      skirt={y0 === 0}
+    />
+  )
+}
+
+const TRIM = new THREE.MeshStandardMaterial({ color: '#8a5a32', roughness: 0.6 })
+
+/** Tường trái (dày 10cm) khoét ô cửa sang hành lang: mặt trong phòng + mặt phía hành lang + nẹp gỗ quanh ô cửa */
+function LeftWall({ maps }: { maps: MapSet }) {
+  const back = BACK_M
+  const front = FRONT_M
+  const { z0, z1, h } = DOORWAY
+  /** tâm bề dày tường */
+  const wx = -HALF_W - WALL_T / 2
+  const pieces = (x: number, face: 1 | -1, from: number) => (
+    <>
+      <SideWall maps={maps} x={x} z0={from} z1={z0} face={face} />
+      <SideWall maps={maps} x={x} z0={z1} z1={front} face={face} />
+      <SideWall maps={maps} x={x} z0={z0} z1={z1} y0={h} face={face} />
+    </>
+  )
+  // nẹp cửa: 2 cột + đầu cửa, phủ kín bề dày tường
+  const jamb = (z: number) => (
+    <mesh position={[wx * M, FLOOR_Y + (h / 2) * M, z * M]} material={TRIM} castShadow>
+      <boxGeometry args={[0.14 * M, h * M, 0.06 * M]} />
+    </mesh>
+  )
+  return (
+    <>
+      {pieces(-HALF_W, 1, back)}
+      {pieces(HALL.x1, -1, HALL.z0)}
+      {jamb(z0 - 0.03)}
+      {jamb(z1 + 0.03)}
+      <mesh position={[wx * M, FLOOR_Y + (h + 0.03) * M, ((z0 + z1) / 2) * M]} material={TRIM}>
+        <boxGeometry args={[0.14 * M, 0.06 * M, (z1 - z0 + 0.12) * M]} />
+      </mesh>
+      {/* ngưỡng cửa */}
+      <mesh position={[wx * M, FLOOR_Y + 0.004 * M, ((z0 + z1) / 2) * M]} material={TRIM}>
+        <boxGeometry args={[0.1 * M, 0.008 * M, (z1 - z0) * M]} />
+      </mesh>
+    </>
+  )
+}
+
+/**
+ * Hành lang ngoài ô cửa: sàn, trần, tường ngoài, 2 đầu (cửa chính ở đầu xa, cửa sổ rèm lá ở đầu gần);
+ * hàng giao tới để cạnh cửa chính, đơn đóng gói chờ gửi + chậu cây nhỏ dựa tường ngoài cạnh cửa sổ
+ */
+function Hallway({ maps }: { maps: MapSet }) {
+  const { x0, x1, z0, z1 } = HALL
+  const w = (x1 - x0) * M
+  const d = (z1 - z0) * M
+  const cx = ((x0 + x1) / 2) * M
+  const cz = ((z0 + z1) / 2) * M
+  const floor = useTiled(useTexture(FLOOR_TEX) as MapSet, w, d, 1.2)
+  const wallY = FLOOR_Y + ROOM.h / 2
+  return (
+    <group>
+      <mesh
+        rotation-x={-Math.PI / 2}
+        position={[cx, FLOOR_Y, cz]}
+        receiveShadow
+        onClick={(e: ThreeEvent<MouseEvent>) => {
+          if (!useGame.getState().walk || e.delta > 6) return
+          e.stopPropagation()
+          useRoom.setState({ goal: [e.point.x, e.point.z] })
+        }}
+      >
+        <planeGeometry args={[w, d]} />
+        <meshStandardMaterial {...floor} />
+      </mesh>
+      <Ceiling maps={maps} w={w} d={d} position={[cx, FLOOR_Y + ROOM.h, cz]} />
+      <SideWall maps={maps} x={x0} z0={z0} z1={z1} face={1} />
+      <Wall maps={maps} w={w} position={[cx, wallY, z0 * M]} />
+      <Wall maps={maps} w={w} position={[cx, wallY, z1 * M]} rotationY={Math.PI} />
+      {/* cuối hành lang: cửa chính ở tường bên trái, kệ sắt để hàng giao tới + ghế đôn dựa tường cuối */}
+      <group position={[x0 * M, FLOOR_Y, HALL_DOOR_Z * M]} rotation-y={Math.PI / 2} scale={M}>
+        <PanelDoor />
+      </group>
+      <group position={[RACK.x * M, FLOOR_Y, RACK.z * M]} scale={M}>
+        <MetalRack />
+        <DoorParcels />
+      </group>
+      <group position={[(RACK.x + RACK.w / 2 + 0.3) * M, FLOOR_Y, (z0 + 0.35) * M]} scale={M}>
+        <Stool />
+      </group>
+      {/* đầu gần (cạnh chậu cây): cửa sổ rèm lá như trong phòng */}
+      <group
+        position={[HALL_WINDOW.x * M, FLOOR_Y + HALL_WINDOW.sill * M, z1 * M]}
+        rotation-y={Math.PI}
+        scale={M}
+      >
+        <RoomWindow size={HALL_WINDOW} />
+      </group>
+      <group position={[SHIP_SPOT.x * M, FLOOR_Y, SHIP_SPOT.z * M]} scale={M}>
+        <ShipBoxes />
+      </group>
+      <Model
+        url={MODELS.plant}
+        position={[HALL_PLANT.x * M, FLOOR_Y, HALL_PLANT.z * M]}
+        scale={1.8}
+      />
+    </group>
+  )
+}
+
 export function Room() {
   const floorMaps = useTexture(FLOOR_TEX) as MapSet
   const wallMaps = useTexture(WALL_TEX) as MapSet
@@ -533,102 +742,196 @@ export function Room() {
   const wallY = FLOOR_Y + ROOM.h / 2
   return (
     <group>
-      {/* bàn học: mặt bàn trùng mặt bàn build */}
-      <Model url={MODELS.desk} position-y={FLOOR_Y} />
+      {/* bàn học: mặt bàn trùng mặt bàn build (BenchSeat bên dưới) */}
       <DeskCarving />
-      <Model url={MODELS.chair} position={[0, FLOOR_Y, 0.85 * M]} rotation-y={Math.PI} />
-      {/* cây nhỏ góc phải (đã bỏ đèn bàn) */}
-      <Model url={MODELS.plant} position={[0.45 * M, Y.table, -0.22 * M]} />
-      {/* kệ sách đứng sát tường, bên phải bàn */}
-      <Model url={MODELS.shelf} position={[SHELF_X, FLOOR_Y, ROOM.back]} />
-      {/* tầng 1: hộp đồ nghề (tua vít + kìm nằm trên bàn, góc phải phía sau); tầng 2: chứng chỉ thợ;
-          các tầng dưới: bàn phím ráp sẵn trên chân đỡ chữ A */}
-      <ShelfToolBox position={[SHELF_X, SHELF_TIERS[0], SHELF_Z]} />
-      {/* tầng 2: chứng chỉ dời sang trái, nhường chỗ bàn phím TKL đỏ */}
-      <ShelfDiploma position={[SHELF_X - 0.24 * M, SHELF_TIERS[1], SHELF_Z]} />
-      <group position={[SHELF_X + 0.12 * M, SHELF_TIERS[1], SHELF_FRONT]} scale={M}>
-        <DisplayKeyboard
-          caseId="exodus80"
-          color="red"
-          keycapKit="full"
-          keycapColor="black"
-          accent={KEYCAP_COLORS.black.hex}
-          variant={RED_TKL_VARIANT}
-          capOf={redBlackCaps}
-        />
+      {/* ghế đôn thấp trước bàn build + bàn máy tính */}
+      <group position={[0, FLOOR_Y, 0.62 * M]} scale={M}>
+        <Stool />
       </group>
-      {SHELF_KEYBOARDS.map((k) => (
-        <group
-          key={k.caseId}
-          position={[SHELF_X + k.x * M, SHELF_TIERS[k.tier], SHELF_FRONT]}
-          scale={M}
-        >
+      <group position={[PC_DESK.x * M, FLOOR_Y, 0.6 * M]} scale={M}>
+        <Stool />
+      </group>
+      {/* đèn tay đòn kẹp mép sau góc phải bàn build (thay chậu cây), dây điện xuống ổ cắm tường sau */}
+      <Model
+        url={MODELS.lamp}
+        position={[LAMP.x * M, Y.table, (-DESK.d / 2 + 0.05) * M]}
+        rotation-y={LAMP.rot}
+      />
+      <group scale={M} position={[0, FLOOR_Y, 0]}>
+        <Cable
+          points={[
+            [LAMP.x, DESK.h - 0.06, -DESK.d / 2 + 0.02],
+            [LAMP.x + 0.03, DESK.h - 0.25, BACK_M + 0.02],
+            [LAMP.x + 0.12, 0.45, BACK_M + 0.012],
+            [LAMP.outlet, 0.3 + 0.03 - 0.02, BACK_M + 0.02],
+          ]}
+        />
+        <Outlet position={[LAMP.outlet, 0.3, BACK_M]} />
+      </group>
+      {/* kệ chưng bàn phím: dựng như dựa tường sau rồi xoay 180° ra tường trước (sau lưng khi ngồi bàn build) */}
+      <group position-z={FRONT_Z + ROOM.back} rotation-y={Math.PI}>
+        <Model url={MODELS.shelf} position={[SHELF_X, FLOOR_Y, ROOM.back]} />
+        {/* tầng 1: hộp đồ nghề (tua vít + kìm nằm trên bàn, góc phải phía sau); tầng 2: chứng chỉ thợ;
+          các tầng dưới: bàn phím ráp sẵn trên chân đỡ chữ A */}
+        <ShelfToolBox position={[SHELF_X, SHELF_TIERS[0], SHELF_Z]} />
+        {/* tầng 2: chứng chỉ dời sang trái, nhường chỗ bàn phím TKL đỏ */}
+        <ShelfDiploma position={[SHELF_X - 0.24 * M, SHELF_TIERS[1], SHELF_Z]} />
+        <group position={[SHELF_X + 0.12 * M, SHELF_TIERS[1], SHELF_FRONT]} scale={M}>
           <DisplayKeyboard
-            caseId={k.caseId}
-            color={k.color}
-            keycapKit={k.caps}
-            keycapColor={k.capColor}
-            accent={KEYCAP_COLORS[k.accent].hex}
-            capOf={k.capOf}
+            caseId="exodus80"
+            color="red"
+            keycapKit="full"
+            keycapColor="black"
+            accent={KEYCAP_COLORS.black.hex}
+            variant={RED_TKL_VARIANT}
+            capOf={redBlackCaps}
           />
         </group>
-      ))}
+        {SHELF_KEYBOARDS.map((k) => (
+          <group
+            key={k.caseId}
+            position={[SHELF_X + k.x * M, SHELF_TIERS[k.tier], SHELF_FRONT]}
+            scale={M}
+          >
+            <DisplayKeyboard
+              caseId={k.caseId}
+              color={k.color}
+              keycapKit={k.caps}
+              keycapColor={k.capColor}
+              accent={KEYCAP_COLORS[k.accent].hex}
+              capOf={k.capOf}
+            />
+          </group>
+        ))}
+      </group>
       <DeskTools position={[0.18 * M, Y.table, -0.17 * M]} />
       {/* màn hình (bấm để về desktop) ở sau bên trái, thùng CPU đứng mép trái bàn; cả 2 thẳng theo cạnh bàn */}
-      <group position={MONITOR_AT} rotation-y={MONITOR_ROT} scale={M}>
-        <Monitor />
+      {/* đi lại: bấm bàn build để ngồi vào làm */}
+      <BenchSeat />
+      {/* bàn máy tính sát bên trái bàn build (màn hình bấm → vào máy tính) */}
+      <group position={[PC_DESK.x * M, FLOOR_Y, PC_DESK.z * M]} rotation-y={PC_DESK.rot} scale={M}>
+        <PcDesk />
       </group>
-      <group position={[-0.45 * M, Y.table, -0.08 * M]} scale={M}>
-        <PcTower />
+      {/* bàn gỗ làm việc dựa tường phải, có tấm lót cắt */}
+      <Model
+        url={MODELS.workTable}
+        position={[WORK_TABLE.x * M, FLOOR_Y, WORK_TABLE.z * M]}
+        rotation-y={-Math.PI / 2}
+      />
+      <CuttingMat
+        w={0.36 * M}
+        d={0.6 * M}
+        fit="stretch"
+        position={[WORK_TABLE.x * M, FLOOR_Y + WORK_TABLE.h * M + 0.02, WORK_TABLE.z * M]}
+      />
+      {/* cửa sổ lớn rèm lá phía trên bàn máy tính: lá gần khép, ít nắng lọt qua khe */}
+      <group position={[WINDOW.x * M, FLOOR_Y + WINDOW.sill * M, ROOM.back]} scale={M}>
+        <RoomWindow />
       </group>
+      {/* tranh "Ếch ngồi đáy giếng" ký tên keeb, tường sau bên phải lịch */}
+      <group position={[1.15 * M, FLOOR_Y + 1.55 * M, ROOM.back]} scale={M}>
+        <FrogPainting />
+      </group>
+      {/* tờ "300k" đóng khung (tiền meme, vẽ canvas), tường sau góc phải */}
+      <CanvasPainting
+        draw={drawBanknote}
+        px={840}
+        py={400}
+        w={0.46}
+        h={0.22}
+        mat={0.05}
+        frame="#b08a3e"
+        metal
+        position={[1.95 * M, FLOOR_Y + 1.6 * M, ROOM.back]}
+        scale={M}
+      />
+      {/* tranh graffiti "QMK" kiểu bàn phím (vẽ canvas, ký keeb), tường trái góc cạnh bàn máy tính */}
+      <CanvasPainting
+        draw={drawQmk}
+        px={900}
+        py={560}
+        w={0.8}
+        h={0.5}
+        mat={0}
+        frame="#18181c"
+        position={[-HALF_W * M, FLOOR_Y + 1.6 * M, ((BACK_M + DOORWAY.z0) / 2) * M]}
+        rotation-y={Math.PI / 2}
+        scale={M}
+      />
+      {/* lịch lớn trên tường sau, phía trên bàn build */}
+      <group position={[0, FLOOR_Y + CALENDAR.y * M, ROOM.back + 0.01 * M]} scale={M}>
+        <WallCalendar />
+      </group>
+      <Model url={MODELS.ceilingLamp} position={[0.1 * M, FLOOR_Y + (2.05 - 0.22) * M, ROOM_CZ]} />
 
-      <mesh rotation-x={-Math.PI / 2} position={[0, FLOOR_Y, ROOM_CZ]} receiveShadow>
+      <mesh
+        rotation-x={-Math.PI / 2}
+        position={[0, FLOOR_Y, ROOM_CZ]}
+        receiveShadow
+        // đi lại: bấm sàn thì đi tới chỗ đó
+        onClick={(e: ThreeEvent<MouseEvent>) => {
+          if (!useGame.getState().walk || e.delta > 6) return
+          e.stopPropagation()
+          useRoom.setState({ goal: [e.point.x, e.point.z] })
+        }}
+      >
         <planeGeometry args={[ROOM.w, ROOM.d]} />
         <meshStandardMaterial {...floor} />
       </mesh>
       <Wall maps={wallMaps} w={ROOM.w} position={[0, wallY, ROOM.back]} />
       {/* chứng chỉ thợ treo tường sau bàn, phía trên khoảng giữa đèn và hộp đồ nghề (rộng 40cm) */}
       <Wall maps={wallMaps} w={ROOM.w} position={[0, wallY, FRONT_Z]} rotationY={Math.PI} />
-      <Door />
       {/* tranh và đồng hồ treo ở tường sau lưng người chơi */}
       <Model
         url={MODELS.picture}
-        position={[1.2 * M, FLOOR_Y + 1.5 * M, FRONT_Z - 0.03 * M]}
+        position={[1.95 * M, FLOOR_Y + 1.5 * M, FRONT_Z - 0.03 * M]}
         rotation-y={Math.PI}
       />
       <Model
         url={MODELS.clock}
-        position={[-1.2 * M, FLOOR_Y + 1.75 * M, FRONT_Z - 0.03 * M]}
+        position={[1.15 * M, FLOOR_Y + 1.75 * M, FRONT_Z - 0.03 * M]}
         rotation-y={Math.PI}
       />
-      <Wall
-        maps={wallMaps}
-        w={ROOM.d}
-        position={[-ROOM.w / 2, wallY, ROOM_CZ]}
-        rotationY={Math.PI / 2}
-      />
+      {/* tường trái có ô cửa ra hành lang ngay cạnh bàn máy tính */}
+      <LeftWall maps={wallMaps} />
+      <Hallway maps={wallMaps} />
       <Wall
         maps={wallMaps}
         w={ROOM.d}
         position={[ROOM.w / 2, wallY, ROOM_CZ]}
         rotationY={-Math.PI / 2}
       />
-      {/* tranh treo ở hai tường hông */}
-      <Model
-        url={MODELS.picture}
-        position={[-ROOM.w / 2 + 0.03 * M, FLOOR_Y + 1.5 * M, ROOM_CZ - 0.5 * M]}
+      {/* tranh treo tường hông + hành lang (khung Poly Haven CC0, `ModelPainting`) */}
+      <ModelPainting
+        frame="hanging02"
+        // tường ngoài hành lang, đối diện ô cửa
+        position={[HALL.x0 * M, FLOOR_Y + 1.5 * M, ((DOORWAY.z0 + DOORWAY.z1) / 2) * M]}
         rotation-y={Math.PI / 2}
+        scale={M}
       />
-      <Model
-        url={MODELS.picture}
-        position={[ROOM.w / 2 - 0.03 * M, FLOOR_Y + 1.5 * M, ROOM_CZ + 0.5 * M]}
+      <ModelPainting
+        frame="hanging03"
+        // tường hành lang phía phòng, giữa đường ra cửa chính
+        position={[HALL.x1 * M, FLOOR_Y + 1.5 * M, -1.6 * M]}
         rotation-y={-Math.PI / 2}
+        scale={M}
+      />
+      {/* tường phải: "Phượng hoàng tái sinh" (tự vẽ, ký keeb) khung mạ vàng trên bàn gỗ + 1 tranh gần tường trước */}
+      <ModelPainting
+        frame="fancy02"
+        draw={drawPhoenix}
+        position={[HALF_W * M, FLOOR_Y + 1.62 * M, WORK_TABLE.z * M]}
+        rotation-y={-Math.PI / 2}
+        scale={M}
+      />
+      <ModelPainting
+        frame="fancy01"
+        position={[HALF_W * M, FLOOR_Y + 1.5 * M, (FRONT_M - 0.9) * M]}
+        rotation-y={-Math.PI / 2}
+        scale={M}
       />
       {/* trần */}
-      <mesh rotation-x={Math.PI / 2} position={[0, FLOOR_Y + ROOM.h, ROOM_CZ]}>
-        <planeGeometry args={[ROOM.w, ROOM.d]} />
-        <meshStandardMaterial color="#efeae2" roughness={1} />
-      </mesh>
+      <Ceiling maps={wallMaps} w={ROOM.w} d={ROOM.d} position={[0, FLOOR_Y + ROOM.h, ROOM_CZ]} />
     </group>
   )
 }

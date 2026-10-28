@@ -4,11 +4,12 @@ import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGame } from '@/store'
 import { useHover } from '../common/useHover'
+import { HINT_COLOR } from '../common/hoverOutline'
 import { SCREEN } from './computerLayout'
 
 // Màn hình + thùng CPU trên bàn (dựng bằng code, đơn vị mét; Room nhân M).
-// Bấm màn hình thì về desktop KeebOS; rê chuột vào thì viền vàng liền nét
-const HOVER = '#ffd84a'
+// Bấm màn hình thì về desktop KeebOS; rê chuột vào thì viền xanh liền nét
+const HOVER = HINT_COLOR
 
 /** Ảnh desktop KeebOS trên màn hình: nền tím xanh, vài icon app, thanh taskbar */
 function screenTexture() {
@@ -54,7 +55,7 @@ function screenTexture() {
 
 const BLACK = new THREE.MeshStandardMaterial({ color: '#16181d', roughness: 0.45, metalness: 0.3 })
 const GREY = new THREE.MeshStandardMaterial({ color: '#2b2f37', roughness: 0.5, metalness: 0.6 })
-/** viền hover: hộp nở ra 1 chút, chỉ vẽ mặt sau → thành đường viền vàng liền nét quanh vật */
+/** viền hover: hộp nở ra 1 chút, chỉ vẽ mặt sau → thành đường viền xanh liền nét quanh vật */
 const SHELL = new THREE.MeshBasicMaterial({ color: HOVER, side: THREE.BackSide, toneMapped: false })
 /** độ dày viền hover (m) */
 const T = 0.0025
@@ -80,7 +81,7 @@ export function Monitor(props: { position?: [number, number, number]; rotationY?
       {...bind}
       onPointerDown={(e: ThreeEvent<PointerEvent>) => setDown([e.clientX, e.clientY])}
       onClick={(e: ThreeEvent<MouseEvent>) => {
-        // kéo xoay camera thì không tính là bấm
+        // kéo khung nhìn (camera) thì không tính là bấm
         if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return
         e.stopPropagation()
         zoomToPC()
