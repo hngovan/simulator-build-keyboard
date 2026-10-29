@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.17',
     date: '2026-10-29',
-    commits: [],
+    commits: ['e6ac9f3'],
     title: 'Thùng đơn cầm tay, bước đóng gói, thu thù lao, camera xoay quanh tâm, con trỏ pixel',
     items: [
       'Nhận đơn thì thùng đơn tới kệ cuối hành lang: cầm thùng mang về đặt lên bàn build mới build được, đổi đơn thì cất thùng lên kệ cất đơn',
