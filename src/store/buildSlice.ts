@@ -51,7 +51,6 @@ import { FOAM_ID, GASKET_ID, SUPPLIES } from '@/data/supplies'
 import type { BuildContext, BuildState, ScrewBit, ScrewStep, StepId, ToolKind } from '@/types'
 import { deadKey, scoreDelivery } from './scoring'
 import type { SkillResult } from '@/data/skillCheck'
-import { leftoverSpare } from './spare'
 import type { GameState } from '.'
 import { emptyInventory } from './shopSlice'
 
@@ -1004,6 +1003,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
           screen: 'pc',
           build: null,
           ctx: null,
+          benchBox: null,
           history: [],
           future: [],
           supplyUsed: {},
@@ -1025,11 +1025,27 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       // giao trễ hạn: mỗi ngày trễ trừ 1 uy tín
       const late = Math.max(0, s.day - (s.order.dueDay ?? s.day))
       if (late) result.late = late
-      // đóng gói: chấm điểm sẵn, cất vào danh sách hôm nay; tiền + uy tín tính khi gửi cho khách (Mezzenger)
+      // đóng gói: chấm điểm sẵn, phím vào thùng nằm trên bàn build (`benchBox` giữ id đơn); cầm thùng ra ô giao hàng
+      // trên kệ ngoài cửa mới là gửi khách (tiền + uy tín, `placeShip`)
       set({
-        packed: [...s.packed, { order: s.order, result }],
-        // switch / stab thừa giữ lại cho đơn sau
-        spare: leftoverSpare(s.spare, s.inventory, s.ctx.keys, !!s.provided.stab),
+        // cất nguyên dữ liệu đơn vào thùng: chưa gửi thì mở ra build lại được; switch / stab thừa vào kho chung lúc gửi khách
+        packed: [
+          ...s.packed,
+          {
+            order: s.order,
+            result,
+            session: {
+              inventory: s.inventory,
+              provided: s.provided,
+              spent: s.spent,
+              posts: s.posts,
+              mount: s.mount,
+              build: s.build,
+              history: [],
+              supplyUsed: {},
+            },
+          },
+        ],
         order: null,
         result: null,
         inventory: emptyInventory(),
@@ -1037,17 +1053,17 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         spent: 0,
         posts: [],
         mount: null,
-        screen: 'pc',
-        windows: ['messenger'],
-        // mở thẳng hội thoại của khách này (nút "Gửi hàng cho khách")
-        messengerPick: s.order.id,
+        benchBox: s.order.id,
         build: null,
         ctx: null,
         history: [],
         future: [],
         supplyUsed: {},
       })
-      s.toast(`📦 Đã đóng gói đơn ${s.order.customer} — vào Mezzenger gửi cho khách`, 'good')
+      s.toast(
+        `📦 Đã đóng gói đơn ${s.order.customer}: bấm thùng trên bàn để cầm lên, mang ra ô giao hàng ở kệ ngoài cửa`,
+        'good',
+      )
       get().save()
     },
   }

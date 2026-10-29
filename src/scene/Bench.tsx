@@ -1,4 +1,7 @@
 import { Suspense, useEffect, useRef } from 'react'
+import { onBench } from '@/store/carrySlice'
+import { usePack } from '@/features/bench/packStore'
+import { PackBox } from './parts/PackBox'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { ContactShadows, Environment, OrbitControls } from '@react-three/drei'
@@ -45,7 +48,16 @@ function StepLoading() {
 /** Chọn thứ hiển thị trên bàn theo bước hiện tại */
 function Workbench() {
   const step = useStep()
+  // đóng gói: bước cuối, hoặc bấm nút cam "Đóng gói" ở bước bất kỳ (hoạt cảnh thùng úp lên bàn phím)
+  const packing = usePack((p) => p.at !== null)
   if (!step) return null
+  if (step === 'pack' || packing)
+    return (
+      <>
+        <Assembly />
+        <PackBox />
+      </>
+    )
   if (step === 'unbox') return <ShippingBox />
   if (step === 'stabMod') return <StabModStation />
   if (step === 'switchLube') return <LubeStation />
@@ -74,23 +86,7 @@ declare global {
 }
 
 /** phím đi lại: đang ngồi bàn build bấm thì đứng dậy */
-const MOVE_KEYS = [
-  'KeyW',
-  'KeyA',
-  'KeyS',
-  'KeyD',
-  'ArrowUp',
-  'ArrowDown',
-  'ArrowLeft',
-  'ArrowRight',
-]
-
-/** tốc độ kéo khung nhìn; dưới PAN_REF (u, khoảng cách camera → tâm nhìn, ~góc nhìn mặc định) thì bù cho khỏi chậm */
-const PAN_SPEED = 2.5
-const PAN_REF = 22
-
-/** mỗi nấc cuộn zoom vào: tâm nhìn tiến về điểm con trỏ chỉ bao nhiêu phần */
-const ZOOM_TO_POINT = 0.12
+const MOVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD']
 
 /** Đặt camera theo độ rộng bàn phím; bấm "Góc nhìn" để đưa về mặc định */
 function CameraRig() {
@@ -113,54 +109,10 @@ function CameraRig() {
     if (import.meta.env.DEV) window.__r3f = { camera, controls, scene }
   }, [camera, controls, scene])
 
-  // Vuốt ngang trên touchpad (2 ngón) để kéo bàn sang 2 bên
-  const dom = useThree((s) => s.gl.domElement)
-  useEffect(() => {
-    if (!controls) return
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
-      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0).setY(0).normalize()
-      const d = right.multiplyScalar(
-        e.deltaX * camera.position.distanceTo(controls.target) * 0.0012,
-      )
-      controls.target.add(d)
-      camera.position.add(d)
-    }
-    dom.addEventListener('wheel', onWheel, { passive: true })
-    return () => dom.removeEventListener('wheel', onWheel)
-  }, [dom, controls, camera])
-
-  // Cuộn zoom vào: dời tâm nhìn (cùng camera) dần về chỗ con trỏ chỉ trúng (sàn, chân bàn, kệ...).
-  // OrbitControls.zoomToCursor với screenSpacePanning = false giữ tâm nhìn trên mặt phẳng ngang, không xuống sàn được
-  useEffect(() => {
-    if (!controls) return
-    const ray = new THREE.Raycaster()
-    const ndc = new THREE.Vector2()
-    const onZoom = (e: WheelEvent) => {
-      if (e.deltaY >= 0 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
-      const r = dom.getBoundingClientRect()
-      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
-      ray.setFromCamera(ndc, camera)
-      const hit = ray.intersectObjects(scene.children, true).find((h) => h.object.visible)
-      if (!hit) return
-      const d = hit.point.clone().sub(controls.target).multiplyScalar(ZOOM_TO_POINT)
-      controls.target.add(d)
-      camera.position.add(d)
-    }
-    dom.addEventListener('wheel', onZoom, { passive: true })
-    return () => dom.removeEventListener('wheel', onZoom)
-  }, [dom, controls, camera, scene])
-
-  // Kéo tự do khắp phòng; giữ tâm nhìn trong 4 bức tường, cao từ sát sàn tới tầm kệ (zoom theo con trỏ xuống sàn được)
+  // giữ tâm nhìn trong 4 bức tường, camera không xuống dưới sàn
   useFrame((state) => {
     // đang bay vào màn hình máy tính: tâm nhìn lên cao ngang màn hình, không kẹp
     if (!controls || useGame.getState().pcZoom) return
-    // OrbitControls kéo theo tỉ lệ khoảng cách camera → zoom sát thì kéo rất chậm.
-    // Bù lại: gần hơn PAN_REF thì tăng panSpeed, rê chuột bao xa thì bàn trôi đi gần bằng lúc nhìn bình thường
-    // gán qua state của useFrame (không sửa thẳng giá trị lấy từ hook)
-    const live = state.controls as OrbitControlsImpl
-    const dist = state.camera.position.distanceTo(live.target)
-    live.panSpeed = PAN_SPEED * Math.max(1, PAN_REF / Math.max(dist, 0.5))
     const t = controls.target
     const { minX, maxX, minY, maxY, minZ, maxZ, floorY } = ROOM_BOUNDS
     const d = new THREE.Vector3(
@@ -217,14 +169,14 @@ function PcZoom() {
 }
 
 /**
- * Camera không xoay (góc nhìn theo bước do CameraRig đặt, lật xem đáy bằng nút lật): chuột trái / phải / 1 ngón kéo khung nhìn,
- * cuộn / 2 ngón zoom. Kéo luôn trượt theo mặt bàn
+ * Camera neo quanh tâm vật đang làm (CameraRig đặt tâm theo bước, Space về góc mặc định, lật xem đáy bằng Q):
+ * chuột trái / phải / 1 ngón kéo xoay quanh tâm, cuộn / 2 ngón zoom vào tâm; không kéo trượt khung nhìn, không xuống dưới mặt bàn
  */
 function Controls() {
   const walk = useGame((s) => s.walk)
   // đang giữ chuột thao tác (hàn...) thì khoá camera
   const locked = useCamLock((s) => s.locked)
-  // đang ngồi bàn build mà bấm WASD / mũi tên: đứng dậy đi luôn (như PC Building Simulator)
+  // đang ngồi bàn build mà bấm WASD: đứng dậy đi luôn (như PC Building Simulator)
   useEffect(() => {
     if (walk) return
     const onKey = (e: KeyboardEvent) => {
@@ -237,7 +189,7 @@ function Controls() {
         return
       const s = useGame.getState()
       // bước test (phím là phím test), đang bay vào máy tính, có bảng / popup đang mở thì thôi
-      if (s.screen !== 'bench' || s.pcZoom || s.benchPicker || s.step() === 'test') return
+      if (s.screen !== 'bench' || s.pcZoom || s.step() === 'test') return
       if (document.querySelector('[role="dialog"], [class*="z-[3000]"], [class*="z-[3500]"]'))
         return
       s.standUp('bench')
@@ -251,23 +203,23 @@ function Controls() {
     <OrbitControls
       makeDefault
       enabled={!locked}
-      enableRotate={false}
-      screenSpacePanning={false}
+      enablePan={false}
+      // không xoay xuống dưới mặt bàn
+      maxPolarAngle={1.45}
       // lại gần sát keycap (1u = 19mm) nhưng vẫn dừng trên mặt bàn / bàn phím
       minDistance={1.8}
       // zoom ra xa được gấp đôi (thấy cả kệ, phòng)
       maxDistance={160}
-      // kéo nhanh hơn; zoom sát thì CameraRig tăng thêm (OrbitControls kéo theo khoảng cách camera)
-      panSpeed={PAN_SPEED}
+      rotateSpeed={0.8}
       zoomSpeed={1.3}
       mouseButtons={{
-        LEFT: THREE.MOUSE.PAN,
+        LEFT: THREE.MOUSE.ROTATE,
         MIDDLE: THREE.MOUSE.DOLLY,
-        RIGHT: THREE.MOUSE.PAN,
+        RIGHT: THREE.MOUSE.ROTATE,
       }}
       touches={{
-        ONE: THREE.TOUCH.PAN,
-        TWO: THREE.TOUCH.DOLLY_PAN,
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_ROTATE,
       }}
     />
   )
@@ -286,7 +238,8 @@ function DeskMat() {
  * nhận cập nhật store (vd vừa giao hàng, build = null) trước khi bị gỡ khỏi màn hình
  */
 function Scene() {
-  const active = useGame((s) => !!s.ctx && !!s.build)
+  // đơn đang làm có build và thùng đơn đang nằm trên bàn (cầm lên cất kệ thì bàn trống)
+  const active = useGame((s) => !!s.ctx && !!s.build && onBench(s))
   // chưa có build (hoặc vừa giao xong): bàn trống, bấm ô vàng để chọn đơn
   if (!active) return <EmptyBench />
   return (
@@ -304,11 +257,8 @@ function Scene() {
 // Cảnh 3D bàn build
 export function Bench() {
   return (
-    <Canvas
-      shadows
-      camera={{ position: [0, 14, 11], fov: 42 }}
-      className="!fixed inset-0 cursor-grab active:cursor-grabbing"
-    >
+    // con trỏ mũi tên mặc định (theo body), rê vào vật bấm được thì `useHover` đổi sang bàn tay
+    <Canvas shadows camera={{ position: [0, 14, 11], fov: 42 }} className="!fixed inset-0">
       <color attach="background" args={['#20232c']} />
       <ambientLight intensity={0.4} />
       <directionalLight

@@ -1,6 +1,7 @@
 import { useEffect, type RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 /** màu tương tác trong cảnh 3D (viền hover, mũi tên hướng dẫn, chỗ chờ đặt / bấm): xanh lá như `--color-green` */
 export const HINT_COLOR = '#3ecf6e'
@@ -34,19 +35,47 @@ export const OUTLINE_MAT = new THREE.ShaderMaterial({
 })
 OUTLINE_MAT.toneMapped = false
 
+/**
+ * Viền cho khối trong suốt (ô chỗ đặt thùng): vẽ ở lượt trong suốt sau khối (khối ghi chiều sâu) → phần vỏ ngược nằm sau mặt trước
+ * bị che, chỉ lộ đường bao quanh mặt nhìn thấy (không tô xanh kín cả khối)
+ */
+export const OUTLINE_GHOST_MAT = OUTLINE_MAT.clone()
+OUTLINE_GHOST_MAT.transparent = true
+OUTLINE_GHOST_MAT.toneMapped = false
+
 const KEY = 'hoverOutline'
 const noRay = () => null
+
+/**
+ * Hình hộp (thùng carton, khối chỗ đặt): pháp tuyến phẳng từng mặt làm vỏ ngược tách rời từng mặt → viền gãy, dày, sắc.
+ * Gộp đỉnh trùng + tính lại pháp tuyến mượt (đỉnh góc đẩy chéo ra) → 1 đường bao gọn quanh mặt nhìn thấy, nhẹ như viền model
+ */
+const smoothCache = new WeakMap<THREE.BufferGeometry, THREE.BufferGeometry>()
+export function outlineGeometry(g: THREE.BufferGeometry) {
+  if (g.type !== 'BoxGeometry') return g
+  let s = smoothCache.get(g)
+  if (!s) {
+    const pos = new THREE.BufferGeometry()
+    pos.setAttribute('position', g.attributes.position)
+    pos.setIndex(g.index)
+    s = mergeVertices(pos)
+    s.computeVertexNormals()
+    smoothCache.set(g, s)
+  }
+  return s
+}
 
 /** viền của 1 mesh (tạo 1 lần, gắn làm con để theo transform / ẩn hiện của mesh) */
 function outlineOf(m: THREE.Mesh) {
   let o = m.userData[KEY] as THREE.Mesh | undefined
   if (!o) {
+    const geo = outlineGeometry(m.geometry)
     o =
       m instanceof THREE.InstancedMesh
-        ? Object.assign(new THREE.InstancedMesh(m.geometry, OUTLINE_MAT, m.instanceMatrix.count), {
+        ? Object.assign(new THREE.InstancedMesh(geo, OUTLINE_MAT, m.instanceMatrix.count), {
             instanceMatrix: m.instanceMatrix,
           })
-        : new THREE.Mesh(m.geometry, OUTLINE_MAT)
+        : new THREE.Mesh(geo, OUTLINE_MAT)
     o.raycast = noRay
     o.frustumCulled = false
     o.userData[KEY] = o

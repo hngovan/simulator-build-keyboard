@@ -10,7 +10,6 @@ export function sitAtBench() {
   const fit = fitAspect(window.innerWidth / window.innerHeight)
   useRoom.setState({
     hover: null,
-    goal: null,
     fly: {
       pos: benchPose(s.ctx && s.build ? s.ctx.width : null, fit),
       look: [0, 0, 0],

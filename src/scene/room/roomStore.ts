@@ -13,17 +13,23 @@ export interface CamFly {
 /** Trạng thái chế độ đi lại trong phòng (không lưu) */
 export const useRoom = create<{
   spot: RoomSpot
-  /** điểm trên sàn đang tự đi tới (bấm sàn), x / z đơn vị cảnh */
-  goal: [number, number] | null
   fly: CamFly | null
-  /** tên việc của vật đang rê chuột (HUD hiện "Bấm: ...") */
+  /** việc chuột trái của vật đang rê (HUD hiện "Nhấn [chuột trái] ...") */
   hover: string | null
+  /** việc chuột phải của vật đang rê (thêm ", nhấn [chuột phải] ...") */
+  hoverAlt: string | null
+  /** đang rê vật mà không bấm được gì: chỉ hiện dòng chữ này (vd bàn build trống) */
+  hoverNote: string | null
+  /** đang trỏ bàn build lúc cầm thùng đơn tới bàn trống: khối chỗ đặt trên bàn sáng viền */
+  benchHover: boolean
   /** đang mở popup lịch treo tường */
   calendar: boolean
 }>(() => ({
   spot: 'bench',
-  goal: null,
   fly: null,
   hover: null,
+  hoverAlt: null,
+  hoverNote: null,
+  benchHover: false,
   calendar: false,
 }))

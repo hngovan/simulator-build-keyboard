@@ -15,6 +15,7 @@ import type {
   Spare,
   StepId,
 } from '@/types'
+import type { BoxSpot } from '@/data/boxes'
 import type { HistoryEntry } from './buildSlice'
 import { buildContext, remapStepIdx } from '@/data/steps'
 import { CASES, SCREW_FULL } from '@/data/parts'
@@ -122,6 +123,10 @@ interface Session {
   worked?: string[]
   /** tiền / uy tín đầu ngày (tổng kết ngày); bản lưu cũ không có */
   dayStart?: { money: number; rep: number } | null
+  /** thùng hàng trong phòng (carrySlice): ô kệ, thùng trên bàn build, thùng đang cầm; bản lưu cũ không có */
+  boxes?: Record<string, BoxSpot>
+  benchBox?: string | null
+  held?: string | null
 }
 
 /** 1 đơn đã đóng gói: kết quả chấm sẵn, tiền / uy tín cộng khi gửi cho khách (hoặc kết thúc ngày) */
@@ -130,6 +135,13 @@ export interface PackedOrder {
   result: DeliveryResult
   /** đã gửi cho khách trong ngày (giữ lại để hiện tin nhắn khách phản hồi tới hết ngày) */
   shipped?: boolean
+  /**
+   * dữ liệu đơn lúc đóng gói (kho đồ, build...): thùng chưa gửi mở ra build lại được (`unpackBox`); gửi khách thì bỏ
+   * (switch / stab thừa vào kho chung lúc gửi). Bản lưu cũ không có = không mở lại được
+   */
+  session?: JobSession
+  /** gửi rồi nhưng chưa thu thù lao (vào Mezzenger bấm "Thu tiền"); `false` = chưa thu, không có = đã thu / bản lưu cũ */
+  paid?: boolean
 }
 
 export interface SaveData extends Profile {

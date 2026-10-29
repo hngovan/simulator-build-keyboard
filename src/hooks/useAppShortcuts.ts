@@ -5,8 +5,8 @@ import { beaconRun } from '@/lib/leaderboardApi'
 
 /**
  * Phím tắt toàn app + lưu khi đóng tab:
- * - Esc: ngồi bàn build / ngồi máy tính thì đứng dậy ra phòng (máy tính đang mở Cài đặt trên cùng thì đóng Cài đặt trước);
- *   đang đi lại trong phòng thì mở Cài đặt. Bỏ qua khi đang gõ chữ, đang test phím (Esc là 1 phím test),
+ * - Esc: chỉ để thoát — ngồi bàn build / ngồi máy tính thì đứng dậy ra phòng (máy tính đang mở Cài đặt trên cùng thì đóng
+ *   Cài đặt trước); đang đi lại trong phòng thì không làm gì (không vào máy tính). Bỏ qua khi đang gõ chữ, đang test phím (Esc là 1 phím test),
  *   hoặc đang có popup (popup tự bắt Esc của nó)
  * - đóng tab / tải lại trang: tiến trình mới chưa lên bảng xếp hạng thì tự gửi (sendBeacon vẫn gửi khi trang đã tắt)
  */
@@ -28,10 +28,8 @@ export function useAppShortcuts() {
         return s.closeApp('settings')
       // đang ngồi máy tính: Esc đứng dậy ra phòng, như ở bàn build
       if (s.screen === 'pc') return s.standUp('pc')
-      // đang ngồi bàn build: Esc đứng dậy ra phòng cho nhanh (đang đi lại thì mở Cài đặt như cũ)
-      if (s.screen === 'bench' && !s.walk) return s.standUp('bench')
-      if (s.screen === 'bench') s.goPC()
-      s.openApp('settings')
+      // đang ngồi bàn build: Esc đứng dậy ra phòng; đang đi lại thì thôi (Esc không đưa vào máy tính)
+      if (s.screen === 'bench' && !s.walk) s.standUp('bench')
     }
     const onHide = () => {
       const s = useGame.getState()

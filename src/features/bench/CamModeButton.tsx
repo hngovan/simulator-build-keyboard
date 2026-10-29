@@ -5,7 +5,7 @@ import { useBenchKey } from './useBenchKey'
 
 const resetCam = () => useGame.getState().resetCam()
 
-/** Nút đưa camera về góc nhìn mặc định + phím Space (camera bàn build không xoay, chỉ kéo / zoom); dùng ở bàn build lẫn bàn trống */
+/** Nút đưa camera về góc nhìn mặc định + phím Space (camera bàn build xoay neo quanh tâm vật đang làm + zoom); dùng ở bàn build lẫn bàn trống */
 export function ResetCamButton() {
   useBenchKey('Space', resetCam)
   return <IconButton icon={<ScanEye />} label="Góc nhìn mặc định (Space)" onClick={resetCam} />

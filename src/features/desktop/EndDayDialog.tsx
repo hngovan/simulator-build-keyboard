@@ -24,7 +24,9 @@ export function EndDayDialog({ onClose }: { onClose: () => void }) {
   const s = useGame()
   const start = s.dayStart ?? { money: s.money, rep: s.rep }
   const unsent = s.packed.filter((p) => !p.shipped)
-  const income = unsent.reduce((a, p) => a + payout(p.result), 0)
+  // gửi rồi chưa thu thù lao: qua ngày cũng tự thu
+  const unpaid = s.packed.filter((p) => p.shipped && p.paid === false)
+  const income = [...unsent, ...unpaid].reduce((a, p) => a + payout(p.result), 0)
   const repGain = unsent.reduce((a, p) => a + shipRep(p.result), 0)
   // giống nextDay: đơn đang chờ trễ quá CANCEL_AFTER ngày thì khách huỷ, đơn nhận mà cả ngày không làm thì đền tiền
   const cancelled = s.jobs.filter((j) => s.day + 1 - (j.order.dueDay ?? s.day + 1) > CANCEL_AFTER)

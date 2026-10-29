@@ -59,8 +59,9 @@
   h4 {
     @apply font-head;
   }
+  /* nút bấm: bàn tay pixel (class cursor-* của từng nút vẫn đè được, vd cursor-grab) */
   button {
-    @apply cursor-pointer;
+    cursor: var(--cursor-hand);
   }
   /* chiều cao taskbar màn máy tính: cửa sổ phóng to / mobile chừa chỗ (mobile 2 hàng) */
   :root {
@@ -107,4 +108,22 @@
   ::-webkit-scrollbar-button {
     display: none;
   }
+}
+
+/*
+ * Con trỏ pixel 8-bit (public/cursors/, sinh bằng `node scripts/gen-cursors.mjs`): mũi tên mặc định toàn game,
+ * bàn tay khi rê vào chỗ bấm được (nút / `cursor-pointer`, vật 3D qua `useHover`). Viết ngoài @layer để thắng utility Tailwind.
+ * Số sau url = điểm bấm (px): đầu mũi tên / đầu ngón tay
+ */
+:root {
+  --cursor-arrow: url('/cursors/arrow.svg') 1 1, auto;
+  --cursor-hand: url('/cursors/hand.svg') 9 1, pointer;
+}
+html,
+body {
+  cursor: var(--cursor-arrow);
+}
+.cursor-pointer,
+.enabled\:cursor-pointer:enabled {
+  cursor: var(--cursor-hand);
 }

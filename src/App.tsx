@@ -18,11 +18,14 @@ import { CalendarDialog } from '@/features/room/CalendarDialog'
 import { useRoom } from '@/scene/room/roomStore'
 import { ShelfViewer } from '@/features/bench/ShelfViewer'
 import { Bench } from '@/scene/Bench'
+import { PayBanner } from '@/components/game/PayBanner'
+import { onBench } from '@/store/carrySlice'
 import { applyAudioSettings, startBgm, stopBgm } from '@/sound'
 
 export default function App() {
   const screen = useGame((s) => s.screen)
-  const hasBuild = useGame((s) => !!s.build)
+  // đang build đơn có thùng trên bàn: HUD bàn build; còn lại (bàn trống / thùng chờ) HUD bàn trống
+  const hasBuild = useGame((s) => !!s.build && onBench(s))
   // đang bay camera vào màn hình máy tính: ẩn HUD cho thấy rõ màn hình
   const zooming = useGame((s) => s.pcZoom)
   // đang đi lại trong phòng (không ngồi ở bàn build)
@@ -66,6 +69,7 @@ export default function App() {
       <Toasts />
       <GlobalTooltip />
       <ReviewPops />
+      <PayBanner />
       {!zooming && guide && <GuideNpc />}
       <GameOverDialog />
     </>

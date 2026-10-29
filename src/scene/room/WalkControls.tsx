@@ -6,25 +6,23 @@ import { screenCenter, screenEye } from '../models/computerLayout'
 import { BLOCKS, BODY_R, EYE_Y, M, SPOTS, WALK_AREAS } from './roomLayout'
 import { useRoom } from './roomStore'
 
-/** tốc độ đi (m/s), giữ Shift thì chạy */
+/** tốc độ đi (m/s); phòng hẹp nên không có chạy */
 const SPEED = 2.2
-const RUN = 3.4
 /** độ nhạy kéo chuột nhìn (rad / px) */
 const LOOK = 0.0042
 /** kéo quá bao nhiêu px thì không tính là bấm */
 const DRAG_PX = 6
+/** zoom con lăn chuột giữa: góc nhìn hẹp nhất = FOV gốc × ZOOM_MIN, mỗi nấc cuộn đổi bao nhiêu (0..1) */
+const ZOOM_MIN = 0.4
+const ZOOM_STEP = 0.12
 /** thời gian bay camera khi đứng dậy / ngồi xuống (s) */
 const FLY_S = 0.7
 
 const KEYS: Record<string, [number, number]> = {
   KeyW: [0, 1],
-  ArrowUp: [0, 1],
   KeyS: [0, -1],
-  ArrowDown: [0, -1],
   KeyA: [-1, 0],
-  ArrowLeft: [-1, 0],
   KeyD: [1, 0],
-  ArrowRight: [1, 0],
 }
 
 /** đẩy điểm (x, z) vào vùng đi được gần nhất (phòng / hành lang / ô cửa) rồi ra khỏi các khối cản (bàn, kệ) */
@@ -76,8 +74,8 @@ function standPose(spot: 'pc' | 'bench') {
 }
 
 /**
- * Đi lại trong phòng góc nhìn người: WASD / mũi tên đi (Shift chạy), kéo chuột / 1 ngón nhìn quanh,
- * bấm sàn thì tự đi tới chỗ đó. Bấm đồ vật (màn hình, bàn build, lịch, thùng hàng) do từng vật tự xử lý.
+ * Đi lại trong phòng góc nhìn người: WASD đi (không dùng phím mũi tên), kéo chuột / 1 ngón nhìn quanh, cuộn con lăn chuột giữa zoom
+ * (thu hẹp góc nhìn, rời chế độ đi lại thì trả FOV gốc). Bấm đồ vật (màn hình, bàn build, lịch, thùng hàng) do từng vật tự xử lý.
  * Đứng dậy / ngồi xuống: camera bay mượt giữa tư thế cũ và mới (`useRoom.fly`)
  */
 export function WalkControls() {
@@ -87,6 +85,9 @@ export function WalkControls() {
     yaw: 0,
     pitch: 0,
     keys: new Set<string>(),
+    /** mức zoom 0 (không) .. 1 (sát nhất) đang muốn / đang hiện */
+    zoom: 0,
+    shownZoom: 0,
     drag: null as { x: number; y: number; moved: boolean } | null,
     anim: null as null | {
       t: number
@@ -116,6 +117,17 @@ export function WalkControls() {
       fromQ: camera.quaternion.clone(),
       to: pose.pos,
       toQ: new THREE.Quaternion().setFromEuler(new THREE.Euler(pose.pitch, pose.yaw, 0, 'YXZ')),
+    }
+  }, [camera])
+
+  // FOV gốc của camera: zoom tính theo nó, rời chế độ đi lại thì trả lại
+  const baseFov = useRef(camera instanceof THREE.PerspectiveCamera ? camera.fov : 42)
+  useEffect(() => {
+    const fov = baseFov.current
+    return () => {
+      if (!(camera instanceof THREE.PerspectiveCamera)) return
+      camera.fov = fov
+      camera.updateProjectionMatrix()
     }
   }, [camera])
 
@@ -152,11 +164,8 @@ export function WalkControls() {
       )
     const down = (e: KeyboardEvent) => {
       if (typing(e) || e.ctrlKey || e.metaKey) return
-      if (KEYS[e.code] || e.code.startsWith('Shift')) {
-        s.keys.add(e.code)
-        // đi bằng phím thì bỏ điểm đang tự đi tới
-        if (KEYS[e.code]) useRoom.setState({ goal: null })
-      }
+      if (!KEYS[e.code]) return
+      s.keys.add(e.code)
     }
     const up = (e: KeyboardEvent) => s.keys.delete(e.code)
     const blur = () => s.keys.clear()
@@ -170,13 +179,20 @@ export function WalkControls() {
       const dy = e.clientY - d.y
       if (!d.moved && Math.hypot(dx, dy) < DRAG_PX) return
       d.moved = true
-      s.yaw -= dx * LOOK
-      s.pitch = THREE.MathUtils.clamp(s.pitch - dy * LOOK, -1.35, 1.35)
+      // đang zoom thì nhìn quanh chậm lại theo góc nhìn
+      const look = LOOK * (1 - s.shownZoom * (1 - ZOOM_MIN))
+      s.yaw -= dx * look
+      s.pitch = THREE.MathUtils.clamp(s.pitch - dy * look, -1.35, 1.35)
       d.x = e.clientX
       d.y = e.clientY
     }
     const pUp = () => (s.drag = null)
     const noMenu = (e: Event) => e.preventDefault()
+    // con lăn chuột giữa: cuộn lên phóng to, cuộn xuống thu nhỏ
+    const wheel = (e: WheelEvent) => {
+      if (s.anim || !e.deltaY) return
+      s.zoom = THREE.MathUtils.clamp(s.zoom - Math.sign(e.deltaY) * ZOOM_STEP, 0, 1)
+    }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
     window.addEventListener('blur', blur)
@@ -184,7 +200,9 @@ export function WalkControls() {
     window.addEventListener('pointermove', pMove)
     window.addEventListener('pointerup', pUp)
     dom.addEventListener('contextmenu', noMenu)
+    dom.addEventListener('wheel', wheel, { passive: true })
     return () => {
+      dom.removeEventListener('wheel', wheel)
       window.removeEventListener('keydown', down)
       window.removeEventListener('keyup', up)
       window.removeEventListener('blur', blur)
@@ -202,6 +220,13 @@ export function WalkControls() {
     // đang bay vào màn hình máy tính: PcZoom điều khiển camera
     if (useGame.getState().pcZoom) return
     const dt = Math.min(rawDt, 1 / 30)
+    // zoom mượt về mức muốn; bay camera (ngồi / đứng) thì bỏ zoom
+    if (s.anim) s.zoom = 0
+    if (Math.abs(s.shownZoom - s.zoom) > 1e-3 && cam instanceof THREE.PerspectiveCamera) {
+      s.shownZoom += (s.zoom - s.shownZoom) * Math.min(1, dt * 10)
+      cam.fov = baseFov.current * (1 - s.shownZoom * (1 - ZOOM_MIN))
+      cam.updateProjectionMatrix()
+    }
     if (s.anim) {
       const a = s.anim
       a.t = Math.min(1, a.t + dt / FLY_S)
@@ -223,27 +248,14 @@ export function WalkControls() {
     const move = new THREE.Vector2()
     for (const k of s.keys) if (KEYS[k]) move.add(new THREE.Vector2(...KEYS[k]))
     const pos = cam.position
-    const speed = (s.keys.has('ShiftLeft') || s.keys.has('ShiftRight') ? RUN : SPEED) * M * dt
+    const speed = SPEED * M * dt
     const fwd = new THREE.Vector3(-Math.sin(s.yaw), 0, -Math.cos(s.yaw))
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x)
     if (move.lengthSq()) {
       move.normalize()
       pos.addScaledVector(fwd, move.y * speed).addScaledVector(right, move.x * speed)
-    } else {
-      // bấm sàn: tự đi tới (dừng cách 1 thân người)
-      const goal = useRoom.getState().goal
-      if (goal) {
-        const d = new THREE.Vector3(goal[0] - pos.x, 0, goal[1] - pos.z)
-        const len = d.length()
-        if (len < speed + 0.05 * M) useRoom.setState({ goal: null })
-        else pos.addScaledVector(d.normalize(), speed)
-      }
     }
-    const before = pos.clone()
     collide(pos)
-    // tự đi mà bị bàn / tường chặn lại thì thôi
-    if (useRoom.getState().goal && before.distanceTo(pos) > speed * 0.8)
-      useRoom.setState({ goal: null })
     pos.y = EYE_Y
     cam.rotation.set(s.pitch, s.yaw, 0, 'YXZ')
   })

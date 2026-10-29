@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
@@ -7,6 +7,7 @@ import { SCREW_STEPS, Y } from '@/data/steps'
 import { KEYCAP_COLORS, TOOLS, screwLevel } from '@/data/parts'
 import type { Key } from '@/types'
 import { useGame } from '@/store'
+import { isPackedBox } from '@/store/carrySlice'
 import { DIPLOMA_URL, createDiploma } from './models/diplomaModel'
 import { BIT_SWAP_MS, ElectricScrewdriver, ManualScrewdriver } from './models/HandTools'
 import { Clickable } from './stations/StationKit'
@@ -27,7 +28,8 @@ import {
   FRONT_M,
   HALF_W,
   WALL_T,
-  SHIP_SPOT,
+  STORE_SHELF,
+  inReach,
   PC_DESK,
   ROOM,
   ROOM_CZ,
@@ -46,9 +48,9 @@ import { CanvasPainting } from './room/CanvasPainting'
 import { FrogPainting } from './room/FrogPainting'
 import { RoomWindow } from './room/RoomWindow'
 import { WallCalendar } from './room/WallCalendar'
-import { DoorParcels, ShipBoxes } from './room/DoorParcels'
-import { useRoom } from './room/roomStore'
+import { DoorParcels, HeldBox, SHELF_SCALE_Y, StorageShelf } from './room/DoorParcels'
 import { sitAtBench } from './room/sitAtBench'
+import { useRoom } from './room/roomStore'
 import { useHoverOutline } from './common/hoverOutline'
 import { CuttingMat } from './common/CuttingMat'
 
@@ -526,21 +528,66 @@ function ShelfDiploma(props: JSX.IntrinsicElements['group']) {
   )
 }
 
+/** bàn build đang thế nào (khi đi lại trỏ vào bàn): quyết định viền sáng, chữ gợi ý, bấm trái / phải làm gì */
+type BenchMode = 'empty' | 'place' | 'heldPacked' | 'busy' | 'sit' | 'packed'
+function benchMode(s: ReturnType<typeof useGame.getState>): BenchMode {
+  if (s.benchBox) return s.held ? 'busy' : isPackedBox(s, s.benchBox) ? 'packed' : 'sit'
+  if (!s.held) return 'empty'
+  return isPackedBox(s, s.held) ? 'heldPacked' : 'place'
+}
+/** chữ gợi ý theo trạng thái bàn: [chuột trái, chuột phải, dòng chữ không bấm được] */
+const BENCH_HINT: Record<BenchMode, [string | null, string | null, string | null]> = {
+  empty: [
+    null,
+    null,
+    'Chưa có đơn hàng nào, lấy thùng đơn từ kệ cuối hành lang để tiến hành build',
+  ],
+  place: ['để đặt thùng đơn lên bàn build', null, null],
+  heldPacked: [null, null, 'Thùng đã đóng gói: mang ra ô giao hàng trên kệ cuối hành lang'],
+  busy: [null, null, 'Bàn build đang có thùng khác: cất thùng đang cầm lên kệ trước'],
+  sit: ['để vào bàn build', null, null],
+  packed: ['để vào bàn build', 'để cầm thùng đã đóng gói lên', null],
+}
+
+/** đẩy chữ gợi ý bàn build lên HUD (useRoom) + con trỏ; `on` = false thì xoá */
+function pushHint(on: boolean) {
+  const m = benchMode(useGame.getState())
+  const [left, right, note] = BENCH_HINT[m]
+  useRoom.setState(
+    on
+      ? { hover: left, hoverAlt: right, hoverNote: note, benchHover: m === 'place' }
+      : { hover: null, hoverAlt: null, hoverNote: null, benchHover: false },
+  )
+  document.body.style.cursor = on && left ? 'var(--cursor-hand)' : ''
+}
+
 /**
- * Bàn build khi đang đi lại: hộp vô hình phủ mặt bàn chặn bấm nhầm đồ trên bàn, rê chuột viền xanh cả bàn,
- * bấm thì camera bay về góc nhìn bàn build rồi ngồi xuống làm (thoát chế độ đi lại)
+ * Bàn build khi đang đi lại: hộp vô hình phủ mặt bàn chặn bấm nhầm đồ trên bàn. Trong tầm với mới tương tác:
+ * - bàn trống, không cầm gì: chỉ hiện chữ "Chưa có đơn hàng nào…" (không viền, bấm không làm gì)
+ * - cầm thùng đơn tới bàn trống: khối chỗ đặt trên bàn sáng viền (không viền cả bàn), bấm = đặt thùng rồi ngồi xuống
+ * - bàn có thùng: viền cả bàn, chuột trái = ngồi vào build; thùng đã đóng gói thì chuột phải = cầm thùng lên
  */
 function BenchSeat() {
   const walk = useGame((s) => s.walk)
+  const mode = useGame(benchMode)
   const desk = useRef<THREE.Group>(null)
   const [hover, setHover] = useState(false)
-  useHoverOutline(desk, hover && walk)
+  useHoverOutline(desk, hover && walk && (mode === 'sit' || mode === 'packed'))
   const box = useMemo(() => {
     const g = new THREE.BoxGeometry(DESK.w * M, 0.4 * M, DESK.d * M)
     // không có pháp tuyến: viền hover bỏ qua hộp vô hình này
     g.deleteAttribute('normal')
     return g
   }, [])
+  // trỏ vào / rời bàn: chữ gợi ý + con trỏ + khối chỗ đặt sáng viền (theo trạng thái bàn lúc đó)
+  const show = (on: boolean) => {
+    setHover(on)
+    pushHint(on)
+  }
+  // trạng thái bàn đổi lúc đang trỏ (đặt thùng, cầm lên…) thì cập nhật chữ gợi ý (store ngoài React)
+  useEffect(() => {
+    if (hover) pushHint(true)
+  }, [mode, hover])
   return (
     <>
       <group ref={desk}>
@@ -552,19 +599,31 @@ function BenchSeat() {
           position-y={Y.table + 0.18 * M}
           onPointerOver={(e: ThreeEvent<PointerEvent>) => {
             e.stopPropagation()
-            setHover(true)
-            document.body.style.cursor = 'pointer'
-            useRoom.setState({ hover: 'Ngồi vào bàn build' })
+            if (inReach(e)) show(true)
           }}
-          onPointerOut={() => {
-            setHover(false)
-            document.body.style.cursor = 'auto'
-            useRoom.setState({ hover: null })
+          // đi lại gần / ra xa trong lúc đang trỏ vào bàn: bật / tắt theo tầm với
+          onPointerMove={(e: ThreeEvent<PointerEvent>) => {
+            const ok = inReach(e)
+            if (ok !== hover) show(ok)
           }}
+          onPointerOut={() => show(false)}
           onPointerDown={(e: ThreeEvent<PointerEvent>) => e.stopPropagation()}
           onClick={(e: ThreeEvent<MouseEvent>) => {
             e.stopPropagation()
-            if (e.delta <= 6) sitAtBench()
+            if (e.delta > 6 || !inReach(e)) return
+            const g = useGame.getState()
+            const m = benchMode(g)
+            if (m === 'empty' || m === 'heldPacked' || m === 'busy') return
+            // cầm thùng đơn tới bàn trống: đặt lên (chuyển sang đơn đó, đủ đồ thì vào build) rồi ngồi xuống
+            if (m === 'place' && !g.placeBench()) return
+            show(false)
+            sitAtBench()
+          }}
+          // chuột phải: cầm thùng đã đóng gói lên mang đi giao
+          onContextMenu={(e: ThreeEvent<MouseEvent>) => {
+            e.stopPropagation()
+            if (!inReach(e) || benchMode(useGame.getState()) !== 'packed') return
+            useGame.getState().pickBench()
           }}
         >
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -687,16 +746,7 @@ function Hallway({ maps }: { maps: MapSet }) {
   const wallY = FLOOR_Y + ROOM.h / 2
   return (
     <group>
-      <mesh
-        rotation-x={-Math.PI / 2}
-        position={[cx, FLOOR_Y, cz]}
-        receiveShadow
-        onClick={(e: ThreeEvent<MouseEvent>) => {
-          if (!useGame.getState().walk || e.delta > 6) return
-          e.stopPropagation()
-          useRoom.setState({ goal: [e.point.x, e.point.z] })
-        }}
-      >
+      <mesh rotation-x={-Math.PI / 2} position={[cx, FLOOR_Y, cz]} receiveShadow>
         <planeGeometry args={[w, d]} />
         <meshStandardMaterial {...floor} />
       </mesh>
@@ -722,9 +772,6 @@ function Hallway({ maps }: { maps: MapSet }) {
         scale={M}
       >
         <RoomWindow size={HALL_WINDOW} />
-      </group>
-      <group position={[SHIP_SPOT.x * M, FLOOR_Y, SHIP_SPOT.z * M]} scale={M}>
-        <ShipBoxes />
       </group>
       <Model
         url={MODELS.plant}
@@ -812,6 +859,17 @@ export function Room() {
       <group position={[PC_DESK.x * M, FLOOR_Y, PC_DESK.z * M]} rotation-y={PC_DESK.rot} scale={M}>
         <PcDesk />
       </group>
+      {/* kệ cất đơn dựa tường phải (mặt trước quay vào phòng): thùng đơn chờ làm / làm dở */}
+      <group
+        position={[STORE_SHELF.x * M, FLOOR_Y, STORE_SHELF.z * M]}
+        rotation-y={-Math.PI / 2}
+        scale={M}
+      >
+        <MetalRack scale-y={SHELF_SCALE_Y} />
+        <StorageShelf />
+      </group>
+      {/* thùng đang cầm trên tay (đi lại) */}
+      <HeldBox />
       {/* bàn gỗ làm việc dựa tường phải, có tấm lót cắt */}
       <Model
         url={MODELS.workTable}
@@ -864,17 +922,7 @@ export function Room() {
       </group>
       <Model url={MODELS.ceilingLamp} position={[0.1 * M, FLOOR_Y + (2.05 - 0.22) * M, ROOM_CZ]} />
 
-      <mesh
-        rotation-x={-Math.PI / 2}
-        position={[0, FLOOR_Y, ROOM_CZ]}
-        receiveShadow
-        // đi lại: bấm sàn thì đi tới chỗ đó
-        onClick={(e: ThreeEvent<MouseEvent>) => {
-          if (!useGame.getState().walk || e.delta > 6) return
-          e.stopPropagation()
-          useRoom.setState({ goal: [e.point.x, e.point.z] })
-        }}
-      >
+      <mesh rotation-x={-Math.PI / 2} position={[0, FLOOR_Y, ROOM_CZ]} receiveShadow>
         <planeGeometry args={[ROOM.w, ROOM.d]} />
         <meshStandardMaterial {...floor} />
       </mesh>

@@ -13,6 +13,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.17',
+    date: '2026-10-29',
+    commits: [],
+    title: 'Thùng đơn cầm tay, bước đóng gói, thu thù lao, camera xoay quanh tâm, con trỏ pixel',
+    items: [
+      'Nhận đơn thì thùng đơn tới kệ cuối hành lang: cầm thùng mang về đặt lên bàn build mới build được, đổi đơn thì cất thùng lên kệ cất đơn',
+      'Bước cuối "Đóng gói": cho phím vào thùng, cầm ra ô giao hàng trên kệ cửa là gửi khách; thùng đóng gói chưa gửi mở ra build lại được',
+      'Gửi xong hiện "Nhận thù lao của bạn": vào Mezzenger bấm Thu tiền mới nhận tiền (qua ngày tự thu)',
+      'Đi lại phải lại gần mới tương tác, ô đặt thùng xanh nhạt viền mảnh, trỏ bàn build hiện việc chuột trái / phải',
+      'Camera bàn build kéo xoay quanh tâm vật đang làm, đi lại zoom bằng chuột giữa, chỉ WASD (bỏ phím mũi tên, bỏ chạy, bỏ bấm sàn đi tới)',
+      'Hướng dẫn điều khiển 1 dòng chữ to giữa đáy kèm hình chuột / phím, con trỏ pixel 8-bit trắng',
+      'Esc chỉ để thoát bàn build / máy tính ra phòng',
+    ],
+  },
+  {
     version: '0.1.16',
     date: '2026-10-29',
     commits: ['4fdf2c9'],

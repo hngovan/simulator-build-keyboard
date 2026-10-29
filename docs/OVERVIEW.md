@@ -104,7 +104,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/com
    có nút tiếp tục kèm ngày và số tiền.
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar. Chơi mới mở sẵn
    Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: icon **Đứng dậy** (hoặc Esc)
-   rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD / phím mũi tên, kéo chuột nhìn, bấm sàn đi tới;
+   rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), kéo chuột nhìn, cuộn chuột giữa phóng to;
    đang ngồi bàn build bấm WASD / mũi tên cũng tự đứng dậy).
    Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
    hành lang (hàng Shopii giao tới + đơn đóng gói chờ gửi, bấm thùng để nhận / gửi). **Kết thúc ngày** chỉ còn ở
@@ -126,11 +126,11 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/com
 
 ### Bàn build 3D
 
-- Đứng dậy rồi bấm vào bàn build trong phòng (`screen = 'bench'`); chưa có build thì là bàn trống, bấm ô vàng trên bàn để mở bảng chọn
-  đơn. Chọn đơn: `buildOrder` nhận đơn mới hoặc chuyển sang đơn đã nhận, kiểm tra kho; đủ đồ thì tự
-  chọn mount và gọi `startBuild`, thiếu thì liệt kê món còn thiếu kèm nút mua ở Shopii.
-- Khi đang build, bấm **Danh sách đơn** để xem tiến độ, đổi đơn hoặc làm tiếp. Đổi đơn thì kho đồ,
-  build và lịch sử của đơn đang làm được cất nguyên trạng vào `jobs`.
+- Nhận đơn ở Mezzenger thì **thùng đơn** của khách tới kệ hàng cuối hành lang. Đứng dậy ra kệ bấm thùng để cầm lên, mang về
+  bấm bàn build để đặt xuống (`placeBench`): đủ đồ thì vào build luôn, thiếu thì thùng nằm trên bàn kèm danh sách món còn thiếu
+  (mua đủ rồi bấm thùng / "Mở thùng, bắt đầu build").
+- Đổi đơn: bấm **Cầm thùng đơn lên** (giữ nguyên tiến độ), cất vào ô mờ trên **kệ cất đơn** (tường phải) rồi lấy thùng khác.
+  Kho đồ, build và lịch sử của đơn được cất nguyên trạng vào `jobs`.
 - Cảnh 3D (`scene/Bench.tsx`) có camera xoay / kéo / zoom, tự lật board ở bước hàn hoặc vít đáy.
   Bấm màn hình trên bàn để quay về desktop.
 - HUD trái hiện yêu cầu đơn + danh sách bước; HUD dưới hiện mục tiêu, dụng cụ và nút **Bước tiếp
@@ -174,11 +174,10 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 
 - **Test**: `useKeyboardTest` bắt phím thật; phím không có trên bàn phím (Fn, macro...) thì click
   phím 3D. Máy đo âm thanh hiện độ khớp với yêu cầu của khách.
-- **Đóng gói**: nút **Đóng gói đơn này** trên thanh menu bàn build gọi `deliver()`; nếu build chưa
-  xong thì hỏi lại. Đơn được chấm điểm ngay và đưa vào `packed`, bàn trống trở lại, máy tính mở
-  Mezzenger.
-- **Gửi**: bấm **Gửi hàng cho khách** trong Mezzenger (`shipOrder`) để cộng tiền và uy tín ngay.
-  Không gửi thì **Kết thúc ngày** (`nextDay`) sẽ gửi nốt các đơn đã đóng gói.
+- **Đóng gói**: bước cuối **Đóng gói** (sau test): bấm thùng carton sau bàn phím (hoặc nút **Cho phím vào thùng** / nút cam **Đóng gói đơn này**), thùng úp lên bàn phím rồi gọi `deliver()`; nếu build chưa
+  xong thì hỏi lại. Đơn được chấm điểm ngay và đưa vào `packed`, phím vào thùng nằm trên bàn.
+- **Gửi**: cầm thùng đã đóng gói ra **ô giao hàng** (2 tầng trên kệ cuối hành lang), đặt vào là gửi (`shipOrder`):
+  cộng tiền và uy tín ngay. Không gửi thì **Kết thúc ngày** (`nextDay`) sẽ gửi nốt các đơn đã đóng gói.
 
 ### Chấm điểm và kết thúc ngày
 
@@ -246,7 +245,7 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   (tray), `topCase` + `topScrew` (top mount: plate bắt vít vào case trên rồi cả cụm thả vào case dưới, không có `caseClose`).
   Mount cũng ảnh hưởng âm thanh và điểm khớp tiếng.
 - Khi kho đã đủ và tương thích, bấm **Ra bàn build** ở Mezzenger hoặc đứng dậy sang bàn build để vào cảnh 3D. Làm theo
-  HUD: click đúng bộ phận, kéo chuột di chuyển khung nhìn (camera không xoay, nút lật để xem đáy), cuộn để zoom.
+  HUD: click đúng bộ phận, giữ chuột kéo để xoay camera quanh tâm vật đang làm (Space về góc mặc định, Q lật xem đáy), cuộn để zoom.
 
 ### Hàn, lube, mod stab, vít, keycap
 
@@ -277,7 +276,7 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   được mã thì click trực tiếp phím 3D. Càng nhiều phím được test càng gần 5 điểm.
 - Bấm **Đóng gói đơn này** để chấm điểm và đóng gói. Nếu chưa xong, game hỏi lại; giao sớm sẽ bị
   điểm thấp.
-- Vào Mezzenger bấm **Gửi hàng cho khách** để nhận tiền hoàn + tiền công và cộng/trừ uy tín. Có thể
+- Cầm thùng đã đóng gói ra ô giao hàng trên kệ cuối hành lang để nhận tiền hoàn + tiền công và cộng/trừ uy tín. Có thể
   gửi từng đơn ngay hoặc để **Kết thúc ngày** gửi nốt.
 
 ### Tiền, uy tín, hạn, dụng cụ, chứng chỉ

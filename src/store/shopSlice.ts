@@ -42,11 +42,14 @@ import type {
   PartItem,
   StabItem,
   SupplyItem,
+  Spare,
   SwitchItem,
   ToolItem,
   ToolKind,
 } from '@/types'
 import type { GameState } from '.'
+import { onBench } from './carrySlice'
+import { freeSlot } from '@/data/boxes'
 import { newBuild } from './buildSlice'
 import {
   DECLINE_FREE,
@@ -59,7 +62,7 @@ import {
 import { certBonus } from '@/data/reputation'
 import { FLAW_TEXT, dealFloor, negotiate, type InboxAction } from '@/data/market'
 import type { Job, JobSession, PackedOrder } from './persistence'
-import { addPart, fillFromStock, stashAll, takeSwitches, without } from './spare'
+import { addPart, fillFromStock, leftoverSpare, stashAll, takeSwitches, without } from './spare'
 import { payout } from './scoring'
 
 /** tiền nhận khi gửi đơn (âm nếu đền hỏng nhiều hơn tiền khách trả) */
@@ -108,11 +111,18 @@ export interface ShopSlice {
   dayStart: { money: number; rep: number } | null
   /** id đơn đã làm hôm nay (mua đồ / thao tác build); đơn đã nhận mà không làm thì qua ngày khách report, đền tiền */
   worked: string[]
-  /** chuyển sang làm 1 đơn đã nhận (đơn đang làm dở được cất lại nguyên trạng) */
-  switchJob: (id: string) => void
+  /**
+   * chuyển sang làm 1 đơn đã nhận (đơn đang làm dở được cất lại nguyên trạng); `stay` = không về máy tính (đặt thùng lên bàn build).
+   * Thùng đơn đang làm còn nằm trên bàn build thì không đổi được (phải cầm lên cất trước)
+   */
+  switchJob: (id: string, stay?: boolean) => void
   /** đơn đã đóng gói hôm nay, chờ kết thúc ngày mới gửi cho khách */
   packed: PackedOrder[]
-  /** gửi 1 đơn đã đóng gói cho khách ngay: cộng tiền + uy tín */
+  /** đơn vừa gửi chờ thu thù lao: banner đầu màn hình "Nhận thù lao của bạn" (không lưu) */
+  payBanner: { id: string; customer: string; amount: number } | null
+  /** thu thù lao đơn đã gửi (nút "Thu tiền" ở Mezzenger): cộng tiền */
+  collectPay: (id: string) => void
+  /** gửi 1 đơn đã đóng gói cho khách ngay: cộng uy tín + đánh giá, thù lao chờ thu ở Mezzenger */
   shipOrder: (id: string) => void
   nextDay: () => void
   buy: (cat: PartCategory, item: PartItem, price: number, scamRate?: number) => BuyResult
@@ -208,6 +218,14 @@ const firstMount = (mounts: string[], inv: Inventory, want?: string | null) =>
   mounts[0]
 
 /** Cất đơn đang làm (nếu có) thành 1 job */
+/** gửi khách 1 đơn đã đóng gói: switch / stab thừa trong thùng vào kho chung (bản lưu cũ không có dữ liệu đơn thì thôi) */
+function packedLeftover(spare: Spare, p: PackedOrder): Spare {
+  const j = p.session
+  if (!j?.mount || !j.build) return spare
+  const { keys } = buildContext(p.order, j.inventory, j.mount)
+  return leftoverSpare(spare, j.inventory, keys, !!j.provided.stab)
+}
+
 export const stashActive = (s: GameState): Job[] =>
   s.order && !s.result
     ? [
@@ -459,15 +477,21 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     }
     // chưa làm đơn nào thì làm luôn đơn này, không thì xếp vào danh sách chờ
     // (vừa giao xong thì cũng xếp chờ: phải bấm kết thúc ngày để sang ngày mới)
+    // thùng đơn của khách tới kệ ngoài cửa (hết ô nhận đơn thì xếp dưới sàn trước kệ): ra lấy mang về bàn build
+    set({
+      boxes: { ...get().boxes, [order.id]: { at: 'door', slot: freeSlot(get().boxes, 'door') } },
+    })
     if (!s.order) {
       const job = freshSession(order, s.day)
       set({ offers, order, ...job, ctx: null, result: null, pressed: {}, future: [] })
-      s.toast('Đã nhận đơn! Mở Shopii hoặc Hội Phím Cơ để mua linh kiện', 'good')
       get().fillActive()
     } else {
       set({ offers, jobs: [...s.jobs, { order, session: freshSession(order, s.day) }] })
-      s.toast(`Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}`, 'good')
     }
+    s.toast(
+      `Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}. Thùng đơn tới kệ ngoài cửa, ra lấy mang về bàn build`,
+      'good',
+    )
   },
   // từ chối quá DECLINE_FREE đơn / ngày: khách bực, để lại đánh giá xấu, trừ uy tín
   declineOrder: (id) => {
@@ -483,9 +507,14 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     })
     if (angry) s.addReviews([declineReview(order, s.day)])
   },
-  switchJob: (id) => {
+  switchJob: (id, stay) => {
     const s = get()
     if (s.stabAnim || s.lubeAnim || s.order?.id === id) return
+    if (s.order && s.benchBox === s.order.id)
+      return s.toast(
+        `Thùng đơn ${s.order.customer} đang trên bàn build: ngồi vào bàn cầm thùng lên cất trước`,
+        'bad',
+      )
     if (s.result)
       return s.toast('Ra lịch trên tường bấm "Kết thúc ngày" trước rồi làm đơn tiếp nhé', 'bad')
     if (s.jobs.find((j) => j.order.id === id)?.order.cancel)
@@ -505,7 +534,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
         session.build && session.mount
           ? buildContext(order, session.inventory, session.mount)
           : null,
-      screen: 'pc',
+      ...(stay ? {} : { screen: 'pc' as const }),
     })
     s.toast(`Chuyển sang đơn của ${order.customer}`)
     get().fillActive()
@@ -514,19 +543,35 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const s = get()
     const p = s.packed.find((x) => x.order.id === id && !x.shipped)
     if (!p) return
-    const gain = payout(p.result)
+    // khách nhận hàng: uy tín + đánh giá tính luôn, thù lao chờ shop vào Mezzenger bấm "Thu tiền" (`collectPay`);
+    // switch / stab thừa của đơn vào kho chung, bỏ dữ liệu đơn trong thùng (không mở lại được nữa)
     set({
-      packed: s.packed.map((x) => (x === p ? { ...x, shipped: true } : x)),
-      money: s.money + gain,
+      packed: s.packed.map((x) =>
+        x === p ? { ...x, shipped: true, paid: false, session: undefined } : x,
+      ),
+      spare: packedLeftover(s.spare, p),
       rep: s.rep + shipRep(p.result),
       done: s.done + 1,
+      payBanner: { id, customer: p.order.customer, amount: payout(p.result) },
     })
     s.addReviews([shipReview(p.order, p.result, s.day)])
+  },
+  collectPay: (id) => {
+    const s = get()
+    const p = s.packed.find((x) => x.order.id === id && x.shipped && x.paid === false)
+    if (!p) return
+    const gain = payout(p.result)
+    set({
+      packed: s.packed.map((x) => (x === p ? { ...x, paid: true } : x)),
+      money: s.money + gain,
+      ...(s.payBanner?.id === id ? { payBanner: null } : {}),
+    })
     s.toast(
-      `📦 Đã gửi đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · ${fmtGain(gain)}`,
+      `💰 Đã thu thù lao đơn ${p.order.customer}: ${'★'.repeat(p.result.stars)} · ${fmtGain(gain)}`,
       'good',
     )
   },
+  payBanner: null,
   // sang ngày mới: gửi nốt đơn đã đóng gói, đợt đơn mới, đơn chờ quá hạn lâu thì khách huỷ
   nextDay: () => {
     {
@@ -541,6 +586,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     // gửi các đơn đã đóng gói chưa gửi: khách hoàn tiền linh kiện + trả công, chấm sao → uy tín
     let money = s.money
     let repGain = 0
+    // gửi rồi mà chưa vào Mezzenger thu thù lao: qua ngày tự thu
+    for (const p of s.packed.filter((x) => x.shipped && x.paid === false)) money += payout(p.result)
     const unsent = s.packed.filter((p) => !p.shipped)
     for (const p of unsent) {
       money += payout(p.result)
@@ -576,11 +623,15 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       posts: s.order && !s.result ? groupPosts(s.order, day) : [],
       result: null,
       packed: [],
+      payBanner: null,
       money,
-      // khách huỷ: switch / stab đã mua cho đơn đó cất vào đồ dư
-      spare: [...cancelled, ...sold].reduce(
-        (sp, j) => stashAll(sp, j.session.inventory, j.session.provided),
-        s.spare,
+      // khách huỷ: switch / stab đã mua cho đơn đó cất vào đồ dư; đơn đóng gói gửi nốt: đồ thừa vào kho chung
+      spare: unsent.reduce(
+        packedLeftover,
+        [...cancelled, ...sold].reduce(
+          (sp, j) => stashAll(sp, j.session.inventory, j.session.provided),
+          s.spare,
+        ),
       ),
       done: s.done + unsent.length,
       ...(s.result ? { build: null, ctx: null } : {}),
@@ -967,14 +1018,12 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       s = get()
     }
     if (!s.order || s.order.id !== id) return null
-    // thiếu đồ thì giữ bảng chọn đơn mở để hiện danh sách còn thiếu
     set({ screen: 'bench' })
-    if (s.build) return (set({ benchPicker: false }), [])
+    if (s.build) return []
     const missing = checkInventory(s.inventory, s.order).filter((c) => !c.ok)
     if (missing.length) return missing
     if (!s.mount)
       s.setMount(s.order.mount ?? firstMount(CASES[s.inventory.case!.id].mounts, s.inventory))
-    set({ benchPicker: false })
     get().startBuild()
     return []
   },
@@ -991,6 +1040,9 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       s = get()
     }
     if (s.result) return s.toast('Đơn này đã giao rồi', 'bad')
+    // phải mang thùng đơn đặt lên bàn build trước (đơn build thử dev thì thôi)
+    if (s.order && !onBench(s))
+      return s.toast('Mang thùng đơn từ kệ ngoài cửa đặt lên bàn build trước đã', 'bad')
     if (s.build) return set({ screen: 'bench' })
     if (!s.order || !s.mount || !checkInventory(s.inventory, s.order).every((c) => c.ok))
       return s.toast('Chưa đủ linh kiện!', 'bad')

@@ -88,6 +88,10 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     title: 'Test phím',
     hint: 'Gõ bàn phím thật hoặc click phím 3D. Phím đã test có chấm xanh; phím không có trên bàn phím của bạn (Fn, macro...) thì click',
   },
+  pack: {
+    title: 'Đóng gói',
+    hint: 'Bấm thùng carton cạnh bàn phím để cho phím vào thùng. Đóng xong cầm thùng ra ô giao hàng trên kệ cuối hành lang để gửi khách',
+  },
 }
 
 /** thời gian 1 lần vặn (ms): tay vặn 1 vòng cổ tay, điện quay liền 1 hơi tới khi vít ăn hết ren */
@@ -146,6 +150,8 @@ export const BIT_LABELS: Record<ScrewBit, string> = {
   flat: 'Dẹt',
 }
 export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'foam', 'switchLube', 'test']
+/** bước build thật (tính tiến độ / chấm điểm / hỏi lại khi giao sớm): bỏ bước đóng gói cuối */
+export const isBuildStep = (step: StepId) => step !== 'pack'
 /**
  * Bước tuỳ chọn với đơn này: khách đòi lót foam (`order.foam`) thì bước `foam` bắt buộc; đơn build thử (dev) bỏ qua được mọi bước,
  * trừ lắp plate khi bước sau cần plate (`steps` có `topCase`: không plate thì không có gì bắt vào case trên; có `gasket`: dải gasket
@@ -274,7 +280,7 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   steps.push('caseIn')
   if (mount === 'tray') steps.push('trayScrew')
   if (caseDef.pieces === 2) steps.push(...(topMount ? [] : (['caseClose'] as const)), 'caseScrew')
-  steps.push('keycap', 'test')
+  steps.push('keycap', 'test', 'pack')
 
   const screwSide = caseDef.screwSide ?? 'bottom'
   // case CAD 2 mảnh: vít đúng lỗ trong model (mm, hệ model → u quanh tâm layout như feet)
@@ -770,6 +776,7 @@ export function stepProgress(
 // Các bước không cho lật bàn phím (đang ở bàn mod / chưa có bàn phím hoàn chỉnh)
 export const NO_FLIP_STEPS: StepId[] = [
   'unbox',
+  'pack',
   'stabMod',
   'switchLube',
   'caseIn',

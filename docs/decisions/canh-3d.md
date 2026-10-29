@@ -841,3 +841,31 @@
   `SCREEN.d / 2`. `SCREEN` đổi theo số đo model (cao 0,345, mép dưới 0,081) để `screenCenter` / `screenEye` (camera bay vào) khớp.
   Viền hover dùng `useHoverOutline` thay `HoverShell` (đã xoá). Bấm vẫn `zoomToPC`.
 - Viền hover màn hình ASUS: vỏ / mặt kính là tấm phẳng mỏng nên viền phồng (`useHoverOutline`) chỉ lộ ở chân đế → thêm khung chữ nhật xanh phẳng (`ShapeGeometry` ôm khung bao vỏ, `visible={hover}`) sát trước mặt kính.
+
+## Camera bàn build xoay neo quanh tâm, bảng điều khiển trực quan, bỏ chạy (2026-10-29)
+
+- Người dùng: cơ chế xoay cũ (phím R) giờ chỉ còn kéo là sai → bỏ, thay bằng kéo xoay neo quanh tâm vật đang làm; xoá thông báo điều khiển lúc
+  vào game; chỉ ảnh mẫu bảng "Giữ [chuột] để xoay camera / Cuộn để phóng to" → hiện bên trái thay chữ ở đáy màn hình; bỏ Shift chạy (phòng hẹp).
+- Bench.tsx `Controls`: OrbitControls `enablePan={false}`, chuột trái / phải / 1 ngón = ROTATE, 2 ngón = DOLLY_ROTATE, `maxPolarAngle` 1,45
+  (không xuống dưới mặt bàn). Tâm xoay = tâm CameraRig đặt (0, 0, 0, Space về mặc định); bỏ zoom dời tâm theo con trỏ + vuốt ngang touchpad kéo bàn
+  (`ZOOM_TO_POINT`, `PAN_SPEED`) để tâm luôn cố định. Kiểm: kéo chuột trái camera đổi, target giữ (0, 0, 0).
+- Bỏ toast `WALK_HINT` (metaSlice, newGame / continueGame). `components/game/ControlsHint.tsx` (`MouseIcon` sáng nút trái / phải / con lăn, `KeyCap`,
+  `ControlsHint` khung góc dưới bên trái, ẩn trên điện thoại); RoomHud dùng thay dòng chữ đáy. WalkControls bỏ `RUN` / phím Shift.
+
+## Đi lại: bỏ bấm sàn đi tới, zoom bằng chuột giữa (2026-10-29)
+
+- Người dùng: bỏ "bấm sàn để đi tới" (đã đi bằng phím điều hướng), thêm zoom bằng chuột giữa.
+- Bỏ `useRoom.goal` (roomStore, sitAtBench, metaSlice, 2 sàn trong Room.tsx, phần tự đi trong WalkControls).
+- WalkControls: con lăn chuột giữa đổi `zoom` 0..1 (mỗi nấc `ZOOM_STEP` 0,12), FOV = gốc × (1 − zoom × (1 − `ZOOM_MIN` 0,4)), lerp mượt; zoom thì
+  nhìn quanh chậm theo; bay camera (ngồi / đứng) tự bỏ zoom; rời chế độ đi lại trả FOV gốc. Bảng điều khiển: dòng "Cuộn [con lăn] để phóng to / thu nhỏ".
+- Đã thử: cuộn trong phòng FOV 42 → ~34, bấm sàn không còn di chuyển, ngồi vào bàn FOV về 42.
+
+## Hướng dẫn điều khiển 1 dòng giữa đáy, chỉ WASD (2026-10-29)
+
+- Người dùng (chỉ ảnh mẫu "Dùng [chuột] để nhìn quanh và [A][D][W][S] di chuyển"): cụm hướng dẫn chữ to rõ, giữa đáy màn hình, không khung card;
+  bỏ đi bằng phím mũi tên, chỉ WASD.
+- `ControlsHint` thành 1 dòng `children` (chữ `font-head text-xl` trắng + bóng chữ, không nền), `KeyCap` keycap trắng chữ tối, `MouseIcon` chuột trắng
+  viền tối (nút đang nói sáng xanh). RoomHud: "Kéo [chuột] để nhìn quanh, [con lăn] phóng to và [A][D][W][S] di chuyển".
+- WalkControls `KEYS` bỏ Arrow*, Bench `MOVE_KEYS` (đứng dậy khi đang ngồi bàn build) chỉ còn WASD.
+- (2026-10-29) Rê vào vật bấm được: bỏ khung xanh "Bấm: …", dòng hướng dẫn giữa đáy đổi thành "Nhấn [chuột trái] {việc}" cùng kiểu chữ trắng
+  (RoomHud, `hover` hạ chữ đầu). `KeyCap` tắt bóng chữ kế thừa (`[text-shadow:none]`) cho chữ A / D / W / S khỏi nhoè.

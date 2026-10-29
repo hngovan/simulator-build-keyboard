@@ -72,7 +72,7 @@ function useProgress(c: OrderEntry) {
 
 /**
  * Khung danh sách đơn cùng kiểu bảng xếp hạng: đầu (icon + tiêu đề + dòng phụ + ⓘ) → khung nền tối có hàng tiêu đề cột
- * → các dòng đơn (`OrderCard`). Dùng ở bàn build (`OrderPicker`) + app Danh sách đơn
+ * → các dòng đơn (`OrderCard`). Dùng ở app Danh sách đơn
  */
 export function OrderListFrame({ children }: { children: ReactNode }) {
   return (

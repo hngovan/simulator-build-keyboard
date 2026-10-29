@@ -5,6 +5,7 @@ import {
   STRIP_FEW_UNNOTICED,
   SCREW_STEPS,
   STRIP_UNNOTICED,
+  isBuildStep,
   isOptionalStep,
   stepProgress,
 } from '@/data/steps'
@@ -65,7 +66,7 @@ export function scoreDelivery({
 }: ScoreInput): DeliveryResult {
   let done = 0
   let total = 0
-  for (const st of ctx.steps.filter((x) => !isOptionalStep(x, order))) {
+  for (const st of ctx.steps.filter((x) => isBuildStep(x) && !isOptionalStep(x, order))) {
     const [d, t] = stepProgress(st, build, ctx, screwClicks)
     done += Math.min(d, t)
     total += t

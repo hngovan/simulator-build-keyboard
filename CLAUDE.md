@@ -8,6 +8,8 @@ lý do) vào đúng file để lần sau khỏi làm lại / làm ngược.
 **Mỗi lần commit tính năng**: thêm 1 mục lên đầu `src/data/changelog.ts` (phiên bản, ngày, commit, tóm tắt) và nâng
 `version` trong `package.json` cho khớp — màn hình tiêu đề hiện số phiên bản, bấm vào xem lịch sử cập nhật.
 Tổng quan source + luồng game + cách chơi: `docs/OVERVIEW.md` (sửa luồng chơi thì cập nhật cả file này + README).
+Mô tả sản phẩm / người chơi: `PRODUCT.md`; hệ thống giao diện (màu, font, bóng đổ, component, Do / Don't): `DESIGN.md`
+(+ `.impeccable/design.json`), dùng cho skill `/impeccable` — đổi UI chung thì cập nhật cả 2 file này.
 
 **Việc nhỏ, độc lập** (tài liệu, CSS, sửa 1 file...) giao cho opencode qua Orca:
 `orca agent launch --agent opencode --prompt "<brief>" --json`, đọc kết quả `orca terminal read --terminal <handle> --json`.
@@ -63,6 +65,8 @@ vào `window.__r3f` để debug trong console.
   hiện khi khác nhau); ô đổ xuống khác: `OptionSelect`; `OptionChip` chỉ cho bộ lọc / picker khung 3D; tab lọc đầu app
   (bảng xếp hạng, Kho) dùng `TabChip` (đang chọn = khối vàng đặc). App dạng danh sách theo khuôn bảng xếp hạng: đầu icon vàng +
   tiêu đề + ⓘ, khung `bg-black/15` có hàng tiêu đề cột, dòng `bg-panel-2` (dòng của mình / đang làm viền vàng), giá trị xanh bên phải.
+- Con trỏ: pixel 8-bit `public/cursors/` (`node scripts/gen-cursors.mjs`), biến `--cursor-arrow` / `--cursor-hand` trong `index.css`; vật 3D bấm được
+  dùng `useHover` (gán `var(--cursor-hand)`), không gán `'pointer'` / `'auto'` thẳng.
 - Tooltip: chỉ cần ghi `title="..."` (1 dòng ngắn), `GlobalTooltip` tự vẽ kiểu game (căn giữa phần tử, `data-tip-align="start"` = căn mép trái); không dùng dòng phụ trong tooltip.
   Nội dung nhiều dòng (mô tả, gạch đầu dòng): `<Tooltip wide content={...}>`. Cả 2 đo kích thước rồi đặt bằng `placeTip` (tự lật, nằm trong
   màn hình); không tự vẽ khung nổi `absolute` (bị khung cuộn cắt).
@@ -100,18 +104,18 @@ vào `window.__r3f` để debug trong console.
     (`components/ui/HudPanel.tsx`: thu gọn được, nhớ trạng thái; `StepDot` = chấm ✓ / số);
     Khung xem 3D dùng chung: `components/ui/ModelViewerFrame.tsx` (sản phẩm Shopii, case, đơn hàng);
     công tắc bật / tắt: `Toggle` (thay checkbox); khung cảnh báo nổi bật: `Alert`.
-    `OrderPicker` (EmptyBenchHud.tsx) dùng cả ở bàn trống lẫn nút "Đổi đơn" khi đang build;
     giao hàng khi build chưa xong thì hỏi lại (`ConfirmDeliver` trong BenchHud).
     App "Kho" (`apps/inventory/InventoryApp`): chỉ đồ đang có (linh kiện đơn đang làm, dụng cụ, vật tư),
     lưới ô kiểu túi đồ game (kéo thả vào ô bất kỳ) + ảnh model 3D như Shopii + số lần còn dùng (`OwnedItems`).
     App "Chi tiết đơn" (`apps/inventory/OrderApp`): yêu cầu khách + đối chiếu linh kiện (✓ `StepDot`), mount, âm thanh.
-    `EmptyBenchHud`: bàn trống (chưa có build) + bảng chọn đơn → `buildOrder(id)`. `title/`: màn hình tiêu đề.
+    `EmptyBenchHud`: bàn chưa vào build — trống / thùng đơn còn thiếu đồ (bấm "Mở thùng" = `buildOrder`) / thùng đã đóng gói. `title/`: màn hình tiêu đề.
 - Phòng đi lại (kiểu PC Building Simulator): `screen = 'bench'` + `walk` (metaSlice, không lưu; `standUp('pc' | 'bench')`).
   `scene/room/`: `roomLayout.ts` (toạ độ phòng / bàn / hành lang / vùng đi `WALK_AREAS` / khối cản `BLOCKS`), `WalkControls`
-  (WASD + kéo nhìn + bấm sàn, bay camera `useRoom.fly`), `RoomSpot` (vật bấm được + chữ gợi ý HUD), `PcDesk` (bàn máy tính sát
-  trái bàn build, CPU dưới gầm, lót chuột 90 × 40), `RoomWindow` (rèm lá), `WallCalendar`, `DoorParcels` / `ShipBoxes` (hành lang),
+  (chỉ WASD đi, không mũi tên, không chạy, không bấm sàn đi tới; kéo nhìn, cuộn chuột giữa zoom FOV, bay camera `useRoom.fly`), `RoomSpot` (vật bấm được + chữ gợi ý HUD), `PcDesk` (bàn máy tính sát
+  trái bàn build, CPU dưới gầm, lót chuột 90 × 40), `RoomWindow` (rèm lá), `WallCalendar`, `DoorParcels` (kệ cuối hành lang: thùng đơn + kiện Shopii + ô giao hàng),
+  `StorageShelf` (kệ cất đơn tường phải), `HeldBox` (thùng đang cầm),
   `Stool`, `HallProps` (cửa 6 ô, kệ sắt), tranh `CanvasPainting` / `ModelPainting` (+ `*Art.ts` vẽ canvas), `sitAtBench`;
-  HUD `features/room/RoomHud`, popup lịch `CalendarDialog` (bấm lịch, nơi duy nhất kết thúc ngày).
+  HUD `features/room/RoomHud` (hướng dẫn 1 dòng chữ to giữa đáy có hình chuột / phím: `components/game/ControlsHint`), popup lịch `CalendarDialog` (bấm lịch, nơi duy nhất kết thúc ngày).
 - `src/scene/` — cảnh R3F: `Bench.tsx` (Canvas, camera, chọn trạm theo bước), `parts/` (Assembly,
   Case, Board, Keycap, Screw...), `stations/` (StabModStation, LubeStation), `models/` (Switch,
   Stabilizer từ GLB; dụng cụ), `materials.tsx`, `common/` (anim, hover).
@@ -123,8 +127,15 @@ vào `window.__r3f` để debug trong console.
 - Mỗi ngày có `offers` (5–7 đơn, luôn có ít nhất 1 TKL + 1 60%, `randomOffers`). Nhận đơn (`acceptOrder(id)`) đặt `dueDay = day + days`.
   Chưa có đơn đang làm thì đơn thành `order` (đơn đang làm); có rồi thì vào `jobs` (mỗi job cất riêng
   inventory / build / history...). `switchJob(id)` cất đơn đang làm vào `jobs` và nạp đơn kia.
-- Không còn icon "Bàn build" ở desktop: icon "Đứng dậy" / Esc ra phòng rồi bấm bàn build (nút "Ra bàn build" ở Mezzenger vẫn `goBench`): chưa có build thì bàn trống, bấm ô chọn đơn
-  (`buildOrder`: nhận / chuyển đơn, đủ đồ thì tự chọn mount + `startBuild`, thiếu thì liệt kê).
+- Thùng hàng vật lý (`store/carrySlice.ts`, `data/boxes.ts`; Session `boxes` / `benchBox` / `held`): nhận đơn thì thùng đơn tới ô nhận đơn
+  kệ cuối hành lang (`boxes[id] = door`, 3 ô / hàng, quá thì xếp sàn); đi lại bấm thùng = `pickBox` (cầm 1 thùng), bấm bàn build = `placeBench`
+  (chuyển sang đơn đó `switchJob(id, true)`, đủ đồ thì `buildOrder` vào build, thiếu thì thùng nằm chờ) rồi ngồi xuống. Không còn bảng chọn đơn:
+  đổi đơn = nút "Cầm thùng đơn lên" (`pickBench`, giữ tiến độ) → cất ô mờ kệ cất đơn (`placeShelf`) → lấy thùng khác. Bàn chỉ hiện build khi
+  thùng đơn đang làm nằm trên bàn (`onBench`; đơn dev luôn tính); `startBuild` / `switchJob` chặn khi thùng chưa / còn trên bàn. Ô mờ (`GhostSlot`)
+  chỉ hiện khi đang cầm thùng hợp chỗ đó (khối xanh nhạt viền mảnh). Thùng của đơn mất (huỷ, sang ngày) tự dọn (subscribe trong `store/index.ts`).
+  Đi lại chỉ tương tác trong tầm với `REACH_M` (`inReach`). Cầm đơn dở lên = hoạt cảnh cho lại vào thùng (`requestStash`). Thùng đã đóng gói chưa gửi
+  mở lại được (`unpackBox`, dữ liệu đơn trong `PackedOrder.session`; đồ thừa vào kho chung lúc gửi). Gửi xong thù lao chờ thu ở Mezzenger
+  (`paid: false`, banner `PayBanner`, `collectPay`, qua ngày tự thu).
 - Shopii không vào kho ngay: chọn tốc độ giao (`data/shipping.ts` `SHIP_SPEEDS`: Hoả tốc trong ngày ×1.25 / Nhanh 1 ngày / Tiết kiệm 2 ngày ×0.9),
   trả tiền lúc đặt (`orderParcel`) → kiện `Profile.parcels` tới cửa theo ngày, ra cửa nhận (`pickupParcel`; đơn lúc đặt không còn đang làm thì vào kho chung).
   Hội Phím Cơ (`buyPost` → `buy` / `buySupply` / `buyTool`) vẫn nhận ngay. Shopii mục "Đơn đang giao" (`ParcelList`), kiện đặt hôm nay huỷ được (`cancelParcel`).
@@ -172,8 +183,9 @@ vào `window.__r3f` để debug trong console.
   ~35% đơn có thêm `switchType` = đòi đúng 1 con (vd Cherry MX Đen): kiểm bằng `switchOk(type, order)`, tên hiện bằng `switchWant(order)`.
   Đơn kit: khách gửi từng món ngẫu nhiên (`Kit.case? / pcb? / plate? / stab?`, ít nhất 1 món); chỉ có `mount` khi gửi case,
   món không gửi thì đơn có thể ghi `pcbType` / `caseColor`.
-- Nhiều đơn mỗi ngày: `deliver()` chấm điểm rồi đẩy vào `packed` (Session) và trả bàn trống; gửi từng đơn ở Mezzenger
-  (`shipOrder`, cộng tiền / uy tín ngay, `PackedOrder.shipped`), "Kết thúc ngày" (`nextDay()`) gửi nốt đơn chưa gửi.
+- Nhiều đơn mỗi ngày: bước cuối `pack` (thùng carton sau bàn phím `PackBox`, `packStore` `requestPack`; nút cam cũng vậy, chưa đủ thì hỏi lại) → `deliver()` chấm điểm, đẩy vào `packed` (Session), thùng đã đóng gói nằm trên bàn (`benchBox`);
+  cầm thùng ra ô giao hàng (2 tầng trên kệ cửa) = `placeShip` → `shipOrder` (cộng tiền / uy tín ngay, `PackedOrder.shipped`; Mezzenger không còn nút gửi),
+  "Kết thúc ngày" (`nextDay()`) gửi nốt đơn chưa gửi.
   Kết thúc ngày = bấm lịch treo tường trong phòng (`CalendarDialog`) → popup `EndDayDialog` (tổng kết so `dayStart` tiền / uy tín đầu ngày, lưu Session).
   Chat khách Mezzenger: tin ngắn `chatIntro` + bảng `OrderSpec` (không liệt kê từng yêu cầu thành tin).
   Mezzenger là app chat (hội thoại đơn mới / đã nhận / chờ gửi / đã gửi / từ chối, nút icon lọc `FilterMenu` Mới / Đang làm / Xong / Huỷ; trạng thái là vật gắn lên thẻ: phong bì (đơn mới) / ghim / kẹp giấy + hạn / tem bưu kiện / dấu mộc ĐÃ GIAO, HUỶ; đơn đã gửi + từ chối mất khi sang ngày; câu trả lời nhanh = tin gửi khách).
@@ -181,7 +193,6 @@ vào `window.__r3f` để debug trong console.
   góc phải trên (`ReviewPops`) + app "Đánh giá".
   Tin khách tô đậm / màu chữ cần chú ý (`messenger/highlight.tsx`); "Nhận đơn" gửi tin "Ok shop nhận đơn này nhé";
   đơn xong: khách tự qua lấy hoặc shop xin địa chỉ rồi gửi (`delivery()` theo id đơn).
-  Nút "Danh sách đơn" (bàn build) = `OrderPicker` có % tiến độ (`buildPercent`), chỉ đơn đã nhận (nhận đơn chỉ ở Mezzenger).
 - Chứng chỉ thợ (`TOOLS.cert`, mục Shopii "Chứng chỉ thợ"): thợ lõ / middle / senior = số phím mỗi lần lắp switch / keycap
   (`installRun`) và số switch mỗi mẻ lube; khung treo tường `createDiploma` (`scene/models/diplomaModel.ts`).
 - Lube switch: phải mở switch bằng đồ mở trước (`openSwitch`, đếm `build.opened`, mỗi click = bậc thợ), `lubeBatch(idx)`
@@ -244,7 +255,7 @@ vào `window.__r3f` để debug trong console.
 - Chuông thông báo (`components/game/NotifyBell.tsx`, cuối `StatusChips`): `logNotify` ghi `Profile.inbox` + `unread` (`notify` / `addReviews` /
   bán đồ / fast bid / huỷ đơn trễ tự ghi), xoá từng cái hoặc xoá hết.
 - Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup): ngồi máy tính / bàn build thì đứng dậy ra phòng (`standUp`;
-  máy tính đang mở Cài đặt trên cùng thì đóng Cài đặt trước), đang đi lại thì mở Cài đặt. Cài đặt trên cùng: Lưu tiến trình
+  máy tính đang mở Cài đặt trên cùng thì đóng Cài đặt trước); đang đi lại thì Esc không làm gì (chỉ dùng để thoát, không vào máy tính). Cài đặt trên cùng: Lưu tiến trình
   (`saveRun` = gửi bảng xếp hạng lý do `'save'`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
   (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Chơi mới đè save cũng gửi lượt cũ (nút phá sản ở Cài đặt đã bỏ).

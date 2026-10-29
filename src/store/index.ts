@@ -6,8 +6,9 @@ import { createMetaSlice, type MetaSlice } from './metaSlice'
 import { createShopSlice, type ShopSlice } from './shopSlice'
 import { createBuildSlice, type BuildSlice } from './buildSlice'
 import { createSellSlice, type SellSlice } from './sellSlice'
+import { createCarrySlice, type CarrySlice } from './carrySlice'
 
-export type GameState = MetaSlice & ShopSlice & BuildSlice & SellSlice
+export type GameState = MetaSlice & ShopSlice & BuildSlice & SellSlice & CarrySlice
 export type { AppId } from './metaSlice'
 export type { StabModKind } from './buildSlice'
 
@@ -16,6 +17,7 @@ export const useGame = create<GameState>()((...a) => ({
   ...createShopSlice(...a),
   ...createBuildSlice(...a),
   ...createSellSlice(...a),
+  ...createCarrySlice(...a),
 }))
 
 // ---------- selector dùng lại ở nhiều nơi ----------
@@ -87,12 +89,34 @@ const SAVED_KEYS = [
   'unread',
   'parcels',
   'saleBought',
+  'boxes',
+  'benchBox',
+  'held',
 ] as const satisfies readonly (keyof GameState)[]
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 useGame.subscribe((s, prev) => {
   if (s.screen === 'title' || !SAVED_KEYS.some((k) => s[k] !== prev[k])) return
   clearTimeout(saveTimer)
   saveTimer = setTimeout(() => useGame.getState().save(), 400)
+})
+
+// Thùng hàng của đơn không còn (khách huỷ, bán mất, sang ngày đơn đã đóng gói được gửi hết): bỏ khỏi kệ / bàn / tay
+useGame.subscribe((s, prev) => {
+  if (s.order === prev.order && s.jobs === prev.jobs && s.packed === prev.packed) return
+  const ids = new Set([
+    ...(s.order ? [s.order.id] : []),
+    ...s.jobs.filter((j) => !j.order.cancel).map((j) => j.order.id),
+    ...s.packed.map((p) => p.order.id),
+  ])
+  const stale = Object.keys(s.boxes).filter((id) => !ids.has(id))
+  const benchGone = !!s.benchBox && !ids.has(s.benchBox)
+  const heldGone = !!s.held && !ids.has(s.held)
+  if (!stale.length && !benchGone && !heldGone) return
+  useGame.setState({
+    boxes: Object.fromEntries(Object.entries(s.boxes).filter(([id]) => ids.has(id))),
+    ...(benchGone ? { benchBox: null } : {}),
+    ...(heldGone ? { held: null } : {}),
+  })
 })
 
 // Đơn đang làm có mua đồ / thao tác build thì tính là hôm nay đã làm đơn đó (chuyển đơn / tải save thì không tính)

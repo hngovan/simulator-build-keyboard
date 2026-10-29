@@ -562,3 +562,77 @@ giá BIN nghĩa là giá chiến thắng, người đăng có thể thêm giá B
   `{ day, ids }` (START, snapshot, `SAVED_KEYS`; sang ngày khác thì danh sách cũ hết hiệu lực). Shopii `onBuy` đặt được hàng
   (`orderParcel` 'ok') mà sản phẩm có `sale` thì ghi `product.id`; `ProductCard` khoá nút "Đã mua sale" (tooltip giải thích).
   Tính theo sản phẩm Shopii (case gộp dòng = 1 sản phẩm: mua 1 option là hết lượt cả dòng). Đã thử trên trình duyệt (ngày 3).
+
+## Thùng hàng vật lý: lấy đơn ở kệ cửa, đặt lên bàn, đóng gói mang ra giao (2026-10-29)
+
+- Người dùng: nhận đơn phải ra lấy đơn, cầm trên tay, đặt lên bàn để build (không chọn đơn là có sẵn trên bàn); build xong đóng gói vào thùng,
+  mang ra chỗ đặt hàng để giao. Chốt: thùng đơn ở kệ hàng ngoài cửa, có khối mờ chỉ chỗ đặt (3 ô / hàng), kiện Shopii hết ô thì xuống sàn gần cửa;
+  đóng gói → cầm ra điểm giao = gửi (bỏ nút gửi Mezzenger); đổi đơn = cầm đơn dở cất lên kệ cất đơn trong phòng; kiện Shopii cầm tay để sau.
+- `data/boxes.ts` (`BoxSpot` door / shelf / ship, số ô, `freeSlot`, `slotTaken`), `store/carrySlice.ts` (`boxes`, `benchBox`, `held`, `pickBox`,
+  `pickBench`, `placeShelf`, `placeBench`, `placeShip`, `onBench`, `isPackedBox`, `boxCustomer`). Session lưu 3 trường; save cũ: đơn đang build → trên bàn,
+  còn lại (đơn chờ, đơn chưa build, đơn đóng gói chưa gửi) → kệ cất đơn (`oldBoxes` trong metaSlice). Dọn thùng của đơn mất: subscribe trong store/index.ts.
+- `acceptOrder` đặt thùng vào ô nhận đơn kệ cửa; `switchJob(id, stay)` (stay = không về máy tính) chặn khi thùng đơn đang làm còn trên bàn;
+  `startBuild` chặn khi thùng chưa lên bàn (trừ dev); `deliver` để thùng đã đóng gói trên bàn (`benchBox`), không mở Mezzenger.
+- Cảnh: `DoorParcels.tsx` viết lại (`CardBox` băng keo xanh = đơn, đỏ = đã đóng gói, vàng nhạt = Shopii; ô nhận đơn 2 tầng dưới kệ cửa + kiện Shopii lấp ô trống,
+  ô giao hàng 2 tầng trên, `StorageShelf` kệ sắt hạ 80% ở tường phải `STORE_SHELF`, `HeldBox` thùng bay theo camera, tắt raycast); `GhostSlot` khối mờ vàng
+  chỉ hiện khi đang cầm thùng hợp chỗ. BenchSeat: đang cầm thùng thì `placeBench` rồi mới ngồi. `EmptyBench` vẽ thùng trên bàn (0,6 cỡ thật) bấm được khi ngồi,
+  ô mờ trên bàn khi cầm thùng đơn tới. Bỏ `OrderPicker` / `benchPicker` / `benchShort` / `ShipBoxes` / `SHIP_SPOT`; BenchHud nút "Cầm thùng đơn lên".
+  `EmptyBenchHud` = khung trạng thái (trống / thiếu đồ + chỗ mua + "Mở thùng, bắt đầu build" / đã đóng gói). RoomHud dòng "Đang cầm thùng ...".
+  Keeb-chan lời thoại bàn trống đổi (`bench:empty2`, `bench:carry`).
+- Đã thử (playwright): nhận 2 đơn → 2 thùng ô 0, 1 kệ cửa; cầm → thùng trước mặt; kệ cất đơn hiện 9 ô mờ (sau thêm mặt trên: 12 ô); đặt bàn → thiếu đồ, thùng + khung thiếu đồ;
+  thùng đóng gói đặt ô giao → shipped, tiền +payout. Chưa chơi trọn 1 đơn thật tới đóng gói (cần mua đủ đồ).
+
+## Bước "Đóng gói" cuối build (2026-10-29)
+
+- Người dùng: build xong chưa thấy bước đóng gói rồi cầm thùng ra kệ giao (trước chỉ có icon cam "Đóng gói đơn này" trên thanh trên, dễ sót).
+- StepId `pack` (STEP_INFO "Đóng gói"), `buildContext` thêm sau `test`; `isBuildStep` loại `pack` khỏi tiến độ / chấm điểm / "chưa làm"
+  (`useBuildComplete`, `useDeliverIssues`, `scoreDelivery`); `NO_FLIP_STEPS` có `pack`. Lời thoại Keeb-chan bước `pack`.
+- `features/bench/packStore.ts` (`usePack` at / ask / clean, `requestPack`, `confirmPack`): nút cam, nút "Cho phím vào thùng" (khung mục tiêu bước pack) và
+  bấm thùng 3D cùng đi qua đây; build chưa đủ thì `ConfirmDeliver` hỏi lại. `scene/parts/PackBox.tsx`: thùng carton 4 vách (không đáy) 2 nắp mở sau bàn phím,
+  bấm → nhấc vòng qua úp bao lấy bàn phím (0,6) → gập nắp + băng keo đỏ → `deliver()` (1,7s + 0,35s). Workbench vẽ Assembly + PackBox khi bước `pack` hoặc đang đóng gói.
+  Popup test xong: "OK, đóng gói" = sang bước `pack` (không đóng gói thẳng).
+- Đã thử (playwright, đơn dựng sẵn đổi thành đơn thật): bước pack có thùng + nút; chưa đủ → hỏi lại; xác nhận → packed, thùng đỏ trên bàn, khung "Đã đóng gói".
+
+## Thu thù lao ở Mezzenger sau khi giao (2026-10-29)
+
+- Người dùng: giao hàng xong hiện thông báo đầu màn hình "Nhận thù lao của bạn — Tuyệt vời, giờ bạn chỉ cần thu thù lao của mình, ấn vào tin nhắn
+  và bấm thu tiền".
+- `shipOrder` (đặt thùng vào ô giao hàng): uy tín + đánh giá + `done` tính luôn, tiền chưa cộng: `PackedOrder.paid = false`, `payBanner` (không lưu).
+  `collectPay(id)` cộng `payout`, `paid = true`, tắt banner. `nextDay` tự thu các đơn gửi rồi chưa thu; EndDayDialog tính cả khoản này.
+  Save cũ: đơn đã gửi không có `paid` = đã thu.
+- `components/game/PayBanner.tsx` (giữa đầu màn hình, viền vàng, không icon; bấm = mở hội thoại khách ở Mezzenger, X ẩn). Mezzenger đơn đã gửi:
+  khách nhắn đã chuyển khoản + nút xanh "Thu tiền (+Xk)", thu xong shop nhắn đã nhận.
+- Dòng "Đang cầm thùng …" ở RoomHud bỏ icon (người dùng: chữ đủ rồi, hạn chế icon).
+- Esc khi đang đi lại không còn mở Cài đặt (kéo vào máy tính): Esc chỉ để thoát bàn build / máy tính ra phòng (`useAppShortcuts`).
+
+## Cất đơn dở vào thùng, mở lại thùng đã đóng gói, tầm với, ô đặt thùng xanh nhạt (2026-10-29)
+
+- Người dùng: (1) đang build trên bàn thì đóng gói lại như bình thường để cất lên kệ, lấy ra build tiếp; (2) đã đóng gói vẫn phải mở ra build lại
+  được; (3) phải lại gần mới tương tác (xa cả mét vẫn lấy được hộp là sai); (4) khối đặt thùng trên bàn xanh da trời nhạt, ô tương tác chỉ viền mảnh.
+- (1) `packStore.requestStash` (nút "Cầm thùng đơn lên" ở BenchHud): cùng hoạt cảnh `PackBox` (băng keo xanh), xong thì `pickBench` (không chấm điểm).
+- (2) `deliver` cất nguyên dữ liệu đơn vào `PackedOrder.session` (history rỗng), không chuyển switch / stab thừa vào kho chung nữa: chuyển lúc gửi
+  (`shipOrder` / `nextDay` qua `packedLeftover`, rồi bỏ `session`). `unpackBox` (carrySlice): thùng chưa gửi trên bàn → đơn khác đang làm cất `jobs`
+  (`stashActive`), nạp lại session + ctx, bỏ khỏi `packed`, thùng vẫn trên bàn → build tiếp; đóng gói lại chấm lại. EmptyBenchHud nút "Mở thùng, build lại"
+  (chỉ khi thùng có session; bản lưu cũ thì không).
+- (3) `REACH_M` 1,8m (lúc đầu 1,3m, người dùng thấy gần quá) + `inReach` (roomLayout, khoảng cách theo mặt sàn từ camera tới chỗ trỏ): RoomSpot / GhostSlot / BenchSeat chỉ rê sáng + bấm được
+  trong tầm (chỉ khi đi lại; đang ngồi thì như cũ), di chuột / đi lại gần thì cập nhật.
+- (4) `GhostSlot` khối xanh nhạt `#8fd0ff` 22% + `Edges` mảnh (rê trong tầm: viền xanh lá), không dùng viền hover dày; bàn build dùng `GhostBlock`
+  (cùng kiểu, không bấm) thay ô nét đứt chữ to.
+- Đã thử (playwright): đóng gói → mở thùng → build lại đúng bước keycap; đứng gần kệ cất đơn rê được ("Cất thùng lên kệ"), lùi xa ~2m thì không.
+
+## Trỏ vào bàn build theo trạng thái, viền nhẹ cho hình hộp (2026-10-29)
+
+- Người dùng: bàn trống thì chỉ ô đặt thùng là vùng tương tác (không viền cả bàn), viền chỉ bao mặt nhìn thấy (không kẻ cạnh khuất); viền thùng hàng
+  sắc quá, làm nhẹ như viền màn hình / bàn; bàn trống hiện "Chưa có đơn hàng nào, lấy đơn từ kệ…" thay dòng hướng dẫn; có đơn thì "nhấn chuột trái
+  để vào bàn build", thùng đã đóng gói thêm "nhấn chuột phải để cầm thùng lên".
+- `hoverOutline.ts`: `outlineGeometry` — BoxGeometry gộp đỉnh + pháp tuyến mượt cho vỏ ngược (hết viền gãy / dày ở thùng carton); `OUTLINE_GHOST_MAT`
+  (lượt trong suốt) cho khối chỗ đặt: khối xanh nhạt ghi chiều sâu (`depthWrite`) + vỏ ngược vẽ sau (renderOrder 2) → chỉ lộ đường bao.
+  `Ghost` / `GhostSlot` / `GhostBlock` trong DoorParcels.tsx (bỏ `Edges`).
+- `useRoom` thêm `hoverAlt` (việc chuột phải), `hoverNote` (chỉ dòng chữ), `benchHover` (khối chỗ đặt trên bàn sáng viền). RoomHud: note → chữ thường;
+  hover → "Nhấn [trái] …, nhấn [phải] …". BenchSeat (Room.tsx): `benchMode` empty / place / heldPacked / busy / sit / packed + `BENCH_HINT`; viền cả bàn
+  chỉ khi bàn có thùng; empty / heldPacked / busy bấm không làm gì; chuột phải (`onContextMenu`) khi thùng đã đóng gói = `pickBench`.
+  RoomSpot đặt hover thì xoá hoverAlt / hoverNote, biến mất lúc đang rê thì xoá chữ gợi ý.
+- Đã thử (playwright): bàn trống → chữ "Chưa có đơn hàng nào…", không viền; cầm thùng tới → "Nhấn [chuột] để đặt thùng đơn lên bàn build", khối chỗ đặt
+  chỉ viền bao (không tô kín).
+- (2026-10-29) Thùng trên bàn build vẽ đúng cỡ thật (`BOX_SCALE` 1, trước 0,6 — người dùng: nhỏ hơn thùng trên kệ là sai); bàn có thùng thì camera
+  góc ngồi lùi ×1,5 (`benchPose(null, fit * 1.5)`) cho thấy trọn thùng. Kệ cất đơn thêm mặt trên (`SHELF_SLOTS` 12).

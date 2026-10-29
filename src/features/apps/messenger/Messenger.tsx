@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChartColumn,
+  Coins,
   Check,
   EyeOff,
   ListFilter,
@@ -18,6 +19,7 @@ import { useGame } from '@/store'
 import { LAYOUTS } from '@/data/layouts'
 import { CASES } from '@/data/parts'
 import { DECLINE_FREE } from '@/data/reviews'
+import { payout } from '@/store/scoring'
 import { Button, Muted, ThumbLoading, ViewHint, type ButtonTone } from '@/components/ui'
 import { CustomerAvatar } from '@/components/game/CustomerAvatar'
 import { OrderSpec } from '@/components/game/OrderSpec'
@@ -482,11 +484,11 @@ const REPLY_DELAY = 800
 /** Khung chat của 1 hội thoại */
 /** `onReply`: giữ hội thoại này đang mở sau khi đơn đổi trạng thái (không nhảy sang hội thoại khác) */
 function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBack: () => void }) {
-  const { acceptOrder, declineOrder, shipOrder, goBench } = useGame.getState()
+  const { acceptOrder, declineOrder, goBench, collectPay } = useGame.getState()
   const order = t.order
   const { caseId } = orderLook(order)
   // tin vừa gửi trong phiên (không lưu): nhận / từ chối / gửi hàng; xin địa chỉ, xem điểm
-  const [sent, setSent] = useState<'accept' | 'decline' | 'ship' | null>(null)
+  const [sent, setSent] = useState<'accept' | 'decline' | null>(null)
   const [askedAddr, setAskedAddr] = useState(false)
   const [score, setScore] = useState(false)
   const body = useRef<HTMLDivElement>(null)
@@ -575,6 +577,16 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
             )}
             {shipped && <ChatBubble from="out">{MSG.shipped(pickup)}</ChatBubble>}
             {shipped && <ChatBubble from="in">{MSG.thanks}</ChatBubble>}
+            {/* khách đã chuyển thù lao: bấm "Thu tiền" mới vào ví */}
+            {shipped && (
+              <ChatBubble from="in">
+                Mình chuyển khoản <b className="text-green">{payout(packed.result)}k</b> cho shop
+                rồi nha 💸
+              </ChatBubble>
+            )}
+            {shipped && packed.paid !== false && (
+              <ChatBubble from="out">Shop nhận được rồi, cảm ơn bạn nhiều! 🙏</ChatBubble>
+            )}
             {score && <ResultCard result={packed.result} />}
           </>
         )}
@@ -631,13 +643,17 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
                 Xin địa chỉ giao hàng
               </Reply>
             )}
+            {/* gửi hàng: cầm thùng đã đóng gói ra ô giao hàng trên kệ cuối hành lang (không bấm gửi ở đây nữa) */}
             {packed && !shipped && (pickup || askedAddr) && (
-              <Reply
-                tone="orange"
-                icon={pickup ? <Handshake /> : <Truck />}
-                onClick={() => act('ship', () => shipOrder(order.id))}
-              >
-                {pickup ? 'Giao tận tay khách' : 'Gửi hàng cho khách'}
+              <span className="flex items-center gap-1.5 px-1 text-sm text-muted">
+                {pickup ? <Handshake className="size-4" /> : <Truck className="size-4" />}
+                Cầm thùng ra ô giao hàng trên kệ cuối hành lang để{' '}
+                {pickup ? 'khách qua lấy' : 'gửi cho khách'}
+              </span>
+            )}
+            {shipped && packed?.paid === false && (
+              <Reply tone="green" icon={<Coins />} onClick={() => collectPay(order.id)}>
+                Thu tiền (+{payout(packed!.result)}k)
               </Reply>
             )}
             {packed && (

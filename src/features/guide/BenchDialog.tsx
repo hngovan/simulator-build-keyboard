@@ -17,8 +17,6 @@ export function BenchDialog() {
   const step = useStep()
   const seen = useGame((s) => s.guideSeen)
   const hasOrder = useGame((s) => !!s.order || s.jobs.length > 0)
-  // đang mở bảng chọn đơn: không che
-  const picker = useGame((s) => s.benchPicker)
   // cảnh 3D đang tải (vào bàn lần đầu / bước mới cần model): chờ `BenchLoader` xong mới nói
   const loading = useSceneLoading((s) => !s.ready || s.pending > 0)
   const mica = useGame((s) => s.ctx?.caseDef.material === 'mica')
@@ -33,7 +31,7 @@ export function BenchDialog() {
     setPrevTopic(topic)
     setIdx(0)
   }
-  if (!lines.length || picker || loading) return null
+  if (!lines.length || loading) return null
   const finish = () => {
     const { seeGuide } = useGame.getState()
     topics.forEach((t) => seeGuide(t.id))

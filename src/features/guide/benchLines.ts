@@ -13,7 +13,7 @@ export interface Topic {
  */
 export const benchTopics = (step: StepId | undefined, hasOrder: boolean, mica = false): Topic[] =>
   !step
-    ? [hasOrder ? { id: 'bench:pick', lines: PICK } : { id: 'bench:empty', lines: EMPTY }]
+    ? [hasOrder ? { id: 'bench:carry', lines: PICK } : { id: 'bench:empty2', lines: EMPTY }]
     : [
         { id: 'bench:intro', lines: INTRO },
         mica && MICA_LINES[step]
@@ -24,12 +24,13 @@ export const benchTopics = (step: StepId | undefined, hasOrder: boolean, mica = 
 const EMPTY = [
   'Ơ, bàn build còn trống trơn nè! Mình là Keeb-chan, trợ lý của thợ phím mới 💕',
   'Muốn build thì phải có đơn đã. Bấm "Về máy tính" góc trái trên, mở Mezzenger xem khách nhắn.',
-  'Chọn đơn hợp sức rồi bấm "Nhận đơn". Nhận xong quay lại đây, bấm ô vàng trên bàn để bắt đầu nha!',
+  'Chọn đơn hợp sức rồi bấm "Nhận đơn". Thùng đơn của khách sẽ tới kệ ngoài cửa, ra lấy mang về đặt lên bàn này nha!',
 ]
 
 const PICK = [
-  'Có đơn rồi đó! Bấm ô vàng trên bàn để mở danh sách đơn đã nhận.',
-  'Chọn 1 đơn: đủ linh kiện là vào build luôn, thiếu thì mình liệt kê ra để bạn đặt ở Shopii, hàng tới cửa thì ra nhận nha.',
+  'Có đơn rồi đó! Đứng dậy (WASD) ra kệ hàng cuối hành lang, bấm thùng đơn để cầm lên.',
+  'Mang về bấm bàn build để đặt xuống: đủ linh kiện là vào build luôn, thiếu thì mua thêm ở Shopii rồi bấm thùng trên bàn.',
+  'Đổi đơn thì bấm "Cầm thùng lên" cất vào kệ cất đơn trong phòng. Build xong đóng gói, cầm thùng ra ô giao hàng trên kệ cửa là gửi khách!',
 ]
 
 const INTRO = [
@@ -119,8 +120,12 @@ const STEP_LINES: Record<StepId, string[]> = {
     'Khách có đòi chất liệu keycap thì xem lại thông tin đơn bên trái cho chắc nha.',
   ],
   test: [
-    'Bước cuối: test phím! Gõ bàn phím thật hoặc click phím 3D, phím test rồi có chấm xanh.',
+    'Gần xong rồi: test phím! Gõ bàn phím thật hoặc click phím 3D, phím test rồi có chấm xanh.',
     'Test hết phím trước khi giao nhé! Bỏ sót là khách có thể báo lỗi nút, bị đánh giá thấp đó 😣',
     'Phím không bấm ăn thì quay lại bước hàn sửa. Xong thì đóng gói giao khách thôi 🎉',
+  ],
+  pack: [
+    'Xong rồi! Bấm thùng carton cạnh bàn phím để cho phím vào thùng nha 📦',
+    'Đóng thùng xong thì cầm thùng lên, mang ra ô giao hàng trên kệ cuối hành lang là gửi khách, tiền về liền!',
   ],
 }

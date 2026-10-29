@@ -106,7 +106,6 @@ export function startDevBuild(o: DevBuildOpts) {
     ctx: null,
     build: null,
     future: [],
-    benchPicker: false,
   })
   useGame.getState().startBuild()
 }

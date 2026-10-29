@@ -317,6 +317,8 @@ export type StepId =
   | 'caseScrew'
   | 'keycap'
   | 'test'
+  /** đóng gói phím vào thùng (bước cuối, bấm thùng = `deliver`); không tính là bước build chưa làm */
+  | 'pack'
 export type ScrewStep = 'caseOpen' | 'stabScrew' | 'topScrew' | 'trayScrew' | 'caseScrew'
 
 export interface StabMods {

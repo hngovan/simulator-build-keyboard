@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand'
+import { SHELF_SLOTS, type BoxSpot } from '@/data/boxes'
 import { randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
-import type { InventoryCheck } from '@/data/parts'
 import type { AudioSettings, NotifyItem, Order, ShopCategory, Toast, Review } from '@/types'
 import { newRunId, runEntry, runSig } from '@/data/gameOver'
 import { submitRun, type RunEndReason, type RunEntry } from '@/lib/leaderboardApi'
@@ -63,10 +63,6 @@ export interface MetaSlice extends Profile {
   setGroupTab: (tab: 'feed' | 'mine') => void
   /** mở Hội Phím Cơ ở tab "Bài của tôi" để đăng bán (nút Đăng bán trong app Kho) */
   openSell: () => void
-  /** bảng chọn đơn ở bàn build trống đang mở (không lưu) */
-  benchPicker: boolean
-  /** đơn vừa chọn ở bảng chọn đơn nhưng còn thiếu linh kiện (giữ qua lúc đổi HUD, không lưu) */
-  benchShort: { order: Order; missing: InventoryCheck[] } | null
   toast: (text: string, kind?: Toast['kind']) => void
   newGame: (name: string) => void
   continueGame: () => void
@@ -108,9 +104,6 @@ export interface Notice {
   title: string
   text: string
 }
-
-/** nhắc cách đi lại khi vào game */
-const WALK_HINT = '🚶 WASD / phím mũi tên để đi lại, bấm màn hình máy tính để xem đơn'
 
 let toastId = 0
 /** số đánh giá giữ lại trong bản lưu */
@@ -197,8 +190,21 @@ function snapshot(s: GameState): SaveData {
       acceptedToday: s.acceptedToday,
       dayStart: s.dayStart,
       worked: s.worked,
+      boxes: s.boxes,
+      benchBox: s.benchBox,
+      held: s.held,
     },
   }
+}
+
+/** nâng cấp bản lưu chưa có thùng hàng: đơn đang build nằm trên bàn, còn lại xếp kệ cất đơn (quá ô thì ra kệ cửa) */
+function oldBoxes(order: Order | null, building: boolean, waiting: string[]) {
+  const boxes: Record<string, BoxSpot> = {}
+  const rest = order && !building ? [order.id, ...waiting] : waiting
+  rest.forEach((id, i) => {
+    boxes[id] = i < SHELF_SLOTS ? { at: 'shelf', slot: i } : { at: 'door', slot: i - SHELF_SLOTS }
+  })
+  return { boxes, benchBox: order && building ? order.id : null, held: null }
 }
 
 export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set, get) => ({
@@ -215,15 +221,13 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   pcZoom: false,
   walk: false,
   standUp: (from) => {
-    useRoom.setState({ spot: from, goal: null, fly: null })
-    set({ screen: 'bench', walk: true, pcZoom: false, benchPicker: false })
+    useRoom.setState({ spot: from, fly: null })
+    set({ screen: 'bench', walk: true, pcZoom: false })
   },
   shopCat: 'case',
   groupTab: 'feed',
   messengerPick: null,
   setMessengerPick: (messengerPick) => set({ messengerPick }),
-  benchPicker: false,
-  benchShort: null,
   gameOver: null,
 
   toast: (text, kind = 'info') => {
@@ -284,6 +288,9 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       minimized: [],
       offers: randomOffers(),
       jobs: [],
+      boxes: {},
+      benchBox: null,
+      held: null,
       order: null,
       inventory: emptyInventory(),
       provided: {},
@@ -294,10 +301,9 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       ctx: null,
       result: null,
     })
-    useRoom.setState({ spot: 'pc', goal: null, fly: null })
+    useRoom.setState({ spot: 'pc', fly: null })
     get().save()
     get().toast(`Chào mừng ${get().name} tới xưởng phím! 🎉`, 'good')
-    get().toast(WALK_HINT)
   },
   continueGame: () => {
     const save = loadSave()
@@ -319,6 +325,13 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       offers: (offers ?? (offer ? [offer] : randomOffers())).map(fix),
       jobs: jobs ?? [],
       packed: session?.packed ?? [],
+      // bản lưu cũ chưa có thùng: đơn đang build coi như trên bàn, đơn chờ / đơn chưa build / đơn đóng gói chưa gửi xếp lên kệ cất đơn
+      ...(session?.boxes
+        ? {}
+        : oldBoxes(order, !!rest.build, [
+            ...(jobs ?? []).map((j) => j.order.id),
+            ...(session?.packed ?? []).filter((p) => !p.shipped).map((p) => p.order.id),
+          ])),
       history: session?.history ?? [],
       future: [],
       supplyUsed: session?.supplyUsed ?? {},
@@ -342,15 +355,14 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     // ctx là dữ liệu dẫn xuất: dựng lại từ đơn + kho đồ
     const s = get()
     if (s.build && s.order && s.mount) set({ ctx: buildContext(s.order, s.inventory, s.mount) })
-    useRoom.setState({ spot: 'pc', goal: null, fly: null })
+    useRoom.setState({ spot: 'pc', fly: null })
     s.toast(`Chào mừng ${save.name} quay lại! Ngày ${save.day}`, 'good')
-    s.toast(WALK_HINT)
   },
   goPC: () => set({ screen: 'pc', pcZoom: false }),
   // ở bàn build: camera bay tới màn hình rồi mới về desktop (PcZoom trong Bench.tsx)
   zoomToPC: () => (get().screen === 'bench' ? set({ pcZoom: true }) : get().goPC()),
   // chưa có build thì vào bàn trống, bấm ô vàng để chọn đơn
-  goBench: () => set({ screen: 'bench', walk: false, benchPicker: false, benchShort: null }),
+  goBench: () => set({ screen: 'bench', walk: false }),
   openApp: (id) =>
     set((s) => ({
       windows: [...s.windows.filter((w) => w !== id), id],

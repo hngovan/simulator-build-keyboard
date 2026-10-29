@@ -4,6 +4,7 @@ import {
   autoFlip,
   NO_FLIP_STEPS,
   TOP_FLIP_STEPS,
+  isBuildStep,
   isOptionalStep,
   stepTitle,
   SCREW_STEPS,
@@ -12,7 +13,7 @@ import {
 } from '@/data/steps'
 import { SCREW_FULL, SWITCHES, TOOLS, screwLevel } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
-import { FlipVertical2, Footprints, ListOrdered, Monitor, PackageCheck, Undo2 } from 'lucide-react'
+import { FlipVertical2, Footprints, Hand, Monitor, PackageCheck, Undo2 } from 'lucide-react'
 import { Alert, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
@@ -25,8 +26,8 @@ import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
 import { ResetCamButton } from './CamModeButton'
 import { useBenchKey } from './useBenchKey'
+import { confirmPack, requestPack, requestStash, usePack } from './packStore'
 import { stabModHint, stabModRules } from '@/data/mods'
-import { OrderPicker } from './EmptyBenchHud'
 
 // Dụng cụ đang dùng ở mỗi bước (hiện ở thanh nhiệm vụ)
 const STEP_TOOL: Partial<Record<StepId, ToolKind>> = {
@@ -49,7 +50,7 @@ function useBuildComplete() {
   const order = useGame((s) => s.order)
   const clicks = SCREW_FULL
   return ctx.steps
-    .filter((st) => !isOptionalStep(st, order))
+    .filter((st) => isBuildStep(st) && !isOptionalStep(st, order))
     .every((st) => {
       const [d, t] = stepProgress(st, build, ctx, clicks)
       return d >= t
@@ -76,7 +77,7 @@ function useDeliverIssues(): DeliverIssues {
   const requested: string[] = []
   const skipped: string[] = []
   const has = (st: StepId) => ctx.steps.includes(st)
-  for (const st of ctx.steps.filter((x) => !isOptionalStep(x, order))) {
+  for (const st of ctx.steps.filter((x) => isBuildStep(x) && !isOptionalStep(x, order))) {
     const [d, t] = stepProgress(st, build, ctx, SCREW_FULL)
     if (d < t) missing.push(`${stepTitle(st, order)}${t > 1 ? ` (${Math.min(d, t)}/${t})` : ''}`)
   }
@@ -160,10 +161,13 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
   const started = useBuild().stepIdx > 0
   const issues = useDeliverIssues()
   const clean = !issues.missing.length && !issues.requested.length && !issues.skipped.length
-  const [confirming, setConfirming] = useState(false)
+  // đóng gói (nút cam / thùng ở bước cuối): build đủ thì đóng luôn, chưa đủ thì hỏi lại
+  useEffect(() => usePack.setState({ clean }), [clean])
+  const confirming = usePack((p) => p.ask)
+  const packing = usePack((p) => p.at !== null)
   const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
   const canUndo = useGame((s) => s.history.length > 0 && !s.stabAnim)
-  const { zoomToPC, toggleFlip, deliver, undo } = useGame.getState()
+  const { zoomToPC, toggleFlip, undo } = useGame.getState()
   // phím Q lật xem đáy / lật lại mặt trên (như nút vàng)
   useBenchKey('KeyQ', canFlip ? toggleFlip : noop)
   // Ctrl+Z để hoàn tác (Space về góc nhìn mặc định: ResetCamButton)
@@ -203,31 +207,28 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
           disabled={!canUndo}
         />
         <ResetCamButton />
-        {/* danh sách đơn: xem tiến độ, đổi sang đơn khác (bản đang dở được cất lại nguyên trạng) */}
+        {/* đổi đơn: cầm thùng đơn đang làm lên (giữ nguyên tiến độ), đứng dậy cất vào kệ cất đơn rồi lấy thùng khác */}
         <IconButton
           tone="blue"
-          icon={<ListOrdered />}
-          label="Danh sách đơn (M)"
-          onClick={() => useGame.setState({ benchPicker: true })}
-          disabled={busy}
+          icon={<Hand />}
+          label="Cầm thùng đơn lên (cất kệ / đổi đơn)"
+          onClick={requestStash}
+          disabled={busy || packing}
         />
         <IconButton
           tone="orange"
           icon={<PackageCheck />}
           label="Đóng gói đơn này"
-          onClick={() => (clean ? deliver() : setConfirming(true))}
-          disabled={!started}
+          onClick={requestPack}
+          disabled={!started || packing}
         />
       </div>
       <StatusChips />
       {confirming && (
         <ConfirmDeliver
           issues={issues}
-          onCancel={() => setConfirming(false)}
-          onConfirm={() => {
-            setConfirming(false)
-            deliver()
-          }}
+          onCancel={() => usePack.setState({ ask: false })}
+          onConfirm={confirmPack}
         />
       )}
     </div>
@@ -246,6 +247,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const soft = step === 'solder' && done > 0 && !finished
   const last = build.stepIdx >= ctx.steps.length - 1
   const busy = !!s.stabAnim || !!s.lubeAnim
+  const packing = usePack((p) => p.at !== null)
   // đang đứng ở bước cũ (đã lùi về): đi tiếp theo các bước đã làm
   const ahead = s.future.length > 1
   const toolKind = STEP_TOOL[step]
@@ -328,6 +330,18 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
                 🔧 {tool.name}
               </span>
             ))}
+          {/* bước đóng gói: nút như bấm thùng carton */}
+          {step === 'pack' && (
+            <Button
+              tone="green"
+              size="sm"
+              className="inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm"
+              onClick={requestPack}
+              disabled={packing}
+            >
+              Cho phím vào thùng
+            </Button>
+          )}
           {/* mọi bước đều phải bấm mới sang bước sau; bước tuỳ chọn thì bỏ qua được */}
           {/* bước mở hộp: click thùng là tự sang bước sau, không cần nút */}
           {!last && step !== 'unbox' && (
@@ -381,12 +395,13 @@ function TestDone() {
           <b className="text-green">
             Test đủ {total}/{total} phím, mọi phím đều nhận.
           </b>{' '}
-          Bàn phím của {order.customer} đã build xong, đóng gói rồi nhắn khách để gửi hàng thôi!
+          Bàn phím của {order.customer} đã build xong, cho vào thùng đóng gói rồi mang ra kệ giao
+          hàng thôi!
         </p>
         <div className="flex justify-end gap-2">
           <Button onClick={() => setClosed(order.id)}>Để sau</Button>
-          <Button tone="green" onClick={() => useGame.getState().deliver()}>
-            OK, gửi khách
+          <Button tone="green" onClick={() => useGame.getState().nextStep()}>
+            OK, đóng gói
           </Button>
         </div>
       </HudCard>
@@ -442,7 +457,6 @@ export function BenchHud() {
       )}
       <Objective step={step} canFlip={canFlip} />
       {step in SCREW_STEPS && <BitPicker step={step as ScrewStep} />}
-      <OrderPicker />
       <TestDone />
     </>
   )

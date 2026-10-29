@@ -816,3 +816,12 @@
 - Yêu cầu: "bỏ icon ra bàn build luôn" (sau khi có phòng đi lại + Esc đứng dậy).
 - `Desktop.tsx`: bỏ 2 chỗ `BENCH_ICON` (góc phải desktop + lưới icon mobile), bỏ `BENCH_ICON` ở `apps.ts`. Ra bàn build: icon "Đứng dậy" / Esc
   rồi bấm bàn trong phòng; nút "Ra bàn build" trong Mezzenger (`goBench`) giữ. Mẹo `ready` (tips.ts), OVERVIEW, CLAUDE.md sửa theo.
+
+## Con trỏ pixel 8-bit (2026-10-29)
+
+- Người dùng: hỏi đổi con trỏ thành mẫu riêng → xem 4 bộ mẫu (trang preview HTML, đã xoá) → chọn "Pixel 8-bit, nền trắng".
+- `scripts/gen-cursors.mjs` (bitmap ký tự `#` viền tối / `o` ruột trắng, mỗi điểm 2px) → `public/cursors/arrow.svg` + `hand.svg` (32 × 32).
+- `src/index.css`: `--cursor-arrow` (điểm bấm 1 1) / `--cursor-hand` (9 1, đầu ngón tay). `html, body` mũi tên; `button` (trong `@layer base`, class
+  `cursor-*` riêng như `cursor-grab` vẫn đè được) + `.cursor-pointer` / `enabled:cursor-pointer` (ngoài layer để thắng utility) dùng bàn tay.
+  Vật 3D: `useHover` / bàn build trong Room.tsx gán `body.style.cursor = 'var(--cursor-hand)'`, rời ra gán `''` (về mặc định, không `'auto'`).
+- Canvas cảnh 3D bỏ `cursor-grab` (mặc định là mũi tên, kéo xoay camera vẫn mũi tên).

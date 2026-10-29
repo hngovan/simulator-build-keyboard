@@ -63,9 +63,18 @@ export const HALL_DOOR_Z = HALL.z0 + 0.8
 export const HALL_WINDOW = { x: (HALL.x0 + HALL.x1) / 2, w: 0.8, h: 1.2, sill: 0.95 }
 /** kệ sắt để hàng giao tới: dựa tường cuối hành lang, lệch về phía tường phòng (m, tâm chân kệ) */
 export const RACK = { x: HALL.x1 - 0.55, z: HALL.z0 + 0.21, w: 0.9, d: 0.38, h: 1.25 }
-/** đơn đóng gói chờ gửi + chậu cây: dựa tường ngoài cạnh cửa sổ (m) */
-export const SHIP_SPOT = { x: HALL.x0 + 0.3, z: HALL.z1 - 1.0 }
+/** kệ cất đơn (kệ sắt như kệ cửa, hạ thấp 80%): dựa tường phải gần tường trước, dưới tranh treo, mặt trước quay vào phòng (m) */
+export const STORE_SHELF = { x: HALF_W - RACK.d / 2 - 0.01, z: FRONT_M - 0.9 }
 export const HALL_PLANT = { x: HALL.x0 + 0.22, z: HALL.z1 - 0.25 }
+
+/** tầm với khi đi lại (m, theo mặt sàn từ chỗ đứng tới chỗ trỏ): xa hơn thì không rê sáng / bấm được đồ vật */
+export const REACH_M = 1.8
+
+/** chỗ trỏ trong tầm với chưa (đi lại); đang ngồi (không đi lại) thì luôn được */
+export const inReach = (e: {
+  point: { x: number; z: number }
+  camera: { position: { x: number; z: number } }
+}) => Math.hypot(e.point.x - e.camera.position.x, e.point.z - e.camera.position.z) <= REACH_M * M
 
 /** Đi lại: mắt cao 1.6m, bán kính người 0.22m */
 export const EYE_Y = FLOOR_Y + 1.6 * M
@@ -89,6 +98,8 @@ const BLOCKS_M: [number, number, number, number][] = [
   [SHELF_X - 0.5, SHELF_X + 0.5, FRONT_M - 0.257, FRONT_M],
   // kệ sắt cuối hành lang
   [RACK.x - RACK.w / 2, RACK.x + RACK.w / 2, HALL.z0, HALL.z0 + RACK.d],
+  // kệ cất đơn dựa tường phải
+  [HALF_W - RACK.d, HALF_W, STORE_SHELF.z - RACK.w / 2, STORE_SHELF.z + RACK.w / 2],
   // bàn làm việc
   [
     WORK_TABLE.x - WORK_TABLE.d / 2,
