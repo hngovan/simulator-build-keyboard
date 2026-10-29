@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.15',
     date: '2026-10-29',
-    commits: ['2940534'],
+    commits: ['2940534', '6e433d1'],
     title: 'Phòng đi lại kiểu PC Building Simulator, hẹn ngày giao hàng, lịch treo tường',
     items: [
       'Vào game là đứng trong phòng: WASD / phím mũi tên đi lại, kéo chuột nhìn, bấm sàn đi tới, bấm đồ vật để dùng; Esc / WASD ở bàn build thì đứng dậy',
