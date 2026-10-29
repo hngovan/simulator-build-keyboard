@@ -1,19 +1,49 @@
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { WINDOW } from './roomLayout'
 
-// Cửa sổ dựng bằng code: khung gỗ trắng 4 ô kính, cảnh ngoài (trời, cây, bãi cỏ, hàng rào) là ảnh vẽ canvas dán sau kính
+// Cửa sổ dựng bằng code: khung gỗ nâu 4 ô kính, nền sau kính trắng bóng như gương
 // (sân vườn 3D thật đã thử rồi bỏ: nặng máy),
 // rèm lá (model `VenetianBlind`) hạ kín: nắng lọt qua khe lá thành vài vệt sọc mờ xiên xuống sàn.
 // Đơn vị mét; gốc = mặt tường, giữa bậu cửa sổ; +z quay vào phòng
 
-const FRAME = new THREE.MeshStandardMaterial({ color: '#f1ece2', roughness: 0.6 })
+/** khung + bậu cửa gỗ nâu (vân óc chó Poly Haven CC0 có sẵn trong game, người dùng: "khung cửa gỗ nâu") */
+const WOOD_TEX = new THREE.TextureLoader().load('/textures/room/walnut_veneer_diff_1k.jpg', (t) => {
+  t.colorSpace = THREE.SRGBColorSpace
+})
+const FRAME = new THREE.MeshStandardMaterial({ map: WOOD_TEX, color: '#b07a4f', roughness: 0.55 })
 /**
  * Rèm lá "Venetian frame window" (người dùng đưa, Sketchfab, chưa rõ giấy phép → chỉ dùng cá nhân): ray + lá + dây + gậy xoay,
  * rộng 1m cao 1,66m, gốc = giữa chân rèm, mặt quay +z
  */
 const BLIND_GLB = '/models/room/venetian-blind.glb'
+/** gỗ sồi cho lá rèm: vân `oak_veneer_01` (Poly Haven CC0), lặp dọc lá (UV tự sinh, xem `woodUv`) */
+const OAK_TEX = new THREE.TextureLoader().load('/textures/room/oak_veneer_01_diff_1k.jpg', (t) => {
+  t.colorSpace = THREE.SRGBColorSpace
+})
+OAK_TEX.wrapS = OAK_TEX.wrapT = THREE.RepeatWrapping
+const BLIND_WOOD = new THREE.MeshStandardMaterial({
+  map: OAK_TEX,
+  color: '#c99a66',
+  roughness: 0.5,
+})
+
+/**
+ * Model rèm không có UV ở lá / ray: sinh UV phẳng theo toạ độ model (m) — u chạy dọc lá (x), v theo bề ngang lá (y + z)
+ * → vân gỗ chạy dọc lá như lá gỗ thật
+ */
+function woodUv(g: THREE.BufferGeometry) {
+  const pos = g.getAttribute('position')
+  const uv = new Float32Array(pos.count * 2)
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = pos.getX(i) * 1.5
+    uv[i * 2 + 1] = (pos.getY(i) + pos.getZ(i)) * 6
+  }
+  const out = g.clone()
+  out.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+  return out
+}
 useGLTF.preload(BLIND_GLB)
 
 /** rèm lá co giãn vừa ô cửa w × h (m), chân rèm ở y = 0 */
@@ -26,7 +56,14 @@ function VenetianBlind({
   const model = useMemo(() => {
     const copy = scene.clone(true)
     copy.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true
+      const m = o as THREE.Mesh
+      if (!m.isMesh) return
+      m.castShadow = m.receiveShadow = true
+      // rèm gỗ sồi có vân: lá, ray, thanh đáy, gậy xoay (người dùng: "rèm gỗ", "không thấy vân gỗ sồi"); dây giữ nguyên
+      if (!/string/i.test(m.name) && !/string/i.test(m.parent?.name ?? '')) {
+        m.geometry = woodUv(m.geometry)
+        m.material = BLIND_WOOD
+      }
     })
     copy.updateMatrixWorld(true)
     const box = new THREE.Box3().setFromObject(copy)
@@ -57,122 +94,16 @@ const RAY_EVERY = 9
 /** hướng nắng chiếu vào (xiên xuống, lệch sang phải) */
 const SUN = new THREE.Vector3(0.25, -0.62, 1).normalize()
 
-/**
- * Cảnh ngoài cửa sổ buổi sáng: trời xanh mây trắng, đồi + hàng cây xa, bãi cỏ xanh trước nhà, hàng rào gỗ trắng,
- * bụi cây + hoa sát chân tường
- */
-function skyTexture() {
-  const W = 384
-  const H = 480
-  const c = document.createElement('canvas')
-  c.width = W
-  c.height = H
-  const g = c.getContext('2d')!
-  let seed = 11
-  const r = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
-  const blob = (x: number, y: number, rx: number, ry: number, fill: string) => {
-    g.fillStyle = fill
-    g.beginPath()
-    g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2)
-    g.fill()
-  }
-  // trời
-  const sky = g.createLinearGradient(0, 0, 0, H * 0.55)
-  sky.addColorStop(0, '#5aa6ea')
-  sky.addColorStop(1, '#cfe8f7')
-  g.fillStyle = sky
-  g.fillRect(0, 0, W, H)
-  const sun = g.createRadialGradient(W * 0.7, H * 0.12, 4, W * 0.7, H * 0.12, 140)
-  sun.addColorStop(0, 'rgba(255,252,230,1)')
-  sun.addColorStop(0.3, 'rgba(255,245,210,0.5)')
-  sun.addColorStop(1, 'rgba(255,245,210,0)')
-  g.fillStyle = sun
-  g.fillRect(0, 0, W, H)
-  // mây
-  for (const [x, y, s] of [
-    [70, 70, 1],
-    [250, 120, 0.8],
-    [170, 40, 0.6],
-  ])
-    for (let i = 0; i < 5; i++)
-      blob(
-        x + (i - 2) * 18 * s,
-        y + Math.sin(i * 1.7) * 6 * s,
-        26 * s,
-        16 * s,
-        'rgba(255,255,255,0.92)',
-      )
-  // đồi xa xanh nhạt + hàng cây xa
-  const hill = H * 0.5
-  g.fillStyle = '#9cc79a'
-  g.beginPath()
-  g.moveTo(0, hill)
-  for (let x = 0; x <= W; x += 8) g.lineTo(x, hill - 18 - Math.sin(x / 60) * 14)
-  g.lineTo(W, H)
-  g.lineTo(0, H)
-  g.fill()
-  for (let x = -10; x < W + 10; x += 16 + r() * 12) {
-    const h = 26 + r() * 30
-    const y = hill - 8 - Math.sin(x / 60) * 14
-    g.fillStyle = '#5b4a36'
-    g.fillRect(x - 2, y - h * 0.35, 4, h * 0.35)
-    blob(x, y - h * 0.55, 10 + r() * 6, h * 0.45, r() > 0.5 ? '#3f7d3c' : '#4c8c43')
-  }
-  // bãi cỏ: xanh đậm dần về gần, sọc cắt cỏ
-  const lawnY = H * 0.6
-  const lawn = g.createLinearGradient(0, lawnY, 0, H)
-  lawn.addColorStop(0, '#7cc35a')
-  lawn.addColorStop(1, '#3f9a36')
-  g.fillStyle = lawn
-  g.fillRect(0, lawnY, W, H - lawnY)
-  for (let i = 0; i < 6; i++) {
-    g.fillStyle = i % 2 ? 'rgba(255,255,255,0.06)' : 'rgba(0,60,0,0.06)'
-    g.fillRect(0, lawnY + i * ((H - lawnY) / 6), W, (H - lawnY) / 6)
-  }
-  // ngọn cỏ lấm tấm
-  for (let i = 0; i < 400; i++) {
-    const x = r() * W
-    const y = lawnY + r() * (H - lawnY)
-    g.strokeStyle = r() > 0.5 ? '#2f7d2a' : '#9ad66e'
-    g.lineWidth = 1
-    g.beginPath()
-    g.moveTo(x, y)
-    g.lineTo(x + (r() - 0.5) * 3, y - 3 - r() * 4)
-    g.stroke()
-  }
-  // hàng rào gỗ trắng ngang bãi cỏ
-  const fy = H * 0.66
-  g.fillStyle = '#f4f1ea'
-  g.fillRect(0, fy + 8, W, 5)
-  g.fillRect(0, fy + 24, W, 5)
-  for (let x = 4; x < W; x += 22) {
-    g.beginPath()
-    g.moveTo(x, fy + 40)
-    g.lineTo(x, fy)
-    g.lineTo(x + 5, fy - 6)
-    g.lineTo(x + 10, fy)
-    g.lineTo(x + 10, fy + 40)
-    g.closePath()
-    g.fill()
-  }
-  // bụi cây + hoa sát chân tường
-  for (let x = -20; x < W + 20; x += 34 + r() * 16) {
-    const y = H - 10 - r() * 20
-    blob(x, y, 30 + r() * 14, 26 + r() * 10, '#2f7a2c')
-    blob(x - 8, y - 10, 18, 14, '#3d8f36')
-    for (let k = 0; k < 6; k++)
-      blob(
-        x + (r() - 0.5) * 44,
-        y + (r() - 0.7) * 30,
-        3,
-        3,
-        ['#ff6f91', '#ffd84a', '#ffffff', '#c86bff'][Math.floor(r() * 4)],
-      )
-  }
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  return t
-}
+/** nền sau kính: trắng tự sáng + phủ bóng phản chiếu môi trường như mặt gương */
+const MIRROR = new THREE.MeshPhysicalMaterial({
+  color: '#ffffff',
+  emissive: '#eef3f8',
+  emissiveIntensity: 0.85,
+  roughness: 0.04,
+  metalness: 0.1,
+  clearcoat: 1,
+  clearcoatRoughness: 0.02,
+})
 
 /**
  * Vệt nắng lọt qua khe rèm lá: mỗi khe (dải ngang mỏng trong mặt cửa sổ) quét theo hướng nắng tới sàn thành
@@ -211,8 +142,6 @@ export function RoomWindow({
   ...props
 }: { size?: { w: number; h: number; sill: number } } & JSX.IntrinsicElements['group']) {
   const { w, h, sill } = size
-  const sky = useMemo(() => skyTexture(), [])
-  useEffect(() => () => sky.dispose(), [sky])
   // rèm lá treo trong lòng khung, từ hộp ray trên xuống sát bậu
   const blindW = w - 0.02
   const slats = useMemo(
@@ -238,10 +167,9 @@ export function RoomWindow({
   const fr = 0.05
   return (
     <group {...props}>
-      {/* ngoài trời: ảnh vẽ dán sát mặt tường sau kính */}
-      <mesh position={[0, h / 2, 0.004]}>
+      {/* nền sau kính: trắng sáng bóng như gương (người dùng: thay cảnh vẽ ngoài trời) */}
+      <mesh position={[0, h / 2, 0.004]} material={MIRROR}>
         <planeGeometry args={[w, h]} />
-        <meshBasicMaterial map={sky} toneMapped={false} />
       </mesh>
       {/* kính */}
       <mesh position={[0, h / 2, 0.03]}>

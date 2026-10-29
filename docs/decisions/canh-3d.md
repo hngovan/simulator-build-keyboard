@@ -825,3 +825,19 @@
 - Rèm lá đổi sang model người dùng đưa (2026-10-29, "đổi qua model rèm này"): `venetian_fraim_window.glb` → `public/models/room/venetian-blind.glb`
   (214KB, ray + lá + dây + gậy xoay, 1 × 1,66m, gốc giữa chân rèm). `VenetianBlind` (RoomWindow) co x / y vừa lòng ô cửa; bỏ lá / dây
   / ray tự dựng, hằng `SLAT_*` chỉ còn để tính vệt nắng. Dùng ở cả cửa sổ bàn máy tính lẫn cuối hành lang.
+- Bàn máy tính đổi sang model người dùng đưa (2026-10-29, "thay model bàn làm việc, bàn có hộc"): `office_desk.glb` →
+  `public/models/desk/office-desk.glb` (86KB, low-poly, đơn vị riêng 0,33 × 0,19 × 0,14). `DeskBody` (PcDesk) co từng trục cho
+  đúng `PC_DESK` (dài 1,2m theo z, sâu 0,7m, cao = bàn build 0,799m), xoay π/2 cho mặt ngăn kéo ra phòng. Bỏ mặt gỗ óc chó / chân thép /
+  hộc tủ tự dựng (`Legs`, `Cabinet`). CPU vẫn ở gầm bàn (z −0,29), nằm gọn khoảng để chân giữa hộc trái và kệ phải.
+- Nền sau kính cửa sổ: bỏ cảnh vẽ ngoài trời, thay mặt trắng bóng như gương (`MIRROR` meshPhysical trắng tự sáng + clearcoat, người dùng:
+  "nền cửa sổ đổi thành nền trắng như gương").
+- Rèm lá đổi chất liệu gỗ sồi có vân (`BLIND_WOOD` = texture `oak_veneer_01`): model không có UV ở lá nên `woodUv` sinh UV phẳng
+  theo toạ độ model (u dọc lá ×1,5, v = y + z ×6) cho vân chạy dọc lá; dây rèm giữ màu gốc.
+- Khung + bậu cửa sổ đổi từ gỗ sơn trắng sang gỗ nâu (`FRAME` = texture óc chó `walnut_veneer`, người dùng: "khung cửa gỗ nâu").
+- Thùng CPU dời vào ngăn kệ hở bên phải bàn có hộc (`CPU_AT` [0, 0.03, −0.475] hệ bàn), 3 đầu dây cáp dời theo.
+- Màn hình máy tính đổi sang model người dùng đưa (2026-10-29): `asus_pc_gaming_monitor.glb` → `public/models/desk/asus-monitor.glb`
+  (1,1MB). `Monitor` (models/Computer.tsx): mesh material "Screen" thay bằng ảnh desktop KeebOS (UV đặt lại theo khung mặt kính, lật u
+  vì model quay mặt kính về −z nên xoay 180°), co cả model cho mặt kính rộng `SCREEN.w` 0,6m, chân đế chạm bàn, mặt kính ở
+  `SCREEN.d / 2`. `SCREEN` đổi theo số đo model (cao 0,345, mép dưới 0,081) để `screenCenter` / `screenEye` (camera bay vào) khớp.
+  Viền hover dùng `useHoverOutline` thay `HoverShell` (đã xoá). Bấm vẫn `zoomToPC`.
+- Viền hover màn hình ASUS: vỏ / mặt kính là tấm phẳng mỏng nên viền phồng (`useHoverOutline`) chỉ lộ ở chân đế → thêm khung chữ nhật xanh phẳng (`ShapeGeometry` ôm khung bao vỏ, `visible={hover}`) sát trước mặt kính.

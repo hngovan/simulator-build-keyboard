@@ -1,15 +1,14 @@
-import { useMemo, useState } from 'react'
-import { RoundedBox } from '@react-three/drei'
+import { useMemo, useRef, useState } from 'react'
+import { RoundedBox, useGLTF } from '@react-three/drei'
 import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGame } from '@/store'
 import { useHover } from '../common/useHover'
-import { HINT_COLOR } from '../common/hoverOutline'
+import { HINT_COLOR, useHoverOutline } from '../common/hoverOutline'
 import { SCREEN } from './computerLayout'
 
-// Màn hình + thùng CPU trên bàn (dựng bằng code, đơn vị mét; Room nhân M).
-// Bấm màn hình thì về desktop KeebOS; rê chuột vào thì viền xanh liền nét
-const HOVER = HINT_COLOR
+// Màn hình (model ASUS) + thùng CPU (dựng bằng code), đơn vị mét; Room nhân M.
+// Bấm màn hình thì về desktop KeebOS; rê chuột vào thì viền xanh
 
 /** Ảnh desktop KeebOS trên màn hình: nền tím xanh, vài icon app, thanh taskbar */
 function screenTexture() {
@@ -54,66 +53,125 @@ function screenTexture() {
 }
 
 const BLACK = new THREE.MeshStandardMaterial({ color: '#16181d', roughness: 0.45, metalness: 0.3 })
-const GREY = new THREE.MeshStandardMaterial({ color: '#2b2f37', roughness: 0.5, metalness: 0.6 })
-/** viền hover: hộp nở ra 1 chút, chỉ vẽ mặt sau → thành đường viền xanh liền nét quanh vật */
-const SHELL = new THREE.MeshBasicMaterial({ color: HOVER, side: THREE.BackSide, toneMapped: false })
-/** độ dày viền hover (m) */
-const T = 0.0025
 
-function HoverShell({ args, show }: { args: [number, number, number]; show: boolean }) {
-  return (
-    <mesh visible={show} material={SHELL} raycast={() => null}>
-      <boxGeometry args={[args[0] + T * 2, args[1] + T * 2, args[2] + T * 2]} />
-    </mesh>
-  )
-}
+/**
+ * Màn hình gaming ASUS (model người dùng đưa, Sketchfab, chưa rõ giấy phép → chỉ dùng cá nhân): mesh mặt kính (material
+ * "Screen") thay bằng ảnh desktop KeebOS, UV đặt lại theo khung mặt kính. Co cả model cho mặt kính rộng SCREEN.w, chân đế
+ * chạm mặt bàn (y = 0), mặt kính ở z = SCREEN.d / 2 (computerLayout tính điểm camera bay vào theo SCREEN).
+ * Model quay mặt kính về −z nên xoay 180°. Bấm vào thì camera bay vào màn hình rồi về máy tính
+ */
+const MONITOR_GLB = '/models/desk/asus-monitor.glb'
+/** khung viền hover phẳng quanh mép màn hình (xanh như viền tương tác khác) */
+const FRAME = new THREE.MeshBasicMaterial({
+  color: HINT_COLOR,
+  toneMapped: false,
+  side: THREE.DoubleSide,
+})
+useGLTF.preload(MONITOR_GLB)
 
-/** Màn hình trên chân đế; bấm vào thì camera bay vào màn hình rồi về máy tính */
 export function Monitor(props: { position?: [number, number, number]; rotationY?: number }) {
   const tex = useMemo(() => screenTexture(), [])
+  const { scene } = useGLTF(MONITOR_GLB)
   const zoomToPC = useGame((s) => s.zoomToPC)
   const [down, setDown] = useState<[number, number] | null>(null)
   const { hover, bind } = useHover(true)
+  const ref = useRef<THREE.Group>(null)
+  useHoverOutline(ref, hover)
+  const model = useMemo(() => {
+    const copy = scene.clone(true)
+    const outer = new THREE.Group()
+    const inner = new THREE.Group()
+    inner.rotation.y = Math.PI
+    inner.add(copy)
+    outer.add(inner)
+    let screen: THREE.Mesh | null = null
+    copy.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (!m.isMesh) return
+      m.castShadow = m.receiveShadow = true
+      if ((m.material as THREE.Material).name === 'Screen') screen = m
+    })
+    if (screen) {
+      const m = screen as THREE.Mesh
+      // UV 0..1 theo khung mặt kính (mặt phẳng x / y của mesh); model xoay 180° nên lật u cho chữ không bị ngược
+      const g = m.geometry.clone()
+      g.computeBoundingBox()
+      const b = g.boundingBox!
+      const pos = g.getAttribute('position')
+      const uv = new Float32Array(pos.count * 2)
+      for (let i = 0; i < pos.count; i++) {
+        uv[i * 2] = 1 - (pos.getX(i) - b.min.x) / (b.max.x - b.min.x)
+        uv[i * 2 + 1] = (pos.getY(i) - b.min.y) / (b.max.y - b.min.y)
+      }
+      g.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
+      m.geometry = g
+      m.material = new THREE.MeshBasicMaterial({
+        map: tex,
+        toneMapped: false,
+        side: THREE.DoubleSide,
+      })
+    }
+    // co theo bề rộng mặt kính, chân đế xuống y = 0, mặt kính ra z = SCREEN.d / 2
+    outer.updateMatrixWorld(true)
+    const sb = new THREE.Box3().setFromObject(screen ?? copy)
+    const k = SCREEN.w / (sb.max.x - sb.min.x)
+    outer.scale.setScalar(k)
+    outer.updateMatrixWorld(true)
+    const all = new THREE.Box3().setFromObject(outer)
+    const sc = new THREE.Box3().setFromObject(screen ?? copy)
+    outer.position.set(-(sc.min.x + sc.max.x) / 2, -all.min.y, SCREEN.d / 2 - sc.max.z)
+    // viền hover quanh mép màn hình: mặt kính / vỏ là tấm phẳng mỏng nên viền phồng (useHoverOutline) không lộ ra,
+    // vẽ khung chữ nhật xanh phẳng ôm mép vỏ, đặt sát trước mặt kính (chân đế vẫn viền phồng như thường)
+    outer.updateMatrixWorld(true)
+    const bezel = new THREE.Box3()
+    copy.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (
+        m.isMesh &&
+        /Base|Backboard|Screen/.test((m.material as THREE.Material).name) &&
+        m.name.includes('001')
+      )
+        bezel.expandByObject(m)
+    })
+    if (bezel.isEmpty()) bezel.copy(new THREE.Box3().setFromObject(screen ?? copy))
+    const rect = (x0: number, y0: number, x1: number, y1: number) =>
+      [
+        [x0, y0],
+        [x1, y0],
+        [x1, y1],
+        [x0, y1],
+      ].map(([x, y]) => new THREE.Vector2(x, y))
+    const t = 0.004
+    const shape = new THREE.Shape(
+      rect(bezel.min.x - t, bezel.min.y - t, bezel.max.x + t, bezel.max.y + t),
+    )
+    shape.holes.push(
+      new THREE.Path(rect(bezel.min.x, bezel.min.y, bezel.max.x, bezel.max.y).reverse()),
+    )
+    return { group: outer, frame: new THREE.ShapeGeometry(shape) }
+  }, [scene, tex])
   return (
     <group
+      ref={ref}
       position={props.position}
       rotation-y={props.rotationY ?? 0}
       {...bind}
       onPointerDown={(e: ThreeEvent<PointerEvent>) => setDown([e.clientX, e.clientY])}
       onClick={(e: ThreeEvent<MouseEvent>) => {
-        // kéo khung nhìn (camera) thì không tính là bấm
+        // kéo xoay camera thì không tính là bấm
         if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return
         e.stopPropagation()
         zoomToPC()
       }}
     >
-      {/* đế + cổ */}
-      <RoundedBox args={[0.22, 0.012, 0.16]} radius={0.005} position-y={0.006} material={GREY}>
-        <HoverShell args={[0.22, 0.012, 0.16]} show={hover} />
-      </RoundedBox>
-      <RoundedBox
-        args={[0.045, SCREEN.y + 0.06, 0.02]}
-        radius={0.006}
-        position={[0, (SCREEN.y + 0.06) / 2, -0.03]}
-        material={GREY}
-      >
-        <HoverShell args={[0.045, SCREEN.y + 0.06, 0.02]} show={hover} />
-      </RoundedBox>
-      {/* thân màn hình (viền mỏng) */}
-      <group position={[0, SCREEN.y + SCREEN.h / 2, 0]}>
-        <RoundedBox
-          args={[SCREEN.w, SCREEN.h, SCREEN.d]}
-          radius={0.006}
-          material={BLACK}
-          castShadow
-        >
-          <HoverShell args={[SCREEN.w, SCREEN.h, SCREEN.d]} show={hover} />
-        </RoundedBox>
-        <mesh position-z={SCREEN.d / 2 + 0.0005}>
-          <planeGeometry args={[SCREEN.w - 0.016, SCREEN.h - 0.026]} />
-          <meshBasicMaterial map={tex} toneMapped={false} />
-        </mesh>
-      </group>
+      <primitive object={model.group} />
+      <mesh
+        geometry={model.frame}
+        material={FRAME}
+        position-z={SCREEN.d / 2 + 0.001}
+        visible={hover}
+        raycast={() => null}
+      />
     </group>
   )
 }

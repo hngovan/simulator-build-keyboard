@@ -3,7 +3,8 @@ import { Y } from '@/data/steps'
 import { M, PC_DESK } from '../room/roomLayout'
 
 /** khung màn hình (m): rộng, cao, dày, cao độ mép dưới so với mặt bàn */
-export const SCREEN = { w: 0.6, h: 0.35, d: 0.02, y: 0.11 }
+// đo từ model ASUS (asus-monitor.glb) co cho mặt kính rộng 0,6m: cao 0,345, mép dưới cách mặt bàn 0,081
+export const SCREEN = { w: 0.6, h: 0.345, d: 0.02, y: 0.081 }
 /** chân đế màn hình (đơn vị cảnh) + góc xoay quanh trục đứng: sát mép sau bàn máy tính, quay mặt vào phòng (+z) */
 export const MONITOR_AT: [number, number, number] = [
   PC_DESK.x * M,

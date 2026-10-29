@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RoundedBox, useGLTF, useTexture } from '@react-three/drei'
+import { RoundedBox, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame } from '@/store'
 import { Monitor, PcTower } from '../models/Computer'
@@ -8,76 +8,49 @@ import { RoomSpot } from './RoomSpot'
 import { Cable, Outlet } from './Wiring'
 import { topreTexture } from './topreArt'
 
-// Bàn máy tính sát bên trái bàn build (dựng bằng code, theo kiểu PC Building Simulator): mặt gỗ óc chó + khung chân thép đen,
-// hộc tủ 3 ngăn bên phải, lót chuột 90 × 40cm in hình Topre, màn hình 27" (bấm → vào máy tính), bàn phím 60% + chuột;
+// Bàn máy tính sát bên trái bàn build (theo kiểu PC Building Simulator): bàn có hộc = model người dùng đưa (`DeskBody`),
+// lót chuột 90 × 40cm in hình Topre, màn hình 27" (bấm → vào máy tính), bàn phím 60% + chuột;
 // thùng CPU đặt dưới gầm bàn, dây kéo lên màn hình / bàn phím. Đơn vị mét, gốc = sàn dưới tâm bàn,
 // chiều dài bàn theo z, mép trước quay ra phòng (+x)
 
-const TOP_T = 0.03
-const TEX = '/textures/room'
-const WALNUT = {
-  map: `${TEX}/walnut_veneer_diff_1k.jpg`,
-  normalMap: `${TEX}/walnut_veneer_nor_gl_1k.jpg`,
-  roughnessMap: `${TEX}/walnut_veneer_rough_1k.jpg`,
-}
-const STEEL = new THREE.MeshStandardMaterial({ color: '#1d1f24', roughness: 0.45, metalness: 0.7 })
+/** chân thùng CPU trong ngăn kệ hở bên phải bàn (hệ bàn: z âm = tay phải người ngồi), đáy trên ván đáy kệ */
+const CPU_AT: [number, number, number] = [0, 0.03, -0.475]
 const PAD = new THREE.MeshStandardMaterial({ color: '#1b1d23', roughness: 0.95 })
 /** ảnh in lót chuột người dùng tự đặt (không bắt buộc) */
 const PAD_IMAGE = '/textures/mousepad.png'
-const CABINET = new THREE.MeshStandardMaterial({ color: '#3b3632', roughness: 0.6 })
-const HANDLE = new THREE.MeshStandardMaterial({ color: '#b9bcc2', roughness: 0.3, metalness: 0.8 })
-/** hộc tủ dưới bàn, phía tường trái */
-const CAB = { w: 0.4, z: PC_DESK.w / 2 - 0.25 }
 
-/** Hộc tủ 3 ngăn kéo tay nắm kim loại, đứng dưới mặt bàn */
-function Cabinet() {
-  const h = DESK.h - TOP_T
-  const d = PC_DESK.d - 0.08
-  return (
-    <group position={[0.02, 0, CAB.z]}>
-      <mesh position-y={h / 2} material={CABINET} castShadow receiveShadow>
-        <boxGeometry args={[d, h, CAB.w]} />
-      </mesh>
-      {[0, 1, 2].map((i) => {
-        const y = 0.06 + ((h - 0.08) / 3) * (i + 0.5)
-        return (
-          <group key={i} position={[d / 2, y, 0]}>
-            <mesh position-x={0.004} material={CABINET}>
-              <boxGeometry args={[0.012, (h - 0.08) / 3 - 0.012, CAB.w - 0.02]} />
-            </mesh>
-            <mesh position-x={0.022} material={HANDLE}>
-              <boxGeometry args={[0.012, 0.014, 0.16]} />
-            </mesh>
-          </group>
-        )
-      })}
-    </group>
-  )
-}
+/**
+ * Bàn có hộc "office desk" (người dùng đưa, Sketchfab, chưa rõ giấy phép → chỉ dùng cá nhân; low-poly 86KB, đơn vị riêng
+ * rộng 0,33 × cao 0,19 × sâu 0,14): co giãn từng trục cho đúng PC_DESK (dài w theo z, sâu d theo x, cao bằng bàn build).
+ * Mặt có ngăn kéo của model (+z) xoay ra phòng (+x)
+ */
+const DESK_GLB = '/models/desk/office-desk.glb'
+useGLTF.preload(DESK_GLB)
 
-/** khung chân chữ T ngược mỗi đầu bàn + xà ngang sau */
-function Legs() {
-  const h = DESK.h - TOP_T
-  return (
-    <group>
-      {[-1, 1].map((s) => (
-        <group key={s} position-z={s * (PC_DESK.w / 2 - 0.08)}>
-          <mesh position-y={h / 2} material={STEEL} castShadow>
-            <boxGeometry args={[0.06, h, 0.05]} />
-          </mesh>
-          <mesh position-y={0.015} material={STEEL} castShadow>
-            <boxGeometry args={[PC_DESK.d - 0.06, 0.03, 0.06]} />
-          </mesh>
-          <mesh position-y={h - 0.02} material={STEEL}>
-            <boxGeometry args={[PC_DESK.d - 0.1, 0.04, 0.05]} />
-          </mesh>
-        </group>
-      ))}
-      <mesh position={[-PC_DESK.d / 2 + 0.08, h - 0.06, 0]} material={STEEL}>
-        <boxGeometry args={[0.03, 0.08, PC_DESK.w - 0.16]} />
-      </mesh>
-    </group>
-  )
+function DeskBody() {
+  const { scene } = useGLTF(DESK_GLB)
+  const model = useMemo(() => {
+    const copy = scene.clone(true)
+    copy.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true
+    })
+    copy.updateMatrixWorld(true)
+    const box = new THREE.Box3().setFromObject(copy)
+    const size = box.getSize(new THREE.Vector3())
+    const k = [PC_DESK.w / size.x, DESK.h / size.y, PC_DESK.d / size.z]
+    copy.scale.set(k[0], k[1], k[2])
+    copy.position.set(
+      (-(box.min.x + box.max.x) / 2) * k[0],
+      -box.min.y * k[1],
+      (-(box.min.z + box.max.z) / 2) * k[2],
+    )
+    const g = new THREE.Group()
+    g.add(copy)
+    // dài theo x của model → trục z của bàn, mặt trước (+z) → +x
+    g.rotation.y = Math.PI / 2
+    return g
+  }, [scene])
+  return <primitive object={model} />
 }
 
 /**
@@ -170,34 +143,11 @@ function MousePad(props: JSX.IntrinsicElements['group']) {
 }
 
 export function PcDesk(props: JSX.IntrinsicElements['group']) {
-  const walnut = useTexture(WALNUT)
-  const top = useMemo(() => {
-    const maps = Object.fromEntries(
-      Object.entries(walnut).map(([k, t]) => {
-        const c = t.clone()
-        c.wrapS = c.wrapT = THREE.RepeatWrapping
-        // vân gỗ chạy dọc chiều dài bàn
-        c.rotation = Math.PI / 2
-        if (k === 'map') c.colorSpace = THREE.SRGBColorSpace
-        c.needsUpdate = true
-        return [k, c]
-      }),
-    )
-    return new THREE.MeshStandardMaterial({ ...maps, roughness: 0.6 })
-  }, [walnut])
   const zoomToPC = useGame((s) => s.zoomToPC)
   const deskTop = DESK.h
   return (
     <group {...props}>
-      <RoundedBox
-        args={[PC_DESK.d, TOP_T, PC_DESK.w]}
-        radius={0.006}
-        position-y={deskTop - TOP_T / 2}
-        material={top}
-        castShadow
-        receiveShadow
-      />
-      <Legs />
+      <DeskBody />
       <MousePad position={[0.1, deskTop, -0.05]} />
       {/* bàn phím Topre Realforce 87U (TKL dài 36,5cm) + chuột Razer DeathAdder (12,7cm), mặt trước quay ra phòng */}
       <DeskGear
@@ -220,15 +170,14 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
           <Monitor />
         </group>
       </RoomSpot>
-      <Cabinet />
-      {/* thùng CPU dưới gầm bàn, cách chân bàn trái (z −0.52) cho khỏi đè lên chân, mặt trước quay ra phòng */}
-      <group position={[-0.05, 0, -0.29]} rotation-y={Math.PI / 2}>
+      {/* thùng CPU cất trong ngăn kệ hở bên phải bàn (CPU_AT), mặt trước quay ra phòng */}
+      <group position={CPU_AT} rotation-y={Math.PI / 2}>
         <PcTower />
       </group>
       {/* dây: CPU → lỗ luồn dây mép sau bàn → chân màn hình; CPU → bàn phím; CPU → ổ điện tường */}
       <Cable
         points={[
-          [-0.22, 0.3, -0.29],
+          [-0.22, 0.3, -0.475],
           [-0.3, 0.45, -0.3],
           [-0.33, deskTop - 0.05, -0.12],
           [-0.33, deskTop + 0.01, -0.05],
@@ -239,7 +188,7 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
       <Cable
         r={0.0025}
         points={[
-          [-0.22, 0.25, -0.25],
+          [-0.22, 0.25, -0.435],
           [-0.31, 0.5, -0.2],
           [-0.33, deskTop - 0.02, -0.15],
           [-0.3, deskTop + 0.008, -0.12],
@@ -249,7 +198,7 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
       />
       <Cable
         points={[
-          [-0.22, 0.2, -0.33],
+          [-0.22, 0.2, -0.515],
           [-0.36, 0.12, -0.4],
           [-0.383, 0.3, -0.44],
         ]}

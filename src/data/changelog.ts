@@ -13,6 +13,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.16',
+    date: '2026-10-29',
+    commits: [],
+    title: 'Bàn máy tính có hộc, màn hình ASUS, rèm + khung cửa gỗ',
+    items: [
+      'Bàn máy tính đổi sang bàn có hộc ngăn kéo, thùng CPU cất trong ngăn kệ bên phải',
+      'Màn hình gaming ASUS chân chữ V, rê chuột có viền xanh quanh cả màn hình',
+      'Rèm lá gỗ sồi có vân, khung + bậu cửa sổ gỗ nâu, nền sau kính trắng như gương',
+    ],
+  },
+  {
     version: '0.1.15',
     date: '2026-10-29',
     commits: ['2940534', '6e433d1'],

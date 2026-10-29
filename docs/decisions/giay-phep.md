@@ -54,3 +54,5 @@ Quy tắc của người dùng:
   (`public/models/desk/`, gốc trong `assets/user-desk/` không commit). Lót chuột in logo Topre "COLDTOP" vẽ lại theo ảnh người dùng
   (thương hiệu thật, chỉ dùng cá nhân).
 - 2026-10-29: rèm lá "Venetian frame window" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/room/venetian-blind.glb`.
+- 2026-10-29: bàn có hộc "office desk" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/desk/office-desk.glb`.
+- 2026-10-29: màn hình "ASUS PC gaming monitor" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/desk/asus-monitor.glb`.
