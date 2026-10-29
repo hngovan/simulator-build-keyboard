@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.16',
     date: '2026-10-29',
-    commits: [],
+    commits: ['4fdf2c9'],
     title: 'Bàn máy tính có hộc, màn hình ASUS, rèm + khung cửa gỗ',
     items: [
       'Bàn máy tính đổi sang bàn có hộc ngăn kéo, thùng CPU cất trong ngăn kệ bên phải',
