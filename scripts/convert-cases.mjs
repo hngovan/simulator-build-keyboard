@@ -1,20 +1,21 @@
 // Chuyển case bàn phím cộng đồng (MIT) sang GLB cho cảnh lắp ráp.
 // Dùng: bun run convert:cases
 //
-// - Bakeneko 60 (kkatano/bakeneko-60): assets/community/bakeneko-60/case/case.step
-// - Planck (MajorKoos/KBDParts): assets/community/planck/case/planck.stl
+// - Bakeneko 60 (kkatano/bakeneko-60): assets/keyboards/bakeneko60/case/case.step
+// - Planck (MajorKoos/KBDParts): assets/keyboards/planck/case/planck.stl
 // CAD: mm, trục cao = trục có kích thước nhỏ nhất (STEP Bakeneko Z lên, STL Planck Y lên). Game: Y hướng lên, mm, tâm case ở gốc (x, z), đáy case ở y = 0,
 // mặt thấp hơn (phía người gõ) quay về +z
 import fs from 'node:fs'
+import path from 'node:path'
 import occtimportjs from 'occt-import-js'
 import { Document, NodeIO } from '@gltf-transform/core'
 
-const OUT = 'public/models/cases'
+const OUT = 'public/models/keyboards'
 // turn: xoay thêm 180° quanh trục đứng. Planck là khay phẳng (2 mép cao bằng nhau) nên đoán mặt trước theo
 // "phía thấp hơn" bị ngược → lỗ cổng USB-C ra trước phải; xoay lại để cổng ở sau bên trái như bàn thật
 const SOURCES = {
-  bakeneko60: { file: 'assets/community/bakeneko-60/case/case.step', kind: 'step' },
-  planck: { file: 'assets/community/planck/case/planck.stl', kind: 'stl', turn: true },
+  'bakeneko60/case': { file: 'assets/keyboards/bakeneko60/case/case.step', kind: 'step' },
+  'planck/case': { file: 'assets/keyboards/planck/case/planck.stl', kind: 'stl', turn: true },
 }
 
 /** STL nhị phân → mảng tam giác không chỉ số (position + pháp tuyến mặt) */
@@ -106,6 +107,7 @@ for (const [id, src] of Object.entries(SOURCES)) {
     .createScene(id)
     .addChild(doc.createNode('case').setMesh(doc.createMesh('case').addPrimitive(prim)))
   const out = `${OUT}/${id}.glb`
+  fs.mkdirSync(path.dirname(out), { recursive: true })
   await new NodeIO().write(out, doc)
   console.log(
     `✔ ${out}: ${(max[0] - min[0]).toFixed(1)} × ${(max[1] - min[1]).toFixed(1)} × ${(max[2] - min[2]).toFixed(1)}mm,`,

@@ -256,7 +256,7 @@ export async function buildScene(kind: ThumbKind, type: string) {
         TOOLS.cert[Number(levelText)].name.replace('Chứng chỉ ', ''),
       )
     if (tool === 'desolder') {
-      const pump = (await glbScene('/models/solder/desolder-pump.glb')).clone(true)
+      const pump = (await glbScene('/models/tools/solder/desolder-pump.glb')).clone(true)
       pump.rotation.z = -0.45
       return pump
     }
@@ -298,19 +298,19 @@ export async function buildScene(kind: ThumbKind, type: string) {
     } else if (tool === 'solder') {
       // model thật: bút hàn 60W (mét, dựng theo +y) / trạm hàn cả cụm (đơn vị OBJ)
       if (level > 1) {
-        const station = (await glbScene('/models/solder/iron-station.glb')).clone(true)
+        const station = (await glbScene('/models/tools/solder/iron-station.glb')).clone(true)
         station.scale.setScalar(0.28)
         station.position.set(-0.2, -0.3, 0)
         group.add(station)
       } else {
-        const pen = (await glbScene('/models/solder/iron-60w.glb')).clone(true)
+        const pen = (await glbScene('/models/tools/solder/iron-60w.glb')).clone(true)
         pen.scale.setScalar(9)
         pen.rotation.z = -1.1
         group.add(pen)
       }
     } else if (tool === 'tipCleaner') {
       // giá bùi nhùi (in 3D, mm): chỉ phần vòm "base" + cục đồng trong lỗ
-      const stand = (await glbScene('/models/solder/sponge-stand.glb')).clone(true)
+      const stand = (await glbScene('/models/tools/solder/sponge-stand.glb')).clone(true)
       stand.traverse((o) => {
         if ((o as THREE.Mesh).isMesh && o.name !== 'base') o.visible = false
       })

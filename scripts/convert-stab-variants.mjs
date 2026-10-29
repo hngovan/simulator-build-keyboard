@@ -1,12 +1,12 @@
 // Housing stab clip-in (Cherry, Sketchfab) + plate-mount (Sketchfab) → GLB chỉ 1 node `housing`, cùng hệ với
-// public/models/stab.glb (screw-in CAD): mm, gốc = tâm slider, y = 0 là mặt PCB (plate-mount: chỗ đặt trên PCB),
+// public/models/stab/stab.glb (screw-in CAD): mm, gốc = tâm slider, y = 0 là mặt PCB (plate-mount: chỗ đặt trên PCB),
 // trục x ngang, z dọc phím, dây ở phía +z. Slider + dây vẫn dùng CAD của stab.glb.
-// Chạy: node scripts/convert-stab-variants.mjs [thư mục model gốc] (mặc định assets/community/stab-variants)
+// Chạy: node scripts/convert-stab-variants.mjs [thư mục model gốc] (mặc định assets/stab/variants)
 import { Document, NodeIO } from '@gltf-transform/core'
 import path from 'node:path'
 
-const SRC = process.argv[2] ?? 'assets/community/stab-variants'
-const OUT = 'public/models'
+const SRC = process.argv[2] ?? 'assets/stab/variants'
+const OUT = 'public/models/stab'
 const io = new NodeIO()
 
 /** đọc vị trí + pháp tuyến + chỉ số của 1 mesh (gộp các primitive) */

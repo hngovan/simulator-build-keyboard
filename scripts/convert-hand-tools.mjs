@@ -1,16 +1,16 @@
 // Chuyển model dụng cụ cầm tay sang GLB cho game.
 // Dùng: bun run convert:hand-tools
 //
-// - assets/community/hand-tools/electric_screwdriver__tool.glb ("Electric Screwdriver_ Tool",
+// - assets/tools/hand/electric_screwdriver__tool.glb ("Electric Screwdriver_ Tool",
 //   MugoflighterfluidArt, Sketchfab, CC BY 4.0): tua vít điện dạng súng, các node xoay lệch.
 //   Gộp transform vào đỉnh, xoay cho trục mũi vít thành +y, mũi ở gốc, tay cầm chĩa +x.
 //   Tách 2 node: "bit" (mũi + đầu kẹp, quay khi vặn) và "body" (thân, cò, tay cầm). Dài ~1.45 đơn vị.
-// - assets/community/hand-tools/MX_opener_V1.5.stl (STL nhị phân, mm, Z lên; chưa rõ giấy phép, dùng cá nhân):
+// - assets/tools/hand/MX_opener_V1.5.stl (STL nhị phân, mm, Z lên; chưa rõ giấy phép, dùng cá nhân):
 //   dụng cụ mở switch MX. Căn tâm, đáy ở y = 0, giữ đơn vị mm
 import fs from 'node:fs'
 import { Document, NodeIO } from '@gltf-transform/core'
 
-const SRC = 'assets/community/hand-tools'
+const SRC = 'assets/tools/hand'
 const OUT = 'public/models/tools'
 fs.mkdirSync(OUT, { recursive: true })
 

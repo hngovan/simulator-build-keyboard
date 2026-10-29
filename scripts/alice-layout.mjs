@@ -7,7 +7,7 @@
 import fs from 'node:fs'
 
 const U = 19.05
-const pcb = fs.readFileSync('assets/community/blossom/pcb/arisu.kicad_pcb', 'utf8')
+const pcb = fs.readFileSync('assets/keyboards/blossom/pcb/arisu.kicad_pcb', 'utf8')
 
 // nhãn + KeyboardEvent.code + hàng (0 = hàng số … 4 = hàng space) theo mã linh kiện SW trên PCB
 const LABELS = {

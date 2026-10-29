@@ -1,4 +1,4 @@
-// Generated from assets/community/keyboard-plate-files-4xgk3/60/typ60-full.dxf.
+// Generated from assets/plates/4xgk3/60/typ60-full.dxf.
 export const plate60Cutouts: [number, number][][] = [
   [
     [-241.1499999999993, 78.725],

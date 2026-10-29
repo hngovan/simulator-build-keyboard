@@ -1,6 +1,6 @@
 // Đường tâm dây 2.25u: thanh ngang, đoạn móc, chỗ uốn
 import { NodeIO } from '@gltf-transform/core'
-const doc = await new NodeIO().read('public/models/stab.glb')
+const doc = await new NodeIO().read('public/models/stab/stab.glb')
 const node = doc
   .getRoot()
   .listNodes()

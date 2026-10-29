@@ -1,4 +1,4 @@
-// Âm thanh: sample CC0 trong public/audio/sfx (tải trước khi tạo AudioContext), thiếu file thì
+// Âm thanh: sample CC0 trong public/audio/sfx/<tương tác>/ (tải trước khi tạo AudioContext), thiếu file thì
 // tổng hợp bằng WebAudio; nhạc nền xoay ngẫu nhiên public/audio/bgm*.mp3 hoặc loop tổng hợp
 import type { AudioSettings, SoundProfile } from '@/types'
 
@@ -11,15 +11,15 @@ const sfxBuffers = new Map<string, AudioBuffer>()
 const sfxLoading = new Map<string, Promise<AudioBuffer | null>>()
 /** toàn bộ sample, tải ngay khi tạo AudioContext để lần phát đầu đã có tiếng thật */
 const SFX_FILES = [
-  'desolder-suction.wav',
-  'keypress-1.wav',
-  'keypress-2.wav',
-  'keypress-3.wav',
-  'screw-turn-1.wav',
-  'screw-turn-2.wav',
-  'assembly-click.wav',
-  'box-tape-1.wav',
-  'box-plastic.wav',
+  'desolder/suction.wav',
+  'keypress/1.wav',
+  'keypress/2.wav',
+  'keypress/3.wav',
+  'screw/1.wav',
+  'screw/2.wav',
+  'assembly/click.wav',
+  'open-box/tape.wav',
+  'open-box/plastic.wav',
 ]
 
 function loadSfx(name: string) {
@@ -120,7 +120,7 @@ export function playKey(profile: SoundProfile, down = true) {
     noiseBurst(t, { freq: body * 2.5 * j, q: 1.5, dur: 0.03, gain: gain * 0.25 })
     return
   }
-  const key = `keypress-${1 + Math.floor(Math.random() * 3)}.wav`
+  const key = `keypress/${1 + Math.floor(Math.random() * 3)}.wav`
   const sampled = playSfx(key, 0.5 + profile.loud * 0.22, 0.92 + profile.pitch * 0.16)
   const synthGain = sampled ? gain * 0.28 : gain
   noiseBurst(t, { freq: body * j, q: 1.2, dur: 0.06 + (1 - profile.pitch) * 0.05, gain: synthGain })
@@ -131,12 +131,12 @@ export function playKey(profile: SoundProfile, down = true) {
 }
 
 export function playClick(freq = 2500) {
-  if (playSfx('assembly-click.wav', 0.48, 0.94 + Math.random() * 0.12)) return
+  if (playSfx('assembly/click.wav', 0.48, 0.94 + Math.random() * 0.12)) return
   noiseBurst(ac().currentTime, { freq, q: 3, dur: 0.04, gain: 0.5 })
 }
 
 export function playScrew() {
-  const sound = Math.random() < 0.5 ? 'screw-turn-1.wav' : 'screw-turn-2.wav'
+  const sound = Math.random() < 0.5 ? 'screw/1.wav' : 'screw/2.wav'
   if (playSfx(sound, 0.7, 0.92 + Math.random() * 0.16)) return
   const t = ac().currentTime
   for (let i = 0; i < 3; i++) noiseBurst(t + i * 0.04, { freq: 3500, q: 8, dur: 0.02, gain: 0.3 })
@@ -144,10 +144,10 @@ export function playScrew() {
 
 /** Bóc băng keo rồi tiếng túi/bao bì sột soạt khi mở kiện hàng. */
 export function playOpenBox() {
-  if (!playSfx('box-tape-1.wav', 0.72))
+  if (!playSfx('open-box/tape.wav', 0.72))
     noiseBurst(ac().currentTime, { freq: 850, q: 0.8, dur: 0.22, gain: 0.22 })
   setTimeout(() => {
-    if (!playSfx('box-plastic.wav', 0.42, 0.88 + Math.random() * 0.18))
+    if (!playSfx('open-box/plastic.wav', 0.42, 0.88 + Math.random() * 0.18))
       noiseBurst(ac().currentTime, { freq: 1400, q: 0.7, dur: 0.16, gain: 0.14 })
   }, 280)
 }
@@ -159,7 +159,7 @@ export function playTipWipe() {
 
 export function playDesolder() {
   const t = ac().currentTime
-  if (!playSfx('desolder-suction.wav', 0.75))
+  if (!playSfx('desolder/suction.wav', 0.75))
     noiseBurst(t, { freq: 1100, q: 0.8, dur: 0.18, gain: 0.22 })
   noiseBurst(t, { freq: 2800, q: 1.8, dur: 0.045, gain: 0.18 })
 }
@@ -171,7 +171,7 @@ export function playSolder() {
 // Tua vít điện: tiếng rè của motor + tiếng ren ốc tua nhanh
 export function playDrill() {
   const a = ac()
-  playSfx('screw-turn-1.wav', 0.45, 1.6 + Math.random() * 0.2)
+  playSfx('screw/1.wav', 0.45, 1.6 + Math.random() * 0.2)
   const t = a.currentTime
   const osc = a.createOscillator()
   osc.type = 'sawtooth'

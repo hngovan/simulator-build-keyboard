@@ -1,4 +1,4 @@
-// Plate gasket của Blossom (doughnut923/Blossom, MIT): assets/community/blossom/plate/plate.dxf → src/data/generated/plateBlossom.ts
+// Plate gasket của Blossom (doughnut923/Blossom, MIT): assets/keyboards/blossom/plate/plate.dxf → src/data/generated/plateBlossom.ts
 // DXF chỉ có LINE rời (mm, y hướng lên): nối đầu mút thành vòng kín, vòng lớn nhất = viền ngoài, còn lại = lỗ.
 // Căn theo layout Alice của game: lỗ switch (14 × 14mm, kể cả xoay) khớp tâm phím `getLayout('alice')` (bình phương tối thiểu).
 // Tai gasket = phần viền plate lòi ra ngoài viền PCB → dải gasket dọc hết tai (tâm, dài, góc) cho `CASES.aliceAlu.gaskets`.
@@ -9,7 +9,7 @@ import { getLayout } from '../src/data/layouts'
 
 type P = [number, number]
 const U = 19.05
-const SRC = 'assets/community/blossom/plate/plate.dxf'
+const SRC = 'assets/keyboards/blossom/plate/plate.dxf'
 const OUT = 'src/data/generated/plateBlossom.ts'
 
 const dxf = new DxfParser().parseSync(fs.readFileSync(SRC, 'utf8'))!

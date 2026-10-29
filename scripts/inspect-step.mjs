@@ -1,5 +1,5 @@
 // Xem cấu trúc file STEP: tên chi tiết, số tam giác, khung bao (mm)
-// Dùng: node scripts/inspect-step.mjs assets/cad/Stabilizer-2.25u.stp
+// Dùng: node scripts/inspect-step.mjs assets/stab/Stabilizer-2.25u.stp
 import fs from 'node:fs'
 import occtimportjs from 'occt-import-js'
 

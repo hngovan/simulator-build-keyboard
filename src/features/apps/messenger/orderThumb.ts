@@ -178,7 +178,7 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
     : caseMat
   const caseModel = caseModelOf(def, spec.layout, spec.variant)
   if (caseModel) {
-    const n = await glbMeshes(`/models/cases/${caseModel}.glb`)
+    const n = await glbMeshes(`/models/keyboards/${caseModel}.glb`)
     // STL in 3D hay có mặt lật chiều → vẽ 2 mặt
     caseMat.side = THREE.DoubleSide
     const m = new THREE.Mesh(n.case.geometry, caseMat)

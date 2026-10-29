@@ -8,8 +8,22 @@ Game phát ngẫu nhiên 3 bài dưới đây (hết bài thì chọn bài khác
 
 ## Hiệu ứng âm thanh
 
-Các WAV trong `sfx/` là CC0, tải từ các bộ sưu tập của [CC0 Sounds](https://cc0-sounds.exi.software/), trang này ghi toàn bộ file âm thanh thuộc CC0:
+Mỗi tương tác 1 thư mục trong `sfx/` (hàm phát tiếng tương ứng trong `src/sound.ts`):
 
-- `keypress-1.wav` đến `keypress-3.wav`: phím gõ, từ [Bb Keyboard Sounds](<https://cc0-sounds.exi.software/collection/bb%20-%20keyboard%20sounds%20(mar%202021)/>).
-- `screw-turn-1.wav`, `screw-turn-2.wav`, `assembly-click.wav`: ratchet và tiếng khớp cơ khí, từ [Bb Smol Mechanisms](<https://cc0-sounds.exi.software/collection/bb%20-%20smol%20mechanisms%20(may%202021)/>).
-- `box-tape-1.wav`, `box-plastic.wav`: bóc băng keo và bao bì sột soạt, từ [Bb Toolbox Rummaging](<https://cc0-sounds.exi.software/collection/bb%20-%20toolbox%20rummaging%20(sept%202021)/>).
+| Thư mục     | Tương tác                                                      | Hàm                      | File                                |
+| ----------- | -------------------------------------------------------------- | ------------------------ | ----------------------------------- |
+| `keypress/` | gõ phím (bước test)                                            | `playKey`                | `1.wav` – `3.wav` (chọn ngẫu nhiên) |
+| `screw/`    | vặn vít bằng tua vít tay (tua vít điện phát `1.wav` tua nhanh) | `playScrew`, `playDrill` | `1.wav`, `2.wav`                    |
+| `assembly/` | lắp linh kiện khớp vào chỗ                                     | `playClick`              | `click.wav`                         |
+| `open-box/` | mở kiện hàng: bóc băng keo rồi bao bì sột soạt                 | `playOpenBox`            | `tape.wav`, `plastic.wav`           |
+| `desolder/` | bút hút thiếc                                                  | `playDesolder`           | `suction.wav`                       |
+
+Thêm tiếng mới: tạo thư mục theo tên tương tác, thêm đường dẫn vào `SFX_FILES` trong `src/sound.ts`.
+Tương tác chưa có file (hàn, lau mũi hàn, quét cọ lube) tổng hợp bằng WebAudio.
+
+Nguồn: `keypress/`, `screw/`, `assembly/`, `open-box/` là CC0 từ các bộ sưu tập của [CC0 Sounds](https://cc0-sounds.exi.software/), trang này ghi toàn bộ file âm thanh thuộc CC0:
+
+- `keypress/`: từ [Bb Keyboard Sounds](<https://cc0-sounds.exi.software/collection/bb%20-%20keyboard%20sounds%20(mar%202021)/>).
+- `screw/`, `assembly/`: ratchet và tiếng khớp cơ khí, từ [Bb Smol Mechanisms](<https://cc0-sounds.exi.software/collection/bb%20-%20smol%20mechanisms%20(may%202021)/>).
+- `open-box/`: bóc băng keo và bao bì sột soạt, từ [Bb Toolbox Rummaging](<https://cc0-sounds.exi.software/collection/bb%20-%20toolbox%20rummaging%20(sept%202021)/>).
+- `desolder/suction.wav`: cắt từ bản gốc người dùng đưa (`assets/audio/sfx/desolder/suction-source.mp3`).

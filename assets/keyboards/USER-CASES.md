@@ -1,7 +1,7 @@
 # Case CAD từ bộ sưu tập cá nhân
 
-Chép từ `D:\IN 3D` (bộ sưu tập của người dùng). Chuyển sang GLB bằng `bun run convert:user-cases`
-(`scripts/convert-user-cases.mjs`) → `public/models/cases/`.
+Chép từ `D:\IN 3D` (bộ sưu tập của người dùng), mỗi bàn phím 1 thư mục `assets/keyboards/<tên>/`. Chuyển sang GLB bằng `bun run convert:user-cases`
+(`scripts/convert-user-cases.mjs`) → `public/models/keyboards/<tên>/case*.glb`.
 
 | Case trong game | File | Ghi chú |
 | --- | --- | --- |

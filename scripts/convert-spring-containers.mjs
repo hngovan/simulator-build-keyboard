@@ -5,7 +5,7 @@ import path from 'node:path'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { Document, NodeIO } from '@gltf-transform/core'
 
-const SRC = 'assets/community/spring-containers-innerscene'
+const SRC = 'assets/lube/spring-containers'
 const OUT = 'public/models/lube'
 fs.mkdirSync(OUT, { recursive: true })
 const loader = new STLLoader()

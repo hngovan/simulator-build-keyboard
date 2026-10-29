@@ -1,4 +1,4 @@
-// Chuyển bộ sưu tập case CAD của người dùng (assets/user-cases, chép từ "D:\IN 3D") sang GLB cho game.
+// Chuyển bộ sưu tập case CAD của người dùng (assets/keyboards/<tên>, chép từ "D:\IN 3D") sang GLB cho game.
 // Dùng: bun run convert:user-cases
 //
 // Các mảnh (nắp, đáy, tạ) của 1 case đã đặt sẵn ở toạ độ lắp ráp: Z hướng lên, mm, plate nằm phẳng.
@@ -12,80 +12,117 @@ import path from 'node:path'
 import occtimportjs from 'occt-import-js'
 import { Document, NodeIO } from '@gltf-transform/core'
 
-const SRC = 'assets/user-cases'
-const OUT = 'public/models/cases'
+const SRC = 'assets/keyboards'
+const OUT = 'public/models/keyboards'
 /** u = 19.05mm; đáy case trong game đặt ở Y.floorBot */
 const MM = 1 / 19.05
 const FLOOR_BOT = -0.9
 
 /** id → các mảnh [file, dời z (mm)] + cao độ mặt trên plate trong CAD (mm; Catto / Vintage: file plate trải 0 → 14.7) */
 const CASES = {
-  exodus60: {
-    parts: [['Exodus60 TOP.stl', -51.2], ['Exodus60 BOT.stl'], ['Exodus60 TẠ.stl']],
-    plateZ: 0,
-  },
-  'exodus60-wkl': {
-    parts: [['Exodus60 TOP WKL.stl'], ['Exodus60 BOT.stl'], ['Exodus60 TẠ.stl']],
-    plateZ: 0,
-  },
-  'exodus60-hhkb': {
-    parts: [['Exodus60 TOP hống hách kb.stl'], ['Exodus60 BOT.stl'], ['Exodus60 TẠ.stl']],
-    plateZ: 0,
-  },
-  exodus80: {
+  'exodus60/case': {
     parts: [
-      ['Exodus80 TOP in 3D.stl'],
-      ['Exodus80 BOT in 3D.stl'],
-      ['Exodus80 TẠ TRONG in 3D.stl'],
-      ['Exodus80 TẠ NGOÀI in 3D.stl'],
+      ['exodus60/Exodus60 TOP.stl', -51.2],
+      ['exodus60/Exodus60 BOT.stl'],
+      ['exodus60/Exodus60 TẠ.stl'],
     ],
     plateZ: 0,
   },
-  repent75: {
-    parts: [['REPENT75 TOP in 3D.stl'], ['REPENT75 BOT in 3D.stl'], ['REPENT75 TẠ in 3D.stl']],
+  'exodus60/case-wkl': {
+    parts: [
+      ['exodus60/Exodus60 TOP WKL.stl'],
+      ['exodus60/Exodus60 BOT.stl'],
+      ['exodus60/Exodus60 TẠ.stl'],
+    ],
+    plateZ: 0,
+  },
+  'exodus60/case-hhkb': {
+    parts: [
+      ['exodus60/Exodus60 TOP hống hách kb.stl'],
+      ['exodus60/Exodus60 BOT.stl'],
+      ['exodus60/Exodus60 TẠ.stl'],
+    ],
+    plateZ: 0,
+  },
+  'exodus80/case': {
+    parts: [
+      ['exodus80/Exodus80 TOP in 3D.stl'],
+      ['exodus80/Exodus80 BOT in 3D.stl'],
+      ['exodus80/Exodus80 TẠ TRONG in 3D.stl'],
+      ['exodus80/Exodus80 TẠ NGOÀI in 3D.stl'],
+    ],
+    plateZ: 0,
+  },
+  'repent75/case': {
+    parts: [
+      ['repent75/REPENT75 TOP in 3D.stl'],
+      ['repent75/REPENT75 BOT in 3D.stl'],
+      ['repent75/REPENT75 TẠ in 3D.stl'],
+    ],
     plateZ: 0,
   },
   // case TKL kiểu Realforce (thư mục REALFORCER1,2)
-  'rf-bruh': { parts: [['TOP RFBRUH.stl'], ['BOT RFBRUH.stl']], plateZ: 0 },
+  'rf-bruh/case': { parts: [['rf-bruh/TOP RFBRUH.stl'], ['rf-bruh/BOT RFBRUH.stl']], plateZ: 0 },
   // CattoRF v4: tấm đáy mỏng + thân case; plate ước lượng dưới mép trên ~9mm
-  'catto-rf': { parts: [['CattoRF v4.step']], plateZ: 24 },
+  'catto-rf/case': { parts: [['catto-rf/CattoRF v4.step']], plateZ: 24 },
   // Duality Horns (TKL): lấy thân / đáy / tạ / badge / accent, bỏ 4 tấm plate và đinh vít
-  'duality-horns': {
+  'duality-horns/case': {
     parts: [
-      ['duality_horns_v1_asm v11.step', 0, { names: ['SOLID', 'BOTTOM'] }],
+      ['duality-horns/duality_horns_v1_asm v11.step', 0, { names: ['SOLID', 'BOTTOM'] }],
       [
-        'duality_horns_v1_asm v11.step',
+        'duality-horns/duality_horns_v1_asm v11.step',
         0,
         { names: ['WEIGHT', 'BADGE', 'ACCENT_V2'], weight: true },
       ],
     ],
     plateZ: 0,
   },
-  'catto-hhkb': {
-    parts: [['CattoHHKB TOP.step'], ['CattoHHKB BOT.step'], ['CattoHHKB TA.step']],
+  'catto-hhkb/case': {
+    parts: [
+      ['catto-hhkb/CattoHHKB TOP.step'],
+      ['catto-hhkb/CattoHHKB BOT.step'],
+      ['catto-hhkb/CattoHHKB TA.step'],
+    ],
     plateZ: 14.7,
   },
-  'vintage60-hhkb': { parts: [['Vintage60 TOP fix 2.stl'], ['Vintage60 BOT.stl']], plateZ: 14.7 },
-  eclipse60: { parts: [['TOP egg.step'], ['BOT egg.step'], ['TA egg.step']], plateZ: -51.5 },
-  'head4-alu': {
-    parts: [['4HEAD TOP ALU.step'], ['4HEAD BOT ACRYLIC.step'], ['4HEAD TA BRASS.step']],
+  'vintage60-hhkb/case': {
+    parts: [['vintage60-hhkb/Vintage60 TOP fix 2.stl'], ['vintage60-hhkb/Vintage60 BOT.stl']],
+    plateZ: 14.7,
+  },
+  'eclipse60/case': {
+    parts: [['eclipse60/TOP egg.step'], ['eclipse60/BOT egg.step'], ['eclipse60/TA egg.step']],
+    plateZ: -51.5,
+  },
+  'head4/case-alu': {
+    parts: [
+      ['head4/4HEAD TOP ALU.step'],
+      ['head4/4HEAD BOT ACRYLIC.step'],
+      ['head4/4HEAD TA BRASS.step'],
+    ],
     plateZ: 1.5,
   },
-  'head4-acrylic': {
-    parts: [['4HEAD TOP ACRYLIC.step'], ['4HEAD BOT ACRYLIC.step'], ['4HEAD TA BRASS.step']],
+  'head4/case-acrylic': {
+    parts: [
+      ['head4/4HEAD TOP ACRYLIC.step'],
+      ['head4/4HEAD BOT ACRYLIC.step'],
+      ['head4/4HEAD TA BRASS.step'],
+    ],
     plateZ: 1.5,
   },
-  ta65: { parts: [['65TA in3D TOP.stl'], ['65TA in3D BOT.stl'], ['65TA in3D TA.stl']], plateZ: 0 },
-  // Blossom (doughnut923/Blossom, MIT — assets/community/blossom): 2 mảnh xếp sẵn để in. Nắp trên in úp mặt →
+  'ta65/case': {
+    parts: [['ta65/65TA in3D TOP.stl'], ['ta65/65TA in3D BOT.stl'], ['ta65/65TA in3D TA.stl']],
+    plateZ: 0,
+  },
+  // Blossom (doughnut923/Blossom, MIT — assets/keyboards/blossom): 2 mảnh xếp sẵn để in. Nắp trên in úp mặt →
   // lật 180° quanh trục x, dời về trên đáy. Mũi nhọn (mặt trước) của đáy ở y nhỏ.
   // Đáy là hình nêm (mép trước cao 2.5mm, vách sau 14.5mm) → nắp nghiêng ~5.4° tựa lên mép sau (rot),
   // chừa khe đều ~0,6mm (dz) cho thấy đường tách 2 mảnh (đo bằng tia đứng qua vách bên),
   // không thì nắp nằm ngang hở 1 khe lớn phía trước. plate nghiêng theo nắp: seat.tilt ghi tay ở parts.ts
-  'alice-blossom': {
+  'blossom/case': {
     parts: [
-      ['../community/blossom/case/B_Case.stl'],
+      ['blossom/case/B_Case.stl'],
       [
-        '../community/blossom/case/U_Case.stl',
+        'blossom/case/U_Case.stl',
         26.4,
         { flip: true, dy: -343.7, rot: { angle: 0.0941, y0: 127.3, z0: 14.5 } },
       ],
@@ -271,6 +308,7 @@ for (const [id, def] of Object.entries(CASES)) {
     scene.addChild(doc.createNode(name).setMesh(doc.createMesh(name).addPrimitive(prim)))
   }
   const out = path.join(OUT, `${id}.glb`)
+  fs.mkdirSync(path.dirname(out), { recursive: true })
   await new NodeIO().write(out, doc)
   console.log(
     `✔ ${id.padEnd(15)} ${(max[0] - min[0]).toFixed(0)} × ${(max[1] - min[1]).toFixed(0)}mm,`,

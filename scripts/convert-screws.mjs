@@ -7,7 +7,7 @@ import path from 'node:path'
 import occtimportjs from 'occt-import-js'
 import { Document, NodeIO } from '@gltf-transform/core'
 
-const INPUT = 'assets/community/screws-innerscene'
+const INPUT = 'assets/screws'
 const OUTPUT = 'public/models/screws'
 const NAMES = ['countersunk-m3x10', 'socket-cap-m2x6', 'button-head-m3x8']
 const occt = await occtimportjs()

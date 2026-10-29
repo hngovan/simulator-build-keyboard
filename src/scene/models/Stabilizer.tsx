@@ -6,12 +6,12 @@ import { MM } from './Switch'
 import { WireCoating } from './ModTools'
 
 // Model stab lấy từ file CAD (scripts/convert-stab.mjs). Đơn vị mm, gốc = mặt trên PCB
-export const STAB_GLB = '/models/stab.glb'
+export const STAB_GLB = '/models/stab/stab.glb'
 useGLTF.preload(STAB_GLB)
 /** housing riêng theo kiểu lắp (scripts/convert-stab-variants.mjs, cùng hệ mm với stab.glb); screw-in dùng CAD gốc */
 export const HOUSING_GLB = {
-  clip: '/models/stab-clip.glb',
-  plate: '/models/stab-plate.glb',
+  clip: '/models/stab/stab-clip.glb',
+  plate: '/models/stab/stab-plate.glb',
 } as const
 Object.values(HOUSING_GLB).forEach((url) => useGLTF.preload(url))
 

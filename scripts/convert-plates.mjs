@@ -1,14 +1,10 @@
-// Chuyển plate CAD cộng đồng sang hình học runtime cho các layout khớp.
+// Lỗ switch plate 60% chuẩn từ DXF cộng đồng → src/data/generated/plate60.ts.
 // Dùng: bun run convert:plates
 import fs from 'node:fs'
 import DxfParser from 'dxf-parser'
-import occtimportjs from 'occt-import-js'
-import { Document, NodeIO } from '@gltf-transform/core'
 
-const ROOT = 'assets/community/keyboard-plate-files-4xgk3'
-const OUT = 'public/models/plates'
+const ROOT = 'assets/plates/4xgk3'
 const DATA = 'src/data/generated'
-fs.mkdirSync(OUT, { recursive: true })
 fs.mkdirSync(DATA, { recursive: true })
 
 function closedPolylinePoints(vertices) {
@@ -45,55 +41,9 @@ const paths = dxf.entities
   .filter((points) => points.length >= 3)
 fs.writeFileSync(
   `${DATA}/plate60.ts`,
-  `// Generated from assets/community/keyboard-plate-files-4xgk3/60/typ60-full.dxf.\n` +
+  `// Generated from assets/plates/4xgk3/60/typ60-full.dxf.\n` +
     `export const plate60Cutouts: [number, number][][] = ${JSON.stringify(paths)}\n`,
 )
 console.log(`✔ ${DATA}/plate60.ts: ${paths.length} CAD cutouts`)
 
-const occt = await occtimportjs()
-const stepFile = `${ROOT}/alice/alice.stp`
-const result = occt.ReadStepFile(new Uint8Array(fs.readFileSync(stepFile)), null)
-if (!result.success || !result.meshes.length) throw new Error(`Không đọc được ${stepFile}`)
-const positions = []
-const normals = []
-const indices = []
-for (const mesh of result.meshes) {
-  const offset = positions.length / 3
-  const p = mesh.attributes.position.array
-  const n = mesh.attributes.normal.array
-  for (let i = 0; i < p.length; i += 3) positions.push(p[i], p[i + 2], -p[i + 1])
-  for (let i = 0; i < n.length; i += 3) normals.push(n[i], n[i + 2], -n[i + 1])
-  for (const index of mesh.index.array) indices.push(offset + index)
-}
-const min = [Infinity, Infinity, Infinity]
-const max = [-Infinity, -Infinity, -Infinity]
-for (let i = 0; i < positions.length; i += 3)
-  for (let a = 0; a < 3; a++) {
-    min[a] = Math.min(min[a], positions[i + a])
-    max[a] = Math.max(max[a], positions[i + a])
-  }
-const centerX = (min[0] + max[0]) / 2
-const centerZ = (min[2] + max[2]) / 2
-const pos = Float32Array.from(positions, (value, i) =>
-  i % 3 === 0 ? value - centerX : i % 3 === 2 ? value - centerZ : value - min[1],
-)
-const doc = new Document()
-const buffer = doc.createBuffer()
-const primitive = doc
-  .createPrimitive()
-  .setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(pos).setBuffer(buffer))
-  .setAttribute(
-    'NORMAL',
-    doc.createAccessor().setType('VEC3').setArray(Float32Array.from(normals)).setBuffer(buffer),
-  )
-  .setIndices(
-    doc.createAccessor().setType('SCALAR').setArray(Uint32Array.from(indices)).setBuffer(buffer),
-  )
-doc
-  .createScene('alice-plate')
-  .addChild(
-    doc.createNode('alice-plate').setMesh(doc.createMesh('alice-plate').addPrimitive(primitive)),
-  )
-await new NodeIO().write(`${OUT}/alice.glb`, doc)
-console.log(`✔ ${OUT}/alice.glb: ${(fs.statSync(`${OUT}/alice.glb`).size / 1024).toFixed(0)} KB`)
 process.exit(0)

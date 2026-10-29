@@ -16,10 +16,10 @@ import { mergeVertices, toCreasedNormals } from 'three/examples/jsm/utils/Buffer
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg'
 
 const SOURCES = {
-  '2.25u': 'assets/cad/Stabilizer-2.25u.stp',
-  '6.25u': 'assets/cad/Stabilizer-6.25u.stp',
+  '2.25u': 'assets/stab/Stabilizer-2.25u.stp',
+  '6.25u': 'assets/stab/Stabilizer-6.25u.stp',
 }
-const OUT = 'public/models/stab.glb'
+const OUT = 'public/models/stab/stab.glb'
 const META = 'src/data/stabModel.json'
 
 const occt = await occtimportjs()

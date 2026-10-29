@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import occtimportjs from 'occt-import-js'
 import { Document, NodeIO } from '@gltf-transform/core'
 
-const source = 'assets/user-tools/desolder-pump/pump.step'
+const source = 'assets/tools/desolder-pump/pump.step'
 const occt = await occtimportjs()
 const result = occt.ReadStepFile(new Uint8Array(fs.readFileSync(source)), null)
 if (!result.success) throw new Error('Cannot read solder pump STEP')
@@ -62,6 +62,6 @@ for (const m of result.meshes) {
     )
   scene.addChild(doc.createNode(m.name).setMesh(doc.createMesh(m.name).addPrimitive(prim)))
 }
-fs.mkdirSync('public/models/solder', { recursive: true })
-await new NodeIO().write('public/models/solder/desolder-pump.glb', doc)
+fs.mkdirSync('public/models/tools/solder', { recursive: true })
+await new NodeIO().write('public/models/tools/solder/desolder-pump.glb', doc)
 console.log('Converted pump: nozzle at origin, handle along +Y, length 3 units')

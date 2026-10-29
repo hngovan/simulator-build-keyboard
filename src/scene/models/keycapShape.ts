@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import type { KeycapProfile } from '@/data/parts'
 
-// Tỉ lệ trong game, lấy dáng từ các mẫu CAD lưu tại assets/community/keycap-profiles.
+// Tỉ lệ trong game, lấy dáng từ các mẫu CAD lưu tại assets/keycaps.
 export const PROFILE: Record<
   KeycapProfile,
   { height: number; inset: number; dish: number; tilt: number }

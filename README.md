@@ -3,7 +3,7 @@
 Mô phỏng quy trình build bàn phím cơ: nhận đơn, mua linh kiện, lắp ráp và giao hàng.
 Ứng dụng được xây dựng bằng React, TypeScript, Vite, Tailwind CSS và React Three Fiber.
 
-Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho game nằm tại [assets/community](assets/community/README.md), kèm nguồn và giấy phép.
+Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho game nằm tại [assets](assets/README.md) (chia theo nhóm: `keyboards/<tên>/`, `switch/`, `stab/`, `keycaps/`, `plates/`, `tools/`...), kèm nguồn và giấy phép.
 
 ## Ảnh demo
 

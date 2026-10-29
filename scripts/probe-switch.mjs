@@ -1,7 +1,7 @@
 // Dò hốc trong housing switch (chỗ stem trượt) bằng tia xuyên ngang
 import { NodeIO } from '@gltf-transform/core'
 import * as THREE from 'three'
-const doc = await new NodeIO().read('public/models/switch.glb')
+const doc = await new NodeIO().read('public/models/switch/switch.glb')
 const m = {}
 for (const n of doc.getRoot().listNodes()) {
   const g = new THREE.BufferGeometry()

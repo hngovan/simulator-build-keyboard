@@ -9,7 +9,7 @@ import { NodeIO } from '@gltf-transform/core'
 const MODELS = {
   metal_toolbox: 'metal-toolbox.glb',
 }
-const OUT = 'assets/community/props-polyhaven'
+const OUT = 'assets/tools/polyhaven'
 const API = 'https://api.polyhaven.com'
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sbk-props-'))
 const io = new NodeIO()

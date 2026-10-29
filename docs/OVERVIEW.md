@@ -93,7 +93,7 @@ Các script convert trong `scripts/*.mjs` đọc model nguồn (CAD / STL / OBJ 
 - Script sinh dữ liệu / dò model: `alice-layout.mjs`, `probe-*.mjs`, `inspect-step.mjs`.
 
 Phần lớn script dùng `occt-import-js` + `@gltf-transform/core`; một số dùng thêm `meshoptimizer`
-hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/community/README.md`,
+hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/README.md`,
 `public/CREDITS.md` và `docs/decisions/giay-phep.md`.
 
 ## 2. Luồng game

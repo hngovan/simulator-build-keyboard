@@ -2,8 +2,8 @@
 
 - Source: https://github.com/4xgk3/Keyboard-plate-files
 - Snapshot commit: `36e09d1b2db5fa61f387f134ce27f89f71452e0a`
-- Full snapshot: `collection.zip` (82,183,688 bytes; SHA-256 `58f6c69284732093dccf45aa7bfc1caafc83c8c08c4bc60aa61739e59aaab902`).
-- The plate files are converted into runtime geometry for the standard 60% and Alice layouts.
+- Full snapshot (not stored in repo, re-download when needed): https://github.com/4xgk3/Keyboard-plate-files/archive/36e09d1b2db5fa61f387f134ce27f89f71452e0a.zip (82,183,688 bytes; SHA-256 `58f6c69284732093dccf45aa7bfc1caafc83c8c08c4bc60aa61739e59aaab902`).
+- Only `60/typ60-full.dxf` is used by the game (standard 60% switch cutouts).
 
 Selected files extracted from the snapshot for easier inspection:
 
@@ -19,4 +19,4 @@ Selected files extracted from the snapshot for easier inspection:
 | `60/typ60-half.dxf` | 60% half plate |
 | `tkl/frog-full.dxf` | TKL full plate |
 
-The ZIP includes the remaining collection. `60/typ60-full.dxf` supplies the standard 60% switch cutouts; `alice/alice.stp` is converted to `public/models/plates/alice.glb`. Other files remain available as CAD source material.
+`60/typ60-full.dxf` is converted to `src/data/generated/plate60.ts` by `bun run convert:plates`. Other files are kept as CAD reference only; the rest of the collection is in the snapshot above.

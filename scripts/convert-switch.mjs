@@ -19,8 +19,8 @@ import {
 } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { Brush, Evaluator, SUBTRACTION } from 'three-bvh-csg'
 
-const SRC = 'assets/cad/switch.step'
-const OUT = 'public/models/switch.glb'
+const SRC = 'assets/switch/switch.step'
+const OUT = 'public/models/switch/switch.glb'
 
 const occt = await occtimportjs()
 const res = occt.ReadStepFile(new Uint8Array(fs.readFileSync(SRC)), null)

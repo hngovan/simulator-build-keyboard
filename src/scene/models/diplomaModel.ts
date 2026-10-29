@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-// Khung ảnh để bàn có chân chống sau (assets/user-props/picture-frame.glb, người dùng cung cấp, chưa rõ giấy phép):
+// Khung ảnh để bàn có chân chống sau (assets/supplies/picture-frame.glb, người dùng cung cấp, chưa rõ giấy phép):
 // mét, đáy ở y = 0, mặt trước +z, khổ dọc 18.9 × 24.6cm. Tấm giấy trắng sẵn có ("Unprinted frame insert")
 // được ẩn đi, thay bằng tấm chứng chỉ vẽ canvas đặt đúng chỗ (dưới lớp kính)
 export const DIPLOMA_URL = '/models/room/picture-frame.glb'

@@ -2,7 +2,7 @@
 import { NodeIO } from '@gltf-transform/core'
 import * as THREE from 'three'
 
-const doc = await new NodeIO().read('public/models/stab.glb')
+const doc = await new NodeIO().read('public/models/stab/stab.glb')
 const meshes = {}
 for (const node of doc.getRoot().listNodes()) {
   const prim = node.getMesh().listPrimitives()[0]

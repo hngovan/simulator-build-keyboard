@@ -18,9 +18,9 @@ import { createSolderSpool } from '../models/solderSpool'
 // - bút hàn 60W (yarankepang, Sketchfab, CC BY 4.0): mét, dựng theo +y, mũi ở y = 0.123
 // - trạm hàn "Sodering_Iron.obj": trạm + giá lò xo + mỏ hàn nằm trên bàn + dây nối, đơn vị OBJ (~2.5cm)
 // - giá bùi nhùi "Soldering Brass Sponge Stand" (in 3D, mm): node "base" là vòm có lỗ chéo
-const IRON_60W = '/models/solder/iron-60w.glb'
-const STATION = '/models/solder/iron-station.glb'
-const SPONGE = '/models/solder/sponge-stand.glb'
+const IRON_60W = '/models/tools/solder/iron-60w.glb'
+const STATION = '/models/tools/solder/iron-station.glb'
+const SPONGE = '/models/tools/solder/sponge-stand.glb'
 ;[IRON_60W, STATION, SPONGE].forEach((url) => useGLTF.preload(url))
 
 const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z)

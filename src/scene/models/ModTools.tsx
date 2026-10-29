@@ -61,7 +61,7 @@ export const Clipper = forwardRef<THREE.Group>(function Clipper(_, ref) {
 })
 
 // Kéo "Loop scissors" (Innerscene Free Parts Library, CC0), hệ mét, mũi kéo chĩa +x, đinh tán ở gốc
-const SCISSORS_GLB = '/models/scissors.glb'
+const SCISSORS_GLB = '/models/tools/scissors.glb'
 useGLTF.preload(SCISSORS_GLB)
 /** góc mở sẵn của mỗi nửa kéo trong model (rad) */
 const SCISSORS_OPEN = 0.435

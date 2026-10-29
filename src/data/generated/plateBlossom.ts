@@ -1,4 +1,4 @@
-// Sinh tự động bởi scripts/gen-blossom-plate.ts từ assets/community/blossom/plate/plate.dxf (doughnut923/Blossom, MIT) — không sửa tay.
+// Sinh tự động bởi scripts/gen-blossom-plate.ts từ assets/keyboards/blossom/plate/plate.dxf (doughnut923/Blossom, MIT) — không sửa tay.
 // mm, [x, z] theo tâm board (z dương = phía trước), đã căn lỗ switch khớp layout Alice
 export const BLOSSOM_PLATE: { outline: [number, number][]; holes: [number, number][][] } = {
   outline: [

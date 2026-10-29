@@ -123,8 +123,8 @@ export function ElectricScrewdriver({ spinKey, dir }: { spinKey: number; dir?: 1
 // Mỏ hàn (model thật, `bun run convert:solder-tools`):
 // - bút hàn 60W "Soldering Iron 60W Adjustable Temprature" (yarankepang, Sketchfab, CC BY 4.0): mét, mũi ở y = 0.123
 // - mỏ hàn của trạm tách từ "Sodering_Iron.obj": mũi ở gốc, cán hướng +y, dài 8.1 đơn vị
-const IRON_60W = '/models/solder/iron-60w.glb'
-const IRON_PRO = '/models/solder/iron-pro.glb'
+const IRON_60W = '/models/tools/solder/iron-60w.glb'
+const IRON_PRO = '/models/tools/solder/iron-pro.glb'
 useGLTF.preload(IRON_60W)
 useGLTF.preload(IRON_PRO)
 /** cả 2 loại thu về dài ~1.45 đơn vị (mũi ở gốc, cán hướng lên) */

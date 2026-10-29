@@ -1,16 +1,16 @@
 // Chuyển model đồ hàn tải về sang GLB cho bàn hàn.
 // Dùng: bun run convert:solder-tools
 //
-// - assets/community/solder-tools/Sodering_Iron.obj (Blender, không kèm .mtl): trạm hàn + mỏ hàn + giá lò xo + dây.
+// - assets/tools/solder/Sodering_Iron.obj (Blender, không kèm .mtl): trạm hàn + mỏ hàn + giá lò xo + dây.
 //   Mỗi object OBJ thành 1 node (tô màu theo tên), bỏ tấm sàn "Plane". Đơn vị giữ nguyên, Y lên.
-// - assets/community/solder-tools/soldering-brass-sponge-stand.3mf (Bambu Studio, mm, Z lên): giá bùi nhùi đồng,
+// - assets/tools/solder/soldering-brass-sponge-stand.3mf (Bambu Studio, mm, Z lên): giá bùi nhùi đồng,
 //   2 phần in rời: object_3 (đế có vành khía) và object_4 (nắp vòm). Mỗi phần căn tâm, đáy ở y = 0
 import fs from 'node:fs'
 import { unzipSync, strFromU8 } from 'fflate'
 import { Document, NodeIO } from '@gltf-transform/core'
 
-const SRC = 'assets/community/solder-tools'
-const OUT = 'public/models/solder'
+const SRC = 'assets/tools/solder'
+const OUT = 'public/models/tools/solder'
 
 /** màu theo tên object OBJ (file gốc không có vật liệu) */
 const OBJ_COLORS = [

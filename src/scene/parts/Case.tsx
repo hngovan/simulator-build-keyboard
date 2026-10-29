@@ -423,7 +423,7 @@ function TrayStandoffs({
 
 /** standoff tray của case CAD: dò sàn theo model GLB */
 function CadStandoffs({ model, origin }: { model: string; origin: [number, number] }) {
-  const { nodes } = useGLTF(`/models/cases/${model}.glb`) as unknown as {
+  const { nodes } = useGLTF(`/models/keyboards/${model}.glb`) as unknown as {
     nodes: Record<string, THREE.Mesh>
   }
   return <TrayStandoffs nodes={nodes} origin={origin} />
@@ -450,7 +450,7 @@ function CaseModel({
   part?: 'all' | 'top' | 'bottom'
   children: ReactNode
 }) {
-  const { nodes } = useGLTF(`/models/cases/${model}.glb`) as unknown as {
+  const { nodes } = useGLTF(`/models/keyboards/${model}.glb`) as unknown as {
     nodes: Record<string, THREE.Mesh>
   }
   // vỏ tô theo chất liệu + màu khách chọn; tạ / badge (node "weight") tô kim loại riêng

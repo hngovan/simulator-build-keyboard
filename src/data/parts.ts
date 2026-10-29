@@ -917,7 +917,7 @@ export const CASES: Record<string, CaseDef> = {
     colors: ['clear', 'smoke', 'yellow', 'green'],
     desc: 'Mica stack, bắt vít từ trên xuống',
   },
-  // ---------- case CAD từ bộ sưu tập người dùng (D:\IN 3D → assets/user-cases, `bun run convert:user-cases`) ----------
+  // ---------- case CAD từ bộ sưu tập người dùng (D:\IN 3D → assets/keyboards/<tên>, `bun run convert:user-cases`) ----------
   // ⚠️ chưa rõ giấy phép: chỉ dùng cá nhân. seat lấy từ kết quả script chuyển đổi
   exodus60: {
     name: 'Exodus60',
@@ -939,8 +939,8 @@ export const CASES: Record<string, CaseDef> = {
       'brown',
     ],
     desc: 'Nhôm CNC có tạ đáy; nắp riêng cho WK / WKL / HHKB (tự đổi theo layout)',
-    model: 'exodus60',
-    modelFor: { hhkb: 'exodus60-hhkb', wkl: 'exodus60-wkl' },
+    model: 'exodus60/case',
+    modelFor: { hhkb: 'exodus60/case-hhkb', wkl: 'exodus60/case-wkl' },
     // case nêm: board nghiêng theo mép trước / sau (đo bằng script, plate thấp hơn giữa mép 0.25u; dz bù mặt keycap ngả về sau khi nghiêng)
     seat: { rise: 0.28, tilt: 0.165, dz: 0.1 },
   },
@@ -964,7 +964,7 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Case 60% dáng "trứng" bo tròn, có tạ đáy',
-    model: 'eclipse60',
+    model: 'eclipse60/case',
     // case nêm: board nghiêng theo mép trước / sau (đo bằng script, plate thấp hơn giữa mép 0.25u; dz bù mặt keycap ngả về sau khi nghiêng)
     seat: { rise: -0.11, tilt: 0.186, dz: 0.11 },
   },
@@ -977,7 +977,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 2000,
     colors: ['silver', 'black', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nắp nhôm, đáy acrylic, tạ đồng; góc gõ 6.2° làm sẵn',
-    model: 'head4-alu',
+    model: 'head4/case-alu',
     bottom: { material: 'acrylic', color: 'clear' },
     weight: 'brass',
     // lòng khoét lệch trước (vành sau dày): đo GLB mép trước lòng 65mm − 2.5u → dz 0.91u
@@ -992,7 +992,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 1100,
     colors: ['clear', 'smoke', 'frost', 'yellow', 'green'],
     desc: 'Nắp + đáy acrylic, tạ đồng; góc gõ 6.2° làm sẵn',
-    model: 'head4-acrylic',
+    model: 'head4/case-acrylic',
     weight: 'brass',
     // lòng khoét lệch trước (vành sau dày): đo GLB mép trước lòng 64mm − 2.5u → dz 0.86u
     seat: { rise: 0.221, tilt: 0.108, dz: 0.86 },
@@ -1020,7 +1020,7 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Case HHKB có khối chặn liền case, tạ đáy',
-    model: 'catto-hhkb',
+    model: 'catto-hhkb/case',
     // lỗ vít dò từ model: hốc chìm đầu vít sâu 3mm ở mặt đáy, ren lên nắp
     screws: [
       [-144, -53.1],
@@ -1045,7 +1045,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 700,
     colors: ['white', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Case HHKB dáng cổ điển (bản in 3D)',
-    model: 'vintage60-hhkb',
+    model: 'vintage60-hhkb/case',
     // case nêm: board nghiêng theo mép trước / sau (đo bằng script, plate thấp hơn giữa mép 0.25u; dz bù mặt keycap ngả về sau khi nghiêng)
     seat: { rise: 0.18, tilt: 0.127, dz: 0.08 },
   },
@@ -1058,7 +1058,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 1800,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Case 65% có tạ đáy, góc gõ 6.9° làm sẵn',
-    model: 'ta65',
+    model: 'ta65/case',
     seat: { rise: 0.006, tilt: 0.12 },
   },
   case65Plastic: {
@@ -1091,7 +1091,7 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Case 75% nắp liền, tạ đáy',
-    model: 'repent75',
+    model: 'repent75/case',
     // có thêm đáy: góc gõ 7° làm sẵn
     seat: { rise: 0.03, tilt: 0.121 },
     weight: 'gold',
@@ -1105,7 +1105,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 2000,
     colors: ['frost', 'clear', 'smoke'],
     desc: 'Nắp PC mờ xuyên đèn, đáy nhôm bạc, tạ vàng; góc gõ 7°',
-    model: 'repent75',
+    model: 'repent75/case',
     seat: { rise: 0.03, tilt: 0.121 },
     weight: 'gold',
     bottom: { material: 'anod', color: 'silver' },
@@ -1119,7 +1119,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 2500,
     colors: ['black', 'navy', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nắp nhôm anod, đáy PC mờ, tạ đồng',
-    model: 'exodus80',
+    model: 'exodus80/case',
     // case nêm (mép sau 1.11u, mép trước −0.06u, dốc ~10°): board nghiêng theo, nằm dưới mép case
     seat: { rise: 0.2, tilt: 0.15, dz: 0.07 },
     weight: 'copper',
@@ -1134,7 +1134,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 2800,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'TKL nhôm, tạ trong + tạ ngoài',
-    model: 'exodus80',
+    model: 'exodus80/case',
     seat: { rise: 0.2, tilt: 0.15, dz: 0.07 },
     weight: 'copper',
   },
@@ -1147,7 +1147,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 2400,
     colors: ['frost', 'clear', 'smoke'],
     desc: 'TKL nắp PC mờ xuyên đèn, tạ đồng',
-    model: 'exodus80',
+    model: 'exodus80/case',
     // cùng model + chỗ đặt board với Exodus80 nhôm
     seat: { rise: 0.2, tilt: 0.15, dz: 0.07 },
     weight: 'copper',
@@ -1172,7 +1172,7 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Case TKL dáng Realforce R1 / R2, thành dày',
-    model: 'rf-bruh',
+    model: 'rf-bruh/case',
     // case gờ trước dày hơn gờ sau: căn theo khung bao thì phím lệch về sau ~0.6u so với lỗ case
     // case nêm: board nghiêng theo mép trước / sau (đo bằng script, plate thấp hơn giữa mép 0.25u; dz bù mặt keycap ngả về sau khi nghiêng)
     seat: { rise: 0.34, tilt: 0.114, dz: 0.76, dx: -0.08 },
@@ -1197,7 +1197,7 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Case TKL kiểu Realforce bản Catto v4',
-    model: 'catto-rf',
+    model: 'catto-rf/case',
     seat: { rise: 0.686, tilt: 0 },
   },
   dualityHorns: {
@@ -1209,7 +1209,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 3000,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'TKL nhôm, tạ đáy + badge + accent, góc gõ 4.5°',
-    model: 'duality-horns',
+    model: 'duality-horns/case',
     seat: { rise: 0.19, tilt: 0.079 },
     weight: 'gold',
   },
@@ -1300,7 +1300,7 @@ export const CASES: Record<string, CaseDef> = {
     price: 1900,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Thiết kế mở của kkatano: nhôm 1 mảnh, O-ring mount gõ êm, nảy',
-    model: 'bakeneko60',
+    model: 'bakeneko60/case',
   },
   aliceAlu: {
     name: 'Blossom',
@@ -1324,7 +1324,7 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Case Alice gasket mount kiểu Arisu, 2 nửa xoay ±12° + cụm mũi tên (doughnut923/Blossom, MIT)',
-    model: 'alice-blossom',
+    model: 'blossom/case',
     // lỗ vít dò từ model (lỗ tròn Ø ~4.6mm ở mặt đáy); gasket trên tai plate DXF gốc (`bun run gen:plate-blossom`)
     screws: [
       [-174.5, -66.5],
@@ -1360,7 +1360,7 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Case khay thấp cho Planck ortholinear 12 × 4 (OLKB, bản vẽ MIT)',
-    model: 'planck',
+    model: 'planck/case',
     // khay thấp (thành tới −0.3u): hạ board để plate nằm ngang mép case, PCB không lòi lên trên thành
     seat: { rise: -0.22, tilt: 0 },
   },

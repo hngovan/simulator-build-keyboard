@@ -8,7 +8,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { Document, NodeIO } from '@gltf-transform/core'
 import { MeshoptSimplifier } from 'meshoptimizer'
 
-const SRC = 'assets/community/keycap-profiles'
+const SRC = 'assets/keycaps'
 const OUT = 'public/models/keycaps'
 fs.mkdirSync(OUT, { recursive: true })
 const stl = new STLLoader()

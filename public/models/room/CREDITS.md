@@ -5,7 +5,7 @@ Từ [Poly Haven](https://polyhaven.com), giấy phép CC0:
 - Wooden Table 02 (`wooden_table_02`) — Serhii Khromov
 - Potted Plant 04 (`potted_plant_04`) — James Ray Cock
 - Shelf 01 (`Shelf_01`) — Gabriel Radić
-- Screwdriver (`screwdriver-lite.glb`, bản nhẹ bỏ texture; gốc ở `assets/community/props-polyhaven/`) — PierreB3D
+- Screwdriver (`screwdriver-lite.glb`, bản nhẹ bỏ texture; gốc ở `assets/tools/polyhaven/`) — PierreB3D
 - Painted Wooden Chair 01 (`painted_wooden_chair_01`) — Kuutti Siitonen
 - Hanging Picture Frame 01 (`hanging_picture_frame_01`) — James Ray Cock
 - Hanging Picture Frame 02 (`hanging_picture_frame_02`) — James Ray Cock

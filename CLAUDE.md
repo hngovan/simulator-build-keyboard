@@ -33,20 +33,20 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 - `bun run build` — `tsc` + `vite build`
 - `bun run typecheck` / `bun run lint` / `bun run format:check` — chạy cả ba trước khi coi là xong
 - `bun run convert:solder-tools`: bút hàn 60W (GLB), trạm hàn (OBJ), giá bùi nhùi (3MF) trong
-  `assets/community/solder-tools/` → `public/models/solder/` (tách `iron-pro.glb` = mỏ hàn trạm, mũi ở gốc).
+  `assets/tools/solder/` → `public/models/tools/solder/` (tách `iron-pro.glb` = mỏ hàn trạm, mũi ở gốc).
 - `bun run convert:hand-tools`: tua vít điện (GLB Sketchfab, CC BY 4.0) + đồ mở switch MX (STL, chưa rõ giấy phép) trong
-  `assets/community/hand-tools/` → `public/models/tools/` (tua vít: node `bit` quay + `body`, mũi ở gốc, trục +y).
+  `assets/tools/hand/` → `public/models/tools/` (tua vít: node `bit` quay + `body`, mũi ở gốc, trục +y).
 - `bun run fetch:emotes`: emote ếch Pepe (FrankerFaceZ, chỉ dùng cá nhân) → `public/emotes/`, emoji trong chat Mezzenger thay bằng emote (`messenger/emotes.tsx`).
-- `bun run convert:desk-gear`: bàn phím Realforce 87U + chuột DeathAdder người dùng đưa (`assets/user-desk/`, gitignore, chỉ dùng cá nhân)
+- `bun run convert:desk-gear`: bàn phím Realforce 87U + chuột DeathAdder người dùng đưa (`assets/desk/`, gitignore, chỉ dùng cá nhân)
   → `public/models/desk/` (gltf-transform optimize, simplify 2% + meshopt).
 - `bun run convert:screwdriver-lite`: tua vít tay Poly Haven → `public/models/room/screwdriver-lite.glb` (bỏ texture, màu đỉnh, 90KB).
-- `bun run gen:plate-blossom`: plate gasket Blossom từ `assets/community/blossom/plate/plate.dxf` → `src/data/generated/plateBlossom.ts`
+- `bun run gen:plate-blossom`: plate gasket Blossom từ `assets/keyboards/blossom/plate/plate.dxf` → `src/data/generated/plateBlossom.ts`
   (căn lỗ switch theo layout Alice, dò tai → `BLOSSOM_GASKETS`; Board `AlicePlate` dựng từ đây).
 - `bun run gen:plates-universal`: plate universal 60 / 75 / TKL / full bằng lõi ai03 Plate Generator (kbplate.ai03.com,
   AGPL — clone ngoài repo, đặt `YAKB_DIR`): layout game gộp mọi variant → KLE + DXF trong `assets/plates/universal/`
   → `src/data/generated/plateUniversal.ts` (Board.tsx dùng, trừ 60 chuẩn giữ plate CAD typ60).
-- `bun run convert:switch` / `bun run convert:stab` — chuyển CAD STEP trong `assets/cad/` thành
-  GLB trong `public/models/` (stab còn sinh `src/data/stabModel.json`). `scripts/probe-*.mjs`,
+- `bun run convert:switch` / `bun run convert:stab` — chuyển CAD STEP trong `assets/switch/` / `assets/stab/` thành
+  GLB trong `public/models/switch/` / `public/models/stab/` (stab còn sinh `src/data/stabModel.json`). `scripts/probe-*.mjs`,
   `inspect-step.mjs` là script dò/kiểm tra model. Thêm / đổi model case thì chạy `node scripts/probe-case-feet.mjs`
   (dò hốc dán feet dưới đáy → `src/data/caseFeet.json`, `RubberFeet` trong Case.tsx dán feet vào đúng hốc).
 
@@ -148,7 +148,7 @@ vào `window.__r3f` để debug trong console.
   bấm lần nữa / Space dừng; đỏ trái = thiếu (hụt / vít vào 1 phần), xanh đạt, vàng hoàn hảo (`build.perfect`, thưởng ≤ 5 điểm khi giao),
   đỏ phải = quá (cháy / trượt ren). Hàn cháy thì `tipDirty`, phải lau bùi nhùi
   (`tipCleaner`, `cleanTip`). Dụng cụ có độ bền (`ToolDef.life`, đếm ở `wear`, hết thì về "chưa có"): bút hàn 300, trạm 1000, bùi nhùi 1000.
-  Đồ hàn trên bàn: `SolderKit` (model ở `public/models/solder/`, `bun run convert:solder-tools`).
+  Đồ hàn trên bàn: `SolderKit` (model ở `public/models/tools/solder/`, `bun run convert:solder-tools`).
   Độ khó hàn (`solderSkill`): bút hàn vùng xanh 20% thanh / kim 0,9 lượt/s, trạm 28% / 0,75, thiếc đểu (`slow`) hẹp vùng xanh
   và `burnChance` ẩn 15%. Hút thiếc cháy: bấm 1 lần là bút hút tự chạy. Bút / trạm đã mua đổi qua lại được (`solderOwned`).
   Thiếc đểu có `burnChance` (cháy dù nhả đúng vùng xanh). Bàn mod stab bày đúng số stab của layout (`stabUnits`).
@@ -205,8 +205,8 @@ vào `window.__r3f` để debug trong console.
   chỉ trừ lượt khi vượt bậc thợ. Bàn build có màn hình (`scene/models/Computer.tsx`): bấm vào thì về desktop.
 - `nextDay()` (sau khi giao): ngày + 1, đợt đơn mới (số đơn + hệ số tiền công theo bậc uy tín, `data/reputation.ts`),
   job trễ quá 3 ngày thì khách huỷ (−3 uy tín). Chứng chỉ thợ cộng thu nhập cơ bản vào ví mỗi lần nhận đơn (`CERT_BONUS`).
-- Case có `model` dùng GLB CAD thật ở `public/models/cases/`: Bakeneko 60, Planck
-  (`bun run convert:cases`, MIT), Alice = Blossom (doughnut923/Blossom, MIT; layout + viền PCB sinh từ PCB KiCad bằng `node scripts/alice-layout.mjs` → `src/data/aliceKeys.ts`) và bộ sưu tập cá nhân trong `assets/user-cases/` (Exodus60/80, Repent75,
+- Case có `model` (= `<bàn phím>/case[-biến thể]`) dùng GLB CAD thật ở `public/models/keyboards/<model>.glb`: Bakeneko 60, Planck
+  (`bun run convert:cases`, MIT), Alice = Blossom (doughnut923/Blossom, MIT; layout + viền PCB sinh từ PCB KiCad bằng `node scripts/alice-layout.mjs` → `src/data/aliceKeys.ts`) và bộ sưu tập cá nhân (`assets/keyboards/<tên>/`, danh sách ở `assets/keyboards/USER-CASES.md`) (Exodus60/80, Repent75,
   Catto HHKB...; `bun run convert:user-cases`, chưa rõ giấy phép; cả 2 script convert case đã sửa lật gương: phím mũi tên ở trước phải, USB ở sau). `seat` = độ cao + góc nghiêng plate
   trong case (board nâng / nghiêng khi thả vào case); `modelFor` = nắp riêng HHKB / WKL; `layouts` = giới hạn layout.
 - Phím có `rot` (Alice: cột trong xoay ±12°, layout `fixed` toạ độ thật + `origin` / `outline`); `row` = hàng keycap đếm từ dưới lên (R1–R4 theo profile).

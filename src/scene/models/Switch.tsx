@@ -5,7 +5,7 @@ import { SWITCHES } from '@/data/parts'
 export const MM = 1 / 19.05 // 1u = 19.05mm
 
 // Model switch Cherry MX lấy từ file CAD (scripts/convert-switch.mjs). mm, Y = 0 ≈ mặt trên plate, gốc = tâm switch
-export const SWITCH_GLB = '/models/switch.glb'
+export const SWITCH_GLB = '/models/switch/switch.glb'
 useGLTF.preload(SWITCH_GLB)
 
 /** Kích thước switch (mm): hốc trượt đã khoét trong housing + thân stem game tự dựng */

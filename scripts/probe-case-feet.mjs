@@ -1,10 +1,10 @@
 // Dò hốc dán feet (đệm cao su) dưới đáy case CAD → src/data/caseFeet.json
 // Hốc = cụm mặt quay xuống (pháp tuyến −y) nằm hơi cao hơn đáy case (trần hốc), gom theo khoảng cách xz.
-// Dùng: node scripts/probe-case-feet.mjs [tên-model...]  (mặc định mọi GLB trong public/models/cases)
+// Dùng: node scripts/probe-case-feet.mjs [model...] (vd exodus60/case)  (mặc định mọi GLB trong public/models/keyboards)
 import fs from 'node:fs'
 import { NodeIO } from '@gltf-transform/core'
 
-const DIR = 'public/models/cases'
+const DIR = 'public/models/keyboards'
 const OUT = 'src/data/caseFeet.json'
 /** trần hốc cao hơn đáy case trong khoảng này (mm) */
 const DEPTH = [0.3, 4]
@@ -67,9 +67,9 @@ const io = new NodeIO()
 const names = process.argv.slice(2).length
   ? process.argv.slice(2)
   : fs
-      .readdirSync(DIR)
+      .readdirSync(DIR, { recursive: true })
       .filter((f) => f.endsWith('.glb'))
-      .map((f) => f.slice(0, -4))
+      .map((f) => f.replaceAll('\\', '/').slice(0, -4))
 
 /** tam giác của mọi node đáy (bottom nếu có, không thì case) trong hệ mm của model */
 async function triangles(name) {

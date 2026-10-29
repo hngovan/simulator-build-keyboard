@@ -47,8 +47,8 @@ trong thư mục [`licenses/`](licenses/). Danh sách này cũng hiện trong ga
 | Keycap MT3 1u                                                                      | Matt3o               | [matt3o.com](https://matt3o.com/mt3-stl-files-for-artisan-keycap-designers/)                                           | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) | Bản GLB chuyển đổi cũng theo CC BY-SA 4.0                                                                                  |
 | Keycap OPK 1u                                                                      | cubiq                | [cubiq/OPK](https://github.com/cubiq/OPK)                                                                              | [Apache 2.0](licenses/opk-Apache-2.0.txt)                       | Đã chuyển STEP → GLB                                                                                                       |
 
-Model switch MX (`models/switch.glb`) và stabilizer (`models/stab.glb`) chuyển từ CAD đi kèm dự án
-(`assets/cad/`). Keycap ASA và các phím rộng là hình học dựng bằng code theo thông số profile.
+Model switch MX (`models/switch/switch.glb`) và stabilizer (`models/stab/stab.glb`) chuyển từ CAD đi kèm dự án
+(`assets/switch/`, `assets/stab/`). Keycap ASA và các phím rộng là hình học dựng bằng code theo thông số profile.
 
 ## Font
 

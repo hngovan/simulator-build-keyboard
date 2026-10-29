@@ -457,7 +457,7 @@ export interface CaseDef {
    */
   /** dz: dời board ra trước (+) / sau (−) theo u khi case CAD không đối xứng trước / sau (căn theo khung bao bị lệch) */
   seat?: { rise: number; tilt: number; dz?: number; dx?: number }
-  /** model case CAD thật (public/models/cases/<model>.glb, `bun run convert:cases`), thay case dựng bằng code */
+  /** model case CAD thật (public/models/keyboards/<model>.glb, `bun run convert:cases`), thay case dựng bằng code */
   model?: string
   /** case CAD 2 mảnh: tâm lỗ vít ghép ở đáy [x, z] (mm, hệ model) thay vị trí vít tính theo cỡ case */
   screws?: [number, number][]
