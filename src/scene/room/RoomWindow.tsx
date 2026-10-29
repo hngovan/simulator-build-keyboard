@@ -1,16 +1,54 @@
 import { useEffect, useMemo } from 'react'
+import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { WINDOW } from './roomLayout'
 
 // Cửa sổ dựng bằng code: khung gỗ trắng 4 ô kính, cảnh ngoài (trời, cây, bãi cỏ, hàng rào) là ảnh vẽ canvas dán sau kính
 // (sân vườn 3D thật đã thử rồi bỏ: nặng máy),
-// rèm lá (venetian) hạ kín, lá nghiêng gần khép: nắng lọt qua khe lá thành các vệt sọc xiên xuống sàn.
+// rèm lá (model `VenetianBlind`) hạ kín: nắng lọt qua khe lá thành vài vệt sọc mờ xiên xuống sàn.
 // Đơn vị mét; gốc = mặt tường, giữa bậu cửa sổ; +z quay vào phòng
 
 const FRAME = new THREE.MeshStandardMaterial({ color: '#f1ece2', roughness: 0.6 })
-const SLAT = new THREE.MeshStandardMaterial({ color: '#cfc7b6', roughness: 0.6, metalness: 0.1 })
-const CORD = new THREE.MeshStandardMaterial({ color: '#d8d2c6', roughness: 0.9 })
-/** bước lá rèm, bản lá (m), góc nghiêng lá (0 = nằm ngang mở hết) */
+/**
+ * Rèm lá "Venetian frame window" (người dùng đưa, Sketchfab, chưa rõ giấy phép → chỉ dùng cá nhân): ray + lá + dây + gậy xoay,
+ * rộng 1m cao 1,66m, gốc = giữa chân rèm, mặt quay +z
+ */
+const BLIND_GLB = '/models/room/venetian-blind.glb'
+useGLTF.preload(BLIND_GLB)
+
+/** rèm lá co giãn vừa ô cửa w × h (m), chân rèm ở y = 0 */
+function VenetianBlind({
+  w,
+  h,
+  ...props
+}: { w: number; h: number } & JSX.IntrinsicElements['group']) {
+  const { scene } = useGLTF(BLIND_GLB)
+  const model = useMemo(() => {
+    const copy = scene.clone(true)
+    copy.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true
+    })
+    copy.updateMatrixWorld(true)
+    const box = new THREE.Box3().setFromObject(copy)
+    const size = box.getSize(new THREE.Vector3())
+    const g = new THREE.Group()
+    copy.scale.set(w / size.x, h / size.y, 1)
+    copy.position.set(
+      (-(box.min.x + box.max.x) / 2) * (w / size.x),
+      -box.min.y * (h / size.y),
+      -(box.min.z + box.max.z) / 2,
+    )
+    g.add(copy)
+    return g
+  }, [scene, w, h])
+  return (
+    <group {...props}>
+      <primitive object={model} />
+    </group>
+  )
+}
+
+/** bước lá, bản lá (m), góc nghiêng lá: chỉ dùng tính khe lọt nắng (vệt sáng), lá thật là model `VenetianBlind` */
 const SLAT_STEP = 0.025
 const SLAT_W = 0.028
 const SLAT_TILT = 1.2
@@ -185,7 +223,6 @@ export function RoomWindow({
       ),
     [h],
   )
-  const slatGeo = useMemo(() => new THREE.BoxGeometry(blindW, 0.0012, SLAT_W), [blindW])
   // khe hở giữa 2 lá khi nghiêng gần khép
   const gap = SLAT_STEP - SLAT_W * Math.sin(SLAT_TILT)
   const rays = useMemo(
@@ -228,28 +265,8 @@ export function RoomWindow({
       <mesh position={[0, -fr - 0.012, 0.08]} material={FRAME} castShadow receiveShadow>
         <boxGeometry args={[w + 0.2, 0.025, 0.17]} />
       </mesh>
-      {/* rèm lá: hộp ray trên, các lá nghiêng, 2 dây thang + thanh đáy */}
-      <mesh position={[0, h - 0.03, 0.09]} material={SLAT} castShadow>
-        <boxGeometry args={[blindW + 0.02, 0.04, 0.05]} />
-      </mesh>
-      {slats.map((y) => (
-        <mesh
-          key={y}
-          geometry={slatGeo}
-          material={SLAT}
-          position={[0, y, 0.09]}
-          rotation-x={SLAT_TILT}
-          castShadow
-        />
-      ))}
-      {[-1, 1].map((sx) => (
-        <mesh key={sx} position={[sx * blindW * 0.3, h / 2, 0.09 + SLAT_W / 2]} material={CORD}>
-          <boxGeometry args={[0.006, h - 0.04, 0.001]} />
-        </mesh>
-      ))}
-      <mesh position={[0, slats[slats.length - 1] - 0.02, 0.09]} material={SLAT} castShadow>
-        <boxGeometry args={[blindW, 0.012, 0.03]} />
-      </mesh>
+      {/* rèm lá: model người dùng đưa, co vừa lòng khung */}
+      <VenetianBlind w={blindW} h={h} position-z={0.09} />
       {/* nắng lọt qua khe lá: vệt sáng xiên + sọc sáng trên sàn */}
       <>
         <mesh geometry={rays.shaft} renderOrder={2}>

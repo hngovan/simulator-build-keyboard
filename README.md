@@ -30,6 +30,7 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 <!-- prettier-ignore -->
 | Phiên bản | Ngày | Mảng | Thay đổi chính |
 | --- | --- | --- | --- |
+| **0.1.15** | 29/10/2026 | 🚶 Phòng đi lại | Đi lại trong phòng bằng WASD (kiểu PC Building Simulator): bàn máy tính sát bàn build, hành lang nhận hàng, lịch treo tường kết thúc ngày; Shopii hẹn ngày giao (Hoả tốc / Nhanh / Tiết kiệm); mua linh kiện không bị chặn, món sale mua 1 lần. |
 | **0.1.10** | 26/10/2026 | 🛒 Chợ & Keeb-chan | Bán đồ trong đơn đang build (switch lẻ, keycap chưa gắn), nút Đăng bán ở Kho; kéo Keeb-chan bằng nhân vật, không ra khỏi màn hình; tên game luôn chính giữa; Bid 1 phút → Fast bid. |
 | **0.1.9** | 26/10/2026 | 🛒 Chợ & luật chơi | Đăng bán lời được (đại gia chốt đêm, chứng chỉ thợ +5% / bậc), fast bid 1 phút, tag Free ship, bán đồ trong đơn; hàng lỗi keycap / switch / stab chỉ bán lại; gỡ bài > 3 lần / ngày bị ban; qua ngày phải nhận ≥ 1 đơn, nhận không làm đền 20% công; điểm xếp hạng bỏ ngày. |
 |  |  | ⌨️ Build | Plateless (PCB hàn + tray), foam Poron lót PCB (thock hơn), stab plate-mount dùng mọi plate, ốc case mica dài tới tấm đáy; Keeb-chan + màn tiêu đề dùng ảnh mới. |

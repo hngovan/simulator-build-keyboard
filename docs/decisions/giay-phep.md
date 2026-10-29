@@ -53,3 +53,4 @@ Quy tắc của người dùng:
 - 2026-10-28: model người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**): Topre Realforce 87U, Razer DeathAdder
   (`public/models/desk/`, gốc trong `assets/user-desk/` không commit). Lót chuột in logo Topre "COLDTOP" vẽ lại theo ảnh người dùng
   (thương hiệu thật, chỉ dùng cá nhân).
+- 2026-10-29: rèm lá "Venetian frame window" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/room/venetian-blind.glb`.

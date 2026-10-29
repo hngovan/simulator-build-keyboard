@@ -13,6 +13,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.15',
+    date: '2026-10-29',
+    commits: ['2940534'],
+    title: 'Phòng đi lại kiểu PC Building Simulator, hẹn ngày giao hàng, lịch treo tường',
+    items: [
+      'Vào game là đứng trong phòng: WASD / phím mũi tên đi lại, kéo chuột nhìn, bấm sàn đi tới, bấm đồ vật để dùng; Esc / WASD ở bàn build thì đứng dậy',
+      'Bàn máy tính sát bàn build dưới cửa sổ rèm lá: màn hình 27", CPU dưới gầm, lót chuột Topre 90 × 40, bàn phím Realforce + chuột DeathAdder',
+      'Hành lang dài ra ô cửa cạnh bàn máy tính: cửa chính cuối hành lang, kệ sắt để hàng giao tới, thùng đơn chờ gửi bấm để gửi',
+      'Shopii phải chọn tốc độ giao: Hoả tốc trong ngày +25%, Nhanh ngày mai, Tiết kiệm 2 ngày −10%; hàng tới thì ra hành lang nhận',
+      'Lịch treo tường: ngày sale, hạn đơn, hàng tới; bấm lịch để xem chi tiết và kết thúc ngày (bỏ nút kết thúc ngày ở máy tính)',
+      'Mua linh kiện không bị chặn nữa (món không vào đơn được thì cất kho chung); mỗi món đang sale chỉ mua 1 lần',
+      'Phòng to hơn, tường + trần xám xanh, ghế đôn, đèn tay đòn có dây cắm ổ, tranh phượng hoàng / ếch đáy giếng / graffiti QMK / tờ 300k',
+      'Kìm cắt + kéo ở bàn mod stab to hơn cho gần tỉ lệ thật',
+    ],
+  },
+  {
     version: '0.1.14',
     date: '2026-10-28',
     commits: ['1532256'],

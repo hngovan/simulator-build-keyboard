@@ -822,3 +822,6 @@
   (kéo thật 20cm × 2 sẽ dài hơn nửa bàn) → thêm `TOOL_K = 1.8` trong StabModStation: scale group kìm / kéo, khoảng mũi ↔ chốt
   (vị trí nghỉ, điểm kẹp chân stab `0.65 × TOOL_K`, điểm cắt băng Urgo `0.4 × TOOL_K`), ngưỡng `clipperHit`, ô "Thiếu kìm cắt",
   bề rộng bàn. Phần gạc bỏ đi `PAD_AWAY` dời sang x −6,3 cho khỏi nằm dưới kéo.
+- Rèm lá đổi sang model người dùng đưa (2026-10-29, "đổi qua model rèm này"): `venetian_fraim_window.glb` → `public/models/room/venetian-blind.glb`
+  (214KB, ray + lá + dây + gậy xoay, 1 × 1,66m, gốc giữa chân rèm). `VenetianBlind` (RoomWindow) co x / y vừa lòng ô cửa; bỏ lá / dây
+  / ray tự dựng, hằng `SLAT_*` chỉ còn để tính vệt nắng. Dùng ở cả cửa sổ bàn máy tính lẫn cuối hành lang.
