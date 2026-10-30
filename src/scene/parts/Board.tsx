@@ -16,6 +16,7 @@ import {
 } from '@/data/steps'
 import type { Key, Point, StepId } from '@/types'
 import { playClick } from '@/sound'
+import { PcbJst } from './Daughterboard'
 import { Drop, lerpTo } from '../common/anim'
 import { MM } from '../models/Switch'
 import { useHover } from '../common/useHover'
@@ -218,7 +219,8 @@ export function Board() {
   const kcKit = useGame((s) => s.inventory.keycap?.kit)
   const { placePlate, placeFoam, wrapRing, dropInCase } = useGame.getState()
   const ref = useRef<THREE.Group>(null)
-  const lifted = step === 'caseIn' && !b.inCase
+  // nhấc board lên trên case: chờ thả vào case, chờ cắm dây JST (dây từ daughterboard trong case lên cổng mặt dưới PCB)
+  const lifted = (step === 'caseIn' && !b.inCase) || step === 'jst'
   const boardClick = step === 'plate' || step === 'foam' || step === 'ring' || step === 'caseIn'
   const { hover, bind } = useHover(boardClick)
   // case CAD có plate nghiêng (Alice): thả vào case thì board nâng + nghiêng theo mặt case
@@ -299,6 +301,8 @@ export function Board() {
         />
       </group>
       {ctx.pcbType === 'hotswap' && <HotswapSockets />}
+      {/* cổng JST mặt dưới PCB nối daughterboard */}
+      <PcbJst />
       {(b.foam || step === 'foam') && (
         <Drop y={0} from={b.foam ? 0.6 : 0}>
           <group onPointerDown={onBoard} {...bind}>

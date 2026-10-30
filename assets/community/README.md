@@ -15,6 +15,7 @@ Năm bộ thiết kế trong bảng đều dùng giấy phép MIT, bản sao n�
 ## Alice / Arisu và bộ plate bổ sung
 
 - `blossom-arisu/` có case hai mảnh STL, plate DXF, PCB STEP/KiCad và metadata layout Arisu. Bộ này theo giấy phép MIT; [nguồn và phạm vi sử dụng](blossom-arisu/SOURCE.md). Layout Arisu khác Alice đang có trong game nên chưa gắn trực tiếp vào scene.
+- `unified-daughterboard/`: daughterboard ai03 Unified C3 (STEP, MIT); [nguồn](unified-daughterboard/SOURCE.md). `bun run convert:dtb` → `public/models/dtb/unified-c3.glb`.
 - `keyboard-plate-files-4xgk3/` chứa ZIP đầy đủ bộ sưu tập plate từ GitHub và chín file Alice/60%/TKL tách sẵn. Plate 60% mặc định lấy cutout từ DXF; plate Alice dùng mesh GLB chuyển từ STEP. Chạy `bun run convert:plates` để tạo lại runtime assets. [Nguồn, commit và danh sách file](keyboard-plate-files-4xgk3/SOURCE.md).
 
 ## Cọ và lọ lube

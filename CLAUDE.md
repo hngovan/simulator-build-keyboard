@@ -45,6 +45,8 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 - `bun run gen:plates-universal`: plate universal 60 / 75 / TKL / full bằng lõi ai03 Plate Generator (kbplate.ai03.com,
   AGPL — clone ngoài repo, đặt `YAKB_DIR`): layout game gộp mọi variant → KLE + DXF trong `assets/plates/universal/`
   → `src/data/generated/plateUniversal.ts` (Board.tsx dùng, trừ 60 chuẩn giữ plate CAD typ60).
+- `bun run convert:dtb`: daughterboard ai03 Unified C3 (STEP, MIT) `assets/community/unified-daughterboard/` → `public/models/dtb/unified-c3.glb`
+  (node pcb / usb / jst / parts; đầu JST dùng lại làm cổng trên PCB, dây JST dựng bằng code trong `scene/parts/Daughterboard.tsx`).
 - `bun run convert:switch` / `bun run convert:stab` — chuyển CAD STEP trong `assets/cad/` thành
   GLB trong `public/models/` (stab còn sinh `src/data/stabModel.json`). `scripts/probe-*.mjs`,
   `inspect-step.mjs` là script dò/kiểm tra model. Thêm / đổi model case thì chạy `node scripts/probe-case-feet.mjs`
@@ -172,6 +174,8 @@ vào `window.__r3f` để debug trong console.
   Gasket mount: bước `gasket` dán dải Poron 20 × 4mm (vật tư `GASKET_ID`, mặt trên + mặt dưới tai / mép plate, `GASKET`; Blossom dải
   dài hết tai + xoay theo mép, `ctx.gaskets[].w / rot`; tiêu hao `gasketStrips` = số dải 20mm phủ hết × 2).
   Foam Poron PCB: bước tuỳ chọn `foam` trước `plate` (`placeFoam` trừ vật tư `FOAM_ID`, `build.foam`, âm thock hơn), cảnh `scene/parts/Foam.tsx`.
+  Daughterboard: bước `dtb` (sau `feet`: đặt DTB sát vách sau, 2 vít M2, cắm dây JST) + `jst` (trước `caseIn`, board nhấc: cắm dây vào PCB),
+  chỉ case dựng bằng code không mica (`dtbSpot`, lỗ USB-C khoét vách `WallPort`); `scene/parts/Daughterboard.tsx`, save rev 8 `addDtbSteps`.
   Feet: bước `feet` (trước `topCase` / `caseIn`, case tự lật úp, chỉ hiện case) dán 1 feet vào mỗi hốc `ctx.feet`
   (`feetPockets` trong steps.ts: case CAD = hốc `caseFeet.json`, case dựng bằng code = 4 hốc CNC lõm `FOOT_R` / `FOOT_DEPTH`
   khoét trong `caseShellGeometry` / tấm mica đáy), `placeFoot(i)` trừ 1 vật tư `feetPick` (`FEET_IDS` nhiều màu, Shopii gộp 1 sản phẩm

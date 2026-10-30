@@ -70,6 +70,14 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     title: 'Dán feet cao su',
     hint: 'Case đã lật úp: click từng hốc tròn dưới đáy để dán feet (mỗi hốc 1 cái, chọn feet đen / trắng ở bảng bên)',
   },
+  dtb: {
+    title: 'Lắp daughterboard',
+    hint: 'Click hốc vách sau case để đặt daughterboard (cổng USB-C quay ra lỗ), click 2 lỗ vít M2 để bắt vít, rồi click đầu cắm JST để cắm dây',
+  },
+  jst: {
+    title: 'Cắm dây JST vào PCB',
+    hint: 'Board đang nhấc trên case: click đầu dây JST nằm trong case để cắm vào cổng JST mặt dưới PCB',
+  },
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
   trayScrew: {
     title: 'Bắt vít tray mount',
@@ -258,6 +266,12 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   const stabModel = inv.stab?.type
   const stabType = stabModel ? STABS[stabModel].mount : undefined
 
+  const screwSide = caseDef.screwSide ?? 'bottom'
+  // case CAD 2 mảnh: vít đúng lỗ trong model (mm, hệ model → u quanh tâm layout như feet)
+  const caseScrews = caseDef.screws
+    ? caseDef.screws.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
+    : caseScrewPoints(width, depth, screwSide)
+
   const steps: StepId[] = ['unbox']
   if (caseDef.pieces === 2) steps.push('caseOpen')
   if (stabKeys.length && stabType !== 'plate') {
@@ -276,17 +290,15 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   const topMount = mount === 'top' && caseDef.pieces === 2
   // dán feet vào đáy case trước khi lắp board vào case
   steps.push('feet')
+  // daughterboard: bắt vào case dưới khi case còn trống, cắm dây vào PCB ngay trước lúc thả board
+  const dtb = dtbSpot(caseDef, width, depth, caseDef.pieces === 2 ? caseScrews : [])
+  if (dtb) steps.push('dtb')
   if (topMount) steps.push('topCase', 'topScrew')
+  if (dtb) steps.push('jst')
   steps.push('caseIn')
   if (mount === 'tray') steps.push('trayScrew')
   if (caseDef.pieces === 2) steps.push(...(topMount ? [] : (['caseClose'] as const)), 'caseScrew')
   steps.push('keycap', 'test', 'pack')
-
-  const screwSide = caseDef.screwSide ?? 'bottom'
-  // case CAD 2 mảnh: vít đúng lỗ trong model (mm, hệ model → u quanh tâm layout như feet)
-  const caseScrews = caseDef.screws
-    ? caseDef.screws.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
-    : caseScrewPoints(width, depth, screwSide)
 
   // Vít tray: nằm ở khe giữa các hàng phím
   const rowYs = [...new Set(keys.map((k) => k.y))].sort((a, b) => a - b)
@@ -374,6 +386,7 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     screws,
     gaskets,
     feet,
+    dtb,
     screwSide,
     pcbType: inv.pcb!.type,
     plateless,
@@ -421,6 +434,43 @@ function topScrewPoints(width: number, depth: number, caseScrews: Point[]): Poin
     { x, z: -z },
     { x, z },
   ])
+}
+
+/**
+ * Daughterboard ai03 Unified C3 (model `public/models/dtb/unified-c3.glb`, mm): mạch 18 × 16,5 × 1,6; 2 lỗ vít M2 phía trước
+ * (±7, +6,25); đầu JST SH 4 pin rộng 6, cao 1,65–4,55 trên đáy mạch, miệng ở z +7,8; cổng USB-C cao 0,65–4,86, mặt ở mép sau
+ */
+export const DTB_MM = {
+  w: 18,
+  d: 16.5,
+  t: 1.6,
+  holes: [
+    [-7, 6.25],
+    [7, 6.25],
+  ] as [number, number][],
+  jst: { z: 7.8, y: 3.1 },
+  usb: { y: 2.75 },
+}
+/** lỗ cổng USB-C khoét xuyên vách sau case (mm): rộng `w`, cao `h`, bo góc `r`, tâm ngang tâm cổng USB-C */
+export const USB_PORT_MM = { w: 11.5, h: 5.5, r: 2 }
+
+/**
+ * Chỗ đặt DTB (u, tâm mặt dưới mạch trên sàn case): sát mặt trong vách sau, x gần giữa nhất mà lỗ cổng USB không chạm
+ * lỗ vít case trong vách sau. Chỉ case dựng bằng code, vỏ liền khối (không mica xếp lớp; case CAD chưa dò lỗ USB) → null
+ */
+export function dtbSpot(
+  caseDef: { model?: string; material: string },
+  width: number,
+  depth: number,
+  caseScrews: Point[],
+) {
+  if (caseDef.model || caseDef.material === 'mica') return null
+  const z = -(depth / 2 + CASE_MARGIN) + (DTB_MM.d / 2) * MM_U
+  const clear = (USB_PORT_MM.w / 2) * MM_U + CASE_BORE.thru + 0.1
+  const back = caseScrews.filter((p) => p.z < 0)
+  let x = 0
+  for (let i = 0; i < 40 && back.some((p) => Math.abs(p.x - x) < clear); i++) x += 0.25
+  return x < width / 2 - 1 ? { x, z } : null
 }
 
 /** lỗ bắt vít case ở đáy / xuyên lớp mica (u, ~M2.5 + đầu vít) */
@@ -760,6 +810,13 @@ export function stepProgress(
       return [b.ring ? 1 : 0, 1]
     case 'feet':
       return [count(b.feet ?? {}), ctx.feet.length]
+    case 'dtb':
+      return [
+        (b.dtb?.placed ? 1 : 0) + count(b.dtb?.screws ?? {}) + (b.dtb?.plugged ? 1 : 0),
+        2 + DTB_MM.holes.length,
+      ]
+    case 'jst':
+      return [b.jst ? 1 : 0, 1]
     case 'caseIn':
       return [b.inCase ? 1 : 0, 1]
     case 'caseClose':
@@ -779,6 +836,8 @@ export const NO_FLIP_STEPS: StepId[] = [
   'pack',
   'stabMod',
   'switchLube',
+  'dtb',
+  'jst',
   'caseIn',
   'caseClose',
   'topCase',

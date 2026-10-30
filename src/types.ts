@@ -308,6 +308,10 @@ export type StepId =
   | 'ring'
   /** dán 4 feet cao su vào hốc CNC dưới đáy case (trước khi lắp board vào case) */
   | 'feet'
+  /** đặt daughterboard (DTB) vào hốc cổng USB vách sau case, bắt 2 vít M2, cắm dây JST vào DTB */
+  | 'dtb'
+  /** cắm đầu dây JST còn lại vào PCB (board đang nhấc trên case) trước khi thả board vào case */
+  | 'jst'
   /** top mount: úp case trên lên plate rồi vặn vít plate vào case trên */
   | 'topCase'
   | 'topScrew'
@@ -360,6 +364,10 @@ export interface BuildState {
   ring: boolean | string
   /** feet đã dán: số hốc → loại feet (id vật tư); bản lưu cũ không có */
   feet?: Record<number, string>
+  /** daughterboard: đã đặt vào case, vít M2 đã bắt (số lỗ), đã cắm dây JST vào DTB; bản lưu cũ không có */
+  dtb?: { placed?: true; screws?: Record<number, true>; plugged?: true }
+  /** đã cắm đầu dây JST còn lại vào PCB */
+  jst?: true
   inCase: boolean
   closed: boolean
   /** vít bị tuôn ren (vặn sai đầu vít / quá lực); hoàn tác không gỡ được */
@@ -419,6 +427,8 @@ export interface BuildContext {
   gaskets: (Point & { w?: number; rot?: number })[]
   /** hốc feet dưới đáy case (u, toạ độ cảnh): tâm x, z + bán kính r */
   feet: FootPocket[]
+  /** daughterboard (u, toạ độ cảnh): tâm x, z mặt dưới mạch nằm trên sàn case; null = case không lắp DTB */
+  dtb: { x: number; z: number } | null
   screwSide: 'top' | 'bottom'
   pcbType: string
   /** không plate: bỏ bước foam + plate, switch hàn thẳng vào PCB */

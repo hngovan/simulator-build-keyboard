@@ -2,6 +2,7 @@ import type { StateCreator } from 'zustand'
 import {
   CASE_SCREW_STEPS,
   CRACK_CHANCE,
+  DTB_MM,
   SCREW_BITS,
   SCREW_STEPS,
   SPIN_MS,
@@ -135,6 +136,12 @@ export interface BuildSlice {
   placeGasket: (i: number) => void
   /** dán 1 feet (loại feetPick) vào hốc thứ i dưới đáy case */
   placeFoot: (i: number) => void
+  /** daughterboard: đặt DTB vào hốc vách sau case / bắt vít M2 lỗ thứ i / cắm dây JST vào DTB */
+  placeDtb: () => void
+  screwDtb: (i: number) => void
+  plugDtb: () => void
+  /** cắm đầu dây JST còn lại vào cổng mặt dưới PCB (board đang nhấc trên case) */
+  plugJst: () => void
   wrapRing: () => void
   dropInCase: () => void
   closeCase: () => void
@@ -953,6 +960,43 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       set({
         build: { ...build, feet, stepIdx: build.stepIdx + (all ? 1 : 0) },
         ...(all ? { viewFlip: false, testIdleFrom: performance.now() } : {}),
+      })
+    },
+    placeDtb: () => {
+      const s = at('dtb')
+      if (!s || s.build.dtb?.placed) return
+      commit(snapshot())
+      s.patchBuild({ dtb: { ...s.build.dtb, placed: true } })
+    },
+    screwDtb: (i) => {
+      const s = at('dtb')
+      const d = s?.build.dtb
+      if (!s || !d?.placed || d.screws?.[i]) return
+      commit(snapshot())
+      s.patchBuild({ dtb: { ...d, screws: { ...d.screws, [i]: true } } })
+    },
+    plugDtb: () => {
+      const s = at('dtb')
+      const d = s?.build.dtb
+      if (!s || !d?.placed || d.plugged) return
+      if (Object.keys(d.screws ?? {}).length < DTB_MM.holes.length)
+        return s.toast('Bắt đủ vít M2 giữ daughterboard trước rồi mới cắm dây', 'bad')
+      commit(snapshot())
+      // cắm dây xong là xong bước, sang luôn bước kế
+      const build = get().build!
+      set({
+        build: { ...build, dtb: { ...d, plugged: true }, stepIdx: build.stepIdx + 1 },
+        testIdleFrom: performance.now(),
+      })
+    },
+    plugJst: () => {
+      const s = at('jst')
+      if (!s || s.build.jst) return
+      commit(snapshot())
+      const build = get().build!
+      set({
+        build: { ...build, jst: true, stepIdx: build.stepIdx + 1 },
+        testIdleFrom: performance.now(),
       })
     },
     press: (id, down) => {

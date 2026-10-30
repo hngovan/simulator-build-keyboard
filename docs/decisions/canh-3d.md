@@ -834,6 +834,8 @@
 - Rèm lá đổi chất liệu gỗ sồi có vân (`BLIND_WOOD` = texture `oak_veneer_01`): model không có UV ở lá nên `woodUv` sinh UV phẳng
   theo toạ độ model (u dọc lá ×1,5, v = y + z ×6) cho vân chạy dọc lá; dây rèm giữ màu gốc.
 - Khung + bậu cửa sổ đổi từ gỗ sơn trắng sang gỗ nâu (`FRAME` = texture óc chó `walnut_veneer`, người dùng: "khung cửa gỗ nâu").
+  2026-10-30 đổi tiếp sang vân sồi `oak_veneer_01` dùng chung `OAK_TEX` với lá rèm (nhân màu `#c99a66`), người dùng: "đổi vân cửa sổ
+  rèm hiện tại thành oak_veneer_01"; bỏ texture óc chó trong RoomWindow.
 - Thùng CPU dời vào ngăn kệ hở bên phải bàn có hộc (`CPU_AT` [0, 0.03, −0.475] hệ bàn), 3 đầu dây cáp dời theo.
 - Màn hình máy tính đổi sang model người dùng đưa (2026-10-29): `asus_pc_gaming_monitor.glb` → `public/models/desk/asus-monitor.glb`
   (1,1MB). `Monitor` (models/Computer.tsx): mesh material "Screen" thay bằng ảnh desktop KeebOS (UV đặt lại theo khung mặt kính, lật u
@@ -869,3 +871,170 @@
 - WalkControls `KEYS` bỏ Arrow*, Bench `MOVE_KEYS` (đứng dậy khi đang ngồi bàn build) chỉ còn WASD.
 - (2026-10-29) Rê vào vật bấm được: bỏ khung xanh "Bấm: …", dòng hướng dẫn giữa đáy đổi thành "Nhấn [chuột trái] {việc}" cùng kiểu chữ trắng
   (RoomHud, `hover` hạ chữ đầu). `KeyCap` tắt bóng chữ kế thừa (`[text-shadow:none]`) cho chữ A / D / W / S khỏi nhoè.
+
+## Viền hover thùng carton bao kín cả cạnh đáy (2026-10-30)
+
+- Người dùng: "viền tương tác phải hiển thị ở trước mặt khi hover vào hộp giấy, đang ở phía sau", rồi gửi ảnh khoanh đỏ cạnh đáy trước +
+  cạnh đáy bên phải: muốn đường bao **kín quanh cả thùng**, kể cả chỗ thùng chạm mặt bàn / kệ (không cần viền các cạnh trong).
+- Nguyên nhân: vỏ ngược (BackSide) phình ra mọi phía, phần đáy lún dưới mặt bàn / kệ nên bị che → chỉ còn viền cạnh trên + hai bên.
+- Thử trước (bỏ): dải xanh dọc mọi cạnh nhìn thấy (`edgeMat`) — không đúng ý (vẽ cả cạnh trong, đáy vẫn thiếu).
+- Thử 2 (bỏ): `OUTLINE_TOP_MAT` kéo chiều sâu vỏ về phía camera 3% khoảng cách → nổi trên mặt bàn nhưng lộ luôn mặt sau vỏ ở dải gần mép
+  (chỗ mặt trước / mặt sau gần nhau về độ sâu) → viền rất dày; giảm `width` không đỡ. Người dùng: "vẫn dày, sửa bằng viền tương tác của cái bàn".
+- Đang dùng: viền thường như bàn làm việc (`OUTLINE_MAT`, 0,004), riêng mesh tên `OUTLINE_ON_TOP` dùng `onTopGeometry`: vỏ gộp đỉnh như hộp,
+  đỉnh đáy chỉ đẩy ngang (pháp tuyến bỏ y) + nhấc 1mm → đáy vỏ nằm ngay trên mặt đỡ, có viền đáy mảnh. Mesh tên `NO_OUTLINE` thì bỏ qua
+  (băng keo, nhãn, logo).
+- `CardBox` (DoorParcels): thân thùng `name={OUTLINE_ON_TOP}`, đồ đắp `name={NO_OUTLINE}`. Dùng `name` thay `userData` vì R3F gán đè
+  object `userData` khi vẽ lại (mất viền đã tạo / dùng chung giữa các thùng).
+
+## Đổi chậu cây góc hành lang sang ZZ Plant (2026-10-30)
+
+- Người dùng: thay chậu cây ở góc tường bằng `zz_plant_in_ceramic_pot__crafted_by_jerovdl.glb` (Sketchfab, Jerovdl, CC BY 4.0).
+- File đã tối ưu sẵn (glTF-Transform, 587KB, 10,6k tam giác, texture 512) → chép thẳng `public/models/room/zz_plant.glb`, không cần script convert.
+  Đơn vị mét, gốc giữa đáy chậu, cao 0,6m, đế 0,31 × 0,39m → `Model` ở `HALL_PLANT` bỏ `scale={1.8}` (cỡ thật).
+- Gỡ `potted_plant_04.glb` (Poly Haven, 1,9MB) khỏi `public/`, `fetch-room.mjs`, `credits.ts`, `CREDITS.md`; thêm ghi công ZZ Plant
+  vào `credits.ts` (nhóm Đạo cụ bàn làm việc) + `public/models/room/CREDITS.md` + bảng `giay-phep.md`.
+
+## Đổi rèm lá cửa sổ sang "Window Blind - 3MB" (2026-10-30)
+
+- Người dùng: đổi rèm cửa hiện tại thành `window_blind_-_3mb.glb` (Sketchfab, Mehdi Shahsavan, CC BY 4.0), "xoá model cửa dư đi".
+- Chép thẳng `public/models/room/window-blind.glb` (1,3MB, 1 mesh, texture riêng 2 × 1024). File gốc đơn vị cm (node scale 0,01);
+  khung bao = cả rèm 1,03 × 1,29m (ray trên + lá bước 2cm + thanh đáy) nên `VenetianBlind` vẫn co x / y vừa lòng ô cửa như cũ.
+- Bỏ ép vân sồi lên lá (`BLIND_WOOD`, `woodUv`): giữ material + texture của model; khung / bậu cửa vẫn vân `oak_veneer_01`.
+- Xoá `venetian-blind.glb` cũ (chưa rõ giấy phép). Ghi công: `credits.ts`, `public/models/room/CREDITS.md`, bảng `giay-phep.md`.
+
+## Cửa sổ trong phòng: rèm khít khung, cỡ bằng bàn máy tính, cùng màu cửa sổ hành lang (2026-10-30)
+
+- Người dùng: "mở rộng rèm cho bằng cửa sổ" → rồi "viền khít, không dư ra như cửa sổ hành lang", "bóp nhỏ lại, bằng cái bàn máy tính";
+  "cửa sổ hành lang chuẩn màu, trong phòng sai".
+- Rèm "Window Blind": lá rèm chỉ chiếm 88,1% bề ngang model (`SLAT_FRAC`, đo đỉnh glb), phần còn lại là 2 nắp đầu ray. `RoomWindow`:
+  `blindW = (w + 0,01) / SLAT_FRAC` (lá phủ lòng khung, lấn 5mm mỗi bên), khung `fr = max(0,05, (blindW − w) / 2)` để 2 nắp nằm trọn
+  trên khung. Vệt nắng tính theo lòng khung `w`.
+- `WINDOW` (roomLayout): tâm x = `PC_DESK.x`, lòng 1,05m (cả khung ~1,2m = bàn máy tính), cao 1,2m (cũ 1,3 × 1,3).
+- Lệch màu: 2 cửa sổ dùng chung component; cửa sổ phòng quay mặt về phía đèn chính (directional light trắng [6, 14, 8] trong Bench.tsx)
+  nên bị rọi thẳng, bạc màu; cửa sổ hành lang quay lưng lại (xoay π) chỉ nhận ánh sáng môi trường. Prop `shade` (nhân màu r, g, b linear,
+  clone vật liệu khung + rèm), phòng dùng `LIT_SHADE` [0,32, 0,29, 0,21]: đo trên ảnh chụp lá rèm phòng (223, 217, 184) ≈ hành lang
+  (216, 208, 177). Hằng số ngoài component (mảng mới mỗi lần vẽ thì rèm clone lại liên tục).
+
+## Daughterboard ai03 Unified C3 + dây JST (2026-10-30)
+
+- Người dùng: "bổ sung assem dtb ai03 + dây jst" (github.com/mraghuram3/Unified-Daughterboard), "tìm model dây nhỏ vừa đầu cắm JST PH 4 pin"
+  (thư mục KiCad `Connector_JST.3dshapes`).
+- DTB C3 thật dùng đầu **JST SH 1,0mm** (SM04B-SRSS-TB, BOM C3), không phải PH 2,0mm; thư mục KiCad người dùng đưa chỉ có EH / GH / PH / XH
+  → không dùng. Đầu cổng lấy luôn từ STEP của DTB (node `jst`), dùng lại làm cổng trên PCB bàn phím. Dây: dựng bằng code (không có model
+  dây phù hợp, Sketchfab cần đăng nhập): 2 đầu cắm SHR-04 (5 × 2,4 × 4,2mm, lút 2mm vào cổng) + 4 sợi `TubeGeometry` AWG28 bước 1mm
+  đỏ / trắng / xanh / đen (VBUS / D− / D+ / GND).
+- Model: `bun run convert:dtb` (`scripts/convert-dtb.mjs`): STEP (`assets/community/unified-daughterboard/`, MIT © 2019 ai03) →
+  `public/models/dtb/unified-c3.glb` (262KB), node `pcb` (đen nhám, STEP tô xanh) / `usb` / `jst` / `parts`; gốc tâm mặt dưới mạch,
+  USB-C quay −z (sau), miệng JST +z. Số đo trong `DTB_MM` (steps.ts): 18 × 16,5 × 1,6mm, 2 lỗ M2 phía trước (±7, +6,25), miệng JST z 7,8.
+- Luồng: bước `dtb` sau `feet` (case trống, chỉ hiện case): bấm khối mờ → `placeDtb`, bấm 2 lỗ → `screwDtb(i)` (ốc socket M2 model
+  `socket-cap-m2x6`, click thường, không skill check), bấm đầu dây → `plugDtb` (thiếu vít thì báo; xong tự sang bước). Bước `jst` ngay
+  trước `caseIn`: board nhấc trên case (`lifted` trong Board + case trên top mount), bấm đầu dây nằm trên sàn → `plugJst`, dây vươn lên
+  cổng mặt dưới PCB (`PcbJst` trong Board, lệch +0,9u x / +1,2u z so với DTB) và theo board hạ xuống (JstCable tự lerp như Board, dựng lại
+  ống dây khi độ cao đổi). `BuildState.dtb` / `jst`, `stepProgress`, `NO_FLIP_STEPS`, câu thoại Keeb-chan `benchLines`.
+- Chỉ case dựng bằng code, vỏ liền khối (`dtbSpot`): case CAD chưa có toạ độ lỗ USB (thử dò tự động bằng tia ngang vách sau: kết quả
+  không tin được, bỏ), mica xếp lớp chưa khoét lớp. DTB nằm trên sàn sát mặt trong vách sau, x dời từ giữa theo bước 0,25u cho lỗ
+  USB không chạm lỗ vít case 2 mảnh ở vách sau. Lỗ USB-C 11,5 × 5,5mm bo 2mm khoét CSG xuyên vách (`WallPort`, `caseShellGeometry`
+  ports); gờ đỡ O-ring / gasket chừa khe `DTB_GAP` (`ledgeGeometry` gap).
+- Khe sàn → mặt dưới PCB 4,9mm, DTB cao 4,86mm: vừa; socket hotswap / chân hàn ở hàng phím sau có thể chạm DTB (khuất dưới board, bỏ qua).
+- Save rev 8 (`addDtbSteps`): build cũ dời stepIdx theo tên bước, đã qua bước thì coi như đã lắp DTB / cắm dây; các migration cũ
+  (`addFeetStep` / `moveRingStep` / `addFoamStep`) tính trên danh sách bỏ `dtb` / `jst` (`noDtb`). Thùng đóng gói chưa gửi cũng dời bước.
+
+## 2 poster bàn phím treo tường trước (2026-10-30)
+
+- Người dùng đưa 2 ảnh (Redbubble mockup 600 × 600): art print "CHERRY クレイジー" (switch Cherry) + poster "My keyboards click with my style".
+- Cắt lấy đúng mặt tranh (PIL, dò mép nền) → `public/textures/posters/cherry-crazy.jpg` (265 × 386) / `keyboards-click.jpg` (408 × 489).
+- `CanvasPainting.tsx`: tách khung + viền giấy + mặt tranh thành `FramedArt`; thêm `ImagePainting({ url })` (useTexture, sRGB) dùng chung khung.
+- `Room.tsx` (`POSTERS`): treo cặp giữa tường trước (x ±0,36m, tâm cao 1,5m, sau lưng khi ngồi bàn build; kệ bàn phím / đồng hồ / tranh cũ
+  ở |x| > 0,7m). Cherry: 0,4m, viền giấy 5cm, khung đen; Keyboards: 0,45m, tràn khung, khung gỗ sáng.
+
+## Vân gỗ cho phào chân tường, nẹp cửa, cửa hành lang, ván kệ; dọn texture thừa (2026-10-30)
+
+- Người dùng: "thêm vân gỗ cho các cạnh tường trong nhà", rồi "cửa (hành lang) và kệ thêm luôn vân gỗ" (ảnh cửa 6 ô xanh + kệ sắt),
+  "textures/room có ảnh nào không xài thì xoá".
+- Room.tsx: phào chân tường `SKIRT` = vân óc chó `walnut_veneer` (nhân `#a4876f`), nẹp ô cửa sang hành lang + ngưỡng `TRIM` = vân sồi
+  (nhân `#b27a4c`); khối dựng bằng `woodBoxGeometry` (UV theo toạ độ thật, vân chạy dọc thanh; nẹp đứng vân dọc), ảnh lặp `woodTex`.
+- HallProps.tsx (dựng theo mét): `woodUV` tính theo đơn vị cảnh (1 ảnh ~22u = 0,42m) → ảnh lặp `22 / 0,42` lần (`grain`). Cửa gỗ sơn xanh
+  giữ màu sơn, vân sồi nổi dưới lớp sơn bằng normal map (`normalScale` 1,2) + roughness map (nhân ảnh màu gỗ vào màu sơn thì lệch màu);
+  ván kệ (`BOARD`, cả kệ cửa + kệ cất đơn dùng `MetalRack`) = vân sồi mộc nhân `#e0bf96`. Cửa sổ hành lang đã có vân sồi từ trước.
+- Xoá `public/textures/room/beige_wall_001_diff_1k.jpg`: tường sơn `WALL_COLOR` luôn ghi đè `map={null}` (chỉ dùng vân trát normal /
+  roughness) → bỏ `map` khỏi `WALL_TEX`, `MapSet` thành Partial, `fetch-room.mjs` không tải ảnh màu tường nữa. 11 ảnh còn lại đều đang dùng
+  (sàn laminate, vân trát tường, vân sồi / óc chó cho case gỗ + đồ gỗ phòng).
+
+- Sau đó người dùng: "viền xung quanh nhà dùng màu gỗ xám cho hợp với tường (`oak_veneer_01_rough_1k.jpg`)" → `SKIRT` / `TRIM` đổi sang
+  ảnh xám vân sồi đó làm ảnh màu (`GREY_WOOD`), nhân `#9ea6ad` / `#b9c0c6` ngả xanh xám theo tường; vân óc chó / sồi màu ở viền bỏ.
+  Khối đứng (cột nẹp cửa, cánh cửa) vân dọc: `grainBoxGeometry` (materials.tsx) đổi u / v khi cao hơn cả bề ngang + bề sâu
+  (`woodUV` luôn cho vân chạy ngang mặt đứng).
+- "Kệ thép chưa giống thép, thêm texture thép": `RACK_BLUE` = Poly Haven `blue_metal_plate` (CC0, Rob Tuytel; diff + nor_gl + arm,
+  `fetch-room.mjs`), `arm` làm cả roughnessMap (kênh G) + metalnessMap (kênh B), metalness / roughness 1, lặp 1 ảnh / 1m. Ảnh gốc
+  xanh navy cũ: nhân màu 2,2 thì bạc thành xanh nhạt loang lổ → 1,4 (thép xanh xám bóng, lộ xước). Khung kệ dùng UV theo kích thước thật.
+- Rồi người dùng (ảnh mẫu PCBS: khung cửa gỗ bản rộng ốp tường + phào mảnh, cùng tông gỗ): "màu gỗ nẹp tường phải giống màu sàn nền"
+  → bỏ gỗ xám. `FLOOR_WOOD` (Room.tsx, dùng cho `SKIRT` + `TRIM`) = vân sồi liền `oak_veneer_01_diff` (texture sàn laminate có đường
+  ghép ván, không hợp thanh mảnh) nhuộm hệ số linear (0,92, 1,04, 1,31) để màu trung bình trùng sàn (155 / 128 / 99 vs sồi 161 / 126 / 87).
+  Khung ô cửa (`CASING`): cột + đầu cửa bản 9cm xuyên hết bề dày tường, lồi ra 1,5cm mỗi mặt (ốp lên tường 2 phía), lấn 2cm vào
+  lòng ô cửa (lòng cửa bọc gỗ); đầu cửa nối liền 2 cột.
+
+## Cửa sổ mỏng sát tường (2026-10-30)
+
+- Người dùng (ảnh nhìn nghiêng): "viền cửa sổ quá dày, làm mỏng lại hoặc âm tường". Chọn làm mỏng: âm tường phải khoét lỗ tường phẳng
+  (PlaneGeometry) + dựng 4 mặt lòng tường cho cả cửa sổ phòng lẫn hành lang.
+- `RoomWindow`: khung + đố lồi khỏi tường `FRAME_D` 2,5cm (cũ 7cm), rèm ép dày `BLIND_D` 3cm (`VenetianBlind` scale z = BLIND_D / dày model,
+  gốc 6,7cm) đặt ngay trước khung, bậu `SILL_D` 9cm (cũ 17cm), kính ở trong khung (0,6 × FRAME_D).
+- Phào chân tường hạ thấp (người dùng: "nẹp chân tường cao quá"): `SKIRT_H` 5cm (cũ 9cm), dày `SKIRT_T` 1,4cm (cũ 1,6cm), Room.tsx.
+- Sàn liền qua ô cửa (người dùng: "cho liền gạch nền qua, không cần gạch cắt"): bỏ thanh ngưỡng cửa; sàn phòng lấn sang trái hết bề dày
+  tường trái `WALL_T` (lấp khe dưới ô cửa, phần dưới tường bị 2 mặt tường che); `useTiled(..., at)` neo texture theo toạ độ thật
+  (offset = mép trái x / tile, −mép trước z / tile) cho sàn phòng + sàn hành lang → ván nối liền, không lệch ở mép tường.
+
+## Công tắc đèn cạnh ô cửa hành lang (2026-10-30)
+
+- Người dùng (ảnh khoanh chỗ trên tường trái, sát nẹp cửa phía tường trước): "thêm 1 model công tắc bật đèn ở đây". Không có file model → dựng bằng code.
+- `LightSwitch` (`room/Wiring.tsx`, cạnh `Outlet`, cùng nhựa `PLATE`): mặt nạ vuông 8,6cm, khung phím lõm, phím bập bênh nghiêng theo `on`,
+  chấm đèn báo cam (tắt đèn thì sáng hơn). Chỉ trang trí, chưa bấm được / chưa bật tắt đèn trần.
+- `LeftWall` (Room.tsx): mặt trong tường trái `x = −HALF_W`, z = mép ngoài nẹp cửa + 8cm (`z1 − lip + cw + 0.08`), cao 1,25m, xoay π/2 quay vào phòng.
+
+## Đèn downlight âm trần hành lang (2026-10-30)
+
+- Người dùng: "thêm 1 số bóng đèn âm tường hay sao đó ở hành lang".
+- `room/Downlight.tsx` (dựng bằng code): viền nhựa trắng Ø11cm + lòng chụp + mặt đèn `MeshBasic` trắng ấm (không tone map → trông như sáng),
+  quầng sáng nhỏ trên trần + vầng sáng ấm Ø1,1m trên sàn (canvas gradient tròn, cộng sáng, opacity 0,16). Không dùng pointLight thật
+  (mỗi đèn thật làm nặng mọi material cả cảnh).
+- `Hallway` (Room.tsx): 4 đèn dọc giữa trần `HALL_LIGHTS_Z` = −2,2 / −0,55 / giữa ô cửa / 2,8 (m), cách ~1,65m.
+- Rồi người dùng: "viền cửa sổ 2 bên vẫn dày, cho nhỏ lại như ở dưới, bỏ thanh gờ (bậu) bên dưới". Khung `FRAME_W` 3cm đều 4 cạnh (trước:
+  2 bên nới bằng phần nắp ray lòi ra ~7cm), bỏ bậu cửa. Lá rèm vẫn phủ lòng khung (`blindW = (w + 0,01) / SLAT_FRAC`) → 2 nắp đầu ray
+  lòi quá khung: `VenetianBlind clip` nướng biến đổi vào hình (clone) rồi ép đỉnh |x| > mép ngoài khung về mép (nắp cụt bằng khung,
+  giữ pháp tuyến gốc). `WINDOW.w` 1,14m để cả khung vẫn 1,2m bằng bàn máy tính.
+
+## Bỏ 2 tranh khung, thêm 2 poster dán tường hành lang (2026-10-30)
+
+- Người dùng: bỏ tranh khung oval chạm (ảnh lâu đài) + khung vàng (phong cảnh Hà Lan); thêm 2 ảnh vào hành lang "kiểu banner dán trên
+  tường, không phải khung tranh".
+- Bỏ `ModelPainting` `hanging03` (tường hành lang phía phòng) + `fancy01` (tường phải gần tường trước); xoá `hanging_picture_frame_03.glb`,
+  `fancy_picture_frame_01.glb` khỏi `public/models/room/`, `FRAMES`, `fetch-room.mjs`, `CREDITS.md`.
+- Ảnh người dùng đưa (`D:\Code Game\`, ảnh mockup sản phẩm 600 × 600) cắt bỏ nền + bóng mockup (PIL, dò mép khác màu nền) →
+  `public/textures/posters/caution-keyboard.jpg` (351 × 498) + `bassline-303.jpg` (413 × 495).
+- `room/WallPoster.tsx`: tấm giấy phẳng cách tường 2mm (không khung, không viền) + 4 miếng băng keo giấy kem mờ chéo 45° ở góc.
+  Caution (rộng 0,42m) ở tường hành lang phía phòng chỗ tranh oval cũ (z −1,6); Bassline 303 (0,45m) tường ngoài hành lang z −0,7
+  (giữa cửa chính và tranh đối diện ô cửa), tâm cao 1,5m.
+- (2026-10-30) Người dùng: thay bằng `light_fixture_-_ceiling_recessed.glb` (Sketchfab, MozillaHubs, CC BY 4.0), "3 bóng thôi".
+  Chép `public/models/room/ceiling-recessed.glb` (175KB, Ø20cm dày 2cm, mặt đèn −y, có texture phát sáng). `Downlight` bỏ viền / mặt đèn
+  dựng code, gắn model với tâm sát trần (lún nửa vào trần), giữ quầng trên trần (to lên 0,5m theo cỡ đèn) + vầng sáng sàn.
+  `HALL_LIGHTS_Z` còn 3 đèn: −1,6 / giữa ô cửa / 3,4. Ghi công: `credits.ts`, `public/models/room/CREDITS.md`, `giay-phep.md`.
+
+## Ổ cắm tường đổi sang model "Electrical Wall Outlet" (2026-10-30)
+
+- Người dùng: "thay thế model ổ cắm" bằng `electrical_wall_outlet.glb` (Sketchfab, sacapuntas, CC BY 4.0).
+- Chép `public/models/room/wall-outlet.glb` (132KB, 3,5k tam giác, không texture). File đơn vị ×10 (0,81 × 1,24) → thu 0,1 = 8,1 × 12,4cm,
+  2 ổ ở y ±2,8cm, lỗ cắm mặt +z, lưng lún sau 5,3mm → `OUTLET_Z` đẩy ra cho lưng sát tường.
+- `Outlet` (Wiring.tsx) giữ API (`plugged`, gốc = tâm mặt ổ sát tường): bỏ mặt nạ / lỗ cắm dựng code, phích cắm dời theo ổ model (y ±0,028).
+  Dùng ở đèn bàn build (Room) + máy tính (PcDesk); dây cáp không đổi.
+
+## Công tắc đèn đổi sang model "Light Switch" (2026-10-30)
+
+- Người dùng: thay model công tắc bật đèn bằng `D:\Code Game\light_switch.glb` (Sketchfab, Avot, CC BY 4.0) → bản gốc
+  `assets/user-props/light_switch.glb` (1,7MB, 3 texture PNG 1024; normal map dạng palette `P` làm sharp lỗi `colourspace` khi nén WebP)
+  → texture chuyển RGB 512px JPEG bằng PIL + `gltf-transform optimize --compress meshopt --texture-compress false --simplify false`
+  → `public/models/room/light-switch.glb` (128KB, giữ kích thước thật: mặt nạ 70 × 114 × 5mm).
+- `LightSwitch` (Wiring.tsx) dùng model: mặt trước model là +x → xoay −π/2 cho mặt quay +z, dời 3mm cho đáy mặt nạ sát tường; bỏ prop `on`.
+  Dùng cho cả công tắc trong phòng (cạnh khung ô cửa) và công tắc hành lang cạnh cửa chính (`PanelDoor`, thay khối dựng bằng code,
+  nâng tâm lên 1,35m cho thoát mặt kệ sắt cao 1,25m).
+- Ghi công: `credits.ts`, `public/models/room/CREDITS.md`, bảng `giay-phep.md`. Người dùng hỏi lại "xoá cái vừa thêm" → chọn giữ công tắc mới
+  (ổ cắm `wall-outlet.glb` do agent khác đổi cùng lúc).

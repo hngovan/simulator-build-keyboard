@@ -1,7 +1,7 @@
 {
   "name": "simulator-build-keyboard",
   "private": true,
-  "version": "0.1.17",
+  "version": "0.1.18",
   "type": "module",
   "packageManager": "bun@1.4.3",
   "scripts": {
@@ -19,6 +19,7 @@
     "convert:cases": "node scripts/convert-cases.mjs",
     "convert:user-cases": "node scripts/convert-user-cases.mjs",
     "convert:screws": "node scripts/convert-screws.mjs",
+    "convert:dtb": "node scripts/convert-dtb.mjs",
     "convert:spring-containers": "node scripts/convert-spring-containers.mjs",
     "convert:keycaps": "node scripts/convert-keycaps.mjs",
     "convert:plates": "node scripts/convert-plates.mjs",

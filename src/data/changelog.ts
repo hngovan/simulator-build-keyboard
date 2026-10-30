@@ -13,6 +13,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.18',
+    date: '2026-10-30',
+    commits: [],
+    title: 'Daughterboard + dây JST, phòng gỗ màu sàn, kệ thép, poster dán tường',
+    items: [
+      'Bước mới lắp daughterboard ai03 Unified C3: đặt DTB vào hốc vách sau (cổng USB-C ra lỗ khoét), bắt 2 vít M2, cắm dây JST; trước khi thả board vào case thì cắm đầu dây còn lại vào PCB',
+      'Cửa sổ rèm lá mới, khung mỏng sát tường, rèm khít khung, cửa sổ trong phòng rộng bằng bàn máy tính, cùng màu cửa sổ hành lang',
+      'Phào chân tường + khung ô cửa gỗ cùng màu sàn, sàn liền qua ô cửa sang hành lang; cửa hành lang + ván kệ có vân gỗ, kệ sắt texture thép',
+      'Hành lang: 2 poster dán tường thay tranh khung, đèn downlight âm trần, công tắc đèn + ổ cắm tường model thật, chậu cây ZZ',
+      'Viền hover thùng carton bao kín cả cạnh đáy',
+    ],
+  },
+  {
     version: '0.1.17',
     date: '2026-10-29',
     commits: ['e6ac9f3'],

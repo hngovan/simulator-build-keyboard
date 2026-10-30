@@ -14,13 +14,10 @@ const API = 'https://api.polyhaven.com'
 const RES = '1k'
 const MODELS = [
   'wooden_table_02',
-  'potted_plant_04',
   'Shelf_01',
   'painted_wooden_chair_01',
   'hanging_picture_frame_01',
   'hanging_picture_frame_02',
-  'hanging_picture_frame_03',
-  'fancy_picture_frame_01',
   'fancy_picture_frame_02',
   'wall_clock',
   // phòng đi lại được: bàn máy tính, bàn workbench, tủ chứa hàng, đèn trần
@@ -37,10 +34,13 @@ const ONLY = process.argv.slice(2)
 /** texture: id → các map cần (tên khoá trong API Poly Haven) */
 const TEXTURES = {
   laminate_floor_02: ['Diffuse', 'nor_gl', 'Rough'],
-  beige_wall_001: ['Diffuse', 'nor_gl', 'Rough'],
+  // tường sơn màu: chỉ cần vân trát, không tải ảnh màu
+  beige_wall_001: ['nor_gl', 'Rough'],
   // vân gỗ cho case gỗ sồi / gỗ óc chó
   oak_veneer_01: ['Diffuse', 'nor_gl', 'Rough'],
   walnut_veneer: ['Diffuse', 'nor_gl', 'Rough'],
+  // kệ thép sơn xanh ở hành lang (arm = AO / độ nhám / kim loại)
+  blue_metal_plate: ['Diffuse', 'nor_gl', 'arm'],
 }
 const OUT_MODELS = 'public/models/room'
 const OUT_TEX = 'public/textures/room'

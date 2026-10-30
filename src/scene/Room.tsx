@@ -38,28 +38,32 @@ import {
 } from './room/roomLayout'
 import { PcDesk } from './room/PcDesk'
 import { Stool } from './room/Stool'
-import { Cable, Outlet } from './room/Wiring'
+import { Cable, LightSwitch, Outlet } from './room/Wiring'
+import { Downlight } from './room/Downlight'
 import { MetalRack, PanelDoor } from './room/HallProps'
 import { ModelPainting } from './room/ModelPainting'
 import { drawPhoenix } from './room/phoenixArt'
 import { drawBanknote } from './room/banknoteArt'
 import { drawQmk } from './room/qmkArt'
-import { CanvasPainting } from './room/CanvasPainting'
+import { CanvasPainting, ImagePainting } from './room/CanvasPainting'
 import { FrogPainting } from './room/FrogPainting'
-import { RoomWindow } from './room/RoomWindow'
+import { LIT_SHADE, RoomWindow } from './room/RoomWindow'
 import { WallCalendar } from './room/WallCalendar'
+import { WallPoster } from './room/WallPoster'
 import { DoorParcels, HeldBox, SHELF_SCALE_Y, StorageShelf } from './room/DoorParcels'
 import { sitAtBench } from './room/sitAtBench'
 import { useRoom } from './room/roomStore'
 import { useHoverOutline } from './common/hoverOutline'
 import { CuttingMat } from './common/CuttingMat'
+import { grainBoxGeometry } from './materials'
 
 // Phòng làm việc quanh bàn build. Model + texture từ Poly Haven (CC0), tải bằng `bun run fetch:room`;
 // hộp đồ nghề từ Sketchfab (CC BY 4.0, xem Cài đặt → Ghi công)
 const DIR = '/models/room'
 const MODELS = {
   desk: `${DIR}/wooden_table_02.glb`,
-  plant: `${DIR}/potted_plant_04.glb`,
+  // chậu cây ZZ (jerovdl, Sketchfab, CC BY 4.0): đơn vị mét, gốc ở đáy chậu, cao 0,6m
+  plant: `${DIR}/zz_plant.glb`,
   shelf: `${DIR}/Shelf_01.glb`,
   picture: `${DIR}/hanging_picture_frame_01.glb`,
   clock: `${DIR}/wall_clock.glb`,
@@ -69,14 +73,30 @@ const MODELS = {
 }
 Object.values(MODELS).forEach((url) => useGLTF.preload(url))
 
+/**
+ * Poster người dùng đưa (ảnh sản phẩm Redbubble, đã cắt lấy mặt tranh; tranh của tác giả khác → chỉ dùng cá nhân).
+ * aspect = rộng / cao ảnh
+ */
+const POSTERS = {
+  cherry: '/textures/posters/cherry-crazy.jpg',
+  cherryAspect: 265 / 386,
+  keyboards: '/textures/posters/keyboards-click.jpg',
+  keyboardsAspect: 408 / 489,
+  /** poster dán tường hành lang (ảnh người dùng đưa, cắt bỏ nền mockup) */
+  caution: '/textures/posters/caution-keyboard.jpg',
+  cautionAspect: 351 / 498,
+  bassline: '/textures/posters/bassline-303.jpg',
+  basslineAspect: 413 / 495,
+}
+
 const TEX = '/textures/room'
 const FLOOR_TEX = {
   map: `${TEX}/laminate_floor_02_diff_1k.jpg`,
   normalMap: `${TEX}/laminate_floor_02_nor_gl_1k.jpg`,
   roughnessMap: `${TEX}/laminate_floor_02_rough_1k.jpg`,
 }
+/** tường sơn xám xanh (`WALL_COLOR`): chỉ lấy vân trát (normal / roughness), không dùng ảnh màu be */
 const WALL_TEX = {
-  map: `${TEX}/beige_wall_001_diff_1k.jpg`,
   normalMap: `${TEX}/beige_wall_001_nor_gl_1k.jpg`,
   roughnessMap: `${TEX}/beige_wall_001_rough_1k.jpg`,
 }
@@ -234,24 +254,59 @@ const SHELF_FRONT = ROOM.back + 0.205 * M
 const LAMP = { x: 0.42, rot: Math.PI / 2, outlet: 0.62 }
 /** màu sơn tường: xám xanh dịu mắt (người dùng đổi từ be) */
 const WALL_COLOR = '#8796a3'
-/** phào chân tường gỗ sẫm */
-const SKIRT = new THREE.MeshStandardMaterial({ color: '#5b4636', roughness: 0.6 })
-type MapSet = Record<keyof typeof FLOOR_TEX, THREE.Texture>
+/** ảnh vân gỗ lặp (UV trải theo toạ độ thật bằng `grainBoxGeometry`, vân chạy dọc thanh) */
+const woodTex = (file: string) => {
+  const t = new THREE.TextureLoader().load(`${TEX}/${file}`, (t) => {
+    t.colorSpace = THREE.SRGBColorSpace
+  })
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  return t
+}
+/**
+ * gỗ cho viền quanh nhà (phào chân tường, khung cửa): vân sồi liền `oak_veneer_01` (cùng kiểu vân với sàn laminate, không có đường
+ * ghép ván) nhuộm cho màu trung bình trùng sàn (sàn 155 / 128 / 99, sồi 161 / 126 / 87 → hệ số linear). Mặt đứng nhận ít đèn hơn
+ * sàn nên tự sẫm hơn chút như ảnh mẫu (người dùng: "màu gỗ nẹp tường phải giống màu sàn nền")
+ */
+const FLOOR_WOOD = new THREE.MeshStandardMaterial({
+  map: woodTex('oak_veneer_01_diff_1k.jpg'),
+  color: new THREE.Color().setRGB(0.92, 1.04, 1.31),
+  roughness: 0.6,
+})
+const SKIRT = FLOOR_WOOD
+/** phào chân tường cao / dày (m): 5cm (cũ 9cm, người dùng: "nẹp chân tường cao quá") */
+const SKIRT_H = 0.05
+const SKIRT_T = 0.014
+type MapSet = Partial<Record<keyof typeof FLOOR_TEX, THREE.Texture>>
 
-/** Lặp texture theo kích thước bề mặt (1 ô = tile mét); clone để mỗi bề mặt có repeat riêng */
-function useTiled(maps: MapSet, w: number, h: number, tile: number) {
+/**
+ * Lặp texture theo kích thước bề mặt (1 ô = tile mét); clone để mỗi bề mặt có repeat riêng.
+ * `at` = góc [mép trái x, mép trước z] (đơn vị cảnh) của mặt sàn nằm ngang (plane xoay −π/2 quanh x): texture neo theo toạ độ
+ * thật → các mảng sàn kề nhau (phòng / hành lang) ván nối liền qua ô cửa
+ */
+function useTiled(
+  maps: MapSet,
+  w: number,
+  h: number,
+  tile: number,
+  at?: readonly [number, number],
+) {
+  const [ax, az] = at ?? [0, 0]
+  const anchored = !!at
   return useMemo(() => {
     const out = {} as MapSet
-    for (const [k, t] of Object.entries(maps) as [keyof MapSet, THREE.Texture][]) {
-      const c = t.clone()
+    const t = tile * M
+    for (const [k, tex] of Object.entries(maps) as [keyof MapSet, THREE.Texture][]) {
+      const c = tex.clone()
       c.wrapS = c.wrapT = THREE.RepeatWrapping
-      c.repeat.set(w / (tile * M), h / (tile * M))
+      c.repeat.set(w / t, h / t)
+      // u = x / tile; v chạy ngược z (v = 0 ở mép trước) → v = −z / tile
+      if (anchored) c.offset.set(ax / t, -az / t)
       if (k === 'map') c.colorSpace = THREE.SRGBColorSpace
       c.needsUpdate = true
       out[k] = c
     }
     return out
-  }, [maps, w, h, tile])
+  }, [maps, w, h, tile, ax, az, anchored])
 }
 
 /** Model glb đặt trong hệ mét → scale về đơn vị cảnh, bật đổ bóng */
@@ -453,6 +508,7 @@ function Wall({
   skirt?: boolean
 }) {
   const t = useTiled(maps, w, h, 1.5)
+  const skirtGeo = useMemo(() => grainBoxGeometry(w, SKIRT_H * M, SKIRT_T * M), [w])
   // Đèn chính chiếu 1 hướng nên tường quay khác hướng bị tối / lệch màu. Giữ màu tường trước mặt
   // (sau bàn, pháp tuyến +z) làm chuẩn: các tường khác nhận đèn như thể cũng quay mặt về +z
   const geo = useMemo(() => {
@@ -465,13 +521,16 @@ function Wall({
   return (
     <group position={position} rotation-y={rotationY}>
       <mesh geometry={geo} receiveShadow>
-        {/* tường sơn xám xanh: bỏ ảnh màu be, giữ vân trát (normal / roughness) */}
-        <meshStandardMaterial {...t} map={null} color={WALL_COLOR} />
+        {/* tường sơn xám xanh: chỉ vân trát (normal / roughness) */}
+        <meshStandardMaterial {...t} color={WALL_COLOR} />
       </mesh>
       {skirt && (
-        <mesh position={[0, -h / 2 + 0.045 * M, 0.008 * M]} material={SKIRT} receiveShadow>
-          <boxGeometry args={[w, 0.09 * M, 0.016 * M]} />
-        </mesh>
+        <mesh
+          geometry={skirtGeo}
+          position={[0, -h / 2 + (SKIRT_H / 2) * M, (SKIRT_T / 2) * M]}
+          material={SKIRT}
+          receiveShadow
+        />
       )}
     </group>
   )
@@ -658,7 +717,7 @@ function Ceiling({
   }, [w, d])
   return (
     <mesh geometry={geo} rotation-x={Math.PI / 2} position={position}>
-      <meshStandardMaterial {...t} map={null} color={WALL_COLOR} />
+      <meshStandardMaterial {...t} color={WALL_COLOR} />
     </mesh>
   )
 }
@@ -693,7 +752,22 @@ function SideWall({
   )
 }
 
-const TRIM = new THREE.MeshStandardMaterial({ color: '#8a5a32', roughness: 0.6 })
+/** khung ô cửa + ngưỡng cửa: cùng gỗ màu sàn với phào */
+const TRIM = FLOOR_WOOD
+/**
+ * khung ô cửa theo ảnh mẫu người dùng (m): cột / đầu cửa bản rộng `w` ốp lên cả 2 mặt tường (lồi ra `out`), lấn vào lòng ô cửa
+ * `lip` → lòng ô cửa bọc gỗ hết bề dày tường
+ */
+const CASING = { w: 0.09, out: 0.015, lip: 0.02 }
+/** khối hộp gỗ (vân theo kích thước thật) cho nẹp cửa, mỗi cỡ dựng 1 lần */
+const trimGeo = (() => {
+  const cache = new Map<string, THREE.BufferGeometry>()
+  return (w: number, h: number, d: number) => {
+    const k = `${w},${h},${d}`
+    if (!cache.has(k)) cache.set(k, grainBoxGeometry(w, h, d))
+    return cache.get(k)!
+  }
+})()
 
 /** Tường trái (dày 10cm) khoét ô cửa sang hành lang: mặt trong phòng + mặt phía hành lang + nẹp gỗ quanh ô cửa */
 function LeftWall({ maps }: { maps: MapSet }) {
@@ -709,28 +783,44 @@ function LeftWall({ maps }: { maps: MapSet }) {
       <SideWall maps={maps} x={x} z0={z0} z1={z1} y0={h} face={face} />
     </>
   )
-  // nẹp cửa: 2 cột + đầu cửa, phủ kín bề dày tường
+  // khung cửa: 2 cột + đầu cửa, xuyên hết bề dày tường + ốp lồi ra 2 mặt, lấn vào lòng ô cửa
+  const { w: cw, out, lip } = CASING
+  const thick = WALL_T + 2 * out
+  const top = h + cw - lip
   const jamb = (z: number) => (
-    <mesh position={[wx * M, FLOOR_Y + (h / 2) * M, z * M]} material={TRIM} castShadow>
-      <boxGeometry args={[0.14 * M, h * M, 0.06 * M]} />
-    </mesh>
+    <mesh
+      geometry={trimGeo(thick * M, top * M, cw * M)}
+      position={[wx * M, FLOOR_Y + (top / 2) * M, z * M]}
+      material={TRIM}
+      castShadow
+      receiveShadow
+    />
   )
   return (
     <>
       {pieces(-HALF_W, 1, back)}
       {pieces(HALL.x1, -1, HALL.z0)}
-      {jamb(z0 - 0.03)}
-      {jamb(z1 + 0.03)}
-      <mesh position={[wx * M, FLOOR_Y + (h + 0.03) * M, ((z0 + z1) / 2) * M]} material={TRIM}>
-        <boxGeometry args={[0.14 * M, 0.06 * M, (z1 - z0 + 0.12) * M]} />
-      </mesh>
-      {/* ngưỡng cửa */}
-      <mesh position={[wx * M, FLOOR_Y + 0.004 * M, ((z0 + z1) / 2) * M]} material={TRIM}>
-        <boxGeometry args={[0.1 * M, 0.008 * M, (z1 - z0) * M]} />
-      </mesh>
+      {jamb(z0 + lip - cw / 2)}
+      {jamb(z1 - lip + cw / 2)}
+      <mesh
+        geometry={trimGeo(thick * M, cw * M, (z1 - z0 - 2 * lip + 2 * cw) * M)}
+        position={[wx * M, FLOOR_Y + (h - lip + cw / 2) * M, ((z0 + z1) / 2) * M]}
+        material={TRIM}
+        castShadow
+        receiveShadow
+      />
+      {/* công tắc đèn mặt trong phòng, sát nẹp cửa phía tường trước, cao 1,25m */}
+      <LightSwitch
+        position={[-HALF_W * M, FLOOR_Y + 1.25 * M, (z1 - lip + cw + 0.08) * M]}
+        rotation-y={Math.PI / 2}
+        scale={M}
+      />
     </>
   )
 }
+
+/** đèn âm trần hành lang (3 đèn, người dùng: "3 bóng thôi"): z (m) — gần kệ hàng cuối hành lang / trước ô cửa vào phòng / gần cửa sổ */
+const HALL_LIGHTS_Z = [-1.6, (DOORWAY.z0 + DOORWAY.z1) / 2, 3.4]
 
 /**
  * Hành lang ngoài ô cửa: sàn, trần, tường ngoài, 2 đầu (cửa chính ở đầu xa, cửa sổ rèm lá ở đầu gần);
@@ -742,7 +832,7 @@ function Hallway({ maps }: { maps: MapSet }) {
   const d = (z1 - z0) * M
   const cx = ((x0 + x1) / 2) * M
   const cz = ((z0 + z1) / 2) * M
-  const floor = useTiled(useTexture(FLOOR_TEX) as MapSet, w, d, 1.2)
+  const floor = useTiled(useTexture(FLOOR_TEX) as MapSet, w, d, 1.2, [cx - w / 2, cz + d / 2])
   const wallY = FLOOR_Y + ROOM.h / 2
   return (
     <group>
@@ -773,11 +863,11 @@ function Hallway({ maps }: { maps: MapSet }) {
       >
         <RoomWindow size={HALL_WINDOW} />
       </group>
-      <Model
-        url={MODELS.plant}
-        position={[HALL_PLANT.x * M, FLOOR_Y, HALL_PLANT.z * M]}
-        scale={1.8}
-      />
+      <Model url={MODELS.plant} position={[HALL_PLANT.x * M, FLOOR_Y, HALL_PLANT.z * M]} />
+      {/* 3 đèn âm trần dọc giữa hành lang (model MozillaHubs), 1 cái ngay trước ô cửa vào phòng */}
+      {HALL_LIGHTS_Z.map((z) => (
+        <Downlight key={z} height={ROOM.h / M} position={[cx, FLOOR_Y + ROOM.h, z * M]} scale={M} />
+      ))}
     </group>
   )
 }
@@ -785,7 +875,11 @@ function Hallway({ maps }: { maps: MapSet }) {
 export function Room() {
   const floorMaps = useTexture(FLOOR_TEX) as MapSet
   const wallMaps = useTexture(WALL_TEX) as MapSet
-  const floor = useTiled(floorMaps, ROOM.w, ROOM.d, 1.2)
+  // sàn phòng lấn sang trái hết bề dày tường trái: lấp khe dưới ô cửa sang hành lang (không cần thanh ngưỡng cửa), phần
+  // nằm dưới tường bị 2 mặt tường che
+  const floorW = ROOM.w + WALL_T * M
+  const floorX = -(WALL_T * M) / 2
+  const floor = useTiled(floorMaps, floorW, ROOM.d, 1.2, [floorX - floorW / 2, FRONT_Z])
   const wallY = FLOOR_Y + ROOM.h / 2
   return (
     <group>
@@ -884,7 +978,8 @@ export function Room() {
       />
       {/* cửa sổ lớn rèm lá phía trên bàn máy tính: lá gần khép, ít nắng lọt qua khe */}
       <group position={[WINDOW.x * M, FLOOR_Y + WINDOW.sill * M, ROOM.back]} scale={M}>
-        <RoomWindow />
+        {/* quay mặt về phía đèn chính nên bị rọi sáng: tối bớt cho cùng màu cửa sổ hành lang */}
+        <RoomWindow shade={LIT_SHADE} />
       </group>
       {/* tranh "Ếch ngồi đáy giếng" ký tên keeb, tường sau bên phải lịch */}
       <group position={[1.15 * M, FLOOR_Y + 1.55 * M, ROOM.back]} scale={M}>
@@ -922,13 +1017,34 @@ export function Room() {
       </group>
       <Model url={MODELS.ceilingLamp} position={[0.1 * M, FLOOR_Y + (2.05 - 0.22) * M, ROOM_CZ]} />
 
-      <mesh rotation-x={-Math.PI / 2} position={[0, FLOOR_Y, ROOM_CZ]} receiveShadow>
-        <planeGeometry args={[ROOM.w, ROOM.d]} />
+      <mesh rotation-x={-Math.PI / 2} position={[floorX, FLOOR_Y, ROOM_CZ]} receiveShadow>
+        <planeGeometry args={[floorW, ROOM.d]} />
         <meshStandardMaterial {...floor} />
       </mesh>
       <Wall maps={wallMaps} w={ROOM.w} position={[0, wallY, ROOM.back]} />
       {/* chứng chỉ thợ treo tường sau bàn, phía trên khoảng giữa đèn và hộp đồ nghề (rộng 40cm) */}
       <Wall maps={wallMaps} w={ROOM.w} position={[0, wallY, FRONT_Z]} rotationY={Math.PI} />
+      {/* cặp poster bàn phím (ảnh người dùng đưa) giữa tường trước, sau lưng khi ngồi bàn build */}
+      <ImagePainting
+        url={POSTERS.cherry}
+        w={0.4}
+        h={0.4 / POSTERS.cherryAspect}
+        mat={0.05}
+        frame="#18181c"
+        position={[-0.36 * M, FLOOR_Y + 1.5 * M, FRONT_Z]}
+        rotation-y={Math.PI}
+        scale={M}
+      />
+      <ImagePainting
+        url={POSTERS.keyboards}
+        w={0.45}
+        h={0.45 / POSTERS.keyboardsAspect}
+        mat={0}
+        frame="#c9a77c"
+        position={[0.36 * M, FLOOR_Y + 1.5 * M, FRONT_Z]}
+        rotation-y={Math.PI}
+        scale={M}
+      />
       {/* tranh và đồng hồ treo ở tường sau lưng người chơi */}
       <Model
         url={MODELS.picture}
@@ -957,24 +1073,30 @@ export function Room() {
         rotation-y={Math.PI / 2}
         scale={M}
       />
-      <ModelPainting
-        frame="hanging03"
+      {/* hành lang: 2 poster giấy dán thẳng lên tường (không khung) thay tranh khung oval */}
+      <WallPoster
+        url={POSTERS.caution}
+        w={0.42}
+        h={0.42 / POSTERS.cautionAspect}
         // tường hành lang phía phòng, giữa đường ra cửa chính
         position={[HALL.x1 * M, FLOOR_Y + 1.5 * M, -1.6 * M]}
         rotation-y={-Math.PI / 2}
         scale={M}
       />
-      {/* tường phải: "Phượng hoàng tái sinh" (tự vẽ, ký keeb) khung mạ vàng trên bàn gỗ + 1 tranh gần tường trước */}
+      <WallPoster
+        url={POSTERS.bassline}
+        w={0.45}
+        h={0.45 / POSTERS.basslineAspect}
+        // tường ngoài hành lang, giữa cửa chính và tranh đối diện ô cửa
+        position={[HALL.x0 * M, FLOOR_Y + 1.5 * M, -0.7 * M]}
+        rotation-y={Math.PI / 2}
+        scale={M}
+      />
+      {/* tường phải: "Phượng hoàng tái sinh" (tự vẽ, ký keeb) khung mạ vàng trên bàn gỗ */}
       <ModelPainting
         frame="fancy02"
         draw={drawPhoenix}
         position={[HALF_W * M, FLOOR_Y + 1.62 * M, WORK_TABLE.z * M]}
-        rotation-y={-Math.PI / 2}
-        scale={M}
-      />
-      <ModelPainting
-        frame="fancy01"
-        position={[HALF_W * M, FLOOR_Y + 1.5 * M, (FRONT_M - 0.9) * M]}
         rotation-y={-Math.PI / 2}
         scale={M}
       />

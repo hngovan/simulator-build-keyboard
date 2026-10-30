@@ -45,7 +45,9 @@ import {
   micaStackPlan,
   type WallBore,
   type WallNotch,
+  type WallPort,
 } from './caseShell'
+import { Daughterboard, DTB_GAP, usbPort } from './Daughterboard'
 import { caseModelOf } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { MM } from '../models/Switch'
@@ -110,6 +112,7 @@ function Walls({
   notches,
   notchTop,
   bores,
+  ports,
 }: ShellProps & {
   floorTop?: number
   pockets?: FootPocket[]
@@ -118,8 +121,10 @@ function Walls({
   notchTop?: number
   /** lỗ khoan đứng (lỗ vít xuyên / lỗ ren / hốc chìm đầu ốc) */
   bores?: WallBore[]
+  /** lỗ ngang xuyên vách sau (cổng USB daughterboard) */
+  ports?: WallPort[]
 }) {
-  const key = JSON.stringify([notches ?? [], bores ?? []])
+  const key = JSON.stringify([notches ?? [], bores ?? [], ports ?? []])
   const geometry = useMemo(() => {
     const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floorTop, pockets, ...cuts(key, notchTop))
     return wood ? woodUV(g) : g
@@ -134,8 +139,8 @@ function Walls({
 
 /** khoét vỏ theo khoá JSON (hốc / lỗ khoan, ghi nhớ theo nội dung chứ không theo mảng mới mỗi lần vẽ) */
 const cuts = (key: string, notchTop?: number) => {
-  const [notches, bores] = JSON.parse(key) as [WallNotch[], WallBore[]]
-  return [notches, notchTop, bores] as const
+  const [notches, bores, ports] = JSON.parse(key) as [WallNotch[], WallBore[], WallPort[]]
+  return [notches, notchTop, bores, ports] as const
 }
 
 /**
@@ -319,7 +324,9 @@ function Ledge({ y0, y1, mat }: { y0: number; y1: number; mat: ReactNode }) {
   const ctx = useCtx()
   const geometry = useMemo(() => {
     const o = CASE_MARGIN + LEDGE_IN
-    return ledgeGeometry(ctx.width + 2 * o, ctx.depth + 2 * o, y0, y1, o - LEDGE_GAP)
+    // daughterboard sát vách sau: chừa khe trên gờ cho DTB + cổng USB
+    const gap = ctx.dtb ? { x: ctx.dtb.x, w: DTB_GAP } : undefined
+    return ledgeGeometry(ctx.width + 2 * o, ctx.depth + 2 * o, y0, y1, o - LEDGE_GAP, gap)
   }, [ctx, y0, y1])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
@@ -514,6 +521,8 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
     ],
     [ctx, bores],
   )
+  // cổng USB daughterboard khoét xuyên vách sau case dưới
+  const ports = useMemo(() => (ctx.dtb ? [usbPort(ctx.dtb.x)] : undefined), [ctx])
   const floorPockets = useMemo(
     () => (mica ? ctx.feet : [...ctx.feet, ...screwHoles]),
     [ctx, mica, screwHoles],
@@ -537,7 +546,8 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   // case trên chờ đậy / úp lơ lửng; top mount: case trên đã bắt vít vào plate nên nhấc lên cùng board khi thả vào case
   // mở case: tháo hết vít đáy thì case trên nhấc lên lơ lửng (đã tách 2 mảnh)
   const split = useCaseSplit()
-  const topY = placing || split || (topMount && step === 'caseIn' && !inCase) ? 2.6 : 0
+  const topY =
+    placing || split || (topMount && ((step === 'caseIn' && !inCase) || step === 'jst')) ? 2.6 : 0
   const bottom = useHover(step === 'caseIn')
   // top mount đã úp case trên, chưa lật cụm lên: bấm case trên (hoặc Q) để lật, vít ở mặt dưới
   const viewFlip = useGame((s) => s.viewFlip)
@@ -632,9 +642,11 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               mat={bottomMat(bottom.hover)}
               wood={wood && !lower}
               bores={bores.bottom}
+              ports={ports}
             />
           )}
           <RubberFeet pockets={ctx.feet} />
+          {ctx.dtb && <Daughterboard at={ctx.dtb} />}
           {/* thả board vào case: mũi tên xanh chỉ mép trước case dưới (bấm case) */}
           {step === 'caseIn' && !inCase && (
             <HintArrow at={[0, (model ? BLOCKER_TOP : wallTop) + 0.05, frontZ]} size={1.6} />

@@ -17,7 +17,7 @@ import type {
 } from '@/types'
 import type { BoxSpot } from '@/data/boxes'
 import type { HistoryEntry } from './buildSlice'
-import { buildContext, remapStepIdx } from '@/data/steps'
+import { DTB_MM, buildContext, remapStepIdx } from '@/data/steps'
 import { CASES, SCREW_FULL } from '@/data/parts'
 import type { Listing, Stolen } from '@/data/selling'
 
@@ -158,7 +158,11 @@ export interface SaveData extends Profile {
 // 5: O-ring mount gá vòng sau lắp switch / hàn (trước đây trước bước plate) → dời stepIdx theo tên bước (moveRingStep)
 // 6: thêm bước tuỳ chọn lót foam PCB trước bước plate → dời stepIdx theo tên bước (addFoamStep)
 // 7: tiến độ vít tính theo tua vít tay (SCREW_FULL); bản cũ dùng tua vít điện (1 click = xong) → vít ≥ 1 thành đầy (fillScrews)
-const SAVE_REV = 7
+// 8: thêm bước lắp daughterboard (`dtb`) + cắm dây JST (`jst`) → dời stepIdx theo tên bước, đã qua thì coi như đã lắp (addDtbSteps)
+const SAVE_REV = 8
+
+/** danh sách bước của bản lưu trước rev 8 (chưa có bước daughterboard) */
+const noDtb = (steps: StepId[]) => steps.filter((s) => s !== 'dtb' && s !== 'jst')
 
 /**
  * Build làm dở từ bản cũ (chưa có bước `feet`): đã tới / qua chỗ chèn bước thì dời stepIdx lên 1 và coi như
@@ -172,7 +176,9 @@ function addFeetStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' 
   if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
   const ctx = buildContext(order, sess.inventory, sess.mount)
   // bản cũ này chưa có bước foam (rev 6)
-  const at = ctx.steps.filter((s) => s !== 'foam').indexOf('feet')
+  const at = noDtb(ctx.steps)
+    .filter((s) => s !== 'foam')
+    .indexOf('feet')
   if (at < 0 || b.stepIdx < at || b.feet) return sess
   const feet = Object.fromEntries(ctx.feet.map((_, i) => [i, 'feetBlack']))
   return { ...sess, build: { ...b, stepIdx: b.stepIdx + 1, feet }, history: [] }
@@ -187,7 +193,7 @@ function moveRingStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build'
   if (!order || !b || sess.mount !== 'oring' || !sess.inventory.case || !sess.inventory.pcb)
     return sess
   // bản cũ này chưa có bước foam (rev 6)
-  const steps: StepId[] = buildContext(order, sess.inventory, sess.mount).steps.filter(
+  const steps: StepId[] = noDtb(buildContext(order, sess.inventory, sess.mount).steps).filter(
     (s) => s !== 'foam',
   )
   const old: StepId[] = steps.filter((s) => s !== 'ring')
@@ -206,11 +212,38 @@ function addFoamStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' 
 ): S {
   const b = sess.build
   if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
-  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  const steps = noDtb(buildContext(order, sess.inventory, sess.mount).steps)
   const cur = steps.filter((s) => s !== 'foam')[b.stepIdx]
   const stepIdx = steps.indexOf(cur)
   if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
   return { ...sess, build: { ...b, stepIdx }, history: [] }
+}
+
+/**
+ * Build làm dở từ bản cũ (chưa có bước daughterboard): tìm lại bước đang làm trong danh sách mới; đã qua chỗ chèn bước
+ * thì coi như đã lắp DTB (đủ vít, cắm dây) / đã cắm dây vào PCB
+ */
+function addDtbSteps<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
+  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  if (!steps.includes('dtb')) return sess
+  const cur = noDtb(steps)[b.stepIdx]
+  const stepIdx = steps.indexOf(cur)
+  if (stepIdx < 0) return sess
+  const dtb =
+    stepIdx > steps.indexOf('dtb')
+      ? {
+          placed: true as const,
+          screws: Object.fromEntries(DTB_MM.holes.map((_, i) => [i, true as const])),
+          plugged: true as const,
+        }
+      : undefined
+  const jst = stepIdx > steps.indexOf('jst') ? (true as const) : undefined
+  return { ...sess, build: { ...b, stepIdx, dtb, jst }, history: [] }
 }
 
 /** đơn kit khách gửi case mà khách dặn mount case không còn làm được (dữ liệu case đổi, vd Blossom → chỉ gasket) */
@@ -342,6 +375,16 @@ export function loadSave(): SaveData | null {
       session = {
         ...fillScrews({ ...session, history: session.history ?? [] }),
         jobs: session.jobs?.map((j) => ({ ...j, session: fillScrews(j.session) })),
+      }
+    }
+    if ((save.rev ?? 0) < 8 && session) {
+      session = {
+        ...addDtbSteps(session.order, { ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: addDtbSteps(j.order, j.session) })),
+        // thùng đã đóng gói chưa gửi mở lại được: build trong đó cũng dời bước
+        packed: session.packed?.map((p) =>
+          p.session ? { ...p, session: addDtbSteps(p.order, p.session) } : p,
+        ),
       }
     }
     if (session) {
