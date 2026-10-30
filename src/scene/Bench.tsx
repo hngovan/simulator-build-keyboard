@@ -20,7 +20,7 @@ import { useCamLock } from './common/camLock'
 import { Room } from './Room'
 import { ROOM_BOUNDS } from './room/roomLayout'
 import { WalkControls } from './room/WalkControls'
-import { benchPose } from './common/benchPose'
+import { benchView } from './common/benchPose'
 import { CuttingMat } from './common/CuttingMat'
 import { EmptyBench } from './EmptyBench'
 import { fitAspect } from './common/fitAspect'
@@ -96,13 +96,15 @@ function CameraRig() {
   const scene = useThree((s) => s.scene)
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
   const fit = useThree((s) => fitAspect(s.size.width / s.size.height))
+  // bước mở hộp: thùng cỡ thật → lùi xa như bàn có thùng
+  const unbox = useStep() === 'unbox'
   useEffect(() => {
     // đang đi lại trong phòng: không kéo camera về bàn
     if (useGame.getState().walk) return
-    camera.position.set(...benchPose(ctx.width, fit))
+    camera.position.set(...benchView({ width: ctx.width, unbox, box: true }, fit))
     controls?.target.set(0, 0, 0)
     controls?.update()
-  }, [ctx, camKey, controls, camera, fit])
+  }, [ctx, camKey, controls, camera, fit, unbox])
 
   // dev: mở camera + controls trong console (cùng kiểu window.__game) để đặt góc nhìn khi debug
   useEffect(() => {

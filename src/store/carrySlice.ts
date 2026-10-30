@@ -6,7 +6,7 @@ import { buildContext } from '@/data/steps'
 
 /**
  * Cầm / đặt thùng hàng trong phòng (đi lại, góc nhìn người): nhận đơn thì thùng đơn tới kệ ngoài cửa, cầm về đặt lên bàn build
- * mới build được; đổi đơn thì cầm đơn dở cất lên kệ cất đơn; đóng gói xong cầm thùng ra ô giao hàng trên kệ cửa = gửi khách.
+ * mới build được; đổi đơn thì cầm đơn dở cất lên kệ cất đơn; đóng gói xong cầm thùng ra kệ giao hàng cạnh chậu cây = gửi khách.
  * Mỗi lúc cầm 1 thùng, bàn build để 1 thùng. Id thùng = id đơn (đơn đã đóng gói vẫn giữ id)
  */
 export interface CarrySlice {
@@ -18,13 +18,13 @@ export interface CarrySlice {
   held: string | null
   /** cầm thùng ở kệ lên tay */
   pickBox: (id: string) => void
-  /** đang ngồi bàn build: cầm thùng trên bàn lên (đơn dở giữ nguyên tiến độ) rồi đứng dậy */
+  /** cầm thùng trên bàn lên (đơn dở giữ nguyên tiến độ); đang ngồi thì đứng dậy */
   pickBench: () => void
   /** cất thùng đang cầm vào ô kệ cất đơn */
   placeShelf: (slot: number) => void
-  /** đặt thùng đơn đang cầm lên bàn build: chuyển sang đơn đó, đủ đồ thì bắt đầu build; trả về false nếu không đặt được */
+  /** đặt thùng đơn đang cầm lên bàn build: chuyển sang đơn đó (bấm B mới vào build); trả về false nếu không đặt được */
   placeBench: () => boolean
-  /** đặt thùng đã đóng gói vào ô giao hàng trên kệ cửa = gửi cho khách */
+  /** đặt thùng đã đóng gói vào kệ giao hàng (cạnh chậu cây) = gửi cho khách */
   placeShip: (slot: number) => void
   /** thùng đã đóng gói (chưa gửi) trên bàn: mở ra, trả đơn về đang build nguyên trạng để sửa / làm tiếp, đóng gói lại thì chấm lại */
   unpackBox: () => void
@@ -65,7 +65,8 @@ export const createCarrySlice: StateCreator<GameState, [], [], CarrySlice> = (se
     if (!s.benchBox || s.stabAnim || s.lubeAnim) return
     if (s.held) return s.toast('Tay đang cầm thùng khác rồi', 'bad')
     set({ held: s.benchBox, benchBox: null })
-    s.standUp('bench')
+    // đang ngồi thì đứng dậy; đang đi lại (chuột phải vào bàn) thì cầm luôn
+    if (!s.walk) s.standUp('bench')
   },
   placeShelf: (slot) => {
     const s = get()
@@ -81,21 +82,16 @@ export const createCarrySlice: StateCreator<GameState, [], [], CarrySlice> = (se
       return false
     }
     if (isPackedBox(s, id)) {
-      s.toast('Thùng này đóng gói rồi: mang ra ô giao hàng trên kệ ngoài cửa', 'bad')
+      s.toast('Thùng này đóng gói rồi: mang ra kệ giao hàng cạnh chậu cây', 'bad')
       return false
     }
     if (s.order?.id !== id) {
       s.switchJob(id, true)
       if (get().order?.id !== id) return false
     }
+    // chỉ đặt thùng lên bàn, không tự vào build: EmptyBenchHud hiện dòng hướng dẫn (chuột phải cầm lên, B build),
+    // thiếu đồ thì liệt kê món thiếu
     set({ benchBox: id, held: null })
-    // đủ đồ thì vào build luôn, thiếu thì thùng nằm trên bàn chờ mua đủ
-    const missing = get().buildOrder(id) ?? []
-    if (missing.length)
-      get().toast(
-        `Đơn ${boxCustomer(get(), id)} còn thiếu: ${missing.map((m) => m.msg).join(', ')}. Mua đủ rồi bấm thùng trên bàn để build`,
-        'bad',
-      )
     return true
   },
   unpackBox: () => {
@@ -125,7 +121,7 @@ export const createCarrySlice: StateCreator<GameState, [], [], CarrySlice> = (se
     const id = s.held
     if (!id || slot < 0 || slot >= SHIP_SLOTS || slotTaken(s.boxes, 'ship', slot)) return
     if (!s.packed.some((p) => p.order.id === id && !p.shipped))
-      return s.toast('Chỉ đặt thùng đã đóng gói vào ô giao hàng', 'bad')
+      return s.toast('Chỉ đặt thùng đã đóng gói vào kệ giao hàng', 'bad')
     set({ boxes: { ...s.boxes, [id]: { at: 'ship', slot } }, held: null })
     s.shipOrder(id)
   },

@@ -13,6 +13,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.20',
+    date: '2026-10-30',
+    commits: [],
+    title: 'Giỏ hàng Shopii + sale, kệ nhận / giao hàng, Duality Horns, thanh lực giữ chuột',
+    items: [
+      'Shopii: mọi món qua giỏ hàng (số lượng, đổi loại, phí giao theo từng món), ô tìm trong mục, sale 3 ngày 1 lần có banner + ruy băng SALE',
+      'Kệ nhận hàng cuối hành lang (thùng xếp lộn xộn, kiện cùng loại gộp chồng), kệ giao hàng cạnh chậu cây, kệ cất đơn 2 ô / tầng',
+      'Thùng đơn cỡ thật ghi tên khách; đặt thùng lên bàn rồi nhấn B để build, chuột phải để cầm lên; bước mở hộp mở đúng thùng carton đó',
+      'Camera ngồi xuống bàn có thùng không còn zoom sát rồi bật ra',
+      'Duality Horns: case 2 mảnh layout TKL F13, vít ghép bắt chéo, plate riêng, ốc tạ, feet đúng hốc',
+      'Hàn + vặn vít: giữ chuột cho thanh lực chạy lên rồi tụt xuống, nhả trong vùng xanh (3 khoảng cố định, chậm hơn; tua vít điện vùng xanh rộng hơn tay một chút)',
+    ],
+  },
+  {
     version: '0.1.19',
     date: '2026-10-30',
     commits: ['305b282'],

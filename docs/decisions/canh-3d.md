@@ -1051,3 +1051,117 @@
 - `Outlet` (Wiring.tsx) thêm `plug: 'eu' | 'cee'` (bỏ khối phích đen), `plugExit(kind)` = chỗ dây ra khỏi phích (hệ ổ) để nối `Cable`.
   PcDesk: `PowerInlet` ở lưng CPU (`C13_AT`, x −0,17 hệ bàn) → dây thòng sàn → phích CEE (`PLUG_END` đổi từ hệ ổ xoay π/2).
   Room: dây đèn bàn tới `LAMP_PLUG`, phích EU.
+
+## 2026-10-30
+
+### Viền hover lịch treo tường dày hơn
+
+- Bìa lịch là hộp rất mỏng: `outlineGeometry` làm mượt pháp tuyến → góc chĩa chủ yếu ra trước, vỏ ngược đẩy ngang ít, viền trông mảnh hơn bàn.
+- `useHoverOutline(ref, show, scale)` + `RoomSpot outlineScale`: vật liệu viền dày ×scale (`outlineMat`, cache theo scale). `WallCalendar` dùng 2.
+
+### Phích cắm đèn bàn màu đen
+
+- Phích `eu` (`power-plug-eu.glb`) gốc trắng lệch màu dây đen: `blackPlug` trong `Wiring.tsx` clone vật liệu, nhân màu `#262626`
+  (model 1 vật liệu texture chung cả chân, chân khuất trong ổ). Phích `cee` (máy tính) vốn đen, giữ nguyên.
+
+### Bước mở hộp = mở thùng carton đơn hàng (bỏ rương gỗ)
+
+- Người dùng: bước mở hộp mở đúng thùng giấy đơn hàng lúc đặt trên bàn, bỏ model hộp gỗ.
+- `ShippingBox` (scene/parts) dựng `JobBox id={order.id} flaps` cỡ thật (`scale={M}`, như thùng trên bàn ở EmptyBench), bấm (`Clickable`,
+  viền hover + `HintArrow`) → rung 0,25 đầu rồi 2 nắp gập bật ra trước / sau (`CardBox flaps`: thân mặt trên tối `OPEN_MATS`, mỗi nắp
+  nửa mặt trên + nửa băng keo, tem dễ vỡ trên nắp trước), `OPEN_MS` 1,4s tự `nextStep`. Bỏ các kiểu túi zip / hộp giấy / thùng to theo
+  bàn phím / rương gỗ ở bước này.
+- Xoá `public/models/room/wooden_chest.glb` (9,5MB) + ghi công (credits.ts, CREDITS.md); `PACKAGING` bỏ "rương gỗ" (vẫn ghi trong tin
+  khách "Mình gửi kèm (túi zip / hộp giấy / thùng carton)").
+
+### Feet Duality Horns dán lệch (dò hốc trên đáy nghiêng)
+
+- Người dùng: feet Duality Horns dán lệch ra góc ngoài, không vào hốc. `caseFeet.json` không có `duality-horns/case` → game dùng 4 góc
+  mặc định. Script cũ chỉ bắt 2 hốc sau: đáy case nghiêng sẵn góc gõ, độ sâu đo so với đáy thấp nhất nên 2 hốc trước "sâu" 4,7mm > 4.
+- `scripts/probe-case-feet.mjs`: gom mặt quay xuống tới `SCAN_H` 15mm trên đáy thấp nhất, lọc hốc theo độ sâu so với mặt đáy quanh hốc
+  (`floorAt`: trung vị mặt quay xuống trong vành r+0,5 → r+8mm, chỉ lấy mặt thấp hơn trần ≤ 5mm; độ sâu = đỉnh trần − đáy quanh); giá trị
+  ghi ra vẫn là độ cao trần (min) so với đáy thấp nhất. Có tham số model thì gộp vào JSON sẵn có (trước: chỉ in); `DEBUG=1` in độ sâu từng cụm.
+- Chỉ thêm `duality-horns/case` (4 hốc Ø8,3mm: sau x ±123,1 z −41,8, trước x ±163,6 z 57). Chạy lại cả file bằng cách dò mới thì kết quả
+  một số case cũ (Bakeneko, Exodus…) khác đi — chưa kiểm bằng mắt nên chưa ghi đè; dò lại case nào thì chạy riêng case đó rồi xem trong game.
+
+### Duality Horns thành case 2 mảnh
+
+- Người dùng: Duality là case 2 mảnh mà build ra 1 mảnh. STEP có SOLID (nắp) + BOTTOM (đáy) nhưng cùng 1 file nên `isBottom` (theo tên file)
+  không tách → gộp node `case`; `CASES.dualityHorns.pieces` = 1.
+- `convert-user-cases.mjs`: Duality tách 2 mục SOLID / BOTTOM (`bottom: true`) → GLB có node `case` + `bottom` + `weight`; chạy riêng từng
+  case bằng tham số id; `marks` (điểm CAD mm) in ra toạ độ game cho `screws`. Seat không đổi (rise 0.19, tilt 0.079); feet dò lại vẫn 4 hốc cũ.
+- Vít ghép: STEP không có đinh vít ghép; dò vách trụ đứng ở cả 2 mảnh → 4 lỗ Ø2mm ở 4 góc (cách mép ~5mm). `pieces: 2`,
+  `screwSide: 'bottom'`, `screws` [±175,2 / 175,3, 66,6 / −66,8]. Mount giữ gasket / tray. Chưa kiểm bằng mắt trong game.
+- Plate thật của người dùng (`assets/keyboards/duality-horns/plate/duality-tkl.dwg`, đọc bằng LibreDWG WASM): TKL F13, multi-layout,
+  6 tai có khe vít (top mount), rãnh flex, khuyết mép (o-ring); 26 đệm Ø3,1mm trên / dưới tai trong STEP. Chưa dựng vào game.
+
+### Duality Horns: feet trước lồi, khối chặn thừa, mount top / O-ring (2026-10-30)
+
+- Feet trước lồi cao: `RubberFeet` dựng feet từ trần hốc xuống tới dưới đáy THẤP NHẤT case (−0,08u); đáy Duality 2 tầng (vùng trước cao hơn
+  ~4,5mm) nên feet trước dài ~6mm. `caseFeet.json` thêm số thứ 5 = mặt đáy quanh hốc (mm; `probe-case-feet.mjs` ghi `min(trần, floorAt)`),
+  `FootPocket.floor` (u); `RubberFeet` đặt gốc ở `Y.floorBot + floor`, feet cao `depth − floor + 0,08` → 4 feet nhô như nhau. Bản 4 số cũ = 0.
+- Khối chặn thừa: nắp CAD Duality có sẵn khung chặn → `CaseDef.ownBlocks` (Case.tsx 2 chỗ `Blockers` của case CAD + `orderThumb`) bỏ khối
+  chặn dựng bằng code.
+- Mount: người dùng chọn chỉ Top mount + O-ring (`mounts: ['top', 'oring']`; dev "Chọn case" / `DevCasePanel` đọc thẳng `mounts`).
+  Đã chạy thử (playwright-core, `startDevBuild` + `nextStep`) cả 2: top = topCase → topScrew → caseIn → caseScrew; oring = ring → … →
+  caseClose → caseScrew, không lỗi. Vít top mount vẫn theo vị trí tính sẵn (chưa theo 6 tai plate thật); vít ghép case vẫn thẳng đứng từ đáy
+  (thật là 8 vít bắt chéo từ nắp xuống trụ đáy, nghiêng ~36° — đo được 8 trụ ở đáy, chưa dựng vít nghiêng).
+- Hàng F lệch ô nắp: nắp cắt theo TKL F13, layout game là TKL thường (chưa có biến thể F13).
+
+### Duality Horns: layout TKL F13 + 8 vít ghép bắt chéo + vít top mount theo tai plate (2026-10-30)
+
+- Người dùng: "đây là layout F13 chứ làm gì có F12" + làm cả vít bắt chéo. Layout mới `tklf13` (types `LayoutId`, layouts.ts `tklF13Rows`:
+  Esc · 0.25 · F1–F4 · 0.25 · F5–F8 · 0.25 · F9–F12 · 0.25 · F13 · 0.25 · cụm PrtSc; hàng dưới như TKL, cùng variant), `strict` → case CAD
+  phải ghi đích danh (`caseFits`); Duality `layouts: ['tklf13']`; `DAYS` / `SIZE_MULT` như TKL. Plate dùng lỗ theo phím (chưa có plate
+  universal / plate DWG). Đã chụp playwright: hàng F13 khớp ô nắp. Phím F13 bàn phím thường không có → bước test khó bấm đủ.
+- Vít ghép: 8 trụ đáy có miệng côn r ~5,7mm, trục ~41°; tâm x theo cặp vách khe (sau 42,9 / 123,8 / 223,6 / 309,6; trước 24,3 / 99,3 /
+  233,9 / 309,6). `screwRays` trong convert-user-cases.mjs bắn tia từ miệng côn dọc trục vào nắp (node `case`, Möller–Trumbore, lấy điểm ra
+  xa nhất) → `angledScrews` [x, y, z mm hệ model + hướng đi vào]. Mép trước ban đầu cho nghiêng ra ngoài → người dùng: "vít cạnh dưới phải
+  quay vào trong" → đảo trục mép trước: cả 8 vít song song (0, −0,8, 0,6), đầu vít mép sau trong ô hàng F, mép trước ở mép trong nắp.
+- Game: `ScrewPoint.y / dir`, steps.ts `caseScrews` từ `angledScrews`; `ScrewSet` vít có `dir` dựng trong group tại đầu vít, quaternion
+  xoay trục −y theo `dir` (`tiltOf`). Duality `screwSide: 'top'` (không lật case), bỏ `screws` 4 góc tạm; `caseScrewHoles` bỏ qua case CAD.
+- Top mount: `CaseDef.topScrews` (mm hệ model) = 6 tai plate (tâm đệm trên / dưới tai trong STEP, khớp 6 khe tai DWG; `marks.topScrews`),
+  thay `topScrewPoints`; Board vẽ tai plate theo `ctx.screws.topScrew`. Đã chụp: vít tai plate ở 3 khe tai trước, 8 vít đóng case.
+- `marks` trong convert-user-cases.mjs giờ là object theo tên nhóm (in `<tên>: [[x, z]...]`).
+- (2026-10-30, sửa) Người dùng: vít lệch lỗ + 4 ốc mép sau quay ngược ra ngoài. Cách "tia từ miệng côn trụ đáy" sai: trục khớp trên mặt côn
+  lệch, tia xuyên ~10mm vật liệu đặc của nắp chứ không chạy trong lỗ. Dò lại bằng `scripts/probe-screw-axis.mjs`: quét hướng thông từ trong
+  trụ → trục (sau 0, −0,672, 0,741; trước 0, 0,746, 0,665 — cả 8 đầu vít quay vào trong, chéo xuống ra ngoài), dịch gốc tìm khoảng hở lớn nhất =
+  tâm lỗ, khoảng hở dọc trục: lỗ ren đáy r ~1,1 · lỗ xuyên nắp r ~1,5 · hốc đầu vít r ~2,7–3 → đầu vít = đầu hốc (t ≈ 4 / 4,5mm).
+  convert-user-cases.mjs `screwHeads` [đầu vít CAD + trục] thay `screwRays` (bỏ bắn tia). Đã chụp: đầu vít nằm trong miệng hốc cả 2 mép.
+- (2026-10-30) Ốc nón trên tạ Duality (người dùng: tạ dùng ốc nón mà không thấy con nào; tạ không cần tháo): dò lỗ côn trong STEP → WEIGHT 4 lỗ
+  Ø7,2 (x 46,1 / 301,5 · y −13,2 / −42,5, mặt trên z −10,43) + ACCENT_V2 2 lỗ Ø5,5 (x 95,5 / 252,1 · y −80,5). convert-user-cases.mjs
+  `heads.weightScrews` (cùng đường in với `angledScrews`) → `CaseDef.weightScrews` [x, y, z, hướng, Ø]; `WeightScrews` trong `CaseModel`
+  (đi cùng đáy, không bấm được) dựng model ốc nón M3 (`countersunk-m3x10.glb`, đầu Ø6) co theo Ø lỗ, xoay theo hướng (nghiêng góc gõ).
+  Đã chụp: 6 ốc nằm giữa lỗ côn.
+
+### Plate riêng Duality, nắp top mount hở 1 đầu, bàn phím bàn máy tính lơ lửng (2026-10-30)
+
+- Plate: người dùng "file plate đang dùng cho case không đúng, là plate riêng" (`duality_tkl.dwg`, trùng file đã chép). `scripts/gen-duality-plate.ts`
+  (`bun run gen:plate-duality`, devDependency `@mlightcad/libredwg-web` 0.8.2): DWG → nối nét thành vòng kín → lỗ switch 14 × 14 → độ dời khớp
+  layout `tklf13` (bỏ phiếu cặp phím – lỗ lưới 0,25mm rồi trung bình; 60/88 phím khớp, lệch 0,00mm; còn lại lỗ gộp stab / multi-layout).
+  Viền DWG vẽ chồng nét (đường thẳng qua khuyết bán nguyệt + nét ngăn dọc x 305,37) → không dựng shape từ DWG mà lấy lưới `PLATE_STANDARD`
+  trong STEP (khung bao trùng DWG 347,7 × 131,1, có rãnh flex; `PRT0001` không có), xoay sang hệ board + dời → `plate.glb` (scene tên
+  `duality-plate`: trùng tên node "plate" thì GLTFLoader đổi node thành `plate_1`, `nodes.plate` thành Group rỗng → plate không hiện).
+  `CaseDef.plateModel` + `ModelPlate` trong Board (thay plate dựng theo phím, tô theo chất liệu). Đã chụp: tai, rãnh flex, lỗ khớp socket PCB.
+- `tklf13` chỉ hàng dưới WKL (người dùng: Duality chỉ có WKL).
+- Nắp top mount hở 1 đầu: nắp CAD có góc gõ (seat tilt 0,079), lúc úp lên plate (board còn phẳng, chưa seat) → Case.tsx nắp CAD khi `topOnly`
+  bọc phép ngược của seat (dời −dx / −rise / −dz rồi xoay −tilt). Vít tai plate giữ hệ board. Đã chụp: switch nhô đều qua ô nắp.
+- Bàn phím Realforce trên bàn máy tính lơ lửng ~4cm: `DeskGear` lấy khung bao có sẵn (min / max accessor của lưới trước khi simplify
+  2%) → `box.expandByObject(m, true)` (khung chính xác theo đỉnh). Đã đo: đáy bàn phím = đáy chuột = mặt bàn.
+- (2026-10-30) Plate Duality giữ đúng file gốc (người dùng chọn): plate cắt hàng dưới kiểu Tsangan 7u (Ctrl 1,5 · Win 1 · Alt 1,5 · Space 7 ·
+  Alt 1,5 · Fn 1 · Ctrl 1,5) + 8 lỗ chữ thập quanh space, chỉ có khe stab 7u (x 4,5u / 10,5u). Chơi WKL: 2 lỗ Win / Fn để trống, khối chặn nắp
+  che; không bịt lỗ cho riêng WKL. Đã đối chiếu (ảnh chồng lỗ DWG + phím game, chụp hàng dưới có stab): phím / stab khớp lỗ.
+  `gen-duality-plate.ts` thêm `DUMP=<file>` xuất lỗ DWG đã căn (mm hệ board) để đối chiếu.
+- (2026-10-30) Sửa: build Duality của người dùng vẫn hàng dưới WK (space 6.25u + switch ở Win / Menu, stab lệch khe 7u) vì đơn tạo trước khi
+  `tklf13` chỉ còn 'wkl' (biến thể lưu trong save). `loadSave` (metaSlice `fix`) gọi `fixVariant`: biến thể không còn trong
+  `LAYOUTS[layout].variants` → lựa chọn đầu (layout chỉ 1 lựa chọn thì gán luôn), áp cho đơn đang làm + `jobs` + `offers`. Đã thử
+  (playwright): save cũ 'wk' → nạp lại 'wkl', space 7u, 85 phím.
+- (2026-10-30) Ốc tạ xuyên qua đáy case (model M3×10 co theo lỗ dài ~12mm): `WeightScrews` rút thân còn `WEIGHT_SCREW_L` 4mm (giữ đầu côn
+  `FLAT_HEAD_H` 1,7mm, ép phần dưới theo y, như `shortenScrew`). Đã chụp mặt đáy: không lòi.
+- (2026-10-30) Badge chữ thập cụm mũi tên mất ở bước top mount (người dùng: "ai mượn gỡ ra"): BADGE gộp trong node `weight` (đi cùng đáy),
+  lúc chỉ vẽ nắp (topCase / topScrew) thì không có. convert-user-cases.mjs tách `{ names: ['BADGE'], badge: true }` → node `badge`,
+  `CaseModel` vẽ badge (kim loại tạ) cùng nắp (`part !== 'bottom'`). Đã chụp bước topScrew: badge ở lỗ chữ thập nắp.
+- (2026-10-30) Vít badge (người dùng: badge chưa vặn vít, check không xuyên như tạ): STEP BADGE có 2 lỗ Ø2,67 (x 340,14 · y −70,76 / −88,01,
+  z 2,03), nắp có lỗ ren Ø2,06 cùng chỗ (z 3,7–4,6) → 2 vít đầu trụ M2 bắt từ trong nắp lên (`heads.badgeScrews` → `CaseDef.badgeScrews`).
+  `WeightScrews` gộp thành `FixedScrews` (kind flat = ốc nón tạ còn 4mm / socket = M2 model dài 8mm còn 5mm, đầu nhô `lift` 2mm); badge vít vẽ
+  cùng nắp. Đã đo bằng tia trong game: đỉnh vít 0,263u < thân badge 0,289u < mặt badge 0,41u → không xuyên.

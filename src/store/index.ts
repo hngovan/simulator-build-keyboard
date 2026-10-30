@@ -89,6 +89,7 @@ const SAVED_KEYS = [
   'unread',
   'parcels',
   'saleBought',
+  'cart',
   'boxes',
   'benchBox',
   'held',

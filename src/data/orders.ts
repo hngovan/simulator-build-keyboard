@@ -58,7 +58,7 @@ const CUSTOMERS = [
   'Bạn Long',
 ]
 const avatarFor = (customer: string) => avatarSrc(CUSTOMERS.indexOf(customer))
-const PACKAGING = ['túi zip', 'hộp giấy', 'thùng carton', 'rương gỗ']
+const PACKAGING = ['túi zip', 'hộp giấy', 'thùng carton']
 
 export function estimateCost(
   layout: LayoutId,
@@ -121,6 +121,7 @@ const DAYS: Record<LayoutId, [number, number]> = {
   frl: [3, 5],
   alice: [3, 5],
   tkl: [3, 5],
+  tklf13: [3, 5],
   full: [4, 6],
 }
 let orderSeq = 0

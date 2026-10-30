@@ -319,9 +319,11 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
   // case CAD cao hơn: khối chặn tới BLOCKER_TOP; case dựng bằng code thì ngang mép trên case
   // case CAD nghiêng (board thấp theo mặt nêm): khối chặn thấp ngang mặt khung, không nhô giữa hàng phím
   const blockTop = caseModel ? (def.seat?.tilt ? 0.3 : BLOCKER_TOP) : Y.caseTop
-  // mica: khung chặn đã nằm trong tấm mica trên cùng
+  // mica: khung chặn đã nằm trong tấm mica trên cùng; model CAD có sẵn khối chặn (`ownBlocks`) thì thôi
   const blocks =
-    !caseModel && def.material === 'mica' ? [] : blockerGaps(keys, width, depth, CASE_MARGIN + 0.05)
+    (!caseModel && def.material === 'mica') || def.ownBlocks
+      ? []
+      : blockerGaps(keys, width, depth, CASE_MARGIN + 0.05)
   for (const bl of blocks) {
     // tấm khung mỏng ở mặt trên, bên dưới rỗng (như bàn build)
     const t = bl.top ?? blockTop

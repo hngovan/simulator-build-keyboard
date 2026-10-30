@@ -788,8 +788,10 @@
 
 ## HUD phòng đi lại + lịch xưởng (2026-10-28)
 
-- `features/room/RoomHud`: nút Dùng máy tính / Ngồi vào bàn build / Lịch, `StatusChips`, số thùng hàng chờ ở hành lang, chữ "Bấm: ..."
+- `features/room/RoomHud`: `StatusChips` (không còn nút lối tắt máy tính / bàn build / lịch, 2026-10-30: bấm thẳng vào vật trong phòng), số thùng hàng chờ ở hành lang, chữ "Bấm: ..."
   theo vật đang rê, dòng hướng dẫn phím. Guide `BenchDialog` ẩn khi đi.
+- Bàn build (2026-10-30, người dùng: "chỉ cần icon back ... note vào dùng esc để out, xóa icon máy tính"): `TopBar` (BenchHud) + `EmptyBenchHud` bỏ nút
+  "Về máy tính" + nút bàn chân, gộp thành 1 nút `ArrowLeft` "Đứng dậy ra phòng (Esc)" (`standUp('bench')`); về máy tính = bấm máy tính trong phòng.
 - Kết thúc ngày bỏ khỏi máy tính: icon desktop `END_DAY_ICON` → `STAND_ICON` "Đứng dậy" (`public/icons/apps/footprints.svg`),
   nút cuối danh sách Mezzenger → "Đứng dậy ra lịch". Tip Keeb-chan + toast đổi chữ theo.
 - Lịch: bấm tờ lịch trên tường (cả lúc ngồi bàn build) → `CalendarDialog` (render ở App khi `useRoom.calendar`): lưới 4 tuần
@@ -825,3 +827,73 @@
   `cursor-*` riêng như `cursor-grab` vẫn đè được) + `.cursor-pointer` / `enabled:cursor-pointer` (ngoài layer để thắng utility) dùng bàn tay.
   Vật 3D: `useHover` / bàn build trong Room.tsx gán `body.style.cursor = 'var(--cursor-hand)'`, rời ra gán `''` (về mặc định, không `'auto'`).
 - Canvas cảnh 3D bỏ `cursor-grab` (mặc định là mũi tên, kéo xoay camera vẫn mũi tên).
+
+## Shopii: ô tìm kiếm, banner sale, giỏ hàng có số lượng (2026-10-30)
+
+- Ô tìm kiếm chuyển từ cột trái lên trên cùng khu sản phẩm (ngoài lớp cuộn của lưới → đứng yên), ẩn ở mục Giỏ hàng / Đơn đang giao;
+  lớp "Đang tìm..." chừa ô tìm (`top-[52px]`).
+- `SaleBanner` chỉ hiện ngày sale (ngày thường không đếm ngược nữa; lịch treo tường vẫn ghi ngày sale tới).
+- Nút thẻ sản phẩm chỉ chữ "Thêm vào giỏ" (bỏ icon).
+- Giỏ hàng: `CartLine` = `unit` (1 đơn vị option) × `qty`, cùng sản phẩm + option (`key` = `id:option`) thì cộng số lượng; `setCartQty`
+  (`QtyInput` ô nhập / + −, dụng cụ tối đa 1 `cartMax`). `data/cart.ts` `cartItems` (switch / stab / vật tư cộng dồn thành 1 món,
+  món khác thành qty món riêng), `cartBase` / `cartShipped` (phí giao tính từng món như lúc đặt). Mỗi dòng ghi giá gốc × số lượng +
+  phí giao theo tốc độ đang chọn (Hoả tốc + cam, Tiết kiệm − xanh) + thành tiền; chân giỏ ghi tiền hàng + phí giao + tổng.
+  Giỏ của bản lưu trước (chưa có `unit`) bỏ khi nạp save.
+
+## Shopii: sale 3 mục, ruy băng SALE, tìm trong mục, phí giao cố định, đổi loại trong giỏ (2026-10-30)
+
+- Phí giao: cố định 1 lần mỗi kiện (`SHIP_SPEEDS[].fee`: Hoả tốc 50k, Nhanh 20k, Tiết kiệm miễn phí), không còn nhân % theo từng món
+  (người dùng: cùng 1 mặt hàng mà tiền ship cộng dồn là sai). `placeOrder` ghi `Parcel.fee`, huỷ hoàn cả phí; giá món trong kiện = giá gốc.
+- Giỏ hàng: nút tốc độ giao ghi luôn phí ("Nhanh · +20k", "Tiết kiệm · Miễn phí"), chân giỏ: tiền hàng / phí giao / tổng; mỗi dòng
+  đổi loại bằng `OptionSelect` (`swapCart`, trùng dòng có sẵn thì gộp số lượng), `cartLine` / `unitItem` chuyển sang `data/cart.ts`.
+  Mặc định chọn Tiết kiệm.
+- Sale: ngày sale chỉ 3 mục linh kiện ngẫu nhiên (`saleCats`), mỗi mục 1–5 món, giảm 5–30% (`saleMap`, cố định theo ngày + id).
+  Bỏ tab "Đang sale"; mục có món sale + thẻ sản phẩm sale gắn ruy băng đỏ chéo góc `SaleRibbon` (cha `relative overflow-hidden`).
+- Tìm kiếm chỉ trong mục đang chọn (mục vẫn sáng khi tìm, đổi mục giữ chữ tìm); bộ lọc trong mục chuyển từ cột trái lên cạnh ô tìm
+  (rộng 200px, mục không có bộ lọc thì ô tìm dài hết).
+- (2026-10-30) Sửa thẻ sản phẩm bị cắt cụt (chỉ còn hàng tên): `overflow-hidden` trên thẻ trong lưới cuộn cao cố định làm hàng lưới co về
+  0 (min-size auto mất) → bỏ, `SaleRibbon` tự cắt trong ô góc + `rounded-tr-xl` theo góc thẻ / mục.
+- (2026-10-30) Huỷ kiện Shopii chỉ khi chưa tới cửa (`cancelParcel`: `arrive > day`, trước là "đặt hôm nay" nên Hoả tốc tới rồi vẫn huỷ
+  được); `ParcelList` ẩn nút Huỷ khi đã tới.
+- (2026-10-30) Món sale = giảm 1 lần (người dùng: mua lần sau về giá thường, không khoá nút): dòng giỏ giá sale riêng (`key` thêm `:sale`,
+  `cartMax` 1); thẻ sản phẩm về giá thường khi đã mua giá sale hôm nay (`saleBought`) hoặc dòng giá sale đang trong giỏ (`saleUsed` trong
+  Shopii); thêm nhiều món sale một lúc = 1 món giá sale + phần còn lại giá thường. Bỏ nút "Đã mua sale". `CartList` đổi loại: dòng sale
+  dùng sản phẩm giá sale, dòng thường dùng giá gốc.
+- (2026-10-30) Giỏ hàng: dòng giá sale có `Badge solid tone="red"` "Sale −x%" trước tên + giá gốc gạch ngang cạnh đơn giá (người dùng:
+  không phân biệt được dòng sale với dòng giá thường cùng món).
+- (2026-10-30) `OptionSelect` (dùng chung): danh sách vẽ qua portal ra `document.body`, `fixed` theo nút (lật lên khi dưới thiếu chỗ,
+  cuộn khung nào cũng đặt lại, cao tối đa 240px, mở ra cuộn tới option đang chọn) — trước `absolute` trong khung cuộn giỏ hàng bị cắt mất.
+  Giỏ hàng: tên món trước, badge "Sale −x%" sau.
+- (2026-10-30) `OptionSelect`: sửa không cuộn được danh sách (mỗi lần cuộn đặt lại vị trí → `pos` mới → `scrollIntoView` kéo về option
+  đang chọn): cuộn chính danh sách không đặt lại vị trí, chỉ cuộn tới option đang chọn 1 lần lúc mở (`shown`).
+- (2026-10-30) Phí giao tính theo từng dòng giỏ (người dùng: ship phải tính cho từng đơn, không phải tất cả 1 giá): `placeOrder(..., lines)`
+  phí = `SHIP_SPEEDS[speed].fee` × số dòng (món khác nhau), cùng món nhiều cái vẫn 1 lần phí. Giỏ: mỗi dòng ghi "ship +20k" và
+  thành tiền gồm phí, nút tốc độ "+20k / món", chân giỏ "N món × phí = tổng phí".
+- (2026-10-30) Chân giỏ hàng gọn còn 3 dòng: Hình thức giao hàng / Thời gian giao hàng / Tổng tiền (bỏ dòng tiền hàng + phí giao chi tiết;
+  phí từng món đã ghi trên từng dòng).
+- (2026-10-30) Giỏ hàng: đầu mục kiểu bảng xếp hạng (ô icon giỏ vàng + "Giỏ hàng" + "Kiểm tra lại sản phẩm trước khi thanh toán",
+  nút "Xoá tất cả" `clearCart`); hình thức giao hàng thành 3 thẻ ngang (icon tròn Zap / Truck / PiggyBank + "Tên · phí" + "Tới cửa: ..."),
+  vạch dọc ngăn cách, đang chọn nền vàng nhạt viền vàng (thay hàng OptionChip).
+- (2026-10-30) Shopii thanh trên cùng (người dùng đưa ảnh shop kiểu PC Building Simulator làm mẫu bố cục): "Shopii / <mục>" + ô tìm +
+  bộ lọc (chỉ khi xem lưới) + nút giỏ hàng bên phải "Giỏ hàng (n)" + tổng tiền hàng (vàng đặc khi đang mở giỏ). Bỏ tab Giỏ hàng ở cột trái;
+  ô tìm / lọc ra khỏi khung sản phẩm, lớp "Đang tìm..." phủ lại cả khung.
+- (2026-10-30) Shopii: nút giỏ hàng dời lên hàng trên cùng, nằm riêng góc phải; bỏ "Shopii / <mục>"; ô tìm + bộ lọc về lại đầu khung
+  sản phẩm. Thông báo sale (Alert) thành banner sự kiện `SaleBanner` (gradient đỏ → cam sọc chéo, "SIÊU SALE LINH KIỆN", "Giảm đến
+  30%...", nhãn vàng "CHỈ HÔM NAY", ⓘ luật sale), chỉ ngày sale; ngày thường hàng trên chỉ còn nút giỏ hàng.
+- (2026-10-30) Bàn build có thùng (chưa vào build): thùng đơn đủ đồ / thùng đã đóng gói không còn khung nút "Cầm thùng lên" / "Mở thùng,
+  bắt đầu build" mà là dòng hướng dẫn `ControlsHint` như khi tương tác đồ vật: "Nhấn [chuột phải] để cầm thùng lên, nhấn [B] để mở thùng
+  bắt đầu build" (`useBoxKeys` trong EmptyBenchHud: chuột phải nhấn rồi nhả trên canvas, dịch ≤ 6px — kéo vẫn xoay camera; phím B bỏ
+  qua khi đang gõ / có dialog). Thùng thiếu đồ giữ khung liệt kê + nút mua (sau đổi, xem dưới). Sửa dòng "đang giao" đọc `it.job ?? p.job`.
+- (2026-10-30, người dùng: "bỏ bớt icon đi thay vào đó là hiển thị hướng dẫn") Thùng thiếu đồ: khung chỉ liệt kê món thiếu (bỏ nút
+  "Cầm thùng lên" và 3 icon Shopii / Hội Phím Cơ / Chi tiết đơn), đẩy lên `bottom-16` (`frame(..., at)`), dưới là `ControlsHint`
+  "Nhấn [chuột phải] để cầm thùng lên, đủ linh kiện thì nhấn [B] để build". Keeb-chan `PICK` nói theo (B / chuột phải).
+- (2026-10-30, người dùng: "nhấn B để build chứ ko cần ghi đủ linh kiện, cho nút B xám đi") Thùng đơn đủ / thiếu đồ dùng chung 1 dòng
+  "Nhấn [chuột phải] để cầm thùng lên, nhấn [B] để build"; thiếu đồ thì `KeyCap off` (xám, prop mới trong ControlsHint.tsx). Thùng 3D trên bàn
+  (`EmptyBench`, `ready`): thiếu đồ thì `Clickable` tắt (không viền xanh khi rê, bấm không làm gì) + không `HintArrow`; chuột phải cầm vẫn được.
+- (2026-10-30, người dùng: "vào màn build mà đã sẵn linh kiện thì zoom thẳng to ... không còn hướng dẫn chuột phải / B") `placeBench`
+  không tự `buildOrder` nữa: đặt thùng đủ đồ lên bàn cũng chỉ nằm đó, `EmptyBenchHud` hiện dòng "chuột phải cầm lên, B build" như thùng thiếu đồ.
+  Bước `unbox` (thùng `JobBox` cỡ thật cao ~10u) camera dí sát nắp thùng do `CameraRig` (Bench.tsx) đặt theo bề rộng bàn phím →
+  bước này dùng góc nhìn bàn có thùng `benchPose(null, fit * 1.5)` như `EmptyBench`, sang bước sau về góc theo bàn phím.
+- (2026-10-30, người dùng: "vẫn lỗi zoom in xong zoom out ra") Ngồi xuống bàn: `sitAtBench` bay camera tới `benchPose` không tính thùng
+  (bàn phím / bàn trống), bay xong `CameraRig` / `EmptyBench` mới đặt góc lùi xa có thùng → giật ra. Gom về `benchView({ width, unbox, box }, fit)`
+  (`scene/common/benchPose.ts`) dùng chung cho cả 3 chỗ: bước mở hộp hoặc bàn có thùng = `benchPose(null, fit × 1.5)`.

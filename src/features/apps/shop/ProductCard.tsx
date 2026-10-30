@@ -1,30 +1,21 @@
 import { useState } from 'react'
 import { Badge, Button, OptionChip, QtyInput, SoundBars, Tooltip } from '@/components/ui'
 import { stabStock } from '@/data/parts'
-import { cn, fmt } from '@/lib/format'
-import {
-  SHIP_ORDER,
-  SHIP_SPEEDS,
-  arriveDay,
-  arriveText,
-  shipPrice,
-  toolOnWay,
-  type ShipSpeed,
-} from '@/data/shipping'
+import { fmt } from '@/lib/format'
+import { toolOnWay } from '@/data/shipping'
 import type { Product, ProductOption, StabItem, SupplyItem, ToolItem } from '@/types'
 import { OptionFilter } from './OptionFilter'
 import { ProductImage } from './ProductImage'
+import { SaleRibbon } from './SaleRibbon'
 import { useGame } from '@/store'
 
 interface Props {
   product: Product
-  /** speed = null: chỉ đổi sang mỏ hàn đã có (không đặt hàng) */
-  onBuy: (product: Product, option: ProductOption, qty: number, speed: ShipSpeed | null) => void
+  /** đổi sang mỏ hàn đã có (không mua) */
+  onEquip: (option: ProductOption) => void
+  /** thêm vào giỏ hàng (mọi món mua đều qua giỏ, chọn tốc độ giao lúc thanh toán) */
+  onCart: (product: Product, option: ProductOption, qty: number) => void
 }
-
-/** tốc độ giao chọn lần trước: thẻ mới mở lấy luôn */
-let lastSpeed: ShipSpeed = 'fast'
-const rememberSpeed = (v: ShipSpeed) => (lastSpeed = v)
 
 /** cỡ stab hiện thành nhãn trên ảnh */
 const STAB_SIZES = [
@@ -36,8 +27,8 @@ const STAB_SIZES = [
 const STACKABLE: Product['cat'][] = ['switch', 'stab', 'supply', 'spell']
 /** option vật tư gộp nhiều loại (nhãn "loại · số gói") */
 const isPack = (o: ProductOption) => 'n' in o.item && o.label.includes(' · ')
-/** Thẻ sản phẩm: chọn option (màu / chất liệu / số lượng) rồi mua */
-export function ProductCard({ product, onBuy }: Props) {
+/** Thẻ sản phẩm: chọn option (màu / chất liệu / số lượng) rồi thêm vào giỏ hàng */
+export function ProductCard({ product, onEquip, onCart }: Props) {
   const [sel, setSel] = useState(0)
   const [qty, setQty] = useState(1)
   const stackable = STACKABLE.includes(product.cat)
@@ -71,22 +62,15 @@ export function ProductCard({ product, onBuy }: Props) {
       : null
   const equipped = !!solderItem && tools.solder === solderItem.level
   const canEquip = !!solderItem && owned[solderItem.level] !== undefined
-  // giao hàng: nhanh đắt, chậm rẻ; giá hiện theo tốc độ đang chọn
-  const day = useGame((s) => s.day)
-  // món đang sale chỉ mua được 1 lần trong ngày sale
-  const saleDone = useGame(
-    (s) => !!product.sale && s.saleBought?.day === s.day && s.saleBought.ids.includes(product.id),
-  )
   const parcels = useGame((s) => s.parcels)
-  const [speed, setSpeedState] = useState(lastSpeed)
-  const setSpeed = (v: ShipSpeed) => (rememberSpeed(v), setSpeedState(v))
   const toolItem = product.cat === 'tool' || product.cat === 'cert' ? (opt.item as ToolItem) : null
   const onWay = !!toolItem && !canEquip && toolOnWay(parcels, toolItem.kind, toolItem.level)
-  const shipping = !equipped && !canEquip
-  const base = opt.price * (stackable ? qty : 1)
-  const total = shipping ? shipPrice(base, speed) : base
+  // giá gốc (phí giao tính lúc thanh toán giỏ theo tốc độ giao)
+  const total = opt.price * (stackable ? qty : 1)
   return (
-    <div className="flex flex-col gap-1.5 rounded-xl bg-panel-2 p-2.5 hover:ring-2 hover:ring-yellow hover:ring-inset">
+    <div className="relative flex flex-col gap-1.5 rounded-xl bg-panel-2 p-2.5 hover:ring-2 hover:ring-yellow hover:ring-inset">
+      {/* món đang sale: ruy băng đỏ SALE chéo góc */}
+      {product.sale && <SaleRibbon size={56} className="rounded-tr-xl" />}
       <ProductImage
         product={product}
         swatch={opt.swatch}
@@ -164,62 +148,35 @@ export function ProductCard({ product, onBuy }: Props) {
           <QtyInput value={qty} onChange={setQty} />
         </div>
       )}
-      {/* tốc độ giao: Hoả tốc tới cửa trong ngày (đắt), Tiết kiệm chậm 2 ngày (rẻ) */}
-      {shipping && !onWay && (
-        <div className="mt-auto flex flex-col gap-1">
-          <div className="flex gap-1">
-            {SHIP_ORDER.map((k) => (
-              <OptionChip
-                key={k}
-                active={speed === k}
-                title={`${SHIP_SPEEDS[k].desc} · ${fmt(shipPrice(base, k))}`}
-                onClick={() => setSpeed(k)}
-                className="flex-1 justify-center px-1"
-              >
-                {SHIP_SPEEDS[k].name}
-              </OptionChip>
-            ))}
-          </div>
-          <div className="text-xs font-bold text-muted">
-            Giao tới cửa: {arriveText(arriveDay(day, speed), day)}
-          </div>
-        </div>
-      )}
-      <div
-        className={cn('flex items-center justify-between gap-2', (!shipping || onWay) && 'mt-auto')}
-      >
-        {/* ngày sale: giá gốc gạch ngang + % giảm (giá đã tính phí giao theo tốc độ) */}
+      <div className="mt-auto flex items-center justify-between gap-2">
+        {/* ngày sale: giá gốc gạch ngang + % giảm */}
         <span className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
           <span className="font-head text-xl font-extrabold text-green">{fmt(total)}</span>
           {opt.was !== undefined && (
-            <s className="text-xs font-bold text-muted">
-              {fmt(shipping ? shipPrice(opt.was * (stackable ? qty : 1), speed) : opt.was)}
-            </s>
+            <s className="text-xs font-bold text-muted">{fmt(opt.was * (stackable ? qty : 1))}</s>
           )}
         </span>
-        <Button
-          tone="orange"
-          size="sm"
-          disabled={equipped || onWay || saleDone}
-          title={
-            saleDone
-              ? 'Mỗi món sale chỉ mua được 1 lần'
-              : onWay
+        {equipped || canEquip ? (
+          <Button size="sm" tone="orange" disabled={equipped} onClick={() => onEquip(opt)}>
+            {equipped ? 'Đang dùng' : 'Dùng máy này'}
+          </Button>
+        ) : (
+          <Button
+            tone="orange"
+            size="sm"
+            disabled={onWay}
+            title={
+              onWay
                 ? 'Đang trên đường giao, xem ở Đơn đang giao'
-                : undefined
-          }
-          onClick={() => onBuy(product, opt, stackable ? qty : 1, shipping ? speed : null)}
-        >
-          {saleDone
-            ? 'Đã mua sale'
-            : equipped
-              ? 'Đang dùng'
-              : canEquip
-                ? 'Dùng máy này'
-                : onWay
-                  ? 'Đang giao'
-                  : 'Đặt mua'}
-        </Button>
+                : product.sale
+                  ? 'Giá sale chỉ cho 1 món, mua thêm là giá thường'
+                  : 'Thêm vào giỏ hàng, chọn tốc độ giao lúc thanh toán'
+            }
+            onClick={() => onCart(product, opt, stackable ? qty : 1)}
+          >
+            {onWay ? 'Đang giao' : 'Thêm vào giỏ'}
+          </Button>
+        )}
       </div>
     </div>
   )

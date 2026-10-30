@@ -252,7 +252,7 @@ export function OptionFilter({
   )
 }
 
-/** Nút lọc 1 cột cùng kiểu `OptionFilter` (bộ lọc trong mục ở cột trái Shopii): nút hiện mục đang chọn, popup danh sách + số khớp */
+/** Nút lọc 1 cột cùng kiểu `OptionFilter` (bộ lọc trong mục, cạnh ô tìm trên lưới sản phẩm Shopii): nút hiện mục đang chọn, popup danh sách + số khớp */
 export function ListFilterPicker({
   items,
   value,

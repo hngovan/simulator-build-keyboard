@@ -1,13 +1,18 @@
 // Dò hốc dán feet (đệm cao su) dưới đáy case CAD → src/data/caseFeet.json
-// Hốc = cụm mặt quay xuống (pháp tuyến −y) nằm hơi cao hơn đáy case (trần hốc), gom theo khoảng cách xz.
-// Dùng: node scripts/probe-case-feet.mjs [model...] (vd exodus60/case)  (mặc định mọi GLB trong public/models/keyboards)
+// Hốc = cụm mặt quay xuống (pháp tuyến −y) nằm hơi cao hơn mặt đáy quanh nó (trần hốc), gom theo khoảng cách xz.
+// Độ sâu hốc đo so với mặt đáy ngay quanh hốc (đáy nghiêng sẵn góc gõ như Duality Horns: hốc phía trước cao hơn đáy thấp nhất
+// vài mm); ghi ra [x, z, r, trần hốc, mặt đáy quanh hốc] (mm so với đáy thấp nhất; bản cũ chỉ 4 số = đáy quanh hốc 0).
+// Dùng: node scripts/probe-case-feet.mjs [model...] (vd exodus60/case: chỉ dò model đó, gộp vào JSON có sẵn)
+//       (không tham số: dò mọi GLB trong public/models/keyboards, ghi lại cả file)
 import fs from 'node:fs'
 import { NodeIO } from '@gltf-transform/core'
 
 const DIR = 'public/models/keyboards'
 const OUT = 'src/data/caseFeet.json'
-/** trần hốc cao hơn đáy case trong khoảng này (mm) */
+/** trần hốc cao hơn mặt đáy quanh hốc trong khoảng này (mm) */
 const DEPTH = [0.3, 4]
+/** gom mặt quay xuống cao hơn đáy thấp nhất tới mức này (mm) rồi mới lọc theo độ sâu quanh hốc */
+const SCAN_H = 15
 /** bán kính hốc feet thật (mm): feet tròn Ø 7–13mm; nhỏ hơn là chốt / lỗ, lớn hơn là chữ khắc */
 const RADIUS = [3.5, 6.5]
 /** model không có hốc: feet dán phẳng, bán kính (mm, như FOOT_R của case dựng bằng code) + chừa tới mép / lỗ vít */
@@ -109,6 +114,8 @@ for (const name of names) {
   const minY = tris.reduce((m, t) => Math.min(m, t[0][1], t[1][1], t[2][1]), Infinity)
   // mặt quay xuống, nằm trong khoảng sâu của hốc
   const pts = []
+  /** tâm mọi tam giác quay xuống [x, y so với đáy thấp nhất, z] (tìm mặt đáy quanh hốc) */
+  const down = []
   /** tam giác trần (xz) để kiểm tra tâm hốc có bị che kín không: hốc feet trần là đĩa kín, lỗ vít là vành khuyên */
   const caps = []
   for (const [a, b, c] of tris) {
@@ -116,10 +123,26 @@ for (const name of names) {
     const w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]]
     const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]]
     const len = Math.hypot(...n) || 1
+    if (n[1] / len > -0.95) continue
     const y = (a[1] + b[1] + c[1]) / 3 - minY
-    if (n[1] / len > -0.95 || y < DEPTH[0] || y > DEPTH[1]) continue
+    down.push([(a[0] + b[0] + c[0]) / 3, y, (a[2] + b[2] + c[2]) / 3])
+    if (y < 0.05 || y > SCAN_H) continue
     for (const v of [a, b, c]) pts.push([v[0], v[2], v[1] - minY])
     caps.push([a, b, c].map((v) => [v[0], v[2]]))
+  }
+  /**
+   * mặt đáy quanh hốc: trung vị độ cao mặt quay xuống trong vành r+0.5 → r+8mm quanh tâm, chỉ lấy mặt thấp hơn trần hốc
+   * (bỏ mặt trong lòng case cao hơn); đáy nghiêng thì lấy thấp nhất sẽ rơi về phía dốc nên dùng trung vị
+   */
+  const floorAt = (x, z, r, ceil) => {
+    const ys = down
+      .filter(([px, py, pz]) => {
+        const d = Math.hypot(px - x, pz - z)
+        return d > r + 0.5 && d < r + 8 && py < ceil - 0.05 && py > ceil - DEPTH[1] - 1
+      })
+      .map((p) => p[1])
+      .sort((u, v) => u - v)
+    return ys.length ? ys[Math.floor(ys.length / 2)] : Infinity
   }
   // gom cụm theo xz (đỉnh cách nhau < 3mm cùng cụm), union-find + lưới 3mm để gộp đủ các mảnh của 1 hốc
   const parent = pts.map((_, i) => i)
@@ -153,12 +176,44 @@ for (const name of names) {
     const cx = (Math.max(...xs) + Math.min(...xs)) / 2
     const cz = (Math.max(...zs) + Math.min(...zs)) / 2
     if (!caps.some((t) => inTri([cx, cz], t))) continue
+    const ceil = Math.min(...c.map((p) => p[2]))
+    // độ sâu = đỉnh trần hốc − mặt đáy quanh hốc (trần nghiêng theo đáy: đỉnh cao hơn mép thấp)
+    const top = Math.max(...c.map((p) => p[2]))
+    const deep = top - floorAt(cx, cz, r, top)
+    if (process.env.DEBUG) {
+      const roof = c.filter((p) => p[2] > top - 0.3)
+      const rx = roof.map((p) => p[0])
+      const rz = roof.map((p) => p[1])
+      console.log(
+        '  cụm',
+        cx.toFixed(1),
+        cz.toFixed(1),
+        'r',
+        r.toFixed(1),
+        'sâu',
+        deep.toFixed(2),
+        'đáy quanh',
+        floorAt(cx, cz, r, top).toFixed(2),
+        '| tâm trần',
+        ((Math.max(...rx) + Math.min(...rx)) / 2).toFixed(1),
+        ((Math.max(...rz) + Math.min(...rz)) / 2).toFixed(1),
+        'cỡ trần',
+        (Math.max(...rx) - Math.min(...rx)).toFixed(1),
+        (Math.max(...rz) - Math.min(...rz)).toFixed(1),
+        '| cao',
+        Math.min(...c.map((p) => p[2])).toFixed(2),
+        top.toFixed(2),
+      )
+    }
+    if (!(deep >= DEPTH[0] && deep <= DEPTH[1])) continue
     const round1 = (n) => Math.round(n * 10) / 10
+    // [x, z, r, trần hốc, mặt đáy quanh hốc] (mm so với đáy thấp nhất): feet nhô ra dưới mặt đáy quanh hốc, không tới đáy thấp nhất
     feet.push([
-      round1((Math.max(...xs) + Math.min(...xs)) / 2),
-      round1((Math.max(...zs) + Math.min(...zs)) / 2),
+      round1(cx),
+      round1(cz),
       round1(r),
-      round1(Math.min(...c.map((p) => p[2]))),
+      round1(ceil),
+      round1(Math.min(ceil, floorAt(cx, cz, r, top))),
     ])
   }
   // hai hốc chồng nhau (bậc khoét 2 tầng) thì giữ hốc lớn
@@ -181,7 +236,9 @@ for (const name of names) {
     if (flat.length) out[name] = flat
   }
 }
-if (!process.argv.slice(2).length) {
-  fs.writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n')
-  console.log('→', OUT)
-}
+// có tham số: gộp model vừa dò vào file sẵn có (giữ các case khác); không tham số: ghi lại cả file
+const merged = process.argv.slice(2).length
+  ? { ...JSON.parse(fs.readFileSync(OUT, 'utf8')), ...out }
+  : out
+fs.writeFileSync(OUT, JSON.stringify(merged, null, 2) + '\n')
+console.log('→', OUT)

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
-import { RoundedBox, useGLTF } from '@react-three/drei'
+import { Clone, RoundedBox, useGLTF } from '@react-three/drei'
 import {
   CylinderGeometry,
   DoubleSide,
   EdgesGeometry,
   Mesh,
+  Quaternion,
   Raycaster,
   SphereGeometry,
   Vector3,
@@ -28,7 +29,7 @@ import {
   ringFrame,
 } from '@/data/steps'
 import { BLOCKER_SKIN, BLOCKER_TOP, blockerGaps, keyRegions } from '@/data/layouts'
-import type { FootPocket, Key, StepId } from '@/types'
+import type { CaseDef, FootPocket, Key, StepId } from '@/types'
 import { playClick } from '@/sound'
 import { lerpTo } from '../common/anim'
 import { useHover } from '../common/useHover'
@@ -267,7 +268,8 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
     const kind = feet[i]
     const lit = hover === i || next === i
     return (
-      <group key={i} position={[p.x, Y.floorBot, p.z]}>
+      // gốc = mặt đáy quanh hốc (đáy 2 tầng: hốc phía trước cao hơn đáy thấp nhất), feet nhô ra dưới mặt đó như nhau
+      <group key={i} position={[p.x, Y.floorBot + (p.floor ?? 0), p.z]}>
         {/* mũi tên xanh chỉ hốc dán tiếp theo: dưới đáy, mũi hướng vào đáy (case đang lật úp thì chỉ xuống) */}
         {i === next && hover !== i && (
           <group rotation-x={Math.PI}>
@@ -277,8 +279,8 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
         {kind && (
           <mesh
             geometry={FOOT_DOME}
-            position-y={p.depth}
-            scale={[p.r * 0.92, p.depth + 0.08, p.r * 0.92]}
+            position-y={p.depth - (p.floor ?? 0)}
+            scale={[p.r * 0.92, p.depth - (p.floor ?? 0) + 0.08, p.r * 0.92]}
             castShadow
           >
             <meshStandardMaterial color={SUPPLIES[kind]?.color ?? '#1c1c1f'} roughness={0.55} />
@@ -440,12 +442,80 @@ function CadStandoffs({ model, origin }: { model: string; origin: [number, numbe
  * Case từ bản vẽ CAD thật (MIT, `bun run convert:cases`): hệ mm, đáy ở y = 0, tâm ở gốc.
  * Đặt đáy trùng đáy case dựng bằng code, vẫn tô theo chất liệu + màu khách chọn
  */
+/**
+ * ốc cố định trên case CAD (trang trí, không tháo): model (mm, đỉnh đầu ở y = 0, thân chĩa −y), `head` = phần đầu giữ nguyên khi
+ * rút thân, `len` = dài model gốc, `keep` = dài còn lại, `d` = đường kính đầu model, `lift` = đầu nhô khỏi mặt tì (như `HEAD_H` vít)
+ */
+const FIXED_SCREWS = {
+  // ốc nón M3×10 bắt tạ / accent (đầu côn 1,7mm chìm ngang mặt): còn 4mm — dài 10mm xuyên qua đáy case
+  flat: { url: '/models/screws/countersunk-m3x10.glb', head: 1.7, len: 10, keep: 4, d: 6, lift: 0 },
+  // vít đầu trụ M2×6 (model dài 8mm, đầu 2mm nhô) bắt badge từ trong nắp lên: còn 5mm (thân 3mm ăn hết lỗ ren nắp z 3,7–4,6,
+  // không lên tới mặt trên nắp ~7,75)
+  socket: { url: '/models/screws/socket-cap-m2x6.glb', head: 2, len: 8, keep: 5, d: 3.8, lift: 2 },
+} as const
+
+/**
+ * Ốc cố định (tạ / accent / badge): co theo đường kính lỗ (`d` trong danh sách, 0 = giữ cỡ model), mặt đầu tại điểm cho sẵn,
+ * trục theo hướng ốc đi vào; thân rút ngắn theo `FIXED_SCREWS` (không lòi ra mặt kia của case)
+ */
+function FixedScrews({
+  list,
+  kind,
+}: {
+  list: NonNullable<CaseDef['weightScrews']>
+  kind: keyof typeof FIXED_SCREWS
+}) {
+  const spec = FIXED_SCREWS[kind]
+  const { scene } = useGLTF(spec.url)
+  const short = useMemo(() => {
+    const root = scene.clone(true)
+    root.updateMatrixWorld(true)
+    const k = (spec.keep - spec.head) / (spec.len - spec.head)
+    const meshes: Mesh[] = []
+    root.traverse((o) => (o as Mesh).isMesh && meshes.push(o as Mesh))
+    for (const m of meshes) {
+      // đưa về hệ model rồi ép phần thân dưới đầu ốc theo y
+      const g = m.geometry.clone().applyMatrix4(m.matrixWorld)
+      const pos = g.attributes.position
+      for (let i = 0; i < pos.count; i++) {
+        const y = pos.getY(i)
+        if (y < -spec.head) pos.setY(i, -spec.head + (y + spec.head) * k)
+      }
+      g.computeBoundingSphere()
+      m.removeFromParent()
+      m.geometry = g
+      m.position.set(0, 0, 0)
+      m.rotation.set(0, 0, 0)
+      m.scale.set(1, 1, 1)
+      m.castShadow = true
+      root.add(m)
+    }
+    return root
+  }, [scene, spec])
+  return list.map(([x, y, z, dx, dy, dz, d], i) => (
+    <group
+      key={i}
+      position={[x, y, z]}
+      quaternion={new Quaternion().setFromUnitVectors(
+        new Vector3(0, -1, 0),
+        new Vector3(dx, dy, dz).normalize(),
+      )}
+      scale={d ? d / spec.d : 1}
+    >
+      {/* đầu ốc nhô (đầu trụ): nâng model cho mặt dưới đầu tì đúng điểm cho sẵn */}
+      <Clone object={short} castShadow position-y={spec.lift} />
+    </group>
+  ))
+}
+
 function CaseModel({
   model,
   origin,
   weight = 'brass',
   bottomMat,
   part = 'all',
+  screws,
+  badgeScrews,
   children,
 }: {
   model: string
@@ -453,8 +523,12 @@ function CaseModel({
   weight?: keyof typeof WEIGHT_METALS
   /** vật liệu đáy (node "bottom"), không có thì dùng chung vật liệu nắp */
   bottomMat?: ReactNode
-  /** case CAD 2 mảnh: chỉ vẽ nắp (node "case") hoặc chỉ đáy (node "bottom" + tạ: tạ gắn trong đáy) */
+  /** case CAD 2 mảnh: chỉ vẽ nắp (node "case" + "badge") hoặc chỉ đáy (node "bottom" + tạ: tạ gắn trong đáy) */
   part?: 'all' | 'top' | 'bottom'
+  /** ốc nón cố định trên tạ (đi cùng đáy) */
+  screws?: CaseDef['weightScrews']
+  /** vít cố định bắt badge (đi cùng nắp) */
+  badgeScrews?: CaseDef['badgeScrews']
   children: ReactNode
 }) {
   const { nodes } = useGLTF(`/models/keyboards/${model}.glb`) as unknown as {
@@ -475,6 +549,14 @@ function CaseModel({
       )}
       {nodes.weight && part !== 'top' && (
         <mesh geometry={nodes.weight.geometry} castShadow receiveShadow>
+          <meshStandardMaterial {...WEIGHT_METALS[weight]} side={DoubleSide} />
+        </mesh>
+      )}
+      {screws && part !== 'top' && <FixedScrews list={screws} kind="flat" />}
+      {badgeScrews && part !== 'bottom' && <FixedScrews list={badgeScrews} kind="socket" />}
+      {/* badge (kim loại như tạ) gắn trên nắp: vẽ cùng nắp */}
+      {nodes.badge && part !== 'bottom' && (
+        <mesh geometry={nodes.badge.geometry} castShadow receiveShadow>
           <meshStandardMaterial {...WEIGHT_METALS[weight]} side={DoubleSide} />
         </mesh>
       )}
@@ -610,6 +692,8 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               weight={caseDef.weight}
               bottomMat={lower && bottomMat(bottom.hover, true)}
               part={two ? 'bottom' : 'all'}
+              screws={caseDef.weightScrews}
+              badgeScrews={caseDef.badgeScrews}
             >
               {/* STL in 3D hay có mặt lật chiều → vẽ 2 mặt cho khỏi trong suốt */}
               <CaseMaterial
@@ -673,7 +757,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
             ))}
           {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên.
               Case 2 mảnh: khung chặn thuộc case trên (đi cùng case trên); mica: khung nằm trong tấm mica trên */}
-          {!two && (
+          {!two && !caseDef.ownBlocks && (
             <Blockers
               keys={ctx.keys}
               width={ctx.width}
@@ -708,22 +792,47 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               {model ? (
                 // case CAD 2 mảnh: nắp (node "case") + khung chặn, đi cùng case trên
                 <>
-                  <CaseModel model={model} origin={ctx.origin} weight={caseDef.weight} part="top">
-                    <CaseMaterial
-                      material={caseDef.material}
-                      color={color}
-                      hover={top.hover}
-                      doubleSide
+                  {/* top mount, board còn nằm phẳng ngoài case (topOnly): đặt nắp theo phép ngược của `seat` (dời rồi xoay
+                      ngược góc nghiêng) cho mặt đỡ plate trong nắp nằm phẳng trên plate — không thì nắp có góc gõ hở 1 đầu */}
+                  <group rotation-x={topOnly ? -(caseDef.seat?.tilt ?? 0) : 0}>
+                    <group
+                      position={
+                        topOnly
+                          ? [
+                              -(caseDef.seat?.dx ?? 0),
+                              -(caseDef.seat?.rise ?? 0),
+                              -(caseDef.seat?.dz ?? 0),
+                            ]
+                          : [0, 0, 0]
+                      }
+                    >
+                      <CaseModel
+                        model={model}
+                        origin={ctx.origin}
+                        weight={caseDef.weight}
+                        part="top"
+                        badgeScrews={caseDef.badgeScrews}
+                      >
+                        <CaseMaterial
+                          material={caseDef.material}
+                          color={color}
+                          hover={top.hover}
+                          doubleSide
+                        />
+                      </CaseModel>
+                    </group>
+                  </group>
+                  {/* model có sẵn khối chặn (Duality Horns): không dựng thêm */}
+                  {!caseDef.ownBlocks && (
+                    <Blockers
+                      keys={ctx.keys}
+                      width={ctx.width}
+                      depth={ctx.depth}
+                      mat={mat(top.hover)}
+                      wood={wood}
+                      top={BLOCKER_TOP}
                     />
-                  </CaseModel>
-                  <Blockers
-                    keys={ctx.keys}
-                    width={ctx.width}
-                    depth={ctx.depth}
-                    mat={mat(top.hover)}
-                    wood={wood}
-                    top={BLOCKER_TOP}
-                  />
+                  )}
                 </>
               ) : mica && sandwich ? (
                 // sandwich: chừa đúng khe plate (plate viền liền là 1 lớp kẹp giữa) → lớp dưới plate + lớp trên plate

@@ -91,8 +91,8 @@ function SolderFeed({ color, time }: { color: string; time: number }) {
 }
 
 /**
- * Chân hàn ở mặt dưới PCB: bấm để nung (skill check, kim nhiệt chạy qua lại), thiếc chảy dần ra 2 chân theo kim.
- * Bấm lần nữa / Space dừng kim: xanh là đạt (vàng = hoàn hảo), đỏ trái thiếc chưa ăn (hụt), đỏ phải cháy xém.
+ * Chân hàn ở mặt dưới PCB: bấm để nung (skill check, giữ chuột thanh nhiệt nạp dần), thiếc chảy dần ra 2 chân theo thanh.
+ * Nhả chuột dừng: xanh là đạt, chưa tới xanh thiếc chưa ăn (hụt), đỏ cháy xém.
  * Mối cháy: bấm 1 lần là bút hút thiếc tự hút
  */
 export function SolderPad({ k }: { k: Key }) {

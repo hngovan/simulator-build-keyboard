@@ -174,6 +174,38 @@ const tklRows = (v: Variant): RowSpec[] => [
   },
 ]
 
+/**
+ * TKL F13 (Duality Horns...): hàng F dồn sát, cách nhau 0.25u (Esc · F1–F4 · F5–F8 · F9–F12 · F13) rồi cụm PrtSc;
+ * các hàng dưới như TKL
+ */
+const tklF13Rows = (v: Variant): RowSpec[] => [
+  {
+    x: 0,
+    y: 0,
+    items: [
+      ['Esc', 1, 'Escape'],
+      0.25,
+      F(1),
+      F(2),
+      F(3),
+      F(4),
+      0.25,
+      F(5),
+      F(6),
+      F(7),
+      F(8),
+      0.25,
+      F(9),
+      F(10),
+      F(11),
+      F(12),
+      0.25,
+      F(13),
+    ],
+  },
+  ...tklRows(v).slice(1),
+]
+
 /** TKL bỏ hàng F (Function Row Less): cả cụm phím dời lên 1.25u */
 const frlRows = (v: Variant): RowSpec[] =>
   tklRows(v)
@@ -311,6 +343,8 @@ interface LayoutDef {
   ff: FormFactor
   /** cỡ case khác cũng vừa (case dựng theo kích thước layout, không có model CAD) */
   fits?: FormFactor[]
+  /** case CAD (nắp cắt sẵn ô phím) phải ghi đích danh layout này trong `CaseDef.layouts` mới vừa (vd TKL F13 lệch hàng F) */
+  strict?: boolean
   variants: Partial<Record<VariantKey, string[]>>
   rows: (v: Variant) => RowSpec[]
   /** layout lấy toạ độ thật từ PCB CAD (Alice / Blossom): bỏ qua rows */
@@ -371,6 +405,14 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     ff: 'tkl',
     variants: { backspace: ['2u', 'split'], bottom: ['wk', 'wkl'] },
     rows: tklRows,
+  },
+  tklf13: {
+    name: 'TKL F13',
+    ff: 'tkl',
+    strict: true,
+    // Duality Horns (case duy nhất dùng F13) chỉ có hàng dưới WKL
+    variants: { backspace: ['2u', 'split'], bottom: ['wkl'] },
+    rows: tklF13Rows,
   },
   full: {
     name: 'Full size',

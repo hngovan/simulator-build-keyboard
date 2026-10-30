@@ -1,6 +1,9 @@
 // Vật tư tiêu hao: mua 1 lần dùng cho nhiều đơn. packs: [số lượt dùng, giá k]
 import type { SkillSpec } from './skillCheck'
 
+/** nhãn dán cuộn thiếc (`solderSpool.ts`) */
+export type SpoolLabel = 'sakura' | 'asahi' | 'noname'
+
 /** Mục đích dùng lube */
 export type LubeUse = 'linear' | 'tactile' | 'clicky' | 'housing' | 'wire' | 'spring'
 
@@ -20,9 +23,16 @@ export interface SupplyDef {
   warn?: Partial<Record<LubeUse, string>>
   /**
    * cuộn thiếc hàn: speed = xếp hạng (nhỏ = xịn), shine = độ bóng mối hàn 0..1,
-   * slow = thiếc chảy chậm (skill check hàn hẹp vùng xanh, `solderSkill`), burnChance = tỉ lệ ẩn cháy chân dù nhả đúng vùng xanh (không hiện cho người chơi)
+   * slow = thiếc chảy chậm (skill check hàn hẹp vùng xanh, `solderSkill`), burnChance = tỉ lệ ẩn cháy chân dù nhả đúng vùng xanh (không hiện cho người chơi),
+   * label = nhãn dán mặt cuộn
    */
-  solder?: { speed: number; shine: number; slow?: number; burnChance?: number }
+  solder?: {
+    speed: number
+    shine: number
+    slow?: number
+    burnChance?: number
+    label?: SpoolLabel
+  }
   /** sách phép (mục Shopii "Sách phép"): số switch cộng thêm mỗi lần mở / mỗi mẻ lube, mỗi lần dùng trừ 1 */
   spell?: number
   /** feet cao su dán đáy case (bước `feet`): 1 vỉ 4 cái */
@@ -114,7 +124,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     color: '#55595e',
     packs: [[1000, 20]],
     desc: 'Rẻ đi đôi với chất lượng: chảy chậm, mối hàn xỉn, có tỉ lệ nhỏ cháy chân dù nhả đúng vùng xanh',
-    solder: { speed: 1.5, shine: 0.2, slow: 0.5, burnChance: 0.15 },
+    solder: { speed: 1.5, shine: 0.2, slow: 0.5, burnChance: 0.15, label: 'noname' },
   },
   solder6337: {
     name: 'Thiếc Sakura 63/37',
@@ -122,7 +132,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     color: '#62666b',
     packs: [[1000, 90]],
     desc: 'Thiếc xịn lõi nhựa thông: chảy đều, ăn chân tốt, mối hàn sáng',
-    solder: { speed: 0.85, shine: 0.85 },
+    solder: { speed: 0.85, shine: 0.85, label: 'sakura' },
   },
   solderPro: {
     name: 'Thiếc Asahi 0.6mm',
@@ -130,7 +140,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     color: '#70757a',
     packs: [[1000, 160]],
     desc: 'Thiếc xịn nhất: chảy cực nhanh, mối hàn bóng đẹp như hàn máy',
-    solder: { speed: 0.6, shine: 1 },
+    solder: { speed: 0.6, shine: 1, label: 'asahi' },
   },
   // feet cao su: chỉ khác màu → Shopii gộp 1 sản phẩm, chọn màu bằng option (`FEET_IDS`)
   ...feetDefs(),
@@ -393,10 +403,10 @@ export const SOLDER_IDS = Object.keys(SUPPLIES)
 export const JOINTS_PER_KEY = 2
 
 /** Cửa sổ hàn (giây thật): bút hàn thiếc chảy sau 2–2,5s, 3s là cháy; trạm hàn 1–2s, 3s cháy */
-/** skill check hàn: bút hàn kim chạy nhanh hơn + vùng xanh hẹp hơn trạm hàn */
+/** skill check hàn: bút hàn thanh nhiệt chạy nhanh hơn + vùng xanh hẹp hơn trạm hàn */
 const SOLDER_SKILL = {
-  pen: { width: 0.2, speed: 0.9 },
-  station: { width: 0.28, speed: 0.75 },
+  pen: { width: 0.2, speed: 0.5 },
+  station: { width: 0.26, speed: 0.42 },
 } as const
 
 /** Độ khó 1 lần hàn theo dụng cụ; thiếc chảy chậm (thiếc đểu, `slow`) thu hẹp vùng xanh */

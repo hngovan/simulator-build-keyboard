@@ -2,7 +2,7 @@ import { X } from 'lucide-react'
 import { useGame } from '@/store'
 
 /**
- * Banner giữa đầu màn hình khi vừa giao hàng (đặt thùng vào ô giao hàng): nhắc vào Mezzenger bấm "Thu tiền" nhận thù lao.
+ * Banner giữa đầu màn hình khi vừa giao hàng (đặt thùng vào kệ giao hàng): nhắc vào Mezzenger bấm "Thu tiền" nhận thù lao.
  * Bấm banner thì mở thẳng hội thoại của khách; thu xong / sang ngày thì tự tắt
  */
 export function PayBanner() {

@@ -1,5 +1,5 @@
 import { useGame } from '@/store'
-import { benchPose } from '../common/benchPose'
+import { benchView } from '../common/benchPose'
 import { fitAspect } from '../common/fitAspect'
 import { useRoom } from './roomStore'
 
@@ -11,7 +11,15 @@ export function sitAtBench() {
   useRoom.setState({
     hover: null,
     fly: {
-      pos: benchPose(s.ctx && s.build ? s.ctx.width : null, fit),
+      pos: benchView(
+        {
+          width: s.ctx && s.build ? s.ctx.width : null,
+          unbox: !!s.build && s.ctx?.steps[s.build.stepIdx] === 'unbox',
+          // thùng đặt lên bàn ngay trước khi ngồi (placeBench) / đang nằm trên bàn
+          box: !!s.benchBox,
+        },
+        fit,
+      ),
       look: [0, 0, 0],
       then: () => {
         useGame.setState({ walk: false })

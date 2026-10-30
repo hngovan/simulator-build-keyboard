@@ -25,7 +25,6 @@ Từ [Poly Haven](https://polyhaven.com), giấy phép CC0:
 Từ [Sketchfab](https://sketchfab.com), giấy phép CC BY 4.0 (bắt buộc ghi công):
 
 - Voxel Cutting Mat (`voxel_cutting_mat.glb`) — shpawen
-- Chest_ Box_ Wooden_26_MB (`wooden_chest.glb`) — Mehdi Shahsavan
 - Old Tool Box (`old_tool_box.glb`) — Марк (Mark-kon)
 - ZZ Plant in Ceramic Pot | Crafted by jerovdl (`zz_plant.glb`) — Jerovdl
 - Window Blind - 3MB (`window-blind.glb`) — Mehdi Shahsavan

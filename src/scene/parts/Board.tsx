@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import { PLATES } from '@/data/parts'
@@ -190,6 +191,36 @@ function PlateMaterial({
   )
 }
 
+/** Plate riêng của case từ model (node "plate", mm, mặt trên y = 0 → đặt cho mặt trên trùng mặt trên plate dựng bằng code) */
+function ModelPlate({
+  model,
+  color,
+  metal,
+  clear,
+  ghost = false,
+}: {
+  model: string
+  color: string
+  metal: boolean
+  clear: boolean
+  ghost?: boolean
+}) {
+  const { nodes } = useGLTF(`/models/keyboards/${model}.glb`) as unknown as {
+    nodes: Record<string, THREE.Mesh>
+  }
+  return (
+    <mesh
+      geometry={nodes.plate.geometry}
+      scale={MM}
+      position-y={-Y.plateBot + (ghost ? 1 : 0)}
+      castShadow
+      receiveShadow
+    >
+      <PlateMaterial color={color} metal={metal} clear={clear} ghost={ghost} />
+    </mesh>
+  )
+}
+
 function AlicePlate({
   color,
   metal,
@@ -248,6 +279,8 @@ export function Board() {
   const sandwich = ctx.mount === 'sandwich' && ctx.caseDef.material === 'mica' && !ctx.caseDef.model
   // tray: plate CAD Alice không có lỗ vít tray → dựng plate theo phím (như sandwich) để khoét lỗ
   const aliceCAD = ctx.layout === 'alice' && !sandwich && ctx.mount !== 'tray'
+  // plate riêng của case (Duality Horns: plate TKL F13 thật, có tai top mount + rãnh flex)
+  const modelPlate = !sandwich ? ctx.caseDef.plateModel : undefined
   const standard60CAD =
     ctx.layout === '60' &&
     (ctx.variant.backspace ?? '2u') === '2u' &&
@@ -320,7 +353,14 @@ export function Board() {
       {b.plate ? (
         <Drop y={Y.plateBot} from={0.8}>
           <group onPointerDown={onBoard} {...bind}>
-            {aliceCAD ? (
+            {modelPlate ? (
+              <ModelPlate
+                model={modelPlate}
+                color={plate.color}
+                metal={!!plate.metal}
+                clear={!!plate.clear}
+              />
+            ) : aliceCAD ? (
               <AlicePlate color={plate.color} metal={!!plate.metal} clear={!!plate.clear} />
             ) : (
               <mesh geometry={plateGeo} receiveShadow castShadow>
@@ -333,7 +373,15 @@ export function Board() {
         step === 'plate' && (
           // plate chờ đặt: lơ lửng phía trên PCB
           <group onPointerDown={onBoard}>
-            {aliceCAD ? (
+            {modelPlate ? (
+              <ModelPlate
+                model={modelPlate}
+                color={plate.color}
+                metal={!!plate.metal}
+                clear={!!plate.clear}
+                ghost
+              />
+            ) : aliceCAD ? (
               <AlicePlate color={plate.color} metal={!!plate.metal} clear={!!plate.clear} ghost />
             ) : (
               <mesh geometry={plateGeo} position-y={1}>

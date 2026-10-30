@@ -5,8 +5,8 @@ import { cn, fmt } from '@/lib/format'
 import { useGame } from '@/store'
 
 /**
- * Đơn đang giao: kiện Shopii đã đặt chưa nhận (khuôn danh sách bảng xếp hạng). Tới cửa thì dòng viền vàng,
- * nhận ở cửa phòng (bấm thùng hàng); kiện đặt hôm nay huỷ được (hoàn tiền)
+ * Đơn đang giao: kiện Shopii (và kiện người bán Hội Phím Cơ gửi) đã đặt chưa nhận (khuôn danh sách bảng xếp hạng).
+ * Tới cửa thì dòng viền vàng, nhận ở kệ cửa (bấm thùng hàng); kiện Shopii chưa tới cửa huỷ được (hoàn tiền)
  */
 export function ParcelList() {
   const day = useGame((s) => s.day)
@@ -49,7 +49,8 @@ export function ParcelList() {
                     {p.label}
                   </div>
                   <div className="text-xs font-bold text-muted">
-                    {SHIP_SPEEDS[p.speed].name} ·{' '}
+                    {p.from === 'market' ? `Hội Phím Cơ · ${p.seller}` : SHIP_SPEEDS[p.speed].name}{' '}
+                    ·{' '}
                     {here ? (
                       <span className="text-yellow">Đã tới cửa — ra cửa nhận</span>
                     ) : (
@@ -57,13 +58,13 @@ export function ParcelList() {
                     )}
                   </div>
                 </div>
-                {p.ordered === day && (
+                {!here && p.from !== 'market' && (
                   <Button size="sm" title="Huỷ đặt, hoàn đủ tiền" onClick={() => cancel(p.id)}>
                     Huỷ
                   </Button>
                 )}
                 <div className="font-head text-xl font-extrabold whitespace-nowrap text-green">
-                  {fmt(p.items.reduce((a, it) => a + it.price, 0))}
+                  {fmt(p.items.reduce((a, it) => a + it.price, 0) + (p.fee ?? 0))}
                 </div>
               </div>
             )

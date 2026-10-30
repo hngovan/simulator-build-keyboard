@@ -1,21 +1,17 @@
 import type { Parcel, ToolKind } from '@/types'
 
-/** tốc độ giao hàng Shopii: nhanh thì đắt, chậm thì rẻ */
+/** tốc độ giao hàng Shopii: phí cố định mỗi dòng giỏ hàng (mỗi món khác nhau; cùng món nhiều cái không cộng dồn), Tiết kiệm miễn phí */
 export type ShipSpeed = 'express' | 'fast' | 'saver'
 
 export const SHIP_SPEEDS: Record<
   ShipSpeed,
-  { name: string; days: number; mult: number; desc: string }
+  { name: string; days: number; fee: number; desc: string }
 > = {
-  express: { name: 'Hoả tốc', days: 0, mult: 1.25, desc: 'Tới cửa ngay trong ngày, +25% giá' },
-  fast: { name: 'Nhanh', days: 1, mult: 1, desc: 'Tới cửa ngày mai, giá gốc' },
-  saver: { name: 'Tiết kiệm', days: 2, mult: 0.9, desc: 'Tới cửa sau 2 ngày, −10% giá' },
+  express: { name: 'Hoả tốc', days: 0, fee: 50, desc: 'Tới cửa ngay trong ngày' },
+  fast: { name: 'Nhanh', days: 1, fee: 20, desc: 'Tới cửa ngày mai' },
+  saver: { name: 'Tiết kiệm', days: 2, fee: 0, desc: 'Tới cửa sau 2 ngày, miễn phí giao' },
 }
 export const SHIP_ORDER: ShipSpeed[] = ['express', 'fast', 'saver']
-
-/** giá đã tính phí giao (làm tròn k như giá sale) */
-export const shipPrice = (price: number, speed: ShipSpeed) =>
-  Math.max(1, Math.round(price * SHIP_SPEEDS[speed].mult))
 
 /** ngày hàng tới cửa nếu đặt hôm nay */
 export const arriveDay = (day: number, speed: ShipSpeed) => day + SHIP_SPEEDS[speed].days

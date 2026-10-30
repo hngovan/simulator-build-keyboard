@@ -1,16 +1,16 @@
-// Skill check (vặn vít vào / hàn chân switch): bấm 1 lần cho kim chạy qua lại trên thanh, bấm lần nữa (hoặc Space) để dừng.
-// Thanh tính 0..1 từ trái sang phải = lực / nhiệt tăng dần: đỏ trái = chưa tới (vít lỏng / thiếc chưa ăn), xanh = đạt,
-// vàng (trong xanh) = hoàn hảo, đỏ phải = quá tay (trượt ren / cháy chân)
+// Skill check (vặn vít vào / hàn chân switch): nhấn giữ chuột cho thanh lực / nhiệt chạy lên rồi tụt xuống, nhả chuột để chấm.
+// Thanh tính 0..1 từ trái sang phải = lực / nhiệt tăng dần: chưa tới xanh = thiếu (vít lỏng / thiếc chưa ăn), xanh = đạt,
+// đỏ cuối thanh = quá tay (trượt ren / cháy chân)
 
 export interface SkillCheck {
-  /** mốc thời gian bắt đầu chạy kim (ms, performance.now) */
+  /** mốc thời gian bắt đầu giữ chuột (ms, performance.now) */
   at: number
-  /** số lượt chạy hết thanh mỗi giây */
+  /** số lần chạy hết thanh mỗi giây */
   speed: number
   /** vùng xanh [lo, hi) */
   lo: number
   hi: number
-  /** vùng vàng hoàn hảo [plo, phi) nằm trong vùng xanh */
+  /** vùng hoàn hảo [plo, phi) (đã bỏ: plo = phi, giữ field cho save / build.perfect cũ) */
   plo: number
   phi: number
 }
@@ -23,19 +23,17 @@ export interface SkillSpec {
   speed: number
 }
 
-/** vùng vàng = phần này của vùng xanh */
-const PERFECT = 0.3
+/** đỏ cuối thanh (quá tay) cố định, vùng xanh nằm sát ngay trước */
+const RED = 0.16
 
-/** tạo 1 lần thử: vùng xanh ngẫu nhiên, luôn chừa đỏ 2 bên (trái ≥ 0.2, phải ≥ 0.12), vùng vàng ngẫu nhiên trong xanh */
-export function makeCheck({ width, speed }: SkillSpec, rng = Math.random): SkillCheck {
-  const w = Math.min(0.6, Math.max(0.06, width))
-  const lo = 0.2 + (0.88 - w - 0.2) * rng()
-  const pw = w * PERFECT
-  const plo = lo + (w - pw) * rng()
-  return { at: performance.now(), speed, lo, hi: lo + w, plo, phi: plo + pw }
+/** 1 lần thử: 3 khoảng cố định (tối = chưa tới, xanh = đạt, đỏ = quá tay), không random; không còn vùng hoàn hảo */
+export function makeCheck({ width, speed }: SkillSpec): SkillCheck {
+  const hi = 1 - RED
+  const lo = hi - Math.min(0.5, Math.max(0.06, width))
+  return { at: performance.now(), speed, lo, hi, plo: hi, phi: hi }
 }
 
-/** vị trí kim 0..1 lúc `now`: chạy qua lại liên tục */
+/** mức lực 0..1 lúc `now`: giữ chuột thì chạy lên hết thanh rồi tụt xuống lại, lặp tới khi nhả */
 export function needleAt(c: SkillCheck, now = performance.now()) {
   const x = ((Math.max(0, now - c.at) / 1000) * c.speed) % 2
   return x < 1 ? x : 2 - x

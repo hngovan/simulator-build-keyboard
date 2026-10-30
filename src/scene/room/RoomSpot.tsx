@@ -9,13 +9,15 @@ import { useGame } from '@/store'
 
 /**
  * Vật bấm được trong phòng: rê chuột viền xanh + HUD hiện "Nhấn [chuột] {label}", bấm (không phải kéo nhìn) thì `onAct`.
- * Phải đứng gần (`REACH_M` theo mặt sàn) mới rê sáng / bấm được. outline = false: con tự vẽ viền (màn hình máy tính có viền riêng)
+ * Phải đứng gần (`REACH_M` theo mặt sàn) mới rê sáng / bấm được. outline = false: con tự vẽ viền (màn hình máy tính có viền riêng);
+ * `outlineScale`: viền dày hơn cho vật mỏng (tờ lịch)
  */
 export function RoomSpot({
   label,
   onAct,
   active = true,
   outline = true,
+  outlineScale = 1,
   children,
   ...props
 }: {
@@ -23,6 +25,7 @@ export function RoomSpot({
   onAct: () => void
   active?: boolean
   outline?: boolean
+  outlineScale?: number
   children: ReactNode
 } & Omit<JSX.IntrinsicElements['group'], 'children'>) {
   const ref = useRef<THREE.Group>(null)
@@ -35,7 +38,7 @@ export function RoomSpot({
     if (ok !== near) setNear(ok)
     return active && ok
   }
-  useHoverOutline(ref, hover && outline)
+  useHoverOutline(ref, hover && outline, outlineScale)
   // vật biến mất lúc đang rê (vừa đặt / cầm thùng): bỏ chữ gợi ý của nó
   useEffect(
     () => () => {

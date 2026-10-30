@@ -42,6 +42,9 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 - `bun run convert:screwdriver-lite`: tua vít tay Poly Haven → `public/models/room/screwdriver-lite.glb` (bỏ texture, màu đỉnh, 90KB).
 - `bun run gen:plate-blossom`: plate gasket Blossom từ `assets/keyboards/blossom/plate/plate.dxf` → `src/data/generated/plateBlossom.ts`
   (căn lỗ switch theo layout Alice, dò tai → `BLOSSOM_GASKETS`; Board `AlicePlate` dựng từ đây).
+- `bun run gen:plate-duality`: plate riêng Duality Horns (TKL F13 multi-layout): căn lỗ switch từ DWG người dùng đưa
+  (`assets/keyboards/duality-horns/plate/duality-tkl.dwg`, đọc bằng `@mlightcad/libredwg-web`) theo layout `tklf13`, hình lấy lưới
+  `PLATE_STANDARD` trong STEP lắp ráp → `public/models/keyboards/duality-horns/plate.glb` (Board vẽ khi `CaseDef.plateModel`).
 - `bun run gen:plates-universal`: plate universal 60 / 75 / TKL / full bằng lõi ai03 Plate Generator (kbplate.ai03.com,
   AGPL — clone ngoài repo, đặt `YAKB_DIR`): layout game gộp mọi variant → KLE + DXF trong `assets/plates/universal/`
   → `src/data/generated/plateUniversal.ts` (Board.tsx dùng, trừ 60 chuẩn giữ plate CAD typ60).
@@ -95,7 +98,8 @@ vào `window.__r3f` để debug trong console.
   - Thêm field cần lưu: cập nhật `Profile`/`Session`, `snapshot()` và `SAVED_KEYS`.
 - `src/data/` — dữ liệu & logic thuần:
   - `parts.ts` (lớn nhất): case/pcb/plate/stab/switch/keycap/tool, `buildSound`, `soundMatch`.
-  - `layouts.ts`: layout 40/60/HHKB/TKL/full + variant → `getLayout` trả về tọa độ phím (đơn vị u).
+  - `layouts.ts`: layout 40/60/HHKB/TKL/TKL F13/full + variant → `getLayout` trả về tọa độ phím (đơn vị u). Layout `strict`
+    (TKL F13 `tklf13`): case CAD phải ghi đích danh trong `CaseDef.layouts` (`caseFits`), case dựng bằng code tự khớp.
   - `steps.ts`: `STEP_INFO`, `buildContext()` sinh danh sách bước theo case/stab/pcb/mount
     (có cache), vị trí vít, hằng số cao độ `Y`, `stepProgress`. Bước tuỳ chọn: `OPTIONAL_STEPS`.
   - `mods.ts` (mod stab, lube), `orders.ts` (sinh đơn ngẫu nhiên), `supplies.ts` (vật tư tiêu hao).
@@ -110,11 +114,12 @@ vào `window.__r3f` để debug trong console.
     App "Kho" (`apps/inventory/InventoryApp`): chỉ đồ đang có (linh kiện đơn đang làm, dụng cụ, vật tư),
     lưới ô kiểu túi đồ game (kéo thả vào ô bất kỳ) + ảnh model 3D như Shopii + số lần còn dùng (`OwnedItems`).
     App "Chi tiết đơn" (`apps/inventory/OrderApp`): yêu cầu khách + đối chiếu linh kiện (✓ `StepDot`), mount, âm thanh.
-    `EmptyBenchHud`: bàn chưa vào build — trống / thùng đơn còn thiếu đồ (bấm "Mở thùng" = `buildOrder`) / thùng đã đóng gói. `title/`: màn hình tiêu đề.
+    `EmptyBenchHud`: bàn chưa vào build — trống / thùng đơn còn thiếu đồ (khung liệt kê, không nút) / mọi thùng có dòng `ControlsHint`
+    (chuột phải nhả không kéo = `pickBench` cầm thùng, phím B = `buildOrder` / `unpackBox`, `useBoxKeys`). `title/`: màn hình tiêu đề.
 - Phòng đi lại (kiểu PC Building Simulator): `screen = 'bench'` + `walk` (metaSlice, không lưu; `standUp('pc' | 'bench')`).
   `scene/room/`: `roomLayout.ts` (toạ độ phòng / bàn / hành lang / vùng đi `WALK_AREAS` / khối cản `BLOCKS`), `WalkControls`
   (chỉ WASD đi, không mũi tên, không chạy, không bấm sàn đi tới; kéo nhìn, cuộn chuột giữa zoom FOV, bay camera `useRoom.fly`), `RoomSpot` (vật bấm được + chữ gợi ý HUD), `PcDesk` (bàn máy tính sát
-  trái bàn build, CPU dưới gầm, lót chuột 90 × 40), `RoomWindow` (rèm lá), `WallCalendar`, `DoorParcels` (kệ cuối hành lang: thùng đơn + kiện Shopii + ô giao hàng),
+  trái bàn build, CPU dưới gầm, lót chuột 90 × 40), `RoomWindow` (rèm lá), `WallCalendar`, `DoorParcels` (kệ cuối hành lang nhận hàng: thùng đơn + kiện Shopii / chợ), `ShipRack` (kệ giao hàng 2 tầng cạnh chậu cây),
   `StorageShelf` (kệ cất đơn tường phải), `HeldBox` (thùng đang cầm),
   `Stool`, `HallProps` (cửa 6 ô, kệ sắt), tranh `CanvasPainting` / `ModelPainting` (+ `*Art.ts` vẽ canvas), `sitAtBench`;
   HUD `features/room/RoomHud` (hướng dẫn 1 dòng chữ to giữa đáy có hình chuột / phím: `components/game/ControlsHint`), popup lịch `CalendarDialog` (bấm lịch, nơi duy nhất kết thúc ngày).
@@ -129,34 +134,39 @@ vào `window.__r3f` để debug trong console.
 - Mỗi ngày có `offers` (5–7 đơn, luôn có ít nhất 1 TKL + 1 60%, `randomOffers`). Nhận đơn (`acceptOrder(id)`) đặt `dueDay = day + days`.
   Chưa có đơn đang làm thì đơn thành `order` (đơn đang làm); có rồi thì vào `jobs` (mỗi job cất riêng
   inventory / build / history...). `switchJob(id)` cất đơn đang làm vào `jobs` và nạp đơn kia.
-- Thùng hàng vật lý (`store/carrySlice.ts`, `data/boxes.ts`; Session `boxes` / `benchBox` / `held`): nhận đơn thì thùng đơn tới ô nhận đơn
-  kệ cuối hành lang (`boxes[id] = door`, 3 ô / hàng, quá thì xếp sàn); đi lại bấm thùng = `pickBox` (cầm 1 thùng), bấm bàn build = `placeBench`
-  (chuyển sang đơn đó `switchJob(id, true)`, đủ đồ thì `buildOrder` vào build, thiếu thì thùng nằm chờ) rồi ngồi xuống. Không còn bảng chọn đơn:
+- Thùng hàng vật lý (`store/carrySlice.ts`, `data/boxes.ts`; Session `boxes` / `benchBox` / `held`): nhận đơn thì thùng đơn tới ô nhận hàng
+  kệ cuối hành lang (`boxes[id] = door`, kệ 4 tầng × 3 ô `DOOR_RACK_SLOTS` 12, chung với kiện Shopii / chợ, quá thì đổ đống sàn `pileFloor`; đơn full khách không gửi đồ thì thùng trống để sẵn ở kệ cất đơn); đi lại bấm thùng = `pickBox` (cầm 1 thùng), bấm bàn build = `placeBench`
+  (chuyển sang đơn đó `switchJob(id, true)`, thùng nằm trên bàn, phím B = `buildOrder` vào build) rồi ngồi xuống. Không còn bảng chọn đơn:
   đổi đơn = nút "Cầm thùng đơn lên" (`pickBench`, giữ tiến độ) → cất ô mờ kệ cất đơn (`placeShelf`) → lấy thùng khác. Bàn chỉ hiện build khi
   thùng đơn đang làm nằm trên bàn (`onBench`; đơn dev luôn tính); `startBuild` / `switchJob` chặn khi thùng chưa / còn trên bàn. Ô mờ (`GhostSlot`)
   chỉ hiện khi đang cầm thùng hợp chỗ đó (khối xanh nhạt viền mảnh). Thùng của đơn mất (huỷ, sang ngày) tự dọn (subscribe trong `store/index.ts`).
   Đi lại chỉ tương tác trong tầm với `REACH_M` (`inReach`). Cầm đơn dở lên = hoạt cảnh cho lại vào thùng (`requestStash`). Thùng đã đóng gói chưa gửi
   mở lại được (`unpackBox`, dữ liệu đơn trong `PackedOrder.session`; đồ thừa vào kho chung lúc gửi). Gửi xong thù lao chờ thu ở Mezzenger
   (`paid: false`, banner `PayBanner`, `collectPay`, qua ngày tự thu).
-- Shopii không vào kho ngay: chọn tốc độ giao (`data/shipping.ts` `SHIP_SPEEDS`: Hoả tốc trong ngày ×1.25 / Nhanh 1 ngày / Tiết kiệm 2 ngày ×0.9),
-  trả tiền lúc đặt (`orderParcel`) → kiện `Profile.parcels` tới cửa theo ngày, ra cửa nhận (`pickupParcel`; đơn lúc đặt không còn đang làm thì vào kho chung).
-  Hội Phím Cơ (`buyPost` → `buy` / `buySupply` / `buyTool`) vẫn nhận ngay. Shopii mục "Đơn đang giao" (`ParcelList`), kiện đặt hôm nay huỷ được (`cancelParcel`).
+- Thùng trên kệ / sàn xếp lộn xộn (`pileTier` / `pileRack` trong DoorParcels.tsx: xoay, lệch, chồng, sàn có nghiêng ngả), kẹp trong lòng kệ `IN_X`.
+  Giao hàng ở kệ 2 tầng cạnh chậu cây hành lang (`ShipRack`, `SHIP_RACK` trong roomLayout); kệ cất đơn / giao hàng 2 ô / tầng cố định (`neatPose`, không chồng). Nhãn thùng đơn ghi tên khách bỏ danh xưng (`shortName`).
+- Shopii không vào kho ngay: thanh toán giỏ chọn tốc độ giao (`data/shipping.ts` `SHIP_SPEEDS`, phí mỗi dòng giỏ (món khác nhau, cùng món nhiều cái 1 lần), tổng ghi `Parcel.fee`: Hoả tốc trong ngày 50k / Nhanh 1 ngày 20k / Tiết kiệm 2 ngày miễn phí),
+  trả tiền lúc đặt (`orderCart`) → kiện `Profile.parcels` tới cửa theo ngày, ra cửa nhận (`pickupParcel`; đơn lúc đặt không còn đang làm thì vào kho chung, `ParcelItem.job` theo từng món).
+  Mọi món Shopii đều qua giỏ hàng (không mua lẻ; `Profile.cart`, dòng giỏ = `unit` × `qty` (`data/cart.ts` `cartLine` / `cartItems`), `addCart` cùng sản phẩm + option thì cộng số lượng, `setCartQty`, `swapCart` đổi loại trong giỏ, `orderCart(speed)` = 1 kiện nhiều món, `CartList`).
+  Kiện cùng nguồn + cùng tên tới cửa gộp 1 thùng trên kệ (bấm nhận cả chồng); kiện Shopii có logo cam, kiện chợ băng keo nâu không logo.
+  Hội Phím Cơ (`buyPost`): người bán gửi kiện (`Parcel.from = 'market'`, `seller`) tới kệ cửa trong ngày, không huỷ được; lỗi / chết switch báo lúc mở kiện (`ParcelItem.note`),
+  hàng lỗi không dùng được vào thẳng kho chung khi nhận (`receiveParcelItem`); seller bùng vẫn mất tiền lúc chốt. Shopii mục "Đơn đang giao" (`ParcelList`), kiện Shopii chưa tới cửa huỷ được (`cancelParcel`, hoàn cả phí giao).
 - Mua/được cung cấp linh kiện → chọn mount → `startBuild` kiểm tra kho rồi tạo `ctx = buildContext(...)`
   và `build = newBuild()`. `ctx` là dữ liệu dẫn xuất, không lưu — dựng lại từ order + inventory + mount.
 - Các action trong `buildSlice` cập nhật `build` qua `patchBuild` (không tự chuyển bước; người chơi bấm
   `nextStep`; riêng `dropInCase` case 1 mảnh thả xong, `placeFoot` dán xong feet cuối, `turnScrew` bắt đủ vít bước vặn vào (chờ `SPIN_MS`) thì tự sang bước kế) → bước `test` → `deliver()` gọi `scoreDelivery`, trừ uy tín theo số ngày trễ hạn.
 - Hàn (PCB solder): cần mỏ hàn (`tools.solder` ≥ 1) + thiếc (`SOLDER_IDS` trong supplies, chọn ở `solderPick`).
-  Hàn + vặn vít vào = skill check (`data/skillCheck.ts`, `scene/common/skill.ts`, thanh `components/game/SkillBar`): bấm cho kim chạy qua lại,
-  bấm lần nữa / Space dừng; đỏ trái = thiếu (hụt / vít vào 1 phần), xanh đạt, vàng hoàn hảo (`build.perfect`, thưởng ≤ 5 điểm khi giao),
-  đỏ phải = quá (cháy / trượt ren). Hàn cháy thì `tipDirty`, phải lau bùi nhùi
+  Hàn + vặn vít vào = skill check (`data/skillCheck.ts`, `scene/common/skill.ts`, thanh `components/game/SkillBar`): nhấn giữ chuột cho thanh lực / nhiệt chạy lên rồi tụt xuống (3 khoảng cố định tối / xanh / đỏ cuối),
+  nhả chuột dừng (camera khoá lúc giữ, `useCamLock`); chưa tới xanh = thiếu (hụt / vít vào 1 phần), xanh đạt (bỏ vùng hoàn hảo + điểm thưởng),
+  nhả ở đỏ = quá (cháy / trượt ren). Hàn cháy thì `tipDirty`, phải lau bùi nhùi
   (`tipCleaner`, `cleanTip`). Dụng cụ có độ bền (`ToolDef.life`, đếm ở `wear`, hết thì về "chưa có"): bút hàn 300, trạm 1000, bùi nhùi 1000.
   Đồ hàn trên bàn: `SolderKit` (model ở `public/models/tools/solder/`, `bun run convert:solder-tools`).
-  Độ khó hàn (`solderSkill`): bút hàn vùng xanh 20% thanh / kim 0,9 lượt/s, trạm 28% / 0,75, thiếc đểu (`slow`) hẹp vùng xanh
+  Độ khó hàn (`solderSkill`): bút hàn vùng xanh 20% thanh / 0,5 lượt/s, trạm 26% / 0,42, thiếc đểu (`slow`) hẹp vùng xanh
   và `burnChance` ẩn 15%. Hút thiếc cháy: bấm 1 lần là bút hút tự chạy. Bút / trạm đã mua đổi qua lại được (`solderOwned`).
   Thiếc đểu có `burnChance` (cháy dù nhả đúng vùng xanh). Bàn mod stab bày đúng số stab của layout (`stabUnits`).
   Đầu vít đang lắp (`screwBit`) lưu trong Profile. Sai đầu vít không chặn: trượt ren, `STRIP_TRIES` 3 lần / vít mới tuôn ren (`build.slips` → `build.stripped`, hoàn tác không gỡ).
-  Bước vặn vào là skill check canh lực (`tightenScrew(id, result)`, `torqueSpec` theo `ToolDef.torque` {width, speed}: tay 24% / 0,7,
-  điện 15% / 1,2), đỏ phải = trượt ren (3 lần thì tuôn); vít ăn vào case PC / mica / acrylic (`CASE_SCREW_STEPS`, `brittleCase`) `CRACK_CHANCE` nứt case (`build.cracked`).
+  Bước vặn vào là skill check canh lực (`tightenScrew(id, result)`, `torqueSpec` theo `ToolDef.torque` {width, speed}:
+  điện 24% / 0,55, tay 20% / 0,45), đỏ = trượt ren (3 lần thì tuôn); vít ăn vào case PC / mica / acrylic (`CASE_SCREW_STEPS`, `brittleCase`) `CRACK_CHANCE` nứt case (`build.cracked`).
   Vít stab tuôn ren = stab hỏng (vòng đỏ, không tự sang bước): có stab dư cùng cỡ thì bấm vít đỏ thay (`replaceStab`, vặn lại cả stab).
   Giao: `DeliveryResult.refund` + `repLoss` (case nứt / vít case-top-tray tuôn ren bị phát hiện: 80% giá case `CASE_REFUND`, −2 uy tín
   `CASE_DAMAGE_REP`; stab tuôn ren: đền nguyên giá bộ stab). Khách không để ý tuôn ren 20% (`STRIP_UNNOTICED`), hỏng ≤ 1/3 số lỗ
@@ -188,7 +198,7 @@ vào `window.__r3f` để debug trong console.
   Đơn kit: khách gửi từng món ngẫu nhiên (`Kit.case? / pcb? / plate? / stab?`, ít nhất 1 món); chỉ có `mount` khi gửi case,
   món không gửi thì đơn có thể ghi `pcbType` / `caseColor`.
 - Nhiều đơn mỗi ngày: bước cuối `pack` (thùng carton sau bàn phím `PackBox`, `packStore` `requestPack`; nút cam cũng vậy, chưa đủ thì hỏi lại) → `deliver()` chấm điểm, đẩy vào `packed` (Session), thùng đã đóng gói nằm trên bàn (`benchBox`);
-  cầm thùng ra ô giao hàng (2 tầng trên kệ cửa) = `placeShip` → `shipOrder` (cộng tiền / uy tín ngay, `PackedOrder.shipped`; Mezzenger không còn nút gửi),
+  cầm thùng ra kệ giao hàng cạnh chậu cây = `placeShip` → `shipOrder` (cộng tiền / uy tín ngay, `PackedOrder.shipped`; Mezzenger không còn nút gửi),
   "Kết thúc ngày" (`nextDay()`) gửi nốt đơn chưa gửi.
   Kết thúc ngày = bấm lịch treo tường trong phòng (`CalendarDialog`) → popup `EndDayDialog` (tổng kết so `dayStart` tiền / uy tín đầu ngày, lưu Session).
   Chat khách Mezzenger: tin ngắn `chatIntro` + bảng `OrderSpec` (không liệt kê từng yêu cầu thành tin).
@@ -218,12 +228,17 @@ vào `window.__r3f` để debug trong console.
   (HHKB, WKL) có khối chặn liền case (`blockerGaps`).
 - Gờ trong lòng case (case dựng bằng code, `Ledge` / `TopBosses` trong Case.tsx): O-ring / OG có gờ đỡ vòng, gasket 2 mảnh có gờ đỡ + gờ đè,
   top mount plate có tai + vấu case trên. Case CAD 2 mảnh (Blossom, Catto HHKB; gasket mount): `CaseModel part`, `CaseDef.screws` / `gaskets` (mm) theo model.
+- Duality Horns (case CAD 2 mảnh, chỉ `tklf13`, mount top / O-ring): 8 vít ghép bắt chéo (đầu vít quay vào trong, chéo xuống ra ngoài) (`CaseDef.angledScrews` [đầu vít mm + hướng],
+  `ScrewPoint.y / dir`, `ScrewSet` xoay vít theo hướng), vít top mount theo 6 tai plate thật (`CaseDef.topScrews`), `ownBlocks` (nắp có sẵn khối chặn), ốc cố định trên tạ / badge (`CaseDef.weightScrews` / `badgeScrews`, `FixedScrews` trong `CaseModel`, thân rút ngắn không xuyên case), badge chữ thập = node `badge` đi cùng nắp;
+  số liệu in từ `convert-user-cases.mjs` (`screwHeads` / `marks`; trục + đáy hốc đầu vít dò bằng `scripts/probe-screw-axis.mjs`).
 - Case 1 mảnh dựng bằng code chơi được tray / O-ring / OG; case 2 mảnh có lỗ vít ở giữa thành case: nhôm / PC / acrylic bắt từ đáy
   (`caseBores` khoét CSG: hốc chìm + lỗ xuyên thành case dưới, lỗ ren case trên; tháo hết vít thì tách 2 mảnh `useCaseSplit`), mica xuyên mọi tấm
   (`caseScrewHoles`). Vỏ khoét bằng `three-bvh-csg` (`caseShellGeometry` notches / bores). Top mount: plate phủ kín lòng case, không bỏ qua bước plate. Mica: tấm trên mặt plate khoét theo `keyRegions` (khung chặn liền tấm, không `Blockers` rời).
 - Shopii gộp case cùng dòng (`CASE_LINES`): 1 sản phẩm, chọn chất liệu (`ProductOption.group`) rồi màu; id case giữ riêng.
-- Shopii: cột trái ghim (tìm kiếm chung mọi mục, "Đang sale", mục hàng, bộ lọc trong mục). Sale linh kiện cứ 3 ngày 1 lần (`data/sale.ts`:
-  `isSaleDay` ngày chia hết 3, ~60% linh kiện giảm 5–30% cố định theo ngày + id, `withSale` → `ProductOption.was` + `Product.sale`), budget khách không đổi.
+- Shopii: hàng trên cùng = banner sự kiện sale (`SaleBanner`, chỉ ngày sale) + nút giỏ hàng góc phải (số món + tổng tiền); cột trái ghim
+  (mục hàng, Đơn đang giao); trên lưới sản phẩm đứng yên ô tìm trong mục đang chọn + bộ lọc trong mục. Sale cứ 3 ngày 1 lần
+  (`data/sale.ts`: `isSaleDay` ngày chia hết 3, `saleCats` 3 mục linh kiện ngẫu nhiên, `saleMap` mỗi mục 1–5 món giảm 5–30% cố định theo ngày + id,
+  `withSale(p, pct)` → `ProductOption.was` + `Product.sale`); mục / thẻ đang sale gắn ruy băng đỏ `SaleRibbon`; mỗi món sale giảm 1 lần (dòng giỏ `:sale` tối đa 1, mua rồi / đang trong giỏ thì thẻ về giá thường); budget khách không đổi.
 - Ảnh đơn / case Shopii / cửa sổ xem 3D dùng chung `buildKeyboardModel` (`features/apps/messenger/orderThumb.ts`).
 - Hội Phím Cơ: bài pass viết bằng thuật ngữ chợ phím che tình trạng thật (`data/market.ts`); inbox người bán (xin hình, check var,
   xin bớt, lowball, tự nhập giá `'offer'` popup, đi ăn xin `'beg'` → 10% được free, 70% người bán chặn, 20% ban chợ 3 ngày `marketBanUntil`...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.

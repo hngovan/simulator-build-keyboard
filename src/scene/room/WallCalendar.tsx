@@ -135,7 +135,12 @@ export function WallCalendar(props: JSX.IntrinsicElements['group']) {
   const { w, h } = CALENDAR
   return (
     <group {...props}>
-      <RoomSpot label="Xem lịch / kết thúc ngày" onAct={() => useRoom.setState({ calendar: true })}>
+      {/* bìa mỏng: viền dày ×2 cho bằng viền bàn */}
+      <RoomSpot
+        label="Xem lịch / kết thúc ngày"
+        outlineScale={2}
+        onAct={() => useRoom.setState({ calendar: true })}
+      >
         {/* bìa cứng sau tờ lịch */}
         <mesh position-z={0.004} castShadow>
           <boxGeometry args={[w + 0.02, h + 0.02, 0.008]} />

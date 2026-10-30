@@ -2,15 +2,28 @@ import { useEffect, useRef } from 'react'
 import { needleAt, type SkillCheck } from '@/data/skillCheck'
 
 /**
- * Thanh skill check: nền đỏ (trái = chưa tới, phải = quá tay), vùng xanh đạt, vùng vàng hoàn hảo, kim trắng chạy qua lại.
- * Kim vẽ bằng requestAnimationFrame (không render lại React mỗi khung)
+ * Thanh lực / nhiệt (giữ chuột): 3 khoảng cố định nền tối (chưa tới) / xanh (nhả là đạt) / đỏ cuối (quá tay);
+ * phần đang giữ vàng → xanh → đỏ theo khoảng, chạy lên rồi tụt xuống. Vẽ bằng requestAnimationFrame (không render lại React mỗi khung)
  */
-export function SkillBar({ check, width = 200 }: { check: SkillCheck; width?: number }) {
-  const needle = useRef<HTMLDivElement>(null)
+export function SkillBar({ check, width = 180 }: { check: SkillCheck; width?: number }) {
+  const fill = useRef<HTMLDivElement>(null)
+  const zone = useRef<HTMLDivElement>(null)
   useEffect(() => {
     let raf = 0
     const tick = () => {
-      if (needle.current) needle.current.style.left = `${needleAt(check) * 100}%`
+      const t = needleAt(check)
+      const at = t < check.lo ? 'turn' : t < check.hi ? 'ok' : 'over'
+      if (fill.current) {
+        fill.current.style.width = `${t * 100}%`
+        fill.current.style.background =
+          at === 'turn'
+            ? 'var(--color-yellow)'
+            : at === 'ok'
+              ? 'var(--color-green)'
+              : 'var(--color-red)'
+      }
+      // vùng xanh mờ khi chưa tới, tới nơi thì đậm
+      if (zone.current) zone.current.style.opacity = at === 'turn' ? '0.2' : '0.75'
       raf = requestAnimationFrame(tick)
     }
     tick()
@@ -19,22 +32,17 @@ export function SkillBar({ check, width = 200 }: { check: SkillCheck; width?: nu
   const pct = (x: number) => `${x * 100}%`
   return (
     <div className="pointer-events-none -translate-y-12 select-none" style={{ width }}>
-      <div className="relative h-4 border-2 border-black/60 bg-red/70">
+      <div className="relative h-4 overflow-hidden border-2 border-black/60 bg-[#1b1f28]">
         <div
+          ref={zone}
           className="absolute inset-y-0 bg-green"
           style={{ left: pct(check.lo), width: pct(check.hi - check.lo) }}
         />
-        <div
-          className="absolute inset-y-0 bg-yellow"
-          style={{ left: pct(check.plo), width: pct(check.phi - check.plo) }}
-        />
-        <div
-          ref={needle}
-          className="absolute -inset-y-1.5 w-1 -translate-x-1/2 bg-white shadow-[0_0_0_1px_#000a]"
-        />
+        <div className="absolute inset-y-0 right-0 bg-red/45" style={{ left: pct(check.hi) }} />
+        <div ref={fill} className="relative h-full bg-yellow" style={{ width: 0 }} />
       </div>
       <div className="mt-1 text-center text-[10px] font-bold whitespace-nowrap text-white drop-shadow-[0_1px_1px_#000]">
-        Bấm lần nữa / Space để dừng kim
+        Giữ chuột, nhả trong vùng xanh
       </div>
     </div>
   )

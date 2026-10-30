@@ -14,7 +14,7 @@ Chép từ `D:\IN 3D` (bộ sưu tập của người dùng), mỗi bàn phím 1
 | 4HEAD nhôm / acrylic | `4HEAD TOP ALU / TOP ACRYLIC / BOT ACRYLIC / TA BRASS` | góc gõ 6.2° |
 | RF Bruh (TKL) | `TOP / BOT RFBRUH` (thư mục REALFORCER1,2) | dáng Realforce |
 | Catto RF v4 (TKL) | `CattoRF v4.step` (2 chi tiết) | cao độ plate ước lượng |
-| Duality Horns (TKL) | `duality_horns_v1_asm v11.step`: SOLID, BOTTOM + tạ WEIGHT, BADGE, ACCENT_V2 | bỏ 4 tấm plate + đinh vít |
+| Duality Horns (TKL) | `duality_horns_v1_asm v11.step`: SOLID (nắp), BOTTOM (node đáy riêng) + tạ WEIGHT, BADGE, ACCENT_V2 | case 2 mảnh, 4 vít góc; bỏ 4 tấm plate + đệm. Plate F13 TKL: `plate/duality-tkl.dwg` |
 | 65TA (65%) | `65TA in3D TOP / BOT / TA` | góc gõ 6.9° |
 
 Mảnh tạ (tên file có TẠ / TA, hoặc WEIGHT / BADGE / ACCENT) xuất thành node `weight` riêng, game tô kim loại khác màu case.

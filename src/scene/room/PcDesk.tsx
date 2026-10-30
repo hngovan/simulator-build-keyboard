@@ -83,7 +83,8 @@ function DeskGear({
         return
       }
       m.castShadow = m.receiveShadow = true
-      box.expandByObject(m)
+      // khung bao chính xác theo đỉnh: khung có sẵn (min / max accessor) là của lưới trước khi simplify → bàn phím lơ lửng
+      box.expandByObject(m, true)
     })
     const size = box.getSize(new THREE.Vector3())
     const k = length / Math.max(size.x, size.z)

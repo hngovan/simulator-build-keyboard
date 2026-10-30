@@ -20,17 +20,18 @@ import {
   type InventoryCheck,
 } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
+import { cartItems, cartMax } from '@/data/cart'
 import {
   SHIP_SPEEDS,
   arriveDay,
   arrivedParcels,
   parcelId,
-  shipPrice,
   toolOnWay,
   type ShipSpeed,
 } from '@/data/shipping'
 import type {
   Paid,
+  CartLine,
   CaseItem,
   DeliveryResult,
   GroupPost,
@@ -49,7 +50,7 @@ import type {
 } from '@/types'
 import type { GameState } from '.'
 import { onBench } from './carrySlice'
-import { freeSlot } from '@/data/boxes'
+import { SHELF_SLOTS, freeSlot } from '@/data/boxes'
 import { newBuild } from './buildSlice'
 import {
   DECLINE_FREE,
@@ -140,13 +141,22 @@ export interface ShopSlice {
   buySupply: (id: string, n: number, price: number, scamRate?: number) => BuyResult
   buyTool: (kind: ToolKind, level: number, price?: number, scamRate?: number) => BuyResult
   /**
-   * Đặt hàng Shopii: kiểm tra + trừ tiền ngay (giá gốc `item.price` × hệ số tốc độ giao), hàng thành kiện
-   * (`parcels`) tới cửa theo ngày; ra cửa nhận (`pickupParcel`) mới vào kho
+   * Giỏ hàng Shopii (mọi món Shopii đều qua giỏ): thêm món (cùng sản phẩm + loại cộng dồn được thì gộp 1 dòng), bỏ món,
+   * đặt cả giỏ = trừ tiền theo tốc độ giao, 1 kiện tới cửa theo ngày; ra cửa nhận (`pickupParcel`) mới vào kho
    */
-  orderParcel: (item: ParcelItem, speed: ShipSpeed) => BuyResult
+  cart: CartLine[]
+  addCart: (line: CartLine) => void
+  /** đổi loại (option) của 1 dòng giỏ, giữ số lượng */
+  swapCart: (key: string, line: CartLine) => void
+  /** đổi số lượng 1 dòng giỏ (ô nhập / + −) */
+  setCartQty: (key: string, qty: number) => void
+  removeCart: (key: string) => void
+  /** xoá hết giỏ hàng */
+  clearCart: () => void
+  orderCart: (speed: ShipSpeed) => BuyResult
   /** nhận kiện đã tới cửa: cấp các món trong kiện rồi xoá kiện */
   pickupParcel: (id: string) => void
-  /** huỷ kiện đặt trong hôm nay (chưa nhận): hoàn đủ tiền */
+  /** huỷ kiện Shopii chưa tới cửa: hoàn đủ tiền (cả phí giao) */
   cancelParcel: (id: string) => void
   useSupply: (id: string, n: number) => boolean
   setLubePick: (kind: keyof LubePick, id: string) => void
@@ -363,6 +373,72 @@ function toolBlock(s: GameState, kind: ToolKind, level: number): string | null {
   return null
 }
 
+/** tên kiện: 1 món = tên món, nhiều món = món đầu + số món còn lại */
+const parcelLabel = (labels: string[]) =>
+  labels.length > 1 ? `${labels[0]} +${labels.length - 1} món` : labels[0]
+
+/** tên 1 món trong kiện */
+const parcelItemName = (it: ParcelItem) =>
+  it.kind === 'part'
+    ? itemName(it.cat, it.item)
+    : it.kind === 'supply'
+      ? SUPPLIES[it.id].name
+      : TOOLS[it.tool][it.level].name
+
+/**
+ * Đặt cả giỏ Shopii thành 1 kiện: kiểm tra (dụng cụ đã có / đang giao), trừ tiền theo tốc độ giao, linh kiện
+ * vào được đơn đang làm thì gắn đơn (lúc nhận vào thẳng đơn), không thì nhận xong cất kho chung
+ */
+function placeOrder(
+  get: () => GameState,
+  set: (p: Partial<GameState>) => void,
+  items: ParcelItem[],
+  speed: ShipSpeed,
+  lines: number,
+): BuyResult {
+  const s = get()
+  const fail = (msg: string): BuyResult => (s.toast(msg, 'bad'), 'fail')
+  const priced: ParcelItem[] = []
+  for (const it of items) {
+    if (it.kind === 'tool') {
+      const err = toolBlock(s, it.tool, it.level)
+      if (err) return fail(err)
+    }
+    const job = it.kind === 'part' && !partBlock(s, it.cat) ? s.order!.id : undefined
+    priced.push({ ...it, ...(job ? { job } : {}) })
+  }
+  // phí giao theo từng dòng (từng món khác nhau) trong giỏ; cùng món mua nhiều cái không cộng thêm
+  const fee = SHIP_SPEEDS[speed].fee * lines
+  const cost = priced.reduce((a, it) => a + it.price, 0) + fee
+  if (s.money < cost) return fail('Không đủ tiền!')
+  const arrive = arriveDay(s.day, speed)
+  const label = parcelLabel(priced.map(parcelItemName))
+  const parcel: Parcel = {
+    id: parcelId(),
+    ordered: s.day,
+    arrive,
+    speed,
+    label,
+    items: priced,
+    fee,
+  }
+  const jobs = priced.flatMap((it) => (it.job && !s.worked.includes(it.job) ? [it.job] : []))
+  set({
+    money: s.money - cost,
+    parcels: [...s.parcels, parcel],
+    // mua đồ cho đơn = hôm nay đã làm đơn đó (luật qua ngày)
+    ...(jobs.length ? { worked: [...s.worked, ...new Set(jobs)] } : {}),
+  })
+  const how = `giao ${SHIP_SPEEDS[speed].name}`
+  s.toast(
+    arrive <= s.day
+      ? `🚚 Đã đặt ${label} — ${how}, hàng tới cửa ngay`
+      : `🚚 Đã đặt ${label} — ${how}, tới ngày ${arrive}`,
+    'good',
+  )
+  return 'ok'
+}
+
 /** Nhận 1 món trong kiện hàng (tiền đã trả lúc đặt) */
 function receiveParcelItem(
   get: () => GameState,
@@ -371,7 +447,17 @@ function receiveParcelItem(
   job: string | undefined,
 ) {
   const s = get()
+  if (it.note) s.toast(it.note, 'bad')
   if (it.kind === 'part') {
+    // keycap / switch / stab lỗi (hàng chợ): không lắp cho khách được → cất thẳng vào kho chung để bán lại
+    const flaw = (it.item as { flaw?: string }).flaw
+    if (flaw && unusable(it.cat, it.item)) {
+      set({ spare: addPart(s.spare, it.cat, it.item) })
+      return s.notify(
+        '😬 Dính hàng lỗi',
+        `${itemName(it.cat, it.item)} bị ${flaw}: không lắp cho khách được, đã cất vào kho chung (viền đỏ). Chỉ đăng bán lại ở Hội Phím Cơ được thôi`,
+      )
+    }
     // đơn lúc đặt vẫn đang làm (và còn nhận món này được): nhận như mua cũ
     if (s.order && s.order.id === job && !partBlock(s, it.cat))
       return receivePart(get, set, it.cat, it.item, it.price)
@@ -398,7 +484,7 @@ function receiveParcelItem(
       : s.tools[it.tool] >= it.level
   if (have) {
     set({ money: s.money + it.price })
-    return s.toast(`Đã có ${tool.name} rồi, Shopii hoàn ${it.price}k`, 'good')
+    return s.toast(`Đã có ${tool.name} rồi, hoàn ${it.price}k`, 'good')
   }
   if (it.tool === 'solder')
     set({
@@ -477,9 +563,16 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     }
     // chưa làm đơn nào thì làm luôn đơn này, không thì xếp vào danh sách chờ
     // (vừa giao xong thì cũng xếp chờ: phải bấm kết thúc ngày để sang ngày mới)
-    // thùng đơn của khách tới kệ ngoài cửa (hết ô nhận đơn thì xếp dưới sàn trước kệ): ra lấy mang về bàn build
+    // khách gửi đồ (đơn kit): thùng đơn tới kệ ngoài cửa (hết ô nhận đơn thì xếp dưới sàn trước kệ), ra lấy mang về bàn build.
+    // Khách không gửi gì (đơn full): không có thùng gửi tới, shop lấy thùng trống để sẵn ở kệ cất đơn (đầy thì ra kệ cửa)
+    const boxes = get().boxes
+    const shelf = order.kit ? -1 : freeSlot(boxes, 'shelf', SHELF_SLOTS)
     set({
-      boxes: { ...get().boxes, [order.id]: { at: 'door', slot: freeSlot(get().boxes, 'door') } },
+      boxes: {
+        ...boxes,
+        [order.id]:
+          shelf >= 0 ? { at: 'shelf', slot: shelf } : { at: 'door', slot: freeSlot(boxes, 'door') },
+      },
     })
     if (!s.order) {
       const job = freshSession(order, s.day)
@@ -489,7 +582,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       set({ offers, jobs: [...s.jobs, { order, session: freshSession(order, s.day) }] })
     }
     s.toast(
-      `Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}. Thùng đơn tới kệ ngoài cửa, ra lấy mang về bàn build`,
+      `Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}. ${shelf >= 0 ? 'Khách không gửi đồ: thùng trống để sẵn ở kệ cất đơn' : 'Thùng đơn tới kệ ngoài cửa'}, mang về bàn build`,
       'good',
     )
   },
@@ -656,7 +749,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       )
     }
     if (get().order || get().jobs.length) s.toast('🛒 Hội Phím Cơ có đợt hàng pass mới hôm nay')
-    if (isSaleDay(day)) s.toast('🔥 Hôm nay Shopii sale linh kiện, giảm 5–30%!', 'good')
+    if (isSaleDay(day)) s.toast('🔥 Hôm nay Shopii sale 3 mục linh kiện, giảm 5–30%!', 'good')
     // kiện Shopii tới cửa hôm nay (không tự nhận: ra cửa bấm thùng hàng)
     const arrived = arrivedParcels(get().parcels, day).filter((p) => p.arrive === day)
     if (arrived.length)
@@ -810,44 +903,72 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       const sw = item as SwitchItem
       item = { ...sw, count: Math.max(1, Math.round(sw.count * (0.8 + Math.random() * 0.1))) }
     }
-    // keycap / switch / stab lỗi: không lắp cho khách được → cất thẳng vào kho chung để bán lại
-    if (flaw && unusable(cat as PartCategory, item)) {
-      if (s.money < cost) return (s.toast('Không đủ tiền!', 'bad'), 'fail')
-      set({ money: s.money - cost })
-      const scammed = Math.random() < scam
-      if (scammed) {
-        s.toast(`😱 Seller bùng hàng! Mất trắng ${cost}k`, 'bad')
-        s.logNotify('😱 Seller bùng hàng', `Mất trắng ${cost}k`)
-      } else {
-        set({ spare: addPart(get().spare, cat as PartCategory, item) })
-        s.notify(
-          '😬 Dính hàng lỗi',
-          `${itemName(cat as PartCategory, item)} bị ${flaw}: không lắp cho khách được, đã cất vào kho chung (viền đỏ). Chỉ đăng bán lại ở Hội Phím Cơ được thôi`,
-        )
-      }
+    const fail = (msg: string): BuyResult => (s.toast(msg, 'bad'), 'fail')
+    const opt = post.opt.item
+    const toolErr =
+      (cat === 'tool' || cat === 'cert') &&
+      toolBlock(s, (opt as ToolItem).kind, (opt as ToolItem).level)
+    if (toolErr) return fail(toolErr)
+    if (s.money < cost) return fail('Không đủ tiền!')
+    set({ money: s.money - cost })
+    const sold = () =>
       set((s) => ({ posts: s.posts.map((p) => (p.id === post.id ? { ...p, sold: true } : p)) }))
-      return scammed ? 'scam' : 'ok'
+    sold()
+    if (Math.random() < scam) {
+      s.toast(`😱 Seller bùng hàng! Mất trắng ${cost}k`, 'bad')
+      s.logNotify('😱 Seller bùng hàng', `Mất trắng ${cost}k`)
+      return 'scam'
     }
-    const res =
-      cat === 'supply' || cat === 'spell'
-        ? s.buySupply((post.opt.item as SupplyItem).id, (post.opt.item as SupplyItem).n, cost, scam)
-        : cat === 'tool' || cat === 'cert'
-          ? s.buyTool(
-              (post.opt.item as ToolItem).kind,
-              (post.opt.item as ToolItem).level,
-              cost,
-              scam,
-            )
-          : s.buy(cat, item, cost, scam)
-    if (res === 'ok' && post.cond === 'dead' && cat === 'switch')
-      s.toast(
-        `😵 Nhận hàng mới thấy chết ${(post.opt.item as SwitchItem).count - (item as SwitchItem).count} con switch`,
-        'bad',
-      )
-    else if (res === 'ok' && flaw) s.toast(`😬 Nhận hàng mới thấy lỗi: ${flaw}`, 'bad')
-    if (res !== 'fail')
-      set((s) => ({ posts: s.posts.map((p) => (p.id === post.id ? { ...p, sold: true } : p)) }))
-    return res
+    // người bán gửi hàng: kiện (không tag Shopii) tới kệ cửa trong ngày, ra nhận mới vào kho; lỗi chỉ thấy lúc mở kiện
+    let pi: ParcelItem
+    if (cat === 'supply' || cat === 'spell')
+      pi = { kind: 'supply', id: (opt as SupplyItem).id, n: (opt as SupplyItem).n, price: cost }
+    else if (cat === 'tool' || cat === 'cert')
+      pi = {
+        kind: 'tool',
+        tool: (opt as ToolItem).kind,
+        level: (opt as ToolItem).level,
+        price: cost,
+      }
+    else {
+      const pc = cat as PartCategory
+      const dead =
+        post.cond === 'dead' && cat === 'switch'
+          ? (opt as SwitchItem).count - (item as SwitchItem).count
+          : 0
+      const note = dead
+        ? `😵 Mở hàng mới thấy chết ${dead} con switch`
+        : flaw && !unusable(pc, item)
+          ? `😬 Mở hàng mới thấy lỗi: ${flaw}`
+          : undefined
+      const job = !partBlock(s, pc) && !(flaw && unusable(pc, item)) ? s.order!.id : undefined
+      pi = {
+        kind: 'part',
+        cat: pc,
+        item,
+        price: cost,
+        ...(job ? { job } : {}),
+        ...(note ? { note } : {}),
+      }
+    }
+    const label = parcelItemName(pi)
+    set({
+      parcels: [
+        ...get().parcels,
+        {
+          id: parcelId(),
+          ordered: s.day,
+          arrive: s.day,
+          speed: 'express',
+          label,
+          items: [pi],
+          from: 'market',
+          seller: post.seller,
+        },
+      ],
+    })
+    s.toast(`🚚 ${post.seller} đã gửi ${label}, hàng tới kệ cửa trong ngày`, 'good')
+    return 'ok'
   },
   buySupply: (id, n, price, scamRate = 0) => {
     const s = get()
@@ -893,47 +1014,64 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     s.toast(`🔧 Đã mua ${tool.name}`, 'good')
     return 'ok'
   },
-  orderParcel: (item, speed) => {
+  cart: [],
+  addCart: (line) => {
     const s = get()
-    const fail = (msg: string): BuyResult => (s.toast(msg, 'bad'), 'fail')
-    let label: string
-    let job: string | undefined
-    if (item.kind === 'part') {
-      label = itemName(item.cat, item.item)
-      // món vào được đơn đang làm thì gắn đơn (lúc nhận vào thẳng đơn), không thì nhận xong cất kho chung
-      job = partBlock(s, item.cat) ? undefined : s.order!.id
-    } else if (item.kind === 'supply') label = SUPPLIES[item.id].name
-    else {
-      const err = toolBlock(s, item.tool, item.level)
-      if (err) return fail(err)
-      label = TOOLS[item.tool][item.level].name
+    const it = line.unit
+    if (it.kind === 'tool') {
+      const err =
+        toolBlock(s, it.tool, it.level) ??
+        (s.cart.some((l) => l.unit.kind === 'tool' && l.unit.tool === it.tool)
+          ? 'Giỏ hàng đã có dụng cụ này rồi'
+          : null)
+      if (err) return s.toast(err, 'bad')
     }
-    const cost = shipPrice(item.price, speed)
-    if (s.money < cost) return fail('Không đủ tiền!')
-    const arrive = arriveDay(s.day, speed)
-    const parcel: Parcel = {
-      id: parcelId(),
-      ordered: s.day,
-      arrive,
-      speed,
-      label,
-      items: [{ ...item, price: cost }],
-      ...(job ? { job } : {}),
-    }
+    if (line.sale && s.cart.some((l) => l.product === line.product && l.sale))
+      return s.toast('Món này đã có giá sale trong giỏ, mua thêm là giá thường', 'bad')
+    // cùng sản phẩm + cùng option: cộng số lượng vào dòng cũ
+    const old = s.cart.find((l) => l.key === line.key)
     set({
-      money: s.money - cost,
-      parcels: [...s.parcels, parcel],
-      // mua đồ cho đơn = hôm nay đã làm đơn đó (luật qua ngày)
-      ...(job && !s.worked.includes(job) ? { worked: [...s.worked, job] } : {}),
+      cart: old
+        ? s.cart.map((l) => (l === old ? { ...l, qty: Math.min(cartMax(l), l.qty + line.qty) } : l))
+        : [...s.cart, line],
     })
-    const how = `giao ${SHIP_SPEEDS[speed].name}`
-    s.toast(
-      arrive <= s.day
-        ? `🚚 Đã đặt ${label} — ${how}, hàng tới cửa ngay`
-        : `🚚 Đã đặt ${label} — ${how}, tới ngày ${arrive}`,
-      'good',
-    )
-    return 'ok'
+    s.toast(`🛒 Đã thêm ${line.label} vào giỏ hàng`, 'good')
+  },
+  swapCart: (key, line) => {
+    const s = get()
+    const old = s.cart.find((l) => l.key === key)
+    if (!old || key === line.key) return
+    // đổi sang option đã có dòng riêng: gộp số lượng vào dòng đó
+    const dup = s.cart.find((l) => l.key === line.key)
+    set({
+      cart: dup
+        ? s.cart
+            .filter((l) => l !== old)
+            .map((l) => (l === dup ? { ...l, qty: Math.min(cartMax(l), l.qty + old.qty) } : l))
+        : s.cart.map((l) => (l === old ? { ...line, qty: Math.min(cartMax(line), old.qty) } : l)),
+    })
+  },
+  setCartQty: (key, qty) =>
+    set({
+      cart: get().cart.map((l) =>
+        l.key === key ? { ...l, qty: Math.max(1, Math.min(cartMax(l), Math.floor(qty) || 1)) } : l,
+      ),
+    }),
+  removeCart: (key) => set({ cart: get().cart.filter((l) => l.key !== key) }),
+  clearCart: () => set({ cart: [] }),
+  orderCart: (speed) => {
+    const s = get()
+    if (!s.cart.length) return 'fail'
+    const res = placeOrder(get, set, s.cart.flatMap(cartItems), speed, s.cart.length)
+    if (res !== 'ok') return res
+    // món sale: mỗi món chỉ mua 1 lần trong ngày sale
+    const sale = s.cart.filter((l) => l.sale).map((l) => l.product)
+    const cur = s.saleBought?.day === s.day ? s.saleBought.ids : []
+    set({
+      cart: [],
+      ...(sale.length ? { saleBought: { day: s.day, ids: [...cur, ...sale] } } : {}),
+    })
+    return res
   },
   pickupParcel: (id) => {
     const s = get()
@@ -941,14 +1079,15 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (!p) return
     if (p.arrive > s.day) return s.toast(`Kiện ${p.label} chưa tới, hẹn ngày ${p.arrive}`, 'bad')
     set({ parcels: s.parcels.filter((x) => x !== p) })
-    for (const it of p.items) receiveParcelItem(get, set, it, p.job)
+    for (const it of p.items) receiveParcelItem(get, set, it, it.job ?? p.job)
   },
   cancelParcel: (id) => {
     const s = get()
     const p = s.parcels.find((x) => x.id === id)
     if (!p) return
-    if (p.ordered !== s.day) return s.toast('Chỉ huỷ được kiện đặt trong hôm nay', 'bad')
-    const refund = p.items.reduce((a, it) => a + it.price, 0)
+    if (p.from === 'market') return s.toast('Người bán gửi hàng rồi, không huỷ được', 'bad')
+    if (p.arrive <= s.day) return s.toast('Hàng đã tới cửa rồi, không huỷ được nữa', 'bad')
+    const refund = p.items.reduce((a, it) => a + it.price, 0) + (p.fee ?? 0)
     set({ parcels: s.parcels.filter((x) => x !== p), money: s.money + refund })
     s.toast(`Đã huỷ đặt ${p.label}, hoàn ${refund}k`, 'good')
   },
@@ -1042,7 +1181,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (s.result) return s.toast('Đơn này đã giao rồi', 'bad')
     // phải mang thùng đơn đặt lên bàn build trước (đơn build thử dev thì thôi)
     if (s.order && !onBench(s))
-      return s.toast('Mang thùng đơn từ kệ ngoài cửa đặt lên bàn build trước đã', 'bad')
+      return s.toast('Mang thùng đơn (kệ ngoài cửa / kệ cất đơn) đặt lên bàn build trước đã', 'bad')
     if (s.build) return set({ screen: 'bench' })
     if (!s.order || !s.mount || !checkInventory(s.inventory, s.order).every((c) => c.ok))
       return s.toast('Chưa đủ linh kiện!', 'bad')

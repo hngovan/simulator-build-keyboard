@@ -1,7 +1,7 @@
 {
   "name": "simulator-build-keyboard",
   "private": true,
-  "version": "0.1.19",
+  "version": "0.1.20",
   "type": "module",
   "packageManager": "bun@1.4.3",
   "scripts": {
@@ -25,6 +25,7 @@
     "convert:plates": "node scripts/convert-plates.mjs",
     "gen:plates-universal": "bun scripts/gen-universal-plates.ts",
     "gen:plate-blossom": "bun scripts/gen-blossom-plate.ts",
+    "gen:plate-duality": "bun scripts/gen-duality-plate.ts",
     "convert:screwdriver-lite": "node scripts/convert-screwdriver-lite.mjs",
     "fetch:emotes": "node scripts/fetch-emotes.mjs",
     "fetch:avatars": "node scripts/fetch-avatars.mjs",
@@ -48,6 +49,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@gltf-transform/core": "^4.1.1",
+    "@mlightcad/libredwg-web": "0.8.2",
     "@tailwindcss/vite": "^4.1.11",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

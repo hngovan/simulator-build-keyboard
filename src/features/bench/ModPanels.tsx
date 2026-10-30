@@ -18,7 +18,7 @@ import {
   type LubeUse,
 } from '@/data/supplies'
 import { stabModRules } from '@/data/mods'
-import { shipPrice, toolOnWay } from '@/data/shipping'
+import { toolOnWay } from '@/data/shipping'
 import { stabSets } from '@/data/steps'
 import type { LubePick } from '@/store/shopSlice'
 import type { ToolKind } from '@/types'
@@ -341,8 +341,7 @@ export function SolderPanel() {
   const pick = useGame((s) => s.solderPick)
   const setSolderPick = useGame((s) => s.setSolderPick)
   const buyTool = useGame((s) => s.buyTool)
-  const orderParcel = useGame((s) => s.orderParcel)
-  const toast = useGame((s) => s.toast)
+  const addCart = useGame((s) => s.addCart)
   const parcels = useGame((s) => s.parcels)
   const solderOwned = useGame((s) => s.solderOwned)
   const lastPurchase = useGame((s) => s.lastSolderPurchase)
@@ -386,7 +385,7 @@ export function SolderPanel() {
       )}
       <HudSection id="solder.tools" title="Dụng cụ">
         {tool(iron, 'solder')}
-        {/* đổi qua lại bút hàn / trạm hàn đã mua; chưa có thì bấm đặt Hoả tốc (ra cửa nhận) */}
+        {/* đổi qua lại bút hàn / trạm hàn đã mua; chưa có thì bấm thêm vào giỏ Shopii (thanh toán ở máy tính) */}
         <div className="flex flex-wrap gap-1">
           {TOOLS.solder.map((item, level) => {
             if (item.none) return null
@@ -394,9 +393,8 @@ export function SolderPanel() {
             const owned = using || solderOwned[level] !== undefined
             const left =
               (item.life ?? 0) - (using ? (wearAll.solder ?? 0) : (solderOwned[level] ?? 0))
-            // chưa có: đặt Hoả tốc (tới cửa trong ngày), ra cửa nhận rồi mới dùng
+            // chưa có: thêm vào giỏ Shopii, thanh toán ở máy tính rồi ra cửa nhận mới dùng
             const coming = !owned && toolOnWay(parcels, 'solder', level)
-            const express = shipPrice(item.price, 'express')
             return (
               <Button
                 key={level}
@@ -408,15 +406,17 @@ export function SolderPanel() {
                     ? `Còn ${left}/${item.life} lần`
                     : coming
                       ? 'Đang giao, ra cửa nhận hàng'
-                      : `Chưa có · đặt Hoả tốc ${fmt(express)}, tới cửa ngay`
+                      : `Chưa có · thêm vào giỏ Shopii ${fmt(item.price)}`
                 }
                 onClick={() => {
                   if (owned) return void buyTool('solder', level)
-                  const res = orderParcel(
-                    { kind: 'tool', tool: 'solder', level, price: item.price },
-                    'express',
-                  )
-                  if (res === 'ok') toast('📦 Hàng hoả tốc đã tới cửa phòng, ra cửa nhận nhé')
+                  addCart({
+                    key: `tool-solder:${level}`,
+                    product: `tool-solder-${level}`,
+                    label: item.name,
+                    unit: { kind: 'tool', tool: 'solder', level, price: item.price },
+                    qty: 1,
+                  })
                 }}
               >
                 {using ? '✓ ' : ''}
@@ -436,8 +436,8 @@ export function SolderPanel() {
         {burnt > 0 && <Muted>Bấm mối cháy để hút thiếc, lau mũi hàn rồi hàn lại.</Muted>}
         {!iron.none && (
           <Muted>
-            Mỗi phím: bấm cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (rộng{' '}
-            {Math.round(skill.width * 100)}% thanh, vàng = hoàn hảo); đỏ phải là cháy chân
+            Mỗi phím: giữ chuột cho thanh nhiệt chạy, nhả trong vùng xanh (rộng{' '}
+            {Math.round(skill.width * 100)}% thanh); nhả ở đỏ là cháy chân
           </Muted>
         )}
       </HudSection>

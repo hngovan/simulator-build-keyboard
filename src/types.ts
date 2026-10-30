@@ -1,7 +1,18 @@
 // Kiểu dữ liệu dùng chung cho toàn game
 
 export type LayoutId =
-  '40' | '60' | 'hhkb' | 'truehhkb' | '65' | '75' | 'frl' | 'tkl' | 'full' | 'planck' | 'alice'
+  | '40'
+  | '60'
+  | 'hhkb'
+  | 'truehhkb'
+  | '65'
+  | '75'
+  | 'frl'
+  | 'tkl'
+  | 'tklf13'
+  | 'full'
+  | 'planck'
+  | 'alice'
 export type FormFactor = '40' | '60' | '65' | '75' | 'frl' | 'tkl' | 'full' | 'planck' | 'alice'
 export type VariantKey = 'backspace' | 'bottom' | 'rshift' | 'space'
 export type Variant = Partial<Record<VariantKey, string>>
@@ -153,10 +164,27 @@ export interface Spare {
 
 // ---------- kiện hàng Shopii (đặt rồi chờ giao tới cửa) ----------
 /** 1 món trong kiện; `price` = tiền đã trả (đã tính phí giao) */
-export type ParcelItem =
+export type ParcelItem = (
   | { kind: 'part'; cat: PartCategory; item: PartItem; price: number }
   | { kind: 'supply'; id: string; n: number; price: number }
   | { kind: 'tool'; tool: ToolKind; level: number; price: number }
+) & {
+  /** id đơn đang làm lúc đặt (linh kiện): nhận lúc đơn đó còn đang làm thì vào thẳng đơn */
+  job?: string
+  /** báo lúc mở kiện (hàng chợ lỗi, chết switch...) */
+  note?: string
+}
+/** 1 dòng giỏ hàng Shopii: `unit` = 1 đơn vị (giá gốc chưa tính phí giao) × `qty` (chọn tốc độ giao lúc đặt cả giỏ) */
+export interface CartLine {
+  /** sản phẩm + option: thêm lại cùng option thì cộng số lượng */
+  key: string
+  /** id sản phẩm Shopii (đánh dấu món sale đã mua) */
+  product: string
+  sale?: boolean
+  label: string
+  unit: ParcelItem
+  qty: number
+}
 export interface Parcel {
   id: string
   /** ngày đặt */
@@ -167,8 +195,14 @@ export interface Parcel {
   /** tên ngắn in trên nhãn thùng */
   label: string
   items: ParcelItem[]
-  /** id đơn đang làm lúc đặt (linh kiện) */
+  /** id đơn đang làm lúc đặt (bản lưu cũ; mới ghi theo từng món `ParcelItem.job`) */
   job?: string
+  /** phí giao đã trả cho cả kiện (huỷ thì hoàn); kiện bản cũ tính phí vào giá từng món */
+  fee?: number
+  /** kiện người bán ở chợ (Hội Phím Cơ) gửi: không tag Shopii, không huỷ được; không có = Shopii */
+  from?: 'market'
+  /** tên người bán (kiện chợ) */
+  seller?: string
 }
 
 // ---------- shop ----------
@@ -402,6 +436,9 @@ export interface Point {
 }
 export interface ScrewPoint extends Point {
   id: string
+  /** vít nghiêng (case CAD bắt chéo, vd Duality Horns): độ cao đầu vít (u) + hướng vít đi vào (vector đơn vị, cảnh) */
+  y?: number
+  dir?: [number, number, number]
   /** vít stab: id phím của stab (tuôn ren = stab đó hỏng, thay stab mới) */
   key?: string
 }
@@ -440,6 +477,8 @@ export interface FootPocket {
   r: number
   /** độ sâu hốc tính từ mặt đáy (u) */
   depth: number
+  /** mặt đáy quanh hốc cao hơn đáy thấp nhất (u; case CAD đáy 2 tầng như Duality Horns), không có = 0 */
+  floor?: number
 }
 
 // ---------- định nghĩa linh kiện ----------
@@ -469,8 +508,29 @@ export interface CaseDef {
   seat?: { rise: number; tilt: number; dz?: number; dx?: number }
   /** model case CAD thật (public/models/keyboards/<model>.glb, `bun run convert:cases`), thay case dựng bằng code */
   model?: string
+  /**
+   * plate riêng của case (model `public/models/keyboards/<plateModel>.glb`, node "plate", mm, hệ board: mặt trên y = 0, đã căn lỗ switch
+   * theo layout; vd Duality Horns `bun run gen:plate-duality`): vẽ model này thay plate dựng theo phím, tô theo chất liệu plate
+   */
+  plateModel?: string
+  /** model CAD đã có sẵn khối chặn chỗ trống layout (vd Duality Horns): không dựng thêm khối chặn bằng code */
+  ownBlocks?: boolean
   /** case CAD 2 mảnh: tâm lỗ vít ghép ở đáy [x, z] (mm, hệ model) thay vị trí vít tính theo cỡ case */
   screws?: [number, number][]
+  /**
+   * case CAD 2 mảnh vít ghép bắt chéo (thay `screws`): [x, y, z, dx, dy, dz] = đầu vít trên vách ngoài nắp (mm, hệ model, y so với đáy)
+   * + hướng vít đi vào; dò bằng `screwRays` trong convert-user-cases.mjs
+   */
+  angledScrews?: [number, number, number, number, number, number][]
+  /**
+   * ốc nón cố định bắt tạ / badge vào đáy (trang trí, không tháo): [x, y, z, dx, dy, dz, đường kính đầu] mm hệ model —
+   * mặt đầu ốc + hướng ốc đi vào (`heads.weightScrews` trong convert-user-cases.mjs)
+   */
+  weightScrews?: [number, number, number, number, number, number, number][]
+  /** vít cố định bắt badge vào nắp (cùng định dạng `weightScrews`, đường kính đầu 0 = cỡ model), vẽ cùng nắp */
+  badgeScrews?: [number, number, number, number, number, number, number][]
+  /** top mount: tâm lỗ vít tai plate [x, z] (mm, hệ model) thay vị trí tính theo cỡ case (tai plate thật) */
+  topScrews?: [number, number][]
   /**
    * plate CAD có tai gasket: dải gasket dọc hết tai [x, z, dài, góc] (mm, hệ plate = tâm board; góc rad của trục dài so với trục x,
    * tai xiên như đoạn chữ V của Alice) thay các dải 20mm chia đều mép trước / sau

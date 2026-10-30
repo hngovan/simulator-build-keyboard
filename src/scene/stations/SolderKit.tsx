@@ -41,8 +41,9 @@ function useModel(url: string, only?: string) {
 
 /** Shared wound-wire reel model, also used by Shopii. */
 function Spool({ wire, mounted }: { wire: string; mounted: boolean }) {
-  const color = SUPPLIES[wire].color
-  const model = useMemo(() => createSolderSpool(color, mounted), [color, mounted])
+  const { color, solder } = SUPPLIES[wire]
+  const label = solder?.label
+  const model = useMemo(() => createSolderSpool(color, mounted, label), [color, mounted, label])
   useEffect(
     () => () => {
       const materials = new Set<THREE.Material>()

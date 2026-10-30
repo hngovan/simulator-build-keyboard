@@ -23,14 +23,14 @@ export const benchTopics = (step: StepId | undefined, hasOrder: boolean, mica = 
 
 const EMPTY = [
   'Ơ, bàn build còn trống trơn nè! Mình là Keeb-chan, trợ lý của thợ phím mới 💕',
-  'Muốn build thì phải có đơn đã. Bấm "Về máy tính" góc trái trên, mở Mezzenger xem khách nhắn.',
-  'Chọn đơn hợp sức rồi bấm "Nhận đơn". Thùng đơn của khách sẽ tới kệ ngoài cửa, ra lấy mang về đặt lên bàn này nha!',
+  'Muốn build thì phải có đơn đã. Bấm Esc đứng dậy, ra máy tính mở Mezzenger xem khách nhắn.',
+  'Chọn đơn hợp sức rồi bấm "Nhận đơn". Khách gửi đồ thì thùng tới kệ ngoài cửa, không gửi gì thì thùng trống để sẵn ở kệ cất đơn, mang về đặt lên bàn này nha!',
 ]
 
 const PICK = [
   'Có đơn rồi đó! Đứng dậy (WASD) ra kệ hàng cuối hành lang, bấm thùng đơn để cầm lên.',
-  'Mang về bấm bàn build để đặt xuống: đủ linh kiện là vào build luôn, thiếu thì mua thêm ở Shopii rồi bấm thùng trên bàn.',
-  'Đổi đơn thì bấm "Cầm thùng lên" cất vào kệ cất đơn trong phòng. Build xong đóng gói, cầm thùng ra ô giao hàng trên kệ cửa là gửi khách!',
+  'Mang về bấm bàn build để đặt xuống: đủ linh kiện là vào build luôn, thiếu thì mua thêm ở Shopii, đủ rồi nhấn B để build.',
+  'Đổi đơn thì nhấn chuột phải cầm thùng trên bàn lên (đang build thì nút bàn tay), cất vào kệ cất đơn trong phòng. Build xong đóng gói, cầm thùng ra kệ giao hàng cạnh chậu cây là gửi khách!',
 ]
 
 const INTRO = [
@@ -41,7 +41,7 @@ const INTRO = [
 
 /** bước vặn vít vào: skill check canh lực, quá tay là trượt ren / nứt case → đền khách */
 const TORQUE_LINE =
-  'Bấm vít cho kim lực chạy qua lại, bấm lần nữa (hoặc Space) dừng trong vùng xanh, trúng vàng là hoàn hảo. Dừng ở đỏ bên phải là trượt ren, 3 lần là tuôn, case PC / mica / acrylic còn có thể nứt, giao đi là phải đền khách đó 😱'
+  'Giữ chuột lên vít cho thanh lực chạy lên rồi tụt xuống, nhả trong vùng xanh là chặt. Nhả ở đỏ là trượt ren, 3 lần là tuôn, case PC / mica / acrylic còn có thể nứt, giao đi là phải đền khách đó 😱'
 
 /** case mica: nhiều tấm mica cắt laser chồng lên nhau, vít xuyên qua mọi lớp (không phải case 2 mảnh) */
 const MICA_LINES: Partial<Record<StepId, string[]>> = {
@@ -91,7 +91,7 @@ const STEP_LINES: Record<StepId, string[]> = {
   ],
   solder: [
     'Board đã lật rồi, giờ hàn switch vào PCB nhé 🔥',
-    'Bấm chân switch cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (vàng là hoàn hảo). Dừng ở đỏ bên phải là cháy chân đó!',
+    'Giữ chuột lên chân switch cho thanh nhiệt chạy lên rồi tụt xuống, nhả trong vùng xanh. Nhả ở đỏ là cháy chân đó!',
     'Hàn cháy thì mũi hàn bị đen: lau vào bùi nhùi rồi hút thiếc hàn lại chân cháy.',
   ],
   gasket: ['Gasket mount: dán các miếng đệm silicon quanh plate cho phím gõ êm và nhún nhẹ.'],
@@ -134,6 +134,6 @@ const STEP_LINES: Record<StepId, string[]> = {
   ],
   pack: [
     'Xong rồi! Bấm thùng carton cạnh bàn phím để cho phím vào thùng nha 📦',
-    'Đóng thùng xong thì cầm thùng lên, mang ra ô giao hàng trên kệ cuối hành lang là gửi khách, tiền về liền!',
+    'Đóng thùng xong thì cầm thùng lên, mang ra kệ giao hàng cạnh chậu cây là gửi khách, tiền về liền!',
   ],
 }

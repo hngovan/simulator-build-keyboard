@@ -146,12 +146,6 @@ export const CREDITS: CreditGroup[] = [
         url: 'https://sketchfab.com/3d-models/voxel-cutting-mat-85e51c02c3a747ee8394a9a6f163dec7',
       },
       {
-        what: 'Chest_ Box_ Wooden_26_MB (rương gỗ bước mở hộp)',
-        author: 'Mehdi Shahsavan',
-        license: 'CC BY 4.0',
-        url: 'https://sketchfab.com/3d-models/chest--box--wooden-26-mb-0a863f5790a44303b2d78d7d8b8b3646',
-      },
-      {
         what: 'Old Tool Box (hộp đồ nghề trên bàn)',
         author: 'Марк (Mark-kon)',
         license: 'CC BY 4.0',

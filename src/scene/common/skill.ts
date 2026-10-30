@@ -7,6 +7,7 @@ import {
   type SkillResult,
   type SkillSpec,
 } from '@/data/skillCheck'
+import { useCamLock } from './camLock'
 
 /** Skill check đang chạy (1 lúc chỉ 1): id vật đang thao tác (vít / phím hàn) + lần thử + hàm nhận kết quả */
 interface Active {
@@ -16,33 +17,29 @@ interface Active {
 }
 export const useSkill = create<{ active: Active | null }>(() => ({ active: null }))
 
-/** lúc vừa dừng kim (ms): cú bấm dừng kim không được tính là bấm vào vít / chân khác */
+/** lúc vừa dừng kim (ms): cú nhả chuột dừng kim không được tính là bấm vào vít / chân khác */
 let stoppedAt = -1e9
 
-const onKey = (e: KeyboardEvent) => {
-  if (e.code !== 'Space' || e.repeat) return
-  e.preventDefault()
-  e.stopPropagation()
-  stopSkill()
-}
-// bấm lần 2 ở đâu cũng dừng kim (pha capture: chạy trước handler của cảnh 3D)
-const onDown = (e: PointerEvent) => {
+// giữ chuột trái cho kim chạy, nhả ra (ở đâu cũng được, pha capture) thì dừng kim chấm điểm
+const onUp = (e: PointerEvent) => {
   if (e.button === 0) stopSkill()
 }
 const listen = (on: boolean) => {
   const f = on ? window.addEventListener : window.removeEventListener
-  f('keydown', onKey as EventListener, true)
-  f('pointerdown', onDown as EventListener, true)
+  f('pointerup', onUp as EventListener, true)
+  f('pointercancel', onUp as EventListener, true)
+  // đang giữ chuột: khoá camera, kéo chuột không xoay cảnh
+  useCamLock.setState({ locked: on })
 }
 
-/** bắt đầu chạy kim cho vật `id` */
+/** nhấn giữ chuột lên vật `id`: bắt đầu chạy kim (nhả chuột thì chấm) */
 export function startSkill(id: string, spec: SkillSpec, done: (r: SkillResult) => void) {
   if (skillBusy()) return
   useSkill.setState({ active: { id, check: makeCheck(spec), done } })
   listen(true)
 }
 
-/** dừng kim, chấm kết quả theo vị trí kim lúc bấm */
+/** dừng kim, chấm kết quả theo vị trí kim lúc nhả chuột */
 export function stopSkill() {
   const a = useSkill.getState().active
   if (!a) return

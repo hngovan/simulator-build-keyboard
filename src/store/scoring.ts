@@ -3,7 +3,6 @@ import {
   CASE_REFUND,
   CASE_SCREW_STEPS,
   STRIP_FEW_UNNOTICED,
-  SCREW_STEPS,
   STRIP_UNNOTICED,
   isBuildStep,
   isOptionalStep,
@@ -19,11 +18,7 @@ import type {
   Inventory,
   Order,
   ScoreCheck,
-  ScrewStep,
 } from '@/types'
-
-/** điểm thưởng tối đa khi mọi lần vặn vít vào / hàn đều trúng vùng vàng skill check */
-const PERFECT_BONUS = 5
 
 /** giao khi chưa test hết phím: tỉ lệ khách phát hiện 1 nút lỗi */
 export const UNTESTED_FAIL = 0.05
@@ -179,21 +174,6 @@ export function scoreDelivery({
       got: Math.max(0, 10 - (over / order.budget) * 40),
     },
   ]
-  // skill check trúng vùng vàng (vặn vít vào + hàn): điểm thưởng theo tỉ lệ thao tác hoàn hảo
-  const skillIds = [
-    ...ctx.steps
-      .filter((st): st is ScrewStep => SCREW_STEPS[st as ScrewStep] === 'tighten')
-      .flatMap((st) => ctx.screws[st].map((sc) => sc.id)),
-    ...(ctx.steps.includes('solder') ? ctx.keys.map((k) => k.id) : []),
-  ]
-  if (skillIds.length) {
-    const n = skillIds.filter((id) => build.perfect?.[id]).length
-    checks.push({
-      label: `Thao tác hoàn hảo (vùng vàng) ${n}/${skillIds.length}`,
-      pts: PERFECT_BONUS,
-      got: (PERFECT_BONUS * n) / skillIds.length,
-    })
-  }
   // nút lỗi khách báo lại: PCB hàn còn phím chưa hàn / hàn cháy thì chắc chắn lỗi đúng các nút đó;
   // không thì giao khi chưa test hết phím có UNTESTED_FAIL khách gặp 1 nút lỗi trong số phím chưa test
   const label = (k: { label: string; id: string; w: number }) =>

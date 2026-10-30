@@ -1,5 +1,5 @@
 // Chuyển bộ sưu tập case CAD của người dùng (assets/keyboards/<tên>, chép từ "D:\IN 3D") sang GLB cho game.
-// Dùng: bun run convert:user-cases
+// Dùng: bun run convert:user-cases [id...] (vd duality-horns/case: chỉ chuyển case đó; không tham số: mọi case)
 //
 // Các mảnh (nắp, đáy, tạ) của 1 case đã đặt sẵn ở toạ độ lắp ráp: Z hướng lên, mm, plate nằm phẳng.
 // Script ghép các mảnh, tìm mặt trước (mép đáy mỏng hơn), đo góc gõ từ độ dốc đáy rồi xoay cho đáy
@@ -65,15 +65,55 @@ const CASES = {
   'rf-bruh/case': { parts: [['rf-bruh/TOP RFBRUH.stl'], ['rf-bruh/BOT RFBRUH.stl']], plateZ: 0 },
   // CattoRF v4: tấm đáy mỏng + thân case; plate ước lượng dưới mép trên ~9mm
   'catto-rf/case': { parts: [['catto-rf/CattoRF v4.step']], plateZ: 24 },
-  // Duality Horns (TKL): lấy thân / đáy / tạ / badge / accent, bỏ 4 tấm plate và đinh vít
+  // Duality Horns (TKL, 2 mảnh): thân (SOLID) = nắp, BOTTOM = node đáy riêng (cùng 1 file nên đánh dấu `bottom`), tạ / badge /
+  // accent; bỏ 4 tấm plate và đệm. `marks`: 4 lỗ vít ghép ở 4 góc (dò trên cả SOLID lẫn BOTTOM, Ø2mm) → in toạ độ game cho `screws`
   'duality-horns/case': {
+    // 8 vít ghép bắt chéo, đầu vít quay vào trong (người dùng xác nhận): lỗ xuyên nắp r ~1,5mm nghiêng ~42–48° ra ngoài xuống trụ đáy.
+    // Đầu vít = đáy hốc đầu vít trên nắp (dò bằng scripts/probe-screw-axis.mjs), trục hướng lên [dx, dy, dz]
+    // 6 tai plate (top mount): tâm đệm trên / dưới tai trong STEP, khớp 6 khe tai plate thật (plate/duality-tkl.dwg)
+    marks: {
+      topScrews: [
+        [61.9, 2.5],
+        [204.8, 2.5],
+        [288.1, 2.5],
+        [51.9, -121.5],
+        [214.6, -121.5],
+        [293, -121.5],
+      ],
+    },
+    heads: {
+      angledScrews: [
+        ...[42.9, 123.8, 223.6, 309.6].map((x) => [x, 2.05, -0.37, 0, -0.672, 0.741]),
+        ...[24.3, 99.3, 233.9, 309.6].map((x) => [x, -120.97, -0.64, 0, 0.746, 0.665]),
+      ],
+      // ốc nón bắt tạ (4 lỗ Ø7,2 trên WEIGHT) + dải accent (2 lỗ Ø5,5): đầu ốc ngang mặt trên, trục đứng (dò lỗ côn trong STEP)
+      weightScrews: [
+        ...[
+          [46.1, -13.2],
+          [46.1, -42.5],
+          [301.5, -13.2],
+          [301.5, -42.5],
+        ].map(([x, y]) => [x, y, -10.43, 0, 0, 1]),
+        [95.5, -80.5, -10.33, 0, 0, 1],
+        [252.1, -80.5, -10.33, 0, 0, 1],
+      ],
+      // vít M2 bắt badge chữ thập từ trong nắp lên: đầu vít ở mặt dưới mặt bích badge (lỗ Ø2,67 z 2,03), ăn vào lỗ ren nắp
+      // (Ø2,06 z 3,7–4,6); ốc đi vào hướng lên → trục ghi [0, 0, −1]
+      badgeScrews: [
+        [340.14, -70.76, 2.03, 0, 0, -1],
+        [340.14, -88.01, 2.03, 0, 0, -1],
+      ],
+    },
     parts: [
-      ['duality-horns/duality_horns_v1_asm v11.step', 0, { names: ['SOLID', 'BOTTOM'] }],
+      ['duality-horns/duality_horns_v1_asm v11.step', 0, { names: ['SOLID'] }],
+      ['duality-horns/duality_horns_v1_asm v11.step', 0, { names: ['BOTTOM'], bottom: true }],
       [
         'duality-horns/duality_horns_v1_asm v11.step',
         0,
-        { names: ['WEIGHT', 'BADGE', 'ACCENT_V2'], weight: true },
+        { names: ['WEIGHT', 'ACCENT_V2'], weight: true },
       ],
+      // badge chữ thập cạnh cụm mũi tên: gắn vào lỗ chữ thập của nắp → node "badge" đi cùng nắp (vẽ cả lúc chỉ có nắp: top mount)
+      ['duality-horns/duality_horns_v1_asm v11.step', 0, { names: ['BADGE'], badge: true }],
     ],
     plateZ: 0,
   },
@@ -219,11 +259,14 @@ const isBottom = (file, opt = {}) =>
   opt.bottom ?? /(^|[\s/_])(BOT|BOTTOM|B_Case)([\s._]|$)/i.test(path.basename(file))
 
 fs.mkdirSync(OUT, { recursive: true })
+const only = process.argv.slice(2)
 for (const [id, def] of Object.entries(CASES)) {
+  if (only.length && !only.includes(id)) continue
   const pos = []
   const nor = []
   const idx = []
   const weightIdx = []
+  const badgeIdx = []
   const bottomIdx = []
   for (const [file, dz, opt] of def.parts) {
     const p = readPart(file, dz, opt)
@@ -231,7 +274,13 @@ for (const [id, def] of Object.entries(CASES)) {
     // mảng lớn: thêm từng phần tử (spread quá nhiều đối số sẽ tràn stack)
     for (const v of p.pos) pos.push(v)
     for (const v of p.nor) nor.push(v)
-    const into = isWeight(file, opt) ? weightIdx : isBottom(file, opt) ? bottomIdx : idx
+    const into = opt?.badge
+      ? badgeIdx
+      : isWeight(file, opt)
+        ? weightIdx
+        : isBottom(file, opt)
+          ? bottomIdx
+          : idx
     for (const i of p.idx) into.push(base + i)
   }
   const min = [Infinity, Infinity, Infinity]
@@ -296,6 +345,7 @@ for (const [id, def] of Object.entries(CASES)) {
     ['case', idx],
     ['bottom', bottomIdx],
     ['weight', weightIdx],
+    ['badge', badgeIdx],
   ]) {
     if (!list.length) continue
     const prim = doc
@@ -318,5 +368,29 @@ for (const [id, def] of Object.entries(CASES)) {
     bottomIdx.length ? 'tách đáy,' : '',
     `${(fs.statSync(out).size / 1024).toFixed(0)} KB`,
   )
+  // đầu ốc theo nhóm (vít nghiêng: đáy hốc đầu vít; ốc tạ: mặt trên lỗ côn; mm CAD) + trục hướng lên → [x, y, z] mm hệ model game
+  // (y so với đáy) + hướng ốc đi vào (ngược trục) → chép vào CaseDef cùng tên (angledScrews / weightScrews)
+  for (const [name, list] of Object.entries(def.heads ?? {})) {
+    const r1 = (n) => Math.round(n * 10) / 10
+    const r2 = (n) => Math.round(n * 100) / 100
+    const o = toGame(0, 0, 0)
+    const out2 = list.map(([x, y, z, dx, dy, dz]) => {
+      const g = toGame(x, y, z)
+      const gd = toGame(-dx, -dy, -dz).map((v, i) => v - o[i])
+      return [r1(g[0]), r1(g[1] - low), r1(g[2]), ...gd.map(r2)]
+    })
+    console.log(`  ${name}:`, JSON.stringify(out2))
+  }
+  // điểm đánh dấu theo nhóm (x, y mm trong CAD, vd lỗ vít / tai plate) → [x, z] mm hệ model game (chép vào CaseDef cùng tên)
+  for (const [name, list] of Object.entries(def.marks ?? {}))
+    console.log(
+      `  ${name}:`,
+      JSON.stringify(
+        list.map(([x, y]) => {
+          const g = toGame(x, y, 0)
+          return [Math.round(g[0] * 10) / 10, Math.round(g[2] * 10) / 10]
+        }),
+      ),
+    )
 }
 process.exit(0)

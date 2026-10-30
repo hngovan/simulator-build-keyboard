@@ -581,6 +581,8 @@ giá BIN nghĩa là giá chiến thắng, người đăng có thể thêm giá B
   Keeb-chan lời thoại bàn trống đổi (`bench:empty2`, `bench:carry`).
 - Đã thử (playwright): nhận 2 đơn → 2 thùng ô 0, 1 kệ cửa; cầm → thùng trước mặt; kệ cất đơn hiện 9 ô mờ (sau thêm mặt trên: 12 ô); đặt bàn → thiếu đồ, thùng + khung thiếu đồ;
   thùng đóng gói đặt ô giao → shipped, tiền +payout. Chưa chơi trọn 1 đơn thật tới đóng gói (cần mua đủ đồ).
+- Bỏ toast "Đơn ... còn thiếu: ..." khi đặt thùng thiếu đồ lên bàn (`placeBench`, 2026-10-30, người dùng: "đã hiển thị thông tin linh kiện còn thiếu rồi
+  => ko cần hiển thị msg"): khung thiếu đồ của `EmptyBenchHud` đã liệt kê.
 
 ## Bước "Đóng gói" cuối build (2026-10-29)
 
@@ -636,3 +638,67 @@ giá BIN nghĩa là giá chiến thắng, người đăng có thể thêm giá B
   chỉ viền bao (không tô kín).
 - (2026-10-29) Thùng trên bàn build vẽ đúng cỡ thật (`BOX_SCALE` 1, trước 0,6 — người dùng: nhỏ hơn thùng trên kệ là sai); bàn có thùng thì camera
   góc ngồi lùi ×1,5 (`benchPose(null, fit * 1.5)`) cho thấy trọn thùng. Kệ cất đơn thêm mặt trên (`SHELF_SLOTS` 12).
+- (2026-10-30) `HeldBox` thùng đang cầm: bỏ xoay ngang (`rotation-y` −0,35 → 0) cho thùng thẳng trước mặt, dời từ lệch phải
+  (`translateX` 0,16 m) sang lệch nhẹ trái (−0,05 m) — người dùng: thùng xéo qua phải không thuận mắt.
+- (2026-10-30) Cỡ thùng theo loại (người dùng: đơn khách hộp chữ nhật to có icon dễ vỡ, hàng chợ / Shopii nhỏ vì linh kiện lẻ):
+  `ORDER_BOX` = `PACKED_BOX` 0,28 × 0,14 × 0,36m (dẹt dài cỡ hộp bàn phím, vừa sâu kệ 0,38m); `CardBox` kind order / packed dán tem
+  "DỄ VỠ" (ly vỡ đỏ, canvas `fragileSticker`) mặt trước bên phải nhãn (nhãn dời trái) + trên nắp. Kiện Shopii nhỏ
+  (0,13 + n·0,025) × (0,07–0,13) × (0,12 + n·0,025)m, n = số món ≤ 4.
+- (2026-10-30) Tên khách ghi trên nhãn trắng thùng đơn / thùng đã đóng gói (`CardBox name`, `JobBox` lấy `boxCustomer`, chữ 3D `Text`;
+  thùng đóng gói ghi trên vạch đỏ).
+- (2026-10-30) Đơn khách không gửi đồ (`type: 'full'`, `kit: null`) không có thùng gửi tới kệ cửa (người dùng: không có đồ thì không cần
+  hộp gửi tới): `acceptOrder` đặt thùng trống của shop ở ô trống kệ cất đơn (`freeSlot(boxes, 'shelf', SHELF_SLOTS)`, đầy thì vẫn ra
+  kệ cửa); giữ thùng làm vật chứa đơn để luồng cầm thùng → bàn build không đổi. Toast nhận đơn / Keeb-chan / EmptyBenchHud nói theo.
+- (2026-10-30) Thùng trên kệ xếp lộn xộn, không lấn cột (người dùng: thùng ẩn vào chân kệ; cho nằm lộn xộn / chồng lên nhau):
+  bỏ ô cố định `rackSlot` / `SLOT_W`. `pileRack` gom thùng theo tầng (`slot` / 3), `pileTier` xếp từng tầng theo thứ tự ô: xoay ±0,15 rad,
+  cách nhau / lệch sâu ngẫu nhiên (`hash01` theo id, cố định), bề ngang sau khi xoay kẹp trong lòng kệ `IN_X` (trừ cột 3,5cm);
+  hết chỗ hoặc ~25% ngẫu nhiên thì chồng lên thùng chưa bị đè, đủ cao tới tầng trên (`headroom`), mặt đủ rộng. Logic ô (`slot`)
+  giữ nguyên; khối mờ chỗ đặt: mỗi tầng còn chỗ 1 khối (`freeSlotsPerTier`), tính cùng `seed` = id thùng đang cầm nên trùng chỗ thùng
+  sẽ nằm. Kệ cửa quá 6 ô vẫn xếp sàn (thêm lệch / xoay).
+
+## Kệ nhận hàng, kệ giao hàng, giỏ hàng Shopii, kiện hàng chợ (2026-10-30)
+
+Người dùng: kệ cuối hành lang chỉ để nhận hàng; thêm kệ 2 tầng gần chậu cây để đơn gửi khách; Shopii cần giỏ hàng
+(đặt nhiều đơn mỗi món 1 thùng ngập hành lang); hết kệ mới ra sàn, lộn xộn / nghiêng / chồng; cùng sản phẩm gộp; kiện Shopii có tag,
+kiện chợ không; tên trên thùng bỏ "chị / anh".
+
+- Kệ cửa: cả 4 tầng nhận hàng (`DOOR_RACK_SLOTS` 12): thùng đơn khách + kiện Shopii / chợ. Quá 12 ô → `pileFloor`: 2 cột lệch về tường
+  phòng (chừa cửa chính), xoay ±0,55 rad, ~35% chồng (tới cao 0,5m), ~20% nằm nghiêng ngả 1 bên (`Pose.tilt` / `lift`, `Posed`).
+- Kệ giao hàng: `ShipRack` (DoorParcels.tsx, `MetalRack tiers={[0.1, 0.55]}`), `SHIP_RACK` (roomLayout) dựa tường ngoài hành lang sau
+  chậu cây, xoay π/2 cho mặt trước quay vào hành lang, có khối cản. Ô `ship` giữ nguyên (6 ô = 2 tầng × 3), chữ hướng dẫn đổi theo.
+- `MetalRack` nhận `tiers` (tầng cuối = mặt trên = chiều cao cột).
+- Gộp kiện: kiện đã tới cùng nguồn (`from`) + cùng `label` vẽ 1 thùng, nhãn "×N", bấm nhận cả chồng.
+- `CardBox kind="market"`: băng keo nâu, không logo cam Shopii, không tem dễ vỡ.
+- Giỏ hàng: `Profile.cart: CartLine[]` (lưu), `addCart` (dụng cụ: chặn đã có / đang giao / đã trong giỏ; món sale 1 lần; cùng sản phẩm
+  gộp dòng nếu `mergeItem` được: vật tư cùng id, switch / stab cùng loại không lỗi), `removeCart`, `orderCart(speed)` → `placeOrder`
+  (chung với `orderParcel`): 1 kiện nhiều món, nhãn "món đầu +N món", `job` ghi theo từng món (`ParcelItem.job`, kiện cũ còn `Parcel.job`).
+  UI: nút giỏ trên `ProductCard`, mục "Giỏ hàng" (`CartList`) ở cột trái Shopii.
+- Hàng chợ: `buyPost` trừ tiền + quyết bùng ngay lúc chốt, không bùng thì thành kiện `from: 'market'` tới kệ cửa trong ngày (không huỷ
+  được). Lỗi / chết switch: `ParcelItem.note` báo lúc mở kiện; hàng lỗi không dùng được vào thẳng kho chung trong `receiveParcelItem`.
+  Dụng cụ đã có / đang giao thì chặn trước khi trả tiền. `buy` / `buySupply` / `buyTool` giữ lại (đổi mỏ hàn đã có vẫn dùng `buyTool`).
+- Nhãn thùng đơn: `shortName` bỏ danh xưng đầu tên (Anh / Chị / Bạn / Em / Cô / Chú / Bác / Ông / Bà).
+- (2026-10-30) Kệ cất đơn / kệ giao hàng không chồng bừa (người dùng: kệ trong nhà không bỏ được 2 ô — thùng thứ 2 / khối mờ bị đặt đè
+  lên thùng có sẵn dù tầng còn chỗ): `pileTier(..., messy)` / `pileRack(..., { messy })`, chồng ngẫu nhiên ~1/4 chỉ ở kệ nhận hàng
+  ngoài cửa; kệ khác còn chỗ là nằm cạnh nhau, hết chỗ (thùng thứ 3 / tầng) mới chồng.
+- (2026-10-30) Kệ cất đơn / kệ giao hàng dùng chỗ cố định theo ô (người dùng: 2 tầng dưới không bỏ được — khối mờ chỉ hiện 1 chỗ / tầng,
+  luôn bên trái): `neatPose` ô 0 / 1 = ván trái / phải (x ±0,2m, xoay lệch nhẹ theo id), ô 2 chồng lên thùng ô 0; `neatFree` mỗi ô trống
+  1 khối mờ (ô 2 chỉ khi ô 0 có thùng, ô 0 bỏ khi thùng ô 2 đã hạ xuống ván). `pileRack` / `pileTier` giờ chỉ cho kệ nhận hàng ngoài cửa.
+- (2026-10-30) Kệ cất đơn / kệ giao hàng bỏ chỗ chồng (người dùng: ô chồng lên nhau bị bug, bỏ đi): 2 ô / tầng trái / phải
+  (`NEAT_PER_ROW`), `SHELF_SLOTS` 12 → 8, `SHIP_SLOTS` 6 → 4; `neatPose(slot, tiers, seed)` / `neatFree` theo ô. Save cũ: `fitBoxes`
+  (boxes.ts, gọi lúc nạp save) dời ô vượt số ô mới vào ô trống, hết thì ra kệ cửa.
+- (2026-10-30) Shopii bỏ mua lẻ (người dùng: tất cả phải ra giỏ hàng thanh toán, trừ chợ Hội Phím Cơ): `ProductCard` chỉ còn nút
+  "Thêm vào giỏ" (giá gốc, không chọn tốc độ giao trên thẻ; mỏ hàn đã có vẫn "Dùng máy này" = `onEquip`), món sale đã trong giỏ
+  khoá nút. Bỏ `orderParcel`; nút mỏ hàn chưa có ở bảng hàn (ModPanels) = thêm vào giỏ. Chợ vẫn chốt mua thẳng với người bán → kiện.
+- Kệ cửa giữ chỗ thùng (2026-10-30, người dùng: "nhận hàng xong ở ngoài cửa thì đơn hàng bị chồng lên mặc dù tôi ko lấy... bị chồng lên
+  thì mới sắp xếp lại xuống hàng dưới"): trước đây `pileTier` xếp lại cả tầng mỗi lần đổi (nối từ trái, chồng ngẫu nhiên tính lại),
+  kiện Shopii / chợ lấy ô trống đầu tiên mỗi lần → lấy 1 thùng là thùng khác dồn / bị chồng. Giờ `DOOR_MEMO` (DoorParcels.tsx, module, không lưu):
+  thùng đã xếp cùng tầng giữ nguyên chỗ (`Spot.placed.under` = thùng đỡ); thùng mất chỗ đỡ (lặp cả chồng) rơi xuống ván (`fell`: còn chỗ thì
+  không chồng bừa lại); thùng mới chen vào khe trống từ trái. `PARCEL_SLOTS` giữ ô của kiện. Đống sàn (`pileFloor`, `FloorSpot.cell`) cũng giữ
+  chỗ, lấy thùng giữa chồng thì thùng trên hạ xuống. Thử bằng script tách hàm: lấy thùng lẻ → không thùng nào đổi chỗ; lấy thùng đang đỡ →
+  chỉ thùng trên nó hạ y 0,20 → 0,10.
+- (2026-10-30) Đi lại trỏ bàn build có thùng đơn chưa mở (chưa build / còn bước mở hộp, `!build.unboxed`): `benchMode` 'closed' → gợi ý
+  "Nhấn [trái] để vào bàn build, nhấn [phải] để cầm thùng đơn lên" + chuột phải `pickBench` ngay từ ngoài bàn (người dùng: chưa mở thì vẫn
+  phải có option chuột phải cầm đơn lên). Đã mở (đang build dở) vẫn phải ngồi vào bàn (hoạt cảnh cất đồ vào thùng). `pickBench` chỉ
+  `standUp` khi đang ngồi (đang đi lại thì cầm luôn, không bay camera).
+- (2026-10-30) Sửa: đơn build thử Dev (`order.dev`, không có thùng / `benchBox` null, `onBench` luôn đúng) mà đứng dậy đi lại thì bàn build
+  tính là trống ("Chưa có đơn hàng nào", bấm không vào lại được) → `benchMode` coi đơn dev là 'sit' (đang cầm thùng khác thì 'busy').

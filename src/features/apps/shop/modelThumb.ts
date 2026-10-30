@@ -236,7 +236,11 @@ export async function buildScene(kind: ThumbKind, type: string) {
       holder.rotation.set(0.55, -0.6, 0)
       return holder
     } else {
-      return createSolderSpool(SUPPLIES[type]?.color ?? '#c5cbd0')
+      return createSolderSpool(
+        SUPPLIES[type]?.color ?? '#c5cbd0',
+        false,
+        SUPPLIES[type]?.solder?.label,
+      )
     }
     return group
   }

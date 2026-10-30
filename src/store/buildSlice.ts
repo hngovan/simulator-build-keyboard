@@ -1069,8 +1069,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       // giao trễ hạn: mỗi ngày trễ trừ 1 uy tín
       const late = Math.max(0, s.day - (s.order.dueDay ?? s.day))
       if (late) result.late = late
-      // đóng gói: chấm điểm sẵn, phím vào thùng nằm trên bàn build (`benchBox` giữ id đơn); cầm thùng ra ô giao hàng
-      // trên kệ ngoài cửa mới là gửi khách (tiền + uy tín, `placeShip`)
+      // đóng gói: chấm điểm sẵn, phím vào thùng nằm trên bàn build (`benchBox` giữ id đơn); cầm thùng ra kệ giao hàng
+      // cạnh chậu cây mới là gửi khách (tiền + uy tín, `placeShip`)
       set({
         // cất nguyên dữ liệu đơn vào thùng: chưa gửi thì mở ra build lại được; switch / stab thừa vào kho chung lúc gửi khách
         packed: [
@@ -1105,7 +1105,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         supplyUsed: {},
       })
       s.toast(
-        `📦 Đã đóng gói đơn ${s.order.customer}: bấm thùng trên bàn để cầm lên, mang ra ô giao hàng ở kệ ngoài cửa`,
+        `📦 Đã đóng gói đơn ${s.order.customer}: bấm thùng trên bàn để cầm lên, mang ra kệ giao hàng cạnh chậu cây`,
         'good',
       )
       get().save()

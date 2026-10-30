@@ -43,6 +43,20 @@ export const OUTLINE_GHOST_MAT = OUTLINE_MAT.clone()
 OUTLINE_GHOST_MAT.transparent = true
 OUTLINE_GHOST_MAT.toneMapped = false
 
+/** viền dày gấp `scale` lần (vật mỏng như tờ lịch: vỏ ngược đẩy ngang ít, viền trông mảnh hơn đồ khác) */
+const thickMats = new Map<number, THREE.ShaderMaterial>()
+function outlineMat(scale: number) {
+  if (scale === 1) return OUTLINE_MAT
+  let m = thickMats.get(scale)
+  if (!m) {
+    m = OUTLINE_MAT.clone()
+    m.uniforms.width.value = OUTLINE_MAT.uniforms.width.value * scale
+    m.toneMapped = false
+    thickMats.set(scale, m)
+  }
+  return m
+}
+
 /** tên mesh: viền thường nhưng đáy phẳng nổi trên mặt đỡ (`onTopGeometry`) / bỏ viền (đồ đắp mỏng: băng keo, nhãn) */
 export const OUTLINE_ON_TOP = 'outline-on-top'
 export const NO_OUTLINE = 'no-outline'
@@ -95,7 +109,7 @@ function onTopGeometry(g: THREE.BufferGeometry) {
 }
 
 /** viền của 1 mesh (tạo 1 lần, gắn làm con để theo transform / ẩn hiện của mesh) */
-function outlineOf(m: THREE.Mesh) {
+function outlineOf(m: THREE.Mesh, mat: THREE.Material) {
   let o = m.userData[KEY] as THREE.Mesh | undefined
   if (!o) {
     const geo =
@@ -104,10 +118,10 @@ function outlineOf(m: THREE.Mesh) {
         : outlineGeometry(m.geometry)
     o =
       m instanceof THREE.InstancedMesh
-        ? Object.assign(new THREE.InstancedMesh(geo, OUTLINE_MAT, m.instanceMatrix.count), {
+        ? Object.assign(new THREE.InstancedMesh(geo, mat, m.instanceMatrix.count), {
             instanceMatrix: m.instanceMatrix,
           })
-        : new THREE.Mesh(geo, OUTLINE_MAT)
+        : new THREE.Mesh(geo, mat)
     o.raycast = noRay
     o.frustumCulled = false
     o.userData[KEY] = o
@@ -125,17 +139,17 @@ const outlinable = (o: THREE.Object3D): o is THREE.Mesh =>
   !!o.geometry?.attributes.normal &&
   !('text' in o)
 
-/** Viền xanh quanh mọi mesh trong group khi `show` (vật tương tác được đang được rê chuột) */
-export function useHoverOutline(ref: RefObject<THREE.Object3D>, show: boolean) {
+/** Viền xanh quanh mọi mesh trong group khi `show` (vật tương tác được đang được rê chuột); `scale` = độ dày viền */
+export function useHoverOutline(ref: RefObject<THREE.Object3D>, show: boolean, scale = 1) {
   useEffect(() => {
     const root = ref.current
     if (!root) return
     const list: THREE.Mesh[] = []
-    if (show) root.traverse((o) => outlinable(o) && list.push(outlineOf(o)))
+    if (show) root.traverse((o) => outlinable(o) && list.push(outlineOf(o, outlineMat(scale))))
     else
       root.traverse((o) => o.userData[KEY] && o.userData[KEY] !== o && list.push(o.userData[KEY]))
     list.forEach((o) => (o.visible = show))
-  }, [ref, show])
+  }, [ref, show, scale])
   // InstancedMesh đổi số con (mở thêm switch...) thì viền theo
   useFrame(() => {
     if (!show || !ref.current) return

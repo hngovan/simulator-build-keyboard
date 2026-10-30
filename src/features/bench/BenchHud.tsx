@@ -13,7 +13,7 @@ import {
 } from '@/data/steps'
 import { SCREW_FULL, SWITCHES, TOOLS, screwLevel } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
-import { FlipVertical2, Footprints, Hand, Monitor, PackageCheck, Undo2 } from 'lucide-react'
+import { ArrowLeft, FlipVertical2, Hand, PackageCheck, Undo2 } from 'lucide-react'
 import { Alert, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
@@ -167,7 +167,7 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
   const packing = usePack((p) => p.at !== null)
   const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
   const canUndo = useGame((s) => s.history.length > 0 && !s.stabAnim)
-  const { zoomToPC, toggleFlip, undo } = useGame.getState()
+  const { toggleFlip, undo } = useGame.getState()
   // phím Q lật xem đáy / lật lại mặt trên (như nút vàng)
   useBenchKey('KeyQ', canFlip ? toggleFlip : noop)
   // Ctrl+Z để hoàn tác (Space về góc nhìn mặc định: ResetCamButton)
@@ -186,11 +186,10 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
     // z-[8]: tooltip icon nổi trên khung HUD 2 bên (z-[5]), dưới bảng hỏi / danh sách đơn
     <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
       <div className="flex gap-2">
-        <IconButton tone="blue" icon={<Monitor />} label="Về máy tính" onClick={zoomToPC} />
+        {/* chỉ 1 nút quay lại (= Esc) đứng dậy ra phòng; về máy tính thì bấm máy tính trong phòng */}
         <IconButton
-          tone="green"
-          icon={<Footprints />}
-          label="Đứng dậy đi lại trong phòng"
+          icon={<ArrowLeft />}
+          label="Đứng dậy ra phòng (Esc)"
           onClick={() => useGame.getState().standUp('bench')}
         />
         <IconButton

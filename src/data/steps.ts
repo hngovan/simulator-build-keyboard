@@ -35,7 +35,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   stabScrew: {
     title: 'Vặn vít stab',
-    hint: 'Stab screw-in: bấm vít cho kim lực chạy, bấm lần nữa dừng trong vùng xanh (đỏ phải là trượt ren)',
+    hint: 'Stab screw-in: giữ chuột lên vít cho thanh lực chạy, nhả trong vùng xanh (nhả ở đỏ là trượt ren)',
   },
   foam: {
     title: 'Lót foam PCB (tuỳ chọn)',
@@ -48,7 +48,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   solder: {
     title: 'Hàn switch',
-    hint: 'Board đã lật. Bấm từng chân cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh; đỏ phải hoặc hụt quá 3 lần sẽ làm cháy chân và đen mũi hàn.',
+    hint: 'Board đã lật. Giữ chuột lên từng chân cho thanh nhiệt chạy, nhả trong vùng xanh; nhả ở đỏ hoặc hụt quá 3 lần sẽ làm cháy chân và đen mũi hàn.',
   },
   gasket: {
     title: 'Dán gasket',
@@ -64,7 +64,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   topScrew: {
     title: 'Bắt vít plate vào case trên',
-    hint: 'Đã lật: bấm ốc M2 cho kim lực chạy, bấm lần nữa dừng trong vùng xanh để bắt tai plate vào lỗ ren case trên',
+    hint: 'Đã lật: giữ chuột lên ốc M2 cho thanh lực chạy, nhả trong vùng xanh để bắt tai plate vào lỗ ren case trên',
   },
   feet: {
     title: 'Dán feet cao su',
@@ -81,12 +81,12 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
   trayScrew: {
     title: 'Bắt vít tray mount',
-    hint: 'Bấm vít giữ PCB vào standoff đáy case, bấm lần nữa dừng kim lực trong vùng xanh',
+    hint: 'Giữ chuột lên vít giữ PCB vào standoff đáy case, nhả trong vùng xanh',
   },
   caseClose: { title: 'Đậy case trên', hint: 'Click vào case trên để đậy lại' },
   caseScrew: {
     title: 'Vặn vít đóng case',
-    hint: 'Bấm vít khoá case, bấm lần nữa dừng kim lực trong vùng xanh (case PC / mica / acrylic quá tay dễ nứt)',
+    hint: 'Giữ chuột lên vít khoá case, nhả trong vùng xanh (case PC / mica / acrylic quá tay dễ nứt)',
   },
   keycap: {
     title: 'Lắp keycap',
@@ -98,7 +98,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   pack: {
     title: 'Đóng gói',
-    hint: 'Bấm thùng carton cạnh bàn phím để cho phím vào thùng. Đóng xong cầm thùng ra ô giao hàng trên kệ cuối hành lang để gửi khách',
+    hint: 'Bấm thùng carton cạnh bàn phím để cho phím vào thùng. Đóng xong cầm thùng ra kệ giao hàng cạnh chậu cây (đầu hành lang) để gửi khách',
   },
 }
 
@@ -148,7 +148,7 @@ export const brittleCase = (caseId?: string | null) => {
   return !!c && (BRITTLE.includes(c.material) || BRITTLE.includes(c.bottom?.material ?? ''))
 }
 
-/** skill check vặn vít vào theo tua vít (vùng xanh + tốc độ kim) */
+/** skill check vặn vít vào theo tua vít (vùng xanh + tốc độ nạp) */
 export const torqueSpec = (level: number) => TOOLS.screw[level]?.torque ?? TOOLS.screw[0].torque!
 
 export const BIT_LABELS: Record<ScrewBit, string> = {
@@ -268,9 +268,17 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
 
   const screwSide = caseDef.screwSide ?? 'bottom'
   // case CAD 2 mảnh: vít đúng lỗ trong model (mm, hệ model → u quanh tâm layout như feet)
-  const caseScrews = caseDef.screws
-    ? caseDef.screws.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
-    : caseScrewPoints(width, depth, screwSide)
+  const caseScrews: (Point & Pick<ScrewPoint, 'y' | 'dir'>)[] = caseDef.angledScrews
+    ? // vít bắt chéo: đầu vít trên vách ngoài nắp, nghiêng theo lỗ
+      caseDef.angledScrews.map(([x, y, z, dx, dy, dz]) => ({
+        x: x * MM_U - origin[0],
+        z: z * MM_U - origin[1],
+        y: Y.floorBot + y * MM_U,
+        dir: [dx, dy, dz],
+      }))
+    : caseDef.screws
+      ? caseDef.screws.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
+      : caseScrewPoints(width, depth, screwSide)
 
   const steps: StepId[] = ['unbox']
   if (caseDef.pieces === 2) steps.push('caseOpen')
@@ -346,7 +354,12 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     caseOpen: name('open', caseScrews),
     caseScrew: name('close', caseScrews),
     // top mount: vít M2 ngắn xuyên lỗ tai plate (lòi ra khe board – vách) bắt vào lỗ ren vấu case trên, vặn từ dưới lên
-    topScrew: name('top', topScrewPoints(width, depth, caseScrews)),
+    topScrew: name(
+      'top',
+      caseDef.topScrews
+        ? caseDef.topScrews.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
+        : topScrewPoints(width, depth, caseScrews),
+    ),
     trayScrew: name('tray', trayScrews),
     stabScrew: name('stab', stabScrews),
   }
@@ -562,11 +575,13 @@ export function caseBores(c: Parameters<typeof boredCase>[0], screws: Point[]) {
  * mica bắt từ trên → lỗ xuyên viền mọi lớp (dùng chung danh sách, sâu không dùng)
  */
 export function caseScrewHoles(
-  caseDef: { pieces: 1 | 2; screwSide?: 'top' | 'bottom' },
+  caseDef: { pieces: 1 | 2; screwSide?: 'top' | 'bottom'; model?: string },
   width: number,
   depth: number,
 ): FootPocket[] {
-  if (caseDef.pieces !== 2 || (caseDef.screwSide ?? 'bottom') === 'bottom') return []
+  // case CAD: lỗ vít có sẵn trong model
+  if (caseDef.pieces !== 2 || caseDef.model || (caseDef.screwSide ?? 'bottom') === 'bottom')
+    return []
   return caseScrewPoints(width, depth, caseDef.screwSide ?? 'bottom').map((p) => ({
     ...p,
     r: SCREW_HOLE_R,
@@ -588,11 +603,12 @@ export function feetPockets(
 ): FootPocket[] {
   const pockets = model ? (CASE_FEET as Record<string, number[][]>)[model] : undefined
   if (pockets)
-    return pockets.map(([x, z, r, d]) => ({
+    return pockets.map(([x, z, r, d, f = 0]) => ({
       x: x * MM - origin[0],
       z: z * MM - origin[1],
       r: r * MM,
       depth: d * MM,
+      floor: f * MM,
     }))
   const W = width + 2 * (CASE_MARGIN + CASE_WALL)
   const D = depth + 2 * (CASE_MARGIN + CASE_WALL)

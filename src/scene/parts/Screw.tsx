@@ -347,7 +347,7 @@ function Screw({
   }, [model])
   const spinMs = toolLv ? SPIN_MS.electric : SPIN_MS.manual
   const p = Math.min(1, turns / clicks)
-  // vặn vào: bấm cho kim lực chạy (skill check, vùng xanh theo tua vít), bấm lần nữa / Space dừng; tua vít quay trong lúc chờ
+  // vặn vào: giữ chuột cho thanh lực nạp (skill check, vùng xanh theo tua vít), nhả chuột dừng; tua vít quay trong lúc chờ
   const skill = useSkill((s) => (s.active?.id === id ? s.active.check : null))
   const [spinTick, setSpinTick] = useState(0)
   useEffect(() => () => cancelSkill(id), [id])
@@ -517,6 +517,13 @@ function Screw({
 }
 
 /** Bộ vít của 1 bước. flip: vít bắt từ mặt dưới (đầu vít hướng xuống) */
+/** xoay trục −y (thân vít đi xuống) theo hướng vít đi vào `dir` */
+const tiltOf = (dir: [number, number, number]) =>
+  new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, -1, 0),
+    new THREE.Vector3(...dir).normalize(),
+  )
+
 export function ScrewSet({
   step,
   y,
@@ -550,24 +557,34 @@ export function ScrewSet({
         .filter((sc) => (s.build?.screws[sc.id] ?? 0) < SCREW_FULL)
         .sort((a, b) => Math.abs(a.x) - Math.abs(b.x) || a.z - b.z)[0]?.id,
   )
-  const list = ctx.screws[step].map((sc) => (
-    <Screw
-      key={sc.id}
-      {...sc}
-      // nhóm lật quay 180° quanh trục x nên đảo cả z: đảo dấu trước để vít về đúng chỗ stab
-      z={flip ? -sc.z : sc.z}
-      y={flip ? 0 : y}
-      mode={SCREW_STEPS[step]}
-      interactive={cur === step && active}
-      bit={bit}
-      requiredBit={requiredBit}
-      style={SCREW_STYLES[step]}
-      shaft={longShaft}
-      hint={active && sc.id === next}
-      short={SCREW_SHORT[step] ?? 1}
-      mouth={flip ? undefined : mouth}
-    />
-  ))
+  const common = (sc: (typeof ctx.screws)[ScrewStep][number]) => ({
+    mode: SCREW_STEPS[step],
+    interactive: cur === step && active,
+    bit,
+    requiredBit,
+    style: SCREW_STYLES[step],
+    shaft: longShaft,
+    hint: active && sc.id === next,
+    short: SCREW_SHORT[step] ?? 1,
+  })
+  const list = ctx.screws[step].map((sc) =>
+    sc.dir ? (
+      // vít bắt chéo (Duality Horns): dựng tại đầu vít trên vách nắp, trục −y của vít xoay theo hướng vít đi vào
+      <group key={sc.id} position={[sc.x, sc.y ?? y, sc.z]} quaternion={tiltOf(sc.dir)}>
+        <Screw id={sc.id} x={0} z={0} y={0} {...common(sc)} />
+      </group>
+    ) : (
+      <Screw
+        key={sc.id}
+        {...sc}
+        // nhóm lật quay 180° quanh trục x nên đảo cả z: đảo dấu trước để vít về đúng chỗ stab
+        z={flip ? -sc.z : sc.z}
+        y={flip ? 0 : y}
+        {...common(sc)}
+        mouth={flip ? undefined : mouth}
+      />
+    ),
+  )
   return (
     <>
       {flip ? (

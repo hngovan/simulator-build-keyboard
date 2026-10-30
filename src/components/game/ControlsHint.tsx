@@ -36,10 +36,12 @@ export function MouseIcon({ btn }: { btn: MouseBtn }) {
   )
 }
 
-/** Phím bấm vẽ như keycap trắng (chữ đậm, rõ trên nền cảnh 3D) */
-export function KeyCap({ children }: { children: ReactNode }) {
+/** Phím bấm vẽ như keycap trắng (chữ đậm, rõ trên nền cảnh 3D); `off` = xám, chưa bấm được */
+export function KeyCap({ children, off }: { children: ReactNode; off?: boolean }) {
   return (
-    <span className="grid h-8 min-w-8 shrink-0 place-items-center rounded-md border-2 border-bg bg-ink px-1 font-head text-lg leading-none font-extrabold text-bg shadow-[0_3px_0_#000a] [text-shadow:none]">
+    <span
+      className={`grid h-8 min-w-8 shrink-0 place-items-center rounded-md border-2 border-bg px-1 font-head text-lg leading-none font-extrabold shadow-[0_3px_0_#000a] [text-shadow:none] ${off ? 'bg-muted text-bg/60' : 'bg-ink text-bg'}`}
+    >
       {children}
     </span>
   )

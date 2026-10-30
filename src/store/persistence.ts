@@ -14,6 +14,7 @@ import type {
   Parcel,
   Spare,
   StepId,
+  CartLine,
 } from '@/types'
 import type { BoxSpot } from '@/data/boxes'
 import type { HistoryEntry } from './buildSlice'
@@ -77,6 +78,8 @@ export interface Profile {
   parcels: Parcel[]
   /** món đang sale đã mua trong ngày sale (mỗi món sale chỉ mua 1 lần); bản lưu cũ không có */
   saleBought: { day: number; ids: string[] }
+  /** giỏ hàng Shopii (chưa đặt); bản lưu cũ không có = [] */
+  cart: CartLine[]
 }
 
 // Đơn đang làm dở (lưu lại để thoát game vào lại vẫn tiếp tục được)
@@ -334,6 +337,7 @@ export const START: Profile = {
   unread: 0,
   parcels: [],
   saleBought: { day: 0, ids: [] },
+  cart: [],
 }
 
 export function loadSave(): SaveData | null {

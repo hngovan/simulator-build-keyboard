@@ -1,8 +1,19 @@
 import type { StateCreator } from 'zustand'
-import { SHELF_SLOTS, type BoxSpot } from '@/data/boxes'
+import { SHELF_SLOTS, fitBoxes, type BoxSpot } from '@/data/boxes'
 import { randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
-import type { AudioSettings, NotifyItem, Order, ShopCategory, Toast, Review } from '@/types'
+import type {
+  AudioSettings,
+  LayoutId,
+  NotifyItem,
+  Order,
+  ShopCategory,
+  Toast,
+  Review,
+  Variant,
+  VariantKey,
+} from '@/types'
+import { LAYOUTS } from '@/data/layouts'
 import { newRunId, runEntry, runSig } from '@/data/gameOver'
 import { submitRun, type RunEndReason, type RunEntry } from '@/lib/leaderboardApi'
 import { START, clearSave, loadSave, writeSave, type Profile, type SaveData } from './persistence'
@@ -169,6 +180,7 @@ function snapshot(s: GameState): SaveData {
     unread: s.unread,
     parcels: s.parcels,
     saleBought: s.saleBought,
+    cart: s.cart,
     session: {
       offers,
       jobs: jobs.map((j) => ({
@@ -195,6 +207,19 @@ function snapshot(s: GameState): SaveData {
       held: s.held,
     },
   }
+}
+
+/**
+ * biến thể layout không còn hợp lệ (layout đổi bộ biến thể, vd TKL F13 giờ chỉ hàng dưới WKL — đơn cũ còn 'wk' space 6.25u lệch
+ * lỗ plate 7u) → lựa chọn đầu tiên còn hợp lệ
+ */
+function fixVariant(layout: LayoutId, v: Variant = {}): Variant {
+  const opts = LAYOUTS[layout]?.variants ?? {}
+  const out: Variant = { ...v }
+  for (const [k, list] of Object.entries(opts) as [VariantKey, string[]][])
+    if (out[k] !== undefined && !list.includes(out[k]!)) out[k] = list[0]
+    else if (out[k] === undefined && list.length === 1) out[k] = list[0]
+  return out
 }
 
 /** nâng cấp bản lưu chưa có thùng hàng: đơn đang build nằm trên bàn, còn lại xếp kệ cất đơn (quá ô thì ra kệ cửa) */
@@ -315,19 +340,22 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       ...o,
       id: o.id ?? `old${Math.random()}`,
       days: o.days ?? 3,
+      variant: fixVariant(o.layout, o.variant),
     })
     const order = rest.order ? fix(rest.order) : null
     set({
       ...profile,
+      // giỏ hàng bản trước (1 món gộp, chưa có số lượng): bỏ
+      cart: (profile.cart ?? []).filter((l) => l.unit && l.qty),
       lastSolderPurchase: null,
       ...rest,
       order: order && { ...order, dueDay: order.dueDay ?? profile.day + order.days },
       offers: (offers ?? (offer ? [offer] : randomOffers())).map(fix),
-      jobs: jobs ?? [],
+      jobs: (jobs ?? []).map((j) => ({ ...j, order: fix(j.order) })),
       packed: session?.packed ?? [],
       // bản lưu cũ chưa có thùng: đơn đang build coi như trên bàn, đơn chờ / đơn chưa build / đơn đóng gói chưa gửi xếp lên kệ cất đơn
       ...(session?.boxes
-        ? {}
+        ? { boxes: fitBoxes(session.boxes) }
         : oldBoxes(order, !!rest.build, [
             ...(jobs ?? []).map((j) => j.order.id),
             ...(session?.packed ?? []).filter((p) => !p.shipped).map((p) => p.order.id),

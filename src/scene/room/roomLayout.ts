@@ -56,7 +56,7 @@ export const CALENDAR = { w: 0.52, h: 0.7, y: 1.55 }
 
 /**
  * Hành lang ngoài tường trái (m), dài ~7m: ô cửa cạnh bàn máy tính dẫn ra. Đầu xa (z0, chạy ra sau phòng): kệ sắt để hàng
- * giao tới + ghế đôn, cửa chính ở tường bên trái ngay cuối hành lang. Đầu gần (z1): cửa sổ rèm lá, chậu cây, đơn chờ gửi
+ * giao tới + ghế đôn, cửa chính ở tường bên trái ngay cuối hành lang. Đầu gần (z1): cửa sổ rèm lá, chậu cây, kệ giao hàng
  */
 export const HALL = { x0: -HALF_W - WALL_T - 1.2, x1: -HALF_W - WALL_T, z0: -3.0, z1: FRONT_M }
 export const DOORWAY = { z0: 0.7, z1: 1.6, h: 2.1 }
@@ -69,6 +69,8 @@ export const RACK = { x: HALL.x1 - 0.55, z: HALL.z0 + 0.21, w: 0.9, d: 0.38, h: 
 /** kệ cất đơn (kệ sắt như kệ cửa, hạ thấp 80%): dựa tường phải gần tường trước, dưới tranh treo, mặt trước quay vào phòng (m) */
 export const STORE_SHELF = { x: HALF_W - RACK.d / 2 - 0.01, z: FRONT_M - 0.9 }
 export const HALL_PLANT = { x: HALL.x0 + 0.22, z: HALL.z1 - 0.25 }
+/** kệ giao hàng 2 tầng: dựa tường ngoài hành lang (x0) ngay sau chậu cây, mặt trước quay vào hành lang (+x) (m, tâm chân kệ) */
+export const SHIP_RACK = { x: HALL.x0 + RACK.d / 2 + 0.01, z: HALL_PLANT.z - 0.3 - RACK.w / 2 }
 
 /** tầm với khi đi lại (m, theo mặt sàn từ chỗ đứng tới chỗ trỏ): xa hơn thì không rê sáng / bấm được đồ vật */
 export const REACH_M = 1.8
@@ -101,6 +103,8 @@ const BLOCKS_M: [number, number, number, number][] = [
   [SHELF_X - 0.5, SHELF_X + 0.5, FRONT_M - 0.257, FRONT_M],
   // kệ sắt cuối hành lang
   [RACK.x - RACK.w / 2, RACK.x + RACK.w / 2, HALL.z0, HALL.z0 + RACK.d],
+  // kệ giao hàng cạnh chậu cây
+  [HALL.x0, HALL.x0 + RACK.d, SHIP_RACK.z - RACK.w / 2, SHIP_RACK.z + RACK.w / 2],
   // kệ cất đơn dựa tường phải
   [HALF_W - RACK.d, HALF_W, STORE_SHELF.z - RACK.w / 2, STORE_SHELF.z + RACK.w / 2],
   // bàn làm việc

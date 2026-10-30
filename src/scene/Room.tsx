@@ -23,6 +23,7 @@ import {
   HALL_DOOR_Z,
   HALL_WINDOW,
   HALL_PLANT,
+  SHIP_RACK,
   RACK,
   BACK_M,
   FRONT_M,
@@ -50,7 +51,7 @@ import { FrogPainting } from './room/FrogPainting'
 import { LIT_SHADE, RoomWindow } from './room/RoomWindow'
 import { WallCalendar } from './room/WallCalendar'
 import { WallPoster } from './room/WallPoster'
-import { DoorParcels, HeldBox, SHELF_SCALE_Y, StorageShelf } from './room/DoorParcels'
+import { DoorParcels, HeldBox, SHELF_SCALE_Y, ShipRack, StorageShelf } from './room/DoorParcels'
 import { sitAtBench } from './room/sitAtBench'
 import { useRoom } from './room/roomStore'
 import { useHoverOutline } from './common/hoverOutline'
@@ -594,9 +595,17 @@ function ShelfDiploma(props: JSX.IntrinsicElements['group']) {
 }
 
 /** bàn build đang thế nào (khi đi lại trỏ vào bàn): quyết định viền sáng, chữ gợi ý, bấm trái / phải làm gì */
-type BenchMode = 'empty' | 'place' | 'heldPacked' | 'busy' | 'sit' | 'packed'
+type BenchMode = 'empty' | 'place' | 'heldPacked' | 'busy' | 'sit' | 'closed' | 'packed'
 function benchMode(s: ReturnType<typeof useGame.getState>): BenchMode {
-  if (s.benchBox) return s.held ? 'busy' : isPackedBox(s, s.benchBox) ? 'packed' : 'sit'
+  // đơn build thử (Cài đặt → Dev) không có thùng thật, luôn tính là đang nằm trên bàn (`onBench`): vào bàn build được
+  if (!s.benchBox && s.order?.dev) return s.held ? 'busy' : 'sit'
+  if (s.benchBox) {
+    if (s.held) return 'busy'
+    if (isPackedBox(s, s.benchBox)) return 'packed'
+    // thùng đơn chưa mở (chưa build / còn ở bước mở hộp): cầm lên được ngay từ ngoài bàn; đã mở thì phải ngồi (hoạt cảnh cất đồ)
+    const opened = s.order?.id === s.benchBox && !!s.build?.unboxed
+    return opened ? 'sit' : 'closed'
+  }
   if (!s.held) return 'empty'
   return isPackedBox(s, s.held) ? 'heldPacked' : 'place'
 }
@@ -608,9 +617,10 @@ const BENCH_HINT: Record<BenchMode, [string | null, string | null, string | null
     'Chưa có đơn hàng nào, lấy thùng đơn từ kệ cuối hành lang để tiến hành build',
   ],
   place: ['để đặt thùng đơn lên bàn build', null, null],
-  heldPacked: [null, null, 'Thùng đã đóng gói: mang ra ô giao hàng trên kệ cuối hành lang'],
+  heldPacked: [null, null, 'Thùng đã đóng gói: mang ra kệ giao hàng cạnh chậu cây'],
   busy: [null, null, 'Bàn build đang có thùng khác: cất thùng đang cầm lên kệ trước'],
   sit: ['để vào bàn build', null, null],
+  closed: ['để vào bàn build', 'để cầm thùng đơn lên', null],
   packed: ['để vào bàn build', 'để cầm thùng đã đóng gói lên', null],
 }
 
@@ -637,7 +647,7 @@ function BenchSeat() {
   const mode = useGame(benchMode)
   const desk = useRef<THREE.Group>(null)
   const [hover, setHover] = useState(false)
-  useHoverOutline(desk, hover && walk && (mode === 'sit' || mode === 'packed'))
+  useHoverOutline(desk, hover && walk && (mode === 'sit' || mode === 'closed' || mode === 'packed'))
   const box = useMemo(() => {
     const g = new THREE.BoxGeometry(DESK.w * M, 0.4 * M, DESK.d * M)
     // không có pháp tuyến: viền hover bỏ qua hộp vô hình này
@@ -679,15 +689,16 @@ function BenchSeat() {
             const g = useGame.getState()
             const m = benchMode(g)
             if (m === 'empty' || m === 'heldPacked' || m === 'busy') return
-            // cầm thùng đơn tới bàn trống: đặt lên (chuyển sang đơn đó, đủ đồ thì vào build) rồi ngồi xuống
+            // cầm thùng đơn tới bàn trống: đặt lên (chuyển sang đơn đó, bấm B mới vào build) rồi ngồi xuống
             if (m === 'place' && !g.placeBench()) return
             show(false)
             sitAtBench()
           }}
-          // chuột phải: cầm thùng đã đóng gói lên mang đi giao
+          // chuột phải: cầm thùng lên (thùng đã đóng gói mang đi giao / thùng đơn chưa mở cất kệ, đổi đơn)
           onContextMenu={(e: ThreeEvent<MouseEvent>) => {
             e.stopPropagation()
-            if (!inReach(e) || benchMode(useGame.getState()) !== 'packed') return
+            const m = benchMode(useGame.getState())
+            if (!inReach(e) || (m !== 'packed' && m !== 'closed')) return
             useGame.getState().pickBench()
           }}
         >
@@ -850,7 +861,7 @@ function Hallway({ maps }: { maps: MapSet }) {
       <SideWall maps={maps} x={x0} z0={z0} z1={z1} face={1} />
       <Wall maps={maps} w={w} position={[cx, wallY, z0 * M]} />
       <Wall maps={maps} w={w} position={[cx, wallY, z1 * M]} rotationY={Math.PI} />
-      {/* cuối hành lang: cửa chính ở tường bên trái, kệ sắt để hàng giao tới + ghế đôn dựa tường cuối */}
+      {/* cuối hành lang: cửa chính ở tường bên trái, kệ sắt nhận hàng (đơn khách + kiện mua) + ghế đôn dựa tường cuối */}
       <group position={[x0 * M, FLOOR_Y, HALL_DOOR_Z * M]} rotation-y={Math.PI / 2} scale={M}>
         <PanelDoor />
       </group>
@@ -870,6 +881,14 @@ function Hallway({ maps }: { maps: MapSet }) {
         <RoomWindow size={HALL_WINDOW} />
       </group>
       <Model url={MODELS.plant} position={[HALL_PLANT.x * M, FLOOR_Y, HALL_PLANT.z * M]} />
+      {/* kệ giao hàng 2 tầng sau chậu cây: đặt thùng đã đóng gói vào = gửi khách */}
+      <group
+        position={[SHIP_RACK.x * M, FLOOR_Y, SHIP_RACK.z * M]}
+        rotation-y={Math.PI / 2}
+        scale={M}
+      >
+        <ShipRack />
+      </group>
       {/* 3 đèn âm trần dọc giữa hành lang (model MozillaHubs), 1 cái ngay trước ô cửa vào phòng */}
       {HALL_LIGHTS_Z.map((z) => (
         <Downlight key={z} height={ROOM.h / M} position={[cx, FLOOR_Y + ROOM.h, z * M]} scale={M} />

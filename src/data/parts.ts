@@ -97,7 +97,7 @@ export interface ToolDef {
   quality?: number
   /** độ bền: dùng được bao nhiêu lần thì hỏng (phải mua lại) */
   life?: number
-  /** tua vít: skill check vặn vào — bề rộng vùng xanh (phần thanh) + tốc độ kim (lượt / giây) */
+  /** tua vít: skill check vặn vào — bề rộng vùng xanh (phần thanh) + tốc độ nạp (lần đầy thanh / giây) */
   torque?: { width: number; speed: number }
 }
 
@@ -1203,13 +1203,57 @@ export const CASES: Record<string, CaseDef> = {
   dualityHorns: {
     name: 'Duality Horns',
     ff: 'tkl',
-    pieces: 1,
+    // nắp cắt ô hàng F kiểu F13 (plate thật: assets/keyboards/duality-horns/plate/duality-tkl.dwg)
+    layouts: ['tklf13'],
+    // nắp (SOLID) + đáy (BOTTOM, có tạ) → case 2 mảnh, 8 vít bắt chéo từ vách ngoài nắp xuống trụ đáy (không lật case)
+    pieces: 2,
+    screwSide: 'top',
     material: 'anod',
-    mounts: ['gasket', 'tray'],
+    // người dùng: chỉ top mount (plate bắt vít qua tai vào case trên) + O-ring
+    mounts: ['top', 'oring'],
     price: 3000,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'TKL nhôm, tạ đáy + badge + accent, góc gõ 4.5°',
     model: 'duality-horns/case',
+    // plate riêng TKL F13 multi-layout (DWG người dùng đưa + lưới PLATE_STANDARD trong STEP, `bun run gen:plate-duality`)
+    plateModel: 'duality-horns/plate',
+    // nắp CAD đã có sẵn khối chặn chỗ trống (cạnh F13, cụm mũi tên...): không dựng thêm
+    ownBlocks: true,
+    // 8 vít ghép bắt chéo, đầu vít quay vào trong (đáy hốc đầu vít trên nắp), chéo xuống ra ngoài vào trụ đáy
+    // (`screwHeads` convert-user-cases.mjs, dò bằng scripts/probe-screw-axis.mjs)
+    angledScrews: [
+      [-130.9, 25.2, -61.5, 0, -0.69, -0.73],
+      [-50, 25.2, -61.5, 0, -0.69, -0.73],
+      [49.8, 25.2, -61.5, 0, -0.69, -0.73],
+      [135.8, 25.2, -61.5, 0, -0.69, -0.73],
+      [-149.5, 15.3, 61.1, 0, -0.72, 0.69],
+      [-74.5, 15.3, 61.1, 0, -0.72, 0.69],
+      [60.1, 15.3, 61.1, 0, -0.72, 0.69],
+      [135.8, 15.3, 61.1, 0, -0.72, 0.69],
+    ],
+    // ốc nón cố định trên tạ (4 lỗ Ø7,2) + dải accent (2 lỗ Ø5,5), không tháo
+    weightScrews: [
+      [-127.7, 14, -47.1, 0, -1, -0.08, 7.2],
+      [-127.7, 11.7, -17.9, 0, -1, -0.08, 7.2],
+      [127.7, 14, -47.1, 0, -1, -0.08, 7.2],
+      [127.7, 11.7, -17.9, 0, -1, -0.08, 7.2],
+      [-78.3, 8.8, 20, 0, -1, -0.08, 5.5],
+      [78.3, 8.8, 20, 0, -1, -0.08, 5.5],
+    ],
+    // 2 vít M2 bắt badge chữ thập từ trong nắp lên (`heads.badgeScrews`)
+    badgeScrews: [
+      [166.3, 21.9, 11.2, 0, 1, 0.08, 0],
+      [166.3, 20.6, 28.4, 0, 1, 0.08, 0],
+    ],
+    // top mount: 6 tai plate thật (3 mép sau, 3 mép trước; `marks.topScrews`)
+    topScrews: [
+      [-111.9, -62],
+      [31, -62],
+      [114.3, -62],
+      [-121.9, 61.7],
+      [40.8, 61.7],
+      [119.2, 61.7],
+    ],
     seat: { rise: 0.19, tilt: 0.079 },
     weight: 'gold',
   },
@@ -1611,6 +1655,7 @@ export const SIZE_MULT: Record<LayoutId, number> = {
   hhkb: 1,
   truehhkb: 1,
   tkl: 1.4,
+  tklf13: 1.4,
   full: 1.7,
   planck: 0.75,
   '65': 1.15,
@@ -1681,15 +1726,15 @@ export const TOOLS: Record<ToolKind, ToolDef[]> = {
       name: 'Tua vít thường',
       clicks: 3,
       price: 0,
-      desc: 'Vặn chậm, kim lực chạy chậm + vùng xanh rộng, dễ canh',
-      torque: { width: 0.24, speed: 0.7 },
+      desc: 'Vặn tay, thanh lực chạy chậm',
+      torque: { width: 0.2, speed: 0.45 },
     },
     {
       name: 'Tua vít điện',
       clicks: 1,
       price: 350,
-      desc: 'Vặn nhanh nhưng lực gắt: kim chạy nhanh, vùng xanh hẹp, dễ trượt ren',
-      torque: { width: 0.15, speed: 1.2 },
+      desc: 'Vặn nhanh, vùng xanh rộng hơn tua vít tay một chút',
+      torque: { width: 0.24, speed: 0.55 },
     },
   ],
   // hold = giây giữ mỏ hàn tới khi thiếc chảy đủ (nhân hệ số loại thiếc, cộng thời gian lấy thiếc)
@@ -2390,5 +2435,7 @@ export function platelessIssue(inv: Pick<Inventory, 'plate' | 'pcb' | 'stab'>): 
 export function caseFits(def: CaseDef, layout: LayoutId) {
   const lay = LAYOUTS[layout]
   const ff = def.ff === lay.ff || (!def.model && !!lay.fits?.includes(def.ff))
+  // layout `strict` (TKL F13): case CAD phải ghi đích danh, case dựng bằng code thì tự khớp theo phím
+  if (lay.strict && def.model && !def.layouts?.includes(layout)) return false
   return ff && (!def.layouts || def.layouts.includes(layout))
 }

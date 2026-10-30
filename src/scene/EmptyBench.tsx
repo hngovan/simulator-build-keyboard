@@ -3,10 +3,11 @@ import { useThree } from '@react-three/fiber'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useGame } from '@/store'
 import { isPackedBox } from '@/store/carrySlice'
+import { checkInventory } from '@/data/parts'
 import { Y } from '@/data/steps'
 import { CuttingMat } from './common/CuttingMat'
 import { fitAspect } from './common/fitAspect'
-import { benchPose } from './common/benchPose'
+import { benchView } from './common/benchPose'
 import { Clickable, HintArrow } from './stations/StationKit'
 import { GhostBlock, JobBox } from './room/DoorParcels'
 import { M } from './room/roomLayout'
@@ -31,13 +32,20 @@ export function EmptyBench() {
     // đang đi lại trong phòng: không kéo camera về bàn
     if (useGame.getState().walk) return
     // có thùng trên bàn (cỡ thật, cao gần 10u): lùi xa thêm cho thấy trọn thùng + mặt bàn
-    camera.position.set(...benchPose(null, hasBox ? fit * 1.5 : fit))
+    camera.position.set(...benchView({ width: null, box: hasBox }, fit))
     controls?.target.set(0, 0, 0)
     controls?.update()
   }, [camera, controls, camKey, fit, hasBox])
   const box = useGame((s) => s.benchBox)
   const packed = useGame((s) => !!s.benchBox && isPackedBox(s, s.benchBox))
   const walk = useGame((s) => s.walk)
+  // thùng đơn thiếu đồ: không viền khi rê, không mũi tên (bấm cũng không vào build được; HUD liệt kê món thiếu)
+  const ready = useGame(
+    (s) =>
+      !!s.benchBox &&
+      (isPackedBox(s, s.benchBox) ||
+        (s.order?.id === s.benchBox && checkInventory(s.inventory, s.order).every((c) => c.ok))),
+  )
   // đang cầm thùng đơn đi tới bàn trống: ô mờ chỉ chỗ đặt (bấm bàn để đặt)
   const placing = useGame((s) => s.walk && !!s.held && !s.benchBox && !isPackedBox(s, s.held))
   const benchHover = useRoom((r) => r.benchHover)
@@ -53,11 +61,11 @@ export function EmptyBench() {
       <CuttingMat w={31.5} d={23.5} position-y={Y.table + 0.005} />
       {box && (
         // thùng giữa bàn (đúng cỡ thật như trên kệ); đang ngồi mới bấm được
-        <Clickable active={!walk} onAct={act}>
+        <Clickable active={!walk && ready} onAct={act}>
           <group position-y={Y.table} scale={M * BOX_SCALE}>
             <JobBox id={box} />
           </group>
-          {!walk && <HintArrow at={[0, Y.table + 0.3 * M * BOX_SCALE, 0]} size={2} />}
+          {!walk && ready && <HintArrow at={[0, Y.table + 0.3 * M * BOX_SCALE, 0]} size={2} />}
         </Clickable>
       )}
       {placing && (

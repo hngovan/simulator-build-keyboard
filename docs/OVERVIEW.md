@@ -107,26 +107,29 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
    rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), kéo chuột nhìn, cuộn chuột giữa phóng to;
    đang ngồi bàn build bấm WASD / mũi tên cũng tự đứng dậy).
    Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
-   hành lang (hàng Shopii giao tới + đơn đóng gói chờ gửi, bấm thùng để nhận / gửi). **Kết thúc ngày** chỉ còn ở
+   hành lang: kệ cuối hành lang nhận hàng (thùng đơn khách + kiện Shopii / chợ, hết kệ thì đổ đống sàn), kệ 2 tầng cạnh
+   chậu cây để thùng đã đóng gói chờ gửi; bấm thùng để nhận / đặt vào để gửi. **Kết thúc ngày** chỉ còn ở
    lịch treo tường: bấm lịch → popup lịch chi tiết (sale, hạn đơn, hàng tới) → "Kết thúc ngày" mở popup tổng kết
    (`EndDayDialog`) hoặc "Quay lại làm việc".
 3. **Mezzenger**: hội thoại đơn mới, đơn chờ gửi và đơn đã gửi. Có thể xem chi tiết yêu cầu (tin ngắn + bảng
    tóm tắt), nhận đơn, từ chối, gửi hàng, xem điểm chấm.
-4. **Shopii**: mua case, PCB, plate, stab, switch, keycap, vật tư, dụng cụ, chứng chỉ thợ và sách phép.
+4. **Shopii**: mua case, PCB, plate, stab, switch, keycap, vật tư, dụng cụ, chứng chỉ thợ và sách phép. Mọi món
+   đều "Thêm vào giỏ" rồi thanh toán ở mục Giỏ hàng (chọn tốc độ giao 1 lần, cả giỏ thành 1 kiện).
 5. **Kho**: xem linh kiện của đơn đang làm, dụng cụ (kèm độ bền còn lại) và vật tư; kéo thả đổi chỗ.
    Hiện cả đồ của đơn đang chờ (ghi tên khách) và **kho chung** (mua dư, bị thay, thừa sau khi giao); nhận / chuyển đơn
    thì tự lấy món hợp yêu cầu, bấm ô để "Dùng cho đơn đang làm" / "Cất về kho chung".
 6. **Danh sách đơn** (app `order`, trước đây là "Chi tiết đơn"): yêu cầu khách, đối chiếu linh kiện,
    chọn mount, dự đoán âm thanh, ngân sách; nhận đơn / đổi đơn / ra bàn build.
 7. **Hội Phím Cơ VN**: bài pass đồ của người chơi khác. Hàng rẻ hơn 20–40% nhưng có khoảng 20% khả
-   năng bị seller bùng tiền. Inbox: tự nhập giá trả (popup, 3 lần), "Đi ăn xin" xin free (10% được, 70% bị người bán chặn, 20% bị ban chợ 3 ngày).
+   năng bị seller bùng tiền. Mua xong người bán gửi kiện tới kệ cửa trong ngày (không tag Shopii), mở kiện mới biết lỗi. Inbox: tự nhập giá trả (popup, 3 lần), "Đi ăn xin" xin free (10% được, 70% bị người bán chặn, 20% bị ban chợ 3 ngày).
 8. **Bảng xếp hạng**: bảng server, xếp theo điểm tổng (đơn + uy tín + ngày + tiền, lọc theo từng thông số) các lượt chơi đã kết thúc (thua / phá sản / chơi lại) + lượt đang chơi.
 9. **Cài đặt**: tắt âm thanh, chỉnh âm lượng nhạc nền / hiệu ứng, xem ghi công, về màn hình title.
    Tiến trình được lưu tự động.
 
 ### Bàn build 3D
 
-- Nhận đơn ở Mezzenger thì **thùng đơn** của khách tới kệ hàng cuối hành lang. Đứng dậy ra kệ bấm thùng để cầm lên, mang về
+- Nhận đơn ở Mezzenger thì **thùng đơn** của khách tới kệ hàng cuối hành lang (khách không gửi đồ thì không có thùng gửi tới:
+  thùng trống của shop để sẵn ở **kệ cất đơn**, lấy ở đó). Đứng dậy ra kệ bấm thùng để cầm lên, mang về
   bấm bàn build để đặt xuống (`placeBench`): đủ đồ thì vào build luôn, thiếu thì thùng nằm trên bàn kèm danh sách món còn thiếu
   (mua đủ rồi bấm thùng / "Mở thùng, bắt đầu build").
 - Đổi đơn: bấm **Cầm thùng đơn lên** (giữ nguyên tiến độ), cất vào ô mờ trên **kệ cất đơn** (tường phải) rồi lấy thùng khác.
@@ -178,7 +181,7 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   phím 3D. Máy đo âm thanh hiện độ khớp với yêu cầu của khách.
 - **Đóng gói**: bước cuối **Đóng gói** (sau test): bấm thùng carton sau bàn phím (hoặc nút **Cho phím vào thùng** / nút cam **Đóng gói đơn này**), thùng úp lên bàn phím rồi gọi `deliver()`; nếu build chưa
   xong thì hỏi lại. Đơn được chấm điểm ngay và đưa vào `packed`, phím vào thùng nằm trên bàn.
-- **Gửi**: cầm thùng đã đóng gói ra **ô giao hàng** (2 tầng trên kệ cuối hành lang), đặt vào là gửi (`shipOrder`):
+- **Gửi**: cầm thùng đã đóng gói ra **kệ giao hàng** (2 tầng, cạnh chậu cây đầu hành lang), đặt vào là gửi (`shipOrder`):
   cộng tiền và uy tín ngay. Không gửi thì **Kết thúc ngày** (`nextDay`) sẽ gửi nốt các đơn đã đóng gói.
 
 ### Chấm điểm và kết thúc ngày
@@ -278,7 +281,7 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   được mã thì click trực tiếp phím 3D. Càng nhiều phím được test càng gần 5 điểm.
 - Bấm **Đóng gói đơn này** để chấm điểm và đóng gói. Nếu chưa xong, game hỏi lại; giao sớm sẽ bị
   điểm thấp.
-- Cầm thùng đã đóng gói ra ô giao hàng trên kệ cuối hành lang để nhận tiền hoàn + tiền công và cộng/trừ uy tín. Có thể
+- Cầm thùng đã đóng gói ra kệ giao hàng cạnh chậu cây để nhận tiền hoàn + tiền công và cộng/trừ uy tín. Có thể
   gửi từng đơn ngay hoặc để **Kết thúc ngày** gửi nốt.
 
 ### Tiền, uy tín, hạn, dụng cụ, chứng chỉ

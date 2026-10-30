@@ -178,8 +178,13 @@ export function PanelDoor(props: JSX.IntrinsicElements['group']) {
 /** Kệ sắt xanh 3 tầng mặt ván (gốc = sàn dưới tâm kệ, mặt trước +z); trả về độ cao các tầng để đặt hàng */
 export const RACK_TIERS = [0.08, 0.5, 0.92, RACK.h]
 
-export function MetalRack(props: JSX.IntrinsicElements['group']) {
-  const { w, d, h } = RACK
+/** `tiers` = độ cao các tầng ván (tầng cuối = mặt trên, cao bằng cột) */
+export function MetalRack({
+  tiers = RACK_TIERS,
+  ...props
+}: { tiers?: number[] } & JSX.IntrinsicElements['group']) {
+  const { w, d } = RACK
+  const h = tiers[tiers.length - 1]
   return (
     <group {...props}>
       {[-1, 1].flatMap((sx) =>
@@ -193,7 +198,7 @@ export function MetalRack(props: JSX.IntrinsicElements['group']) {
           />
         )),
       )}
-      {RACK_TIERS.map((y) => (
+      {tiers.map((y) => (
         <group key={y} position-y={y}>
           <mesh
             position-y={-0.012}

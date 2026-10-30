@@ -71,9 +71,27 @@ function pick(scene: THREE.Object3D, re: RegExp) {
   return c
 }
 
+/**
+ * phích đen cho khớp màu dây (model gốc nhựa trắng, 1 vật liệu texture chung cả chân): nhân màu tối lên texture,
+ * chân cắm khuất trong ổ nên tối theo cũng không lộ
+ */
+function blackPlug(scene: THREE.Object3D) {
+  const c = scene.clone(true)
+  c.traverse((o) => {
+    const m = o as THREE.Mesh
+    if (!m.isMesh) return
+    m.castShadow = true
+    const mat = (m.material as THREE.MeshStandardMaterial).clone()
+    mat.color.set('#262626')
+    m.material = mat
+  })
+  return c
+}
+
 function Plug({ kind }: { kind: PlugKind }) {
   const { scene } = useGLTF(PLUGS[kind].url)
   const cee = useMemo(() => (kind === 'cee' ? pick(scene, /^CEE/) : null), [scene, kind])
+  const eu = useMemo(() => (kind === 'eu' ? blackPlug(scene) : null), [scene, kind])
   return (
     <group position={SOCKET}>
       {cee ? (
@@ -86,7 +104,7 @@ function Plug({ kind }: { kind: PlugKind }) {
         </group>
       ) : (
         <group rotation-y={Math.PI} scale={0.02}>
-          <Clone object={scene} position={[0, -0.48, -0.02]} castShadow />
+          <primitive object={eu!} position={[0, -0.48, -0.02]} />
         </group>
       )}
     </group>
