@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.19',
     date: '2026-10-30',
-    commits: [],
+    commits: ['305b282'],
     title: 'Phích cắm thật cho dây nguồn máy tính + dây đèn bàn',
     items: [
       'Dây nguồn máy tính có đầu C13 cắm vào lưng CPU và phích CEE cắm ổ tường (model thật), dây thòng xuống sàn',
