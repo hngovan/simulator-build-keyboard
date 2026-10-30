@@ -188,6 +188,18 @@ export const CREDITS: CreditGroup[] = [
         url: 'https://sketchfab.com/3d-models/electrical-wall-outlet-a19e89cfc54047bb965e1b3d6983301c',
       },
       {
+        what: '[CC0] European Power Plug (phích CEE + đầu C13 dây nguồn máy tính)',
+        author: 'Lara Sophie Schütt',
+        license: 'CC BY 4.0',
+        url: 'https://sketchfab.com/3d-models/cc0-european-power-plug-189d8288a0614781995221cf4c3e67a5',
+      },
+      {
+        what: 'power plug (european) (phích dây đèn bàn)',
+        author: 'ChoboiAssets',
+        license: 'CC BY 4.0',
+        url: 'https://sketchfab.com/3d-models/power-plug-european-4b73c69e083f43329491dff671721515',
+      },
+      {
         what: 'Electric Screwdriver_ Tool (tua vít điện)',
         author: 'MugoflighterfluidArt',
         license: 'CC BY 4.0',

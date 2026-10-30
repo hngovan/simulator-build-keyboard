@@ -23,6 +23,8 @@ Quy tắc của người dùng:
 | Window Blind - 3MB               | Mehdi Shahsavan      | rèm lá cửa sổ (2026-10-30)          |
 | Light Fixture - Ceiling Recessed | MozillaHubs          | đèn âm trần hành lang (2026-10-30)  |
 | Electrical Wall Outlet           | sacapuntas           | ổ cắm tường (2026-10-30)            |
+| [CC0] European Power Plug        | Lara Sophie Schütt   | dây nguồn máy tính (2026-10-30)     |
+| power plug (european)            | ChoboiAssets         | phích đèn bàn (2026-10-30)          |
 | Light Switch                     | Avot                 | công tắc đèn cạnh cửa (2026-10-30)  |
 
 - MIT: daughterboard ai03 Unified C3 (STEP, © 2019 ai03, github.com/mraghuram3/Unified-Daughterboard) → `public/models/dtb/`, ghi ở `credits.ts` + `public/licenses/unified-daughterboard-MIT.txt` (2026-10-30).

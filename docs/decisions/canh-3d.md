@@ -1038,3 +1038,16 @@
   nâng tâm lên 1,35m cho thoát mặt kệ sắt cao 1,25m).
 - Ghi công: `credits.ts`, `public/models/room/CREDITS.md`, bảng `giay-phep.md`. Người dùng hỏi lại "xoá cái vừa thêm" → chọn giữ công tắc mới
   (ổ cắm `wall-outlet.glb` do agent khác đổi cùng lúc).
+
+## Phích cắm model: dây nguồn máy tính + dây đèn bàn (2026-10-30)
+
+- Người dùng: "thay luôn dây điện cắm cpu thành model `cc0_european_power_plug.glb`", "dây điện cắm bóng đèn thành `power_plug_european.glb`".
+- `cc0_european_power_plug.glb` → `public/models/room/power-cord-cee.glb` (Lara Sophie Schütt, ghi CC0 nhưng Sketchfab để CC BY 4.0 → ghi công):
+  nguyên sợi dây nằm uốn cố định trên sàn (phích CEE 7/7 + đầu cái IEC C13) → **chỉ lấy 2 đầu cắm** (`pick` tách nhánh theo tên `^CEE` / `^IEC`
+  kèm transform thế giới), đoạn dây giữa vẫn là `Cable` tự uốn. CEE: chân xếp dọc +z, dây ra ngang → xoay π quanh y rồi −π/2 quanh trục chân
+  cho dây thòng xuống. C13: trục +x riêng = hướng cắm, `PowerInlet` đặt gốc = tâm mặt cắm (đo Box3 lúc chạy), `C13_LEN` 7cm.
+- `power_plug_european.glb` → `power-plug-eu.glb` (ChoboiAssets, CC BY 4.0, 1 mesh + texture ~1MB): file ×50 (thu 0,02 → Ø3,7cm),
+  chân ngang +z, đuôi dây sau thân chếch xuống → xoay π quanh y.
+- `Outlet` (Wiring.tsx) thêm `plug: 'eu' | 'cee'` (bỏ khối phích đen), `plugExit(kind)` = chỗ dây ra khỏi phích (hệ ổ) để nối `Cable`.
+  PcDesk: `PowerInlet` ở lưng CPU (`C13_AT`, x −0,17 hệ bàn) → dây thòng sàn → phích CEE (`PLUG_END` đổi từ hệ ổ xoay π/2).
+  Room: dây đèn bàn tới `LAMP_PLUG`, phích EU.

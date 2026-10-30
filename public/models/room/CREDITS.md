@@ -32,3 +32,5 @@ Từ [Sketchfab](https://sketchfab.com), giấy phép CC BY 4.0 (bắt buộc gh
 - Light Fixture - Ceiling Recessed (`ceiling-recessed.glb`) — MozillaHubs
 - Electrical Wall Outlet (`wall-outlet.glb`) — sacapuntas
 - Light Switch (`light-switch.glb`) — Avot
+- [CC0] European Power Plug (`power-cord-cee.glb`) — Lara Sophie Schütt
+- power plug (european) (`power-plug-eu.glb`) — ChoboiAssets

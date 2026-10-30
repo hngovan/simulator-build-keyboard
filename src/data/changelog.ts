@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.19',
+    date: '2026-10-30',
+    commits: [],
+    title: 'Phích cắm thật cho dây nguồn máy tính + dây đèn bàn',
+    items: [
+      'Dây nguồn máy tính có đầu C13 cắm vào lưng CPU và phích CEE cắm ổ tường (model thật), dây thòng xuống sàn',
+      'Dây đèn bàn build cắm bằng phích EU tròn (model thật), đuôi dây thòng xuống rồi vòng lên đèn',
+    ],
+  },
+  {
     version: '0.1.18',
     date: '2026-10-30',
     commits: ['e27f286'],

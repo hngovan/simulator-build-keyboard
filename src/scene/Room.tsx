@@ -38,7 +38,7 @@ import {
 } from './room/roomLayout'
 import { PcDesk } from './room/PcDesk'
 import { Stool } from './room/Stool'
-import { Cable, LightSwitch, Outlet } from './room/Wiring'
+import { Cable, LightSwitch, Outlet, plugExit } from './room/Wiring'
 import { Downlight } from './room/Downlight'
 import { MetalRack, PanelDoor } from './room/HallProps'
 import { ModelPainting } from './room/ModelPainting'
@@ -252,6 +252,12 @@ const SHELF_Z = ROOM.back + 0.13 * M
 const SHELF_FRONT = ROOM.back + 0.205 * M
 /** đèn tay đòn trên bàn build (Poly Haven `desk_lamp_arm_01`, kẹp mép bàn): tâm x (m), góc xoay, ổ cắm tường sau (x, m) */
 const LAMP = { x: 0.42, rot: Math.PI / 2, outlet: 0.62 }
+/** chỗ dây đèn ra khỏi phích cắm ổ tường sau (hệ phòng / M, ổ không xoay) */
+const LAMP_PLUG = ((e) => [LAMP.outlet + e[0], 0.3 + e[1], BACK_M + e[2]])(plugExit('eu')) as [
+  number,
+  number,
+  number,
+]
 /** màu sơn tường: xám xanh dịu mắt (người dùng đổi từ be) */
 const WALL_COLOR = '#8796a3'
 /** ảnh vân gỗ lặp (UV trải theo toạ độ thật bằng `grainBoxGeometry`, vân chạy dọc thanh) */
@@ -904,10 +910,13 @@ export function Room() {
             [LAMP.x, DESK.h - 0.06, -DESK.d / 2 + 0.02],
             [LAMP.x + 0.03, DESK.h - 0.25, BACK_M + 0.02],
             [LAMP.x + 0.12, 0.45, BACK_M + 0.012],
-            [LAMP.outlet, 0.3 + 0.03 - 0.02, BACK_M + 0.02],
+            [LAMP.outlet - 0.03, 0.2, BACK_M + 0.03],
+            [LAMP.outlet, LAMP_PLUG[1] - 0.04, LAMP_PLUG[2] + 0.004],
+            LAMP_PLUG,
           ]}
         />
-        <Outlet position={[LAMP.outlet, 0.3, BACK_M]} />
+        {/* phích EU (model) cắm ổ trên, đuôi dây thòng xuống rồi vòng lên đèn */}
+        <Outlet position={[LAMP.outlet, 0.3, BACK_M]} plug="eu" />
       </group>
       {/* kệ chưng bàn phím: dựng như dựa tường sau rồi xoay 180° ra tường trước (sau lưng khi ngồi bàn build) */}
       <group position-z={FRONT_Z + ROOM.back} rotation-y={Math.PI}>

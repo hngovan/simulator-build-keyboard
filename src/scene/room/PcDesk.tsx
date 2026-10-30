@@ -5,7 +5,7 @@ import { useGame } from '@/store'
 import { Monitor, PcTower } from '../models/Computer'
 import { DESK, MOUSE_PAD, PC_DESK } from './roomLayout'
 import { RoomSpot } from './RoomSpot'
-import { Cable, Outlet } from './Wiring'
+import { C13_LEN, Cable, Outlet, PowerInlet, plugExit } from './Wiring'
 import { topreTexture } from './topreArt'
 
 // Bàn máy tính sát bên trái bàn build (theo kiểu PC Building Simulator): bàn có hộc = model người dùng đưa (`DeskBody`),
@@ -15,6 +15,13 @@ import { topreTexture } from './topreArt'
 
 /** chân thùng CPU trong ngăn kệ hở bên phải bàn (hệ bàn: z âm = tay phải người ngồi), đáy trên ván đáy kệ */
 const CPU_AT: [number, number, number] = [0, 0.03, -0.475]
+/** ổ cắm tường sau (hệ bàn), xoay π/2: hệ ổ (x, y, z) → hệ bàn (z, y, −x) */
+const OUTLET_AT: [number, number, number] = [-0.403, 0.32, -0.44]
+const PLUG_END = ((e) => [OUTLET_AT[0] + e[2], OUTLET_AT[1] + e[1], OUTLET_AT[2] - e[0]])(
+  plugExit('cee'),
+) as [number, number, number]
+/** cổng nguồn lưng CPU (lưng ở x −0,17 hệ bàn, gần đáy), đầu C13 cắm theo +x */
+const C13_AT: [number, number, number] = [-0.17, 0.1, -0.52]
 const PAD = new THREE.MeshStandardMaterial({ color: '#1b1d23', roughness: 0.95 })
 /** ảnh in lót chuột người dùng tự đặt (không bắt buộc) */
 const PAD_IMAGE = '/textures/mousepad.png'
@@ -196,15 +203,21 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
           [0.04, deskTop + 0.012, 0.06],
         ]}
       />
+      {/* dây nguồn: đầu C13 cắm lưng CPU → thòng xuống sàn → lên phích CEE ở ổ tường */}
+      <PowerInlet position={C13_AT} />
       <Cable
+        r={0.0035}
         points={[
-          [-0.22, 0.2, -0.515],
-          [-0.36, 0.12, -0.4],
-          [-0.383, 0.3, -0.44],
+          [C13_AT[0] - C13_LEN + 0.01, C13_AT[1], C13_AT[2]],
+          [C13_AT[0] - C13_LEN - 0.01, C13_AT[1], C13_AT[2]],
+          [-0.33, 0.07, -0.48],
+          [PLUG_END[0] + 0.01, PLUG_END[1] - 0.06, PLUG_END[2] + 0.005],
+          [PLUG_END[0] + 0.004, PLUG_END[1] - 0.025, PLUG_END[2] + 0.002],
+          PLUG_END,
         ]}
       />
       {/* ổ cắm trên tường sau (hệ bàn: −x là tường), phích máy tính cắm ổ trên */}
-      <Outlet position={[-0.403, 0.32, -0.44]} rotation-y={Math.PI / 2} />
+      <Outlet position={OUTLET_AT} rotation-y={Math.PI / 2} plug="cee" />
     </group>
   )
 }
