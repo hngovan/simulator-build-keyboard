@@ -43,6 +43,10 @@ export const OUTLINE_GHOST_MAT = OUTLINE_MAT.clone()
 OUTLINE_GHOST_MAT.transparent = true
 OUTLINE_GHOST_MAT.toneMapped = false
 
+/** tên mesh: viền thường nhưng đáy phẳng nổi trên mặt đỡ (`onTopGeometry`) / bỏ viền (đồ đắp mỏng: băng keo, nhãn) */
+export const OUTLINE_ON_TOP = 'outline-on-top'
+export const NO_OUTLINE = 'no-outline'
+
 const KEY = 'hoverOutline'
 const noRay = () => null
 
@@ -65,11 +69,39 @@ export function outlineGeometry(g: THREE.BufferGeometry) {
   return s
 }
 
+/**
+ * Hộp đặt trên mặt bàn / kệ (thùng carton): vỏ ngược phình cả xuống dưới, đáy lún dưới mặt đỡ nên mất viền cạnh đáy.
+ * Đỉnh đáy chỉ đẩy ngang (pháp tuyến bỏ trục y) + nhấc lên 1mm → đáy vỏ nằm ngay trên mặt đỡ, viền đáy mảnh như các cạnh khác
+ */
+const onTopCache = new WeakMap<THREE.BufferGeometry, THREE.BufferGeometry>()
+function onTopGeometry(g: THREE.BufferGeometry) {
+  let s = onTopCache.get(g)
+  if (!s) {
+    s = outlineGeometry(g).clone()
+    s.computeBoundingBox()
+    const minY = s.boundingBox!.min.y
+    const pos = s.getAttribute('position')
+    const nor = s.getAttribute('normal')
+    const n = new THREE.Vector3()
+    for (let i = 0; i < pos.count; i++) {
+      if (pos.getY(i) > minY + 1e-6) continue
+      pos.setY(i, minY + 0.001)
+      n.set(nor.getX(i), 0, nor.getZ(i)).normalize()
+      nor.setXYZ(i, n.x, n.y, n.z)
+    }
+    onTopCache.set(g, s)
+  }
+  return s
+}
+
 /** viền của 1 mesh (tạo 1 lần, gắn làm con để theo transform / ẩn hiện của mesh) */
 function outlineOf(m: THREE.Mesh) {
   let o = m.userData[KEY] as THREE.Mesh | undefined
   if (!o) {
-    const geo = outlineGeometry(m.geometry)
+    const geo =
+      m.name === OUTLINE_ON_TOP && m.geometry.type === 'BoxGeometry'
+        ? onTopGeometry(m.geometry)
+        : outlineGeometry(m.geometry)
     o =
       m instanceof THREE.InstancedMesh
         ? Object.assign(new THREE.InstancedMesh(geo, OUTLINE_MAT, m.instanceMatrix.count), {
@@ -85,10 +117,11 @@ function outlineOf(m: THREE.Mesh) {
   return o
 }
 
-/** mesh vẽ viền được: có pháp tuyến, không phải chữ 3D (troika) hay chính viền */
+/** mesh vẽ viền được: có pháp tuyến, không phải chữ 3D (troika), chính viền hay đồ đắp mỏng (tên `NO_OUTLINE`) */
 const outlinable = (o: THREE.Object3D): o is THREE.Mesh =>
   o instanceof THREE.Mesh &&
   o.userData[KEY] !== o &&
+  o.name !== NO_OUTLINE &&
   !!o.geometry?.attributes.normal &&
   !('text' in o)
 

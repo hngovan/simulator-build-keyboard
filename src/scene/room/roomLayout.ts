@@ -42,8 +42,11 @@ export const MOUSE_PAD = { w: 0.9, d: 0.4 }
 /** kệ chưng bàn phím (model rộng 1m, sâu 0.257m) dựa tường trước (sau lưng khi ngồi bàn build), tâm x (m) */
 export const SHELF_X = -(DESK.w / 2 + 0.65)
 
-/** cửa sổ lớn rèm lá ở tường sau, phía trên bàn máy tính (m): tâm x, rộng, cao, cao độ bậu so với sàn */
-export const WINDOW = { x: -1.1, w: 1.3, h: 1.3, sill: 0.98 }
+/**
+ * cửa sổ rèm lá ở tường sau, phía trên bàn máy tính (m): tâm x, rộng lòng khung, cao, cao độ bậu so với sàn.
+ * Cả khung rộng bằng bàn máy tính 1,2m, cùng tâm (người dùng: "bằng cái bàn máy tính là được")
+ */
+export const WINDOW = { x: PC_DESK.x, w: 1.14, h: 1.2, sill: 0.98 }
 
 /** bàn gỗ làm việc (WoodenTable_03, 1.33 × 0.58m) dựa tường phải, mặt trước quay vào phòng */
 export const WORK_TABLE = { x: HALF_W - 0.3, z: 1.8, w: 1.33, d: 0.58, h: 0.83 }

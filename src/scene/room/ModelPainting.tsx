@@ -11,8 +11,6 @@ const DIR = '/models/room'
 export const FRAMES = {
   hanging01: `${DIR}/hanging_picture_frame_01.glb`,
   hanging02: `${DIR}/hanging_picture_frame_02.glb`,
-  hanging03: `${DIR}/hanging_picture_frame_03.glb`,
-  fancy01: `${DIR}/fancy_picture_frame_01.glb`,
   fancy02: `${DIR}/fancy_picture_frame_02.glb`,
 }
 Object.values(FRAMES).forEach((url) => useGLTF.preload(url))

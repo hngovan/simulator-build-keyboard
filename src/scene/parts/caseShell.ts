@@ -32,6 +32,15 @@ export interface WallNotch {
   d: number
 }
 
+/** lỗ ngang khoét xuyên vách sau (cổng USB): tâm x, tâm cao y, rộng w, cao h, bo góc r (u) */
+export interface WallPort {
+  x: number
+  y: number
+  w: number
+  h: number
+  r: number
+}
+
 /** lỗ tròn đứng khoan vào vỏ (u): tâm x, z, bán kính `r`, từ y0 tới y1 (lỗ vít xuyên / lỗ ren / hốc chìm đầu ốc) */
 export interface WallBore {
   x: number
@@ -61,7 +70,15 @@ function ringShape(W: number, D: number, wall: number, solid: boolean, inset = 0
  * Gờ đỡ chạy quanh lòng case (đỡ vòng O-ring / gasket): vành phẳng `W` × `D` (mép ngoài lấn vào vách), rộng `wall`,
  * từ y0 tới y1, góc bo như góc ruột case
  */
-export function ledgeGeometry(W: number, D: number, y0: number, y1: number, wall: number) {
+export function ledgeGeometry(
+  W: number,
+  D: number,
+  y0: number,
+  y1: number,
+  wall: number,
+  /** chừa khe trên gờ vách sau (u): tâm x, rộng w (chỗ daughterboard + cổng USB) */
+  gap?: { x: number; w: number },
+) {
   const shape = roundedRect(new THREE.Shape(), W, D, INNER_R) as THREE.Shape
   shape.holes.push(roundedRect(new THREE.Path(), W - 2 * wall, D - 2 * wall, INNER_R))
   const g = new THREE.ExtrudeGeometry(shape, {
@@ -71,7 +88,13 @@ export function ledgeGeometry(W: number, D: number, y0: number, y1: number, wall
   })
   g.rotateX(-Math.PI / 2)
   g.translate(0, y0, 0)
-  return g
+  if (!gap) return g
+  const cut = new THREE.BoxGeometry(gap.w, y1 - y0 + 0.04, wall + 0.04).translate(
+    gap.x,
+    (y0 + y1) / 2,
+    -D / 2 + wall / 2,
+  )
+  return carve(g, [cut])
 }
 
 /** trừ các khối `cuts` khỏi `base` (CSG), giải phóng hình gốc */
@@ -144,6 +167,8 @@ export function caseShellGeometry(
   notchTop = y1,
   /** lỗ khoan đứng vào vỏ (lỗ vít xuyên, lỗ ren, hốc chìm đầu ốc) */
   bores: WallBore[] = [],
+  /** lỗ ngang xuyên vách sau (cổng USB daughterboard) */
+  ports: WallPort[] = [],
 ) {
   const b = SHELL_BEVEL
   const extrude = (shape: THREE.Shape, h: number, bottom: number, segs = 6) => {
@@ -177,6 +202,18 @@ export function caseShellGeometry(
         h.z,
       ),
     ),
+    ...ports.map((o) => {
+      const g = new THREE.ExtrudeGeometry(
+        roundedRect(new THREE.Shape(), o.w, o.h, o.r) as THREE.Shape,
+        {
+          depth: wall + 0.1,
+          bevelEnabled: false,
+          curveSegments: 8,
+        },
+      )
+      // đùn theo +z từ ngoài mặt vách sau vào trong lòng case
+      return g.translate(o.x, o.y, -D / 2 - 0.05)
+    }),
   ]
   const ring = cuts.length ? carve(shell, cuts) : shell
   if (floorTop === undefined) return ring

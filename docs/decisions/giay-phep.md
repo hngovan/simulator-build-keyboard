@@ -3,24 +3,35 @@
 Quy tắc của người dùng:
 
 - File sưu tầm cá nhân chưa rõ giấy phép: **chỉ dùng cá nhân** (assets/user-cases, solder-tools OBJ / 3MF,
-  đồ mở switch MX STL).
+  đồ mở switch MX STL, poster hành lang `public/textures/posters/caution-keyboard.jpg` / `bassline-303.jpg` — ảnh mockup sản phẩm người dùng đưa).
 - **Không** tải nhạc từ YouTube.
 - Model CC BY 4.0 phải ghi công ở **cả** `src/data/credits.ts` (mục Ghi công trong Cài đặt đã bỏ theo yêu cầu người dùng 2026-10-25; file vẫn giữ làm nguồn) và `public/CREDITS.md`.
 
 ## Đã ghi công (CC BY 4.0)
 
-| Model                      | Tác giả              | Dùng ở                            |
-| -------------------------- | -------------------- | --------------------------------- |
-| Soldering Iron 60W         | yarankepang          | bút hàn                           |
-| Band Aid Box               | Logansryche          | hộp Urgo                          |
-| Voxel Cutting Mat          | shpawen              | tấm lót bàn                       |
-| Chest Box Wooden           | Mehdi Shahsavan      | rương mở hộp                      |
-| Old Tool Box               | Mark-kon             | hộp đồ nghề                       |
-| Diploma Frame              | DrewA                | khung chứng chỉ (thêm 2026-10-24) |
-| Electric Screwdriver_ Tool | MugoflighterfluidArt | tua vít điện (thêm 2026-10-24)    |
-| Round Brush                | Zsky                 | cọ lube                           |
+| Model                            | Tác giả              | Dùng ở                              |
+| -------------------------------- | -------------------- | ----------------------------------- |
+| Soldering Iron 60W               | yarankepang          | bút hàn                             |
+| Band Aid Box                     | Logansryche          | hộp Urgo                            |
+| Voxel Cutting Mat                | shpawen              | tấm lót bàn                         |
+| Chest Box Wooden                 | Mehdi Shahsavan      | rương mở hộp                        |
+| Old Tool Box                     | Mark-kon             | hộp đồ nghề                         |
+| Diploma Frame                    | DrewA                | khung chứng chỉ (thêm 2026-10-24)   |
+| Electric Screwdriver_ Tool       | MugoflighterfluidArt | tua vít điện (thêm 2026-10-24)      |
+| Round Brush                      | Zsky                 | cọ lube                             |
+| ZZ Plant in Ceramic Pot          | Jerovdl              | chậu cây góc hành lang (2026-10-30) |
+| Window Blind - 3MB               | Mehdi Shahsavan      | rèm lá cửa sổ (2026-10-30)          |
+| Light Fixture - Ceiling Recessed | MozillaHubs          | đèn âm trần hành lang (2026-10-30)  |
+| Electrical Wall Outlet           | sacapuntas           | ổ cắm tường (2026-10-30)            |
+| [CC0] European Power Plug        | Lara Sophie Schütt   | dây nguồn máy tính (2026-10-30)     |
+| power plug (european)            | ChoboiAssets         | phích đèn bàn (2026-10-30)          |
+| Light Switch                     | Avot                 | công tắc đèn cạnh cửa (2026-10-30)  |
+
+- MIT: daughterboard ai03 Unified C3 (STEP, © 2019 ai03, github.com/mraghuram3/Unified-Daughterboard) → `public/models/dtb/`, ghi ở `credits.ts` + `public/licenses/unified-daughterboard-MIT.txt` (2026-10-30).
 
 ## CC0 / tự dựng
+
+- 2026-10-30: texture `blue_metal_plate` (Poly Haven, Rob Tuytel) cho kệ thép hành lang (`credits.ts` + `public/models/room/CREDITS.md`).
 
 - Poly Haven (bàn, ghế, đèn, cây, kệ, tua vít tay...), Innerscene (hũ, hộp lò xo).
 - 2026-10-28 (phòng đi lại được): tải thêm từ Poly Haven `metal_office_desk`, `WoodenTable_03`, `drawer_cabinet`,
@@ -33,7 +44,7 @@ Quy tắc của người dùng:
 ## Nguồn file gốc
 
 - `assets/community/hand-tools/SOURCE.md`: tua vít điện + đồ mở switch.
-- `assets/community/README.md`: các bộ CAD bàn phím (MIT).
+- `assets/README.md`: các bộ CAD bàn phím (MIT).
 - PCB Mechlovin: **đã gỡ** (2026-10-25, người dùng không cần nữa) — xoá `assets/community/mechlovin-pcb/`,
   `public/models/pcbs/`, script `convert:pcbs`, sản phẩm Shopii `PCB_MODELS` và ghi công; chỉ còn PCB tiêu chuẩn mỗi layout.
 - ai03 Plate Generator (`ai03-2725/yet-another-keyboard-builder`, **AGPL-3.0**): chỉ chạy offline để sinh plate universal
@@ -54,5 +65,8 @@ Quy tắc của người dùng:
   (`public/models/desk/`, gốc trong `assets/user-desk/` không commit). Lót chuột in logo Topre "COLDTOP" vẽ lại theo ảnh người dùng
   (thương hiệu thật, chỉ dùng cá nhân).
 - 2026-10-29: rèm lá "Venetian frame window" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/room/venetian-blind.glb`.
+  2026-10-30 đã thay bằng "Window Blind - 3MB" (CC BY 4.0) và xoá file này.
+- 2026-10-30: 2 poster bàn phím người dùng đưa (ảnh sản phẩm Redbubble, tranh của tác giả khác, **chỉ dùng cá nhân**) →
+  `public/textures/posters/` (`cherry-crazy.jpg`, `keyboards-click.jpg`).
 - 2026-10-29: bàn có hộc "office desk" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/desk/office-desk.glb`.
 - 2026-10-29: màn hình "ASUS PC gaming monitor" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/desk/asus-monitor.glb`.

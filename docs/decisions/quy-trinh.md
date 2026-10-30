@@ -74,3 +74,11 @@
   `isOptionalStep` (steps.ts): `plate` bắt buộc khi danh sách bước có `topCase` (đã có) hoặc `gasket` (mới). `placeGasket` chặn khi
   `!build.plate` (lỡ bỏ qua / đổi case dev giữa chừng) + toast nhắc quay lại bước lắp plate. Kiểm playwright: gasket60 ở bước plate chưa đặt
   bấm tiếp → đứng yên; plastic60 tray vẫn bỏ qua được; dán gasket khi chưa có plate → không dán, có plate → dán được.
+
+## Merge origin/main sau khi sắp xếp lại assets (2026-10-30)
+
+- Xung đột do commit `533822b` (bỏ `assets/community/`, `user-props/` → `supplies/`) gặp daughterboard + công tắc đèn từ remote.
+- Daughterboard nguồn chuyển `assets/community/unified-daughterboard/` → `assets/dtb/` (khớp `public/models/dtb/`),
+  sửa `scripts/convert-dtb.mjs`, CLAUDE.md, `docs/decisions/canh-3d.md`; ghi vào bảng nhóm `assets/README.md`.
+- `light_switch.glb` để ở `assets/supplies/`; bỏ `assets/community/README.md` (nội dung đã gộp vào `assets/README.md`).
+- Đồ nguồn mới: theo nhóm trong `assets/README.md`, không tạo lại `assets/community/`.

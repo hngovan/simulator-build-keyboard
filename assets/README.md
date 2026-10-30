@@ -14,6 +14,7 @@ bằng URL `/models/...`. Hai bên chia theo cùng một nhóm:
 | Ốc vít | `screws/` | `screws/` | `convert:screws` |
 | Dụng cụ | `tools/` (`hand/`, `solder/`, `desolder-pump/`, `scissors/`, `polyhaven/`) | `tools/` (+ `tools/solder/`) | `convert:hand-tools`, `convert:solder-tools`, `convert:desolder-pump` |
 | Lube | `lube/` (`brushes/`, `jars/`, `spring-containers/`) | `lube/` | `convert:spring-containers` |
+| Daughterboard | `dtb/` | `dtb/unified-c3.glb` | `convert:dtb` |
 | Vật tư | `supplies/` | `supplies/` | — |
 | Bàn máy tính | `desk/` (gitignore) | `desk/` | `convert:desk-gear` |
 | Âm thanh | `audio/sfx/<tương tác>/` (bản gốc) | `public/audio/sfx/<tương tác>/` (ngoài `models/`) | cắt tay |
@@ -62,7 +63,8 @@ Năm bộ thiết kế trong bảng đều dùng giấy phép MIT, bản sao n�
 - `tools/polyhaven/` có model GLB hộp đồ nghề + tua vít tay (tham khảo). Giấy phép **CC0**, [xem nguồn chi tiết](tools/polyhaven/SOURCE.md).
 - `tools/scissors/` có model GLB kéo cắt, giấy phép **CC0**, [xem nguồn](tools/scissors/SOURCE.md).
 - `screws/` có ba model STEP ốc đầu côn chìm, đầu trụ lục giác và đầu tròn thấp; bản GLB game dùng ở `public/models/screws/`. Giấy phép **CC0**, [xem nguồn](screws/SOURCE.md).
-- `supplies/`: hộp băng cá nhân, khung bằng, khung ảnh để bàn (người dùng đưa, chưa rõ giấy phép).
+- `supplies/`: hộp băng cá nhân, khung bằng, khung ảnh để bàn (người dùng đưa, chưa rõ giấy phép); công tắc đèn `light_switch.glb` (Sketchfab, Avot, CC BY 4.0).
+- `dtb/`: daughterboard ai03 Unified C3 (STEP, MIT); [nguồn](dtb/SOURCE.md). `bun run convert:dtb` → `public/models/dtb/unified-c3.glb`.
 
 ## Keycap
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 
-// Tranh treo tường vẽ bằng canvas (dùng chung cho các tranh tự vẽ): khung + viền giấy + mặt tranh.
+// Tranh treo tường vẽ bằng canvas (dùng chung cho các tranh tự vẽ) / tranh từ ảnh: khung + viền giấy + mặt tranh.
 // Đơn vị mét; gốc = tâm tranh, mặt quay +z. Chữ ký viết tay dùng font Caveat (OFL, đã dùng cho chữ khắc bàn)
 
 const SIGN_FONT = '/fonts/Caveat.ttf'
@@ -40,21 +41,7 @@ export function signature(
   g.restore()
 }
 
-export function CanvasPainting({
-  draw,
-  px,
-  py,
-  w,
-  h,
-  frame = '#4a2f1d',
-  metal = false,
-  mat = 0.04,
-  ...props
-}: {
-  draw: PaintFn
-  /** cỡ canvas (px) */
-  px: number
-  py: number
+type FrameProps = {
   /** cỡ mặt tranh (m) */
   w: number
   h: number
@@ -63,23 +50,18 @@ export function CanvasPainting({
   metal?: boolean
   /** bề rộng viền giấy (0 = tranh tràn khung) */
   mat?: number
-} & JSX.IntrinsicElements['group']) {
-  const [tex, setTex] = useState(() => paint(draw, px, py, 'cursive'))
-  useEffect(() => {
-    let alive = true
-    new FontFace(SIGN_FAMILY, `url(${SIGN_FONT})`)
-      .load()
-      .then((f) => {
-        if (!alive) return
-        document.fonts.add(f)
-        setTex(paint(draw, px, py, SIGN_FAMILY))
-      })
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [draw, px, py])
-  useEffect(() => () => tex.dispose(), [tex])
+} & JSX.IntrinsicElements['group']
+
+/** khung + viền giấy + mặt tranh `tex` (dùng chung cho tranh vẽ canvas / tranh ảnh) */
+function FramedArt({
+  tex,
+  w,
+  h,
+  frame = '#4a2f1d',
+  metal = false,
+  mat = 0.04,
+  ...props
+}: FrameProps & { tex: THREE.Texture }) {
   const fw = 0.035
   return (
     <group {...props}>
@@ -112,4 +94,43 @@ export function CanvasPainting({
       </mesh>
     </group>
   )
+}
+
+export function CanvasPainting({
+  draw,
+  px,
+  py,
+  ...props
+}: {
+  draw: PaintFn
+  /** cỡ canvas (px) */
+  px: number
+  py: number
+} & FrameProps) {
+  const [tex, setTex] = useState(() => paint(draw, px, py, 'cursive'))
+  useEffect(() => {
+    let alive = true
+    new FontFace(SIGN_FAMILY, `url(${SIGN_FONT})`)
+      .load()
+      .then((f) => {
+        if (!alive) return
+        document.fonts.add(f)
+        setTex(paint(draw, px, py, SIGN_FAMILY))
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [draw, px, py])
+  useEffect(() => () => tex.dispose(), [tex])
+  return <FramedArt tex={tex} {...props} />
+}
+
+/** tranh in từ file ảnh (`public/textures/posters/`), khung như tranh vẽ canvas */
+export function ImagePainting({ url, ...props }: { url: string } & FrameProps) {
+  const tex = useTexture(url, (t) => {
+    t.colorSpace = THREE.SRGBColorSpace
+    t.anisotropy = 4
+  })
+  return <FramedArt tex={tex} {...props} />
 }

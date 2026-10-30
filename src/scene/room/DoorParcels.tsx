@@ -15,7 +15,12 @@ import { boxCustomer, isPackedBox } from '@/store/carrySlice'
 import { RoomSpot } from './RoomSpot'
 import { RACK_TIERS } from './HallProps'
 import { M, inReach } from './roomLayout'
-import { OUTLINE_GHOST_MAT, outlineGeometry } from '../common/hoverOutline'
+import {
+  NO_OUTLINE,
+  OUTLINE_GHOST_MAT,
+  OUTLINE_ON_TOP,
+  outlineGeometry,
+} from '../common/hoverOutline'
 
 // Thùng hàng trong phòng (dựng bằng code), đơn vị mét, gốc = chân kệ, mặt trước kệ +z:
 // - `DoorParcels` (kệ sắt cuối hành lang): 2 tầng dưới = thùng đơn khách mới nhận (bấm để cầm) + kiện Shopii (bấm để nhận vào kho),
@@ -70,22 +75,23 @@ export function CardBox({
   const [w, h, d] = size
   return (
     <group>
-      <mesh position-y={h / 2} material={CARD} castShadow receiveShadow>
+      {/* rê chuột: viền bao kín cả cạnh đáy sát mặt kệ / bàn (`OUTLINE_ON_TOP`); băng keo, nhãn mỏng không viền riêng */}
+      <mesh position-y={h / 2} material={CARD} castShadow receiveShadow name={OUTLINE_ON_TOP}>
         <boxGeometry args={size} />
       </mesh>
-      <mesh position-y={h + 0.0008} material={TAPES[kind]}>
+      <mesh position-y={h + 0.0008} material={TAPES[kind]} name={NO_OUTLINE}>
         <boxGeometry args={[0.05, 0.0016, d + 0.002]} />
       </mesh>
-      <mesh position={[0, h * 0.55, d / 2 + 0.001]} material={LABEL}>
+      <mesh position={[0, h * 0.55, d / 2 + 0.001]} material={LABEL} name={NO_OUTLINE}>
         <planeGeometry args={[w * 0.5, h * 0.4]} />
       </mesh>
       {kind === 'shopii' && (
-        <mesh position={[-w * 0.17, h * 0.62, d / 2 + 0.0015]} material={BRAND}>
+        <mesh position={[-w * 0.17, h * 0.62, d / 2 + 0.0015]} material={BRAND} name={NO_OUTLINE}>
           <planeGeometry args={[w * 0.1, h * 0.12]} />
         </mesh>
       )}
       {big && (
-        <mesh position={[w * 0.06, h * 0.45, d / 2 + 0.0015]} material={BRAND}>
+        <mesh position={[w * 0.06, h * 0.45, d / 2 + 0.0015]} material={BRAND} name={NO_OUTLINE}>
           <planeGeometry args={[w * 0.28, h * 0.04]} />
         </mesh>
       )}

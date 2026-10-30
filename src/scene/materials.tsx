@@ -60,6 +60,17 @@ export function woodBoxGeometry(w: number, h: number, d: number, radius = 0) {
   return woodUV(geo)
 }
 
+/** khối hộp vân theo thớ: thanh đứng (cao hơn cả bề ngang lẫn bề sâu) vân chạy dọc, còn lại vân ngang như `woodBoxGeometry` */
+export function grainBoxGeometry(w: number, h: number, d: number) {
+  const geo = woodBoxGeometry(w, h, d)
+  if (h <= Math.max(w, d)) return geo
+  // mặt đứng: u = y, v = ngang → đổi chỗ u / v cho vân (chạy theo v của ảnh) dọc theo chiều cao
+  const uv = geo.getAttribute('uv')
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i), uv.getX(i))
+  uv.needsUpdate = true
+  return geo
+}
+
 /** Trải UV vân gỗ theo toạ độ thật (chiếu theo hướng pháp tuyến) cho geometry bất kỳ (khối hộp, vỏ case liền) */
 export function woodUV<G extends THREE.BufferGeometry>(geo: G) {
   const pos = geo.getAttribute('position')
