@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.18',
     date: '2026-10-30',
-    commits: [],
+    commits: ['e27f286'],
     title: 'Daughterboard + dây JST, phòng gỗ màu sàn, kệ thép, poster dán tường',
     items: [
       'Bước mới lắp daughterboard ai03 Unified C3: đặt DTB vào hốc vách sau (cổng USB-C ra lỗ khoét), bắt 2 vít M2, cắm dây JST; trước khi thả board vào case thì cắm đầu dây còn lại vào PCB',
