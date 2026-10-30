@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.20',
     date: '2026-10-30',
-    commits: [],
+    commits: ['0d30899'],
     title: 'Giỏ hàng Shopii + sale, kệ nhận / giao hàng, Duality Horns, thanh lực giữ chuột',
     items: [
       'Shopii: mọi món qua giỏ hàng (số lượng, đổi loại, phí giao theo từng món), ô tìm trong mục, sale 3 ngày 1 lần có banner + ruy băng SALE',
