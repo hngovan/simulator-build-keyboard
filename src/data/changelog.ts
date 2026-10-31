@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.22',
     date: '2026-10-31',
-    commits: [],
+    commits: ['db53f68'],
     title: 'Kiện hàng Shopii rõ hơn, lịch chi tiết cuộn được, mua nhiều case / plate',
     items: [
       'Chờ giao hàng: trạng thái "Đã giao" / "n ngày tới"; rê tên kiện xem đủ các món; mua nhiều cái cùng món ghi "x2" thay vì "+1 món"',
