@@ -79,11 +79,14 @@ function Gasket({
   )
 }
 
+/** object rỗng cố định cho selector (trả `{}` mới mỗi lần thì Zustand render lặp vô hạn) */
+const NO_GASKETS: Record<number, true> = {}
+
 /** Các điểm dán gasket Poron quanh viền / tai plate */
 export function Gaskets() {
   const ctx = useCtx()
   const step = useStep()
-  const placed = useGame((s) => s.build?.gaskets ?? {})
+  const placed = useGame((s) => s.build?.gaskets ?? NO_GASKETS)
   const placeGasket = useGame((s) => s.placeGasket)
   // mũi tên xanh chỉ miếng gasket chưa dán đầu tiên (như bàn mod stab)
   const next = step === 'gasket' ? ctx.gaskets.find((_, i) => !placed[i]) : undefined

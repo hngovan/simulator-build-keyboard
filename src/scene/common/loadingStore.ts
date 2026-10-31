@@ -16,6 +16,16 @@ export const useSceneLoading = create<SceneLoading>()(() => ({
   settled: false,
 }))
 
+/** chạy `fn` khi cảnh 3D tải xong lần đầu (vd lời chào lúc vào game: không hiện lúc màn chờ còn che) */
+export function afterLoad(fn: () => void) {
+  if (useSceneLoading.getState().settled) return fn()
+  const off = useSceneLoading.subscribe((s) => {
+    if (!s.settled) return
+    off()
+    fn()
+  })
+}
+
 // đã dựng cảnh + không còn model chờ tải: coi như vào bàn xong, từ đó đổi bước chỉ phủ mờ
 useSceneLoading.subscribe((s) => {
   if (s.ready && s.pending === 0 && !s.settled) useSceneLoading.setState({ settled: true })

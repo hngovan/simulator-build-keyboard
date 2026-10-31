@@ -25,6 +25,23 @@ export function arrivedParcels(parcels: Parcel[], day: number): Parcel[] {
   return parcels.filter((p) => p.arrive <= day)
 }
 
+/**
+ * Kiện đã tới gộp thành thùng trên kệ cửa: cùng nguồn (Shopii / chợ) + cùng tên = 1 thùng (bấm nhận cả chồng).
+ * Dùng chung cho kệ 3D (`DoorParcels`) và số thùng đếm ở HUD để 2 bên luôn khớp
+ */
+export function parcelStacks(parcels: Parcel[], day: number): Parcel[][] {
+  const map = new Map<string, Parcel[]>()
+  for (const p of arrivedParcels(parcels, day)) {
+    const k = `${p.from ?? 'shopii'}|${p.label}`
+    map.set(k, [...(map.get(k) ?? []), p])
+  }
+  return [...map.values()]
+}
+
+/** tên kiện gộp theo thùng: "PCB 40% Hotswap ×2, Switch ..." */
+export const stackLabels = (stacks: Parcel[][]) =>
+  stacks.map((l) => (l.length > 1 ? `${l[0].label} ×${l.length}` : l[0].label)).join(', ')
+
 /** dụng cụ (mỏ hàn: đúng loại, món khác: bậc này trở lên) đang trên đường giao / chờ ở cửa */
 export const toolOnWay = (parcels: Parcel[], kind: ToolKind, level: number) =>
   parcels.some((p) =>

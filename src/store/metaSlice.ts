@@ -22,6 +22,7 @@ import { compactHistory } from './buildSlice'
 import type { GameState } from '.'
 import { applyAudioSettings, stopBgm } from '@/sound'
 import { useRoom } from '@/scene/room/roomStore'
+import { afterLoad } from '@/scene/common/loadingStore'
 
 type Screen = 'title' | 'pc' | 'bench'
 export type AppId =
@@ -309,7 +310,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       // vào game là đứng trong phòng (kiểu PC Building Simulator), bấm màn hình máy tính mới vào desktop
       screen: 'bench',
       walk: true,
-      windows: ['messenger'],
+      // mở máy tính là desktop trống, không tự mở Mezzenger
+      windows: [],
       minimized: [],
       offers: randomOffers(),
       jobs: [],
@@ -328,7 +330,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     })
     useRoom.setState({ spot: 'pc', fly: null })
     get().save()
-    get().toast(`Chào mừng ${get().name} tới xưởng phím! 🎉`, 'good')
+    // chào sau khi phòng 3D tải xong (màn chờ còn che thì chưa)
+    afterLoad(() => get().toast(`Chào mừng ${get().name} tới xưởng phím! 🎉`, 'good'))
   },
   continueGame: () => {
     const save = loadSave()
@@ -377,14 +380,14 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       gameOver: null,
       screen: 'bench',
       walk: true,
-      windows: ['messenger'],
+      windows: [],
       minimized: [],
     })
     // ctx là dữ liệu dẫn xuất: dựng lại từ đơn + kho đồ
     const s = get()
     if (s.build && s.order && s.mount) set({ ctx: buildContext(s.order, s.inventory, s.mount) })
     useRoom.setState({ spot: 'pc', fly: null })
-    s.toast(`Chào mừng ${save.name} quay lại! Ngày ${save.day}`, 'good')
+    afterLoad(() => s.toast(`Chào mừng ${save.name} quay lại! Ngày ${save.day}`, 'good'))
   },
   goPC: () => set({ screen: 'pc', pcZoom: false }),
   // ở bàn build: camera bay tới màn hình rồi mới về desktop (PcZoom trong Bench.tsx)

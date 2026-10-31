@@ -119,7 +119,6 @@ function ModRow({ index, state, name, req, onDo }: ModRowProps) {
 function ToolWarn({ kinds }: { kinds: ('brush' | 'clipper' | 'opener')[] }) {
   const tools = useGame((s) => s.tools)
   const openShop = useGame((s) => s.openShop)
-  const parcels = useGame((s) => s.parcels)
   const missing = kinds.filter((k) => TOOLS[k][tools[k]].none)
   if (!missing.length) return null
   // khung cảnh báo nổi bật (thay dòng chữ đỏ nhỏ), kèm nút mở Shopii đúng mục dụng cụ; đã đặt thì nhắc ra cửa nhận
@@ -127,10 +126,7 @@ function ToolWarn({ kinds }: { kinds: ('brush' | 'clipper' | 'opener')[] }) {
     <Alert title="Thiếu dụng cụ">
       <ul className="list-disc pl-5">
         {missing.map((k) => (
-          <li key={k}>
-            {TOOLS[k][1].name}
-            {toolOnWay(parcels, k, 1) && ' (đang giao, tới cửa thì ra nhận)'}
-          </li>
+          <li key={k}>{TOOLS[k][1].name}</li>
         ))}
       </ul>
       <Button size="sm" tone="red" onClick={() => openShop('tool')}>

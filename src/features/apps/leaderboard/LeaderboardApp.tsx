@@ -94,7 +94,7 @@ export function LeaderboardApp() {
   }, [data, key, pos])
 
   return (
-    <div className="flex h-[min(640px,72vh)] flex-col gap-3 group-data-fill/win:h-full">
+    <div className="flex h-[min(640px,72vh,calc(var(--win-max-h,100vh)-84px))] flex-col gap-3 group-data-fill/win:h-full">
       <div className="flex items-center gap-3">
         <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-yellow/15 text-yellow">
           <Trophy className="size-9 fill-yellow/30" strokeWidth={2.2} />

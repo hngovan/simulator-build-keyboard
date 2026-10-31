@@ -108,7 +108,6 @@ Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phả
 |  | Đòi chất liệu keycap | 80% |
 |  | Muốn lube · cấm lube · tuỳ shop | 40% · 20% · 40% |
 |  | Qua ngày mà đơn đã nhận cả ngày không làm (khách report) | Đền 20% tiền công mỗi đơn |
-|  | Qua ngày mới | Phải nhận ít nhất 1 đơn trong ngày |
 
 ## Tài liệu
 
@@ -121,7 +120,7 @@ Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phả
 - Mua linh kiện đúng yêu cầu ở **Shopii**; món khách gửi trong kit thì không cần mua. **Hội Phím Cơ VN** bán đồ pass rẻ hơn nhưng có khoảng 20% rủi ro bị bùng tiền.
 - Chọn mount trước khi build, rồi ra **bàn build 3D** và làm theo danh sách bước trên HUD.
 - Stab plate-mount gài được mọi plate. **Plateless** (bật ở app Danh sách đơn): bỏ plate, bắt buộc PCB hàn + Tray mount. **Foam Poron** lót PCB (Shopii → Lube & vật tư) là bước tuỳ chọn trước plate, tiếng thock hơn.
-- Mỗi ngày phải nhận ít nhất 1 đơn mới qua ngày được; đơn đã nhận mà cả ngày không làm gì thì khách report, đền 20% tiền công.
+- Kết thúc ngày lúc nào cũng được (không bắt nhận đơn); đơn đã nhận mà cả ngày không làm gì thì khách report, đền 20% tiền công.
 - Trước khi lắp board vào case phải dán 4 feet cao su vào hốc dưới đáy case: mua feet đen / trắng ở Shopii → Lube & vật tư (1 lần mua = 4 cái).
 - Hàn / vặn vít vào: bấm cho kim chạy, bấm lần nữa (hoặc Space) dừng trong vùng xanh, trúng vàng là hoàn hảo; lau mũi hàn khi bị cháy. Lube switch thì mở vỏ trước; mod stab theo đúng mẫu; chọn đúng đầu vít (sai là trượt ren, 3 lần thì tuôn) và dừng kim lực trong vùng xanh — quá tay là tuôn ren / nứt case, giao đi phải đền khách.
 - Test bằng bàn phím thật hoặc click phím 3D; càng nhiều phím được test càng cao điểm.

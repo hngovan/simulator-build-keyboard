@@ -1,33 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { KEYCAP_KITS, KEYCAP_MATERIALS, SHOP_CATS, keycapMaterialOf, stabStock } from '@/data/parts'
-import { SUPPLIES } from '@/data/supplies'
+import { KEYCAP_KITS, KEYCAP_MATERIALS, SHOP_CATS, keycapMaterialOf } from '@/data/parts'
 import { PartArt } from '@/components/art/PartArt'
 import { SupplyArt, ToolArt } from '@/components/art/ToolArt'
 import { cn } from '@/lib/format'
 import { CloseButton, ThumbLoading, ViewHint } from '@/components/ui'
-import type {
-  CaseItem,
-  KeycapItem,
-  PartCategory,
-  PcbItem,
-  PlateItem,
-  Product,
-  ProductOption,
-  StabItem,
-  SupplyItem,
-  SwitchItem,
-  ToolItem,
-} from '@/types'
+import type { KeycapItem, PartCategory, Product, ProductOption } from '@/types'
 import { useModelThumb, type ThumbKind } from './modelThumb'
+import { productThumb } from './productThumb'
 import { ShopProductViewer } from './ShopProductViewer'
 import { useCaseThumb } from '../messenger/orderThumb'
 import { CaseViewer } from '../messenger/OrderViewer'
-
-/** ảnh stab theo option: chỉ có stab dài 6.25u / 7u thì chụp dây dài, còn lại (bộ, lẻ 2u) chụp stab 2u */
-function stabThumbType(item: StabItem) {
-  const { short, long, long7 } = stabStock(item)
-  return short ? item.type : long ? `${item.type}:6.25u` : long7 ? `${item.type}:7u` : item.type
-}
 
 /**
  * Ảnh sản phẩm: switch / stab / keycap chụp từ model 3D trong game (theo option đang chọn),
@@ -38,58 +20,39 @@ export function ProductImage({
   swatch,
   item,
   className,
-  picker,
+  panel,
+  subtitle,
   tags,
 }: {
   product: Product
   swatch: string
   item?: ProductOption['item']
   className?: string
-  /** dãy nút chọn option (màu...) hiện trong khung xem 3D */
-  picker?: ReactNode
+  /** panel cột phải khung xem 3D (chọn option, thông số, thêm vào giỏ) */
+  panel?: ReactNode
+  /** dòng phụ cạnh tiêu đề khung xem (option đang chọn) */
+  subtitle?: ReactNode
   /** nhãn nổi góc dưới phải ảnh (vd số stab nhận được) */
   tags?: ReactNode
 }) {
+  // tiêu đề khung xem: "SHOPII · <mục>" cam nhỏ + tên sản phẩm
+  const heading = (
+    <>
+      <span className="mr-2 font-head text-xs font-extrabold tracking-wider text-orange uppercase">
+        Shopii · {SHOP_CATS[product.cat]}
+      </span>
+      {product.name}
+    </>
+  )
+  const zoom = { heading, subtitle, side: panel }
   const frame = cn(
     'relative flex h-[110px] items-center justify-center overflow-hidden rounded-[10px] bg-black/15',
     className,
   )
-  const kind: ThumbKind | null =
-    product.cat === 'switch' ||
-    product.cat === 'stab' ||
-    product.cat === 'keycap' ||
-    product.cat === 'pcb' ||
-    product.cat === 'plate'
-      ? product.cat
-      : product.cat === 'tool' || product.cat === 'cert'
-        ? 'tool'
-        : (product.cat === 'supply' || product.cat === 'spell') && product.supply
-          ? SUPPLIES[product.supply]?.fit
-            ? 'lubeJar'
-            : 'supply'
-          : null
-  // keycap: chụp theo bộ (profile) + màu của option đang chọn
+  const { kind, type, caseItem } = productThumb(product, item)
   const cap = item as KeycapItem | undefined
-  const pcb = item as PcbItem | undefined
-  const plate = item as PlateItem | undefined
-  const tool = product.tool ?? (item as ToolItem | undefined)
-  const type =
-    product.cat === 'keycap'
-      ? cap && `${cap.kit}:${cap.color}`
-      : product.cat === 'pcb'
-        ? pcb && `${pcb.layout}:${pcb.type}`
-        : product.cat === 'plate'
-          ? plate && `${plate.layout}:${plate.material}`
-          : product.cat === 'tool' || product.cat === 'cert'
-            ? tool && `${tool.kind}:${tool.level}`
-            : product.cat === 'supply' || product.cat === 'spell'
-              ? ((item as SupplyItem | undefined)?.id ?? product.supply)
-              : product.cat === 'stab'
-                ? item && stabThumbType(item as StabItem)
-                : (item as SwitchItem | StabItem | undefined)?.type
   const thumb = useModelThumb(kind, type)
   // case: chụp nguyên bàn phím ghép với đúng case + màu đang chọn
-  const caseItem = product.cat === 'case' ? (item as CaseItem | undefined) : undefined
   const caseThumb = useCaseThumb(caseItem?.id, caseItem?.color)
   const [viewing, setViewing] = useState(false)
   const profile = product.cat === 'keycap' ? KEYCAP_KITS[cap?.kit ?? 'base']?.profile : null
@@ -111,7 +74,7 @@ export function ProductImage({
 
   if (product.cat === 'keycap')
     return (
-      <ImageZoom title={product.name} kind={kind} type={type} picker={picker}>
+      <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
         <div className={cn(frame, 'relative')}>
           {thumb ? (
             <img src={thumb} alt={product.name} className="h-full w-full object-contain" />
@@ -168,21 +131,32 @@ export function ProductImage({
             caseId={caseItem.id}
             color={caseItem.color}
             onClose={() => setViewing(false)}
-            footer={picker}
+            title={heading}
+            subtitle={subtitle}
+            side={panel}
           />
         )}
       </>
     )
-  // ảnh model 3D đang chụp (lần đầu tải tài nguyên): khung loading thay ảnh vẽ tạm
-  if ((caseItem ? caseThumb : thumb) === undefined)
+  // ảnh model 3D đang chụp (lần đầu tải / vừa đổi option): khung loading thay ảnh vẽ tạm.
+  // Vẫn bọc ImageZoom (cùng vị trí với các nhánh dưới) để khung xem 3D đang mở không bị gỡ rồi đóng mất khi đổi option
+  if (caseItem && caseThumb === undefined)
     return (
       <div className={frame}>
         <ThumbLoading />
       </div>
     )
+  if (!caseItem && thumb === undefined)
+    return (
+      <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
+        <div className={frame}>
+          <ThumbLoading />
+        </div>
+      </ImageZoom>
+    )
   if (thumb)
     return (
-      <ImageZoom title={product.name} kind={kind} type={type} picker={picker}>
+      <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
         <div className={frame}>
           <img src={thumb} alt={product.name} className="h-full w-full object-contain" />
           {badge}
@@ -191,7 +165,7 @@ export function ProductImage({
     )
   if (product.supply)
     return (
-      <ImageZoom title={product.name} kind={kind} type={type} picker={picker}>
+      <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
         <div className={frame}>
           <SupplyArt id={product.supply} color={swatch} />
         </div>
@@ -199,7 +173,7 @@ export function ProductImage({
     )
   if (product.tool)
     return (
-      <ImageZoom title={product.name} kind={kind} type={type} picker={picker}>
+      <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
         <div className={frame}>
           <ToolArt kind={product.tool.kind} level={product.tool.level} />
         </div>
@@ -207,7 +181,7 @@ export function ProductImage({
     )
   if (isPartCategory(product.cat))
     return (
-      <ImageZoom title={product.name} kind={kind} type={type} picker={picker}>
+      <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
         <div className={frame}>
           <PartArt category={product.cat} color={swatch} />
           {badge}
@@ -216,7 +190,7 @@ export function ProductImage({
     )
 
   return (
-    <ImageZoom title={product.name} kind={kind} type={type} picker={picker}>
+    <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
       <div
         className={cn('flex items-end rounded-[10px] border-2 border-white/15 p-1.5', className)}
         style={{ background: swatch }}
@@ -233,13 +207,19 @@ function ImageZoom({
   title,
   kind,
   type,
-  picker,
+  heading,
+  subtitle,
+  side,
   children,
 }: {
   title: string
   kind: ThumbKind | null
   type?: string
-  picker?: ReactNode
+  /** tiêu đề khung xem 3D (mặc định = title) */
+  heading?: ReactNode
+  subtitle?: ReactNode
+  /** panel cột phải khung xem 3D */
+  side?: ReactNode
   children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -266,9 +246,10 @@ function ImageZoom({
         <ShopProductViewer
           kind={kind}
           type={type}
-          title={title}
+          title={heading ?? title}
+          subtitle={subtitle}
           onClose={() => setOpen(false)}
-          footer={picker}
+          side={side}
         />
       ) : open ? (
         <div

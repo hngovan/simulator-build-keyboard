@@ -5,15 +5,17 @@ import {
   LoaderCircle,
   PackageX,
   Search,
+  ShoppingBag,
   ShoppingCart,
   Truck,
 } from 'lucide-react'
 import { Button, SoundLegend, TabChip, Tooltip } from '@/components/ui'
 import { useGame } from '@/store'
-import { cn, fmt } from '@/lib/format'
+import { cn } from '@/lib/format'
 import { SHOP_CATS, buildCatalog } from '@/data/parts'
-import { SALE_EVERY, isSaleDay, saleMap, withSale } from '@/data/sale'
-import { cartBase, cartLine } from '@/data/cart'
+import { SALE_EVERY, isSaleDay, nextSaleDay, saleMap, withSale } from '@/data/sale'
+import { SHIP_SPEEDS } from '@/data/shipping'
+import { cartLine, optName } from '@/data/cart'
 import type { ShopCategory, ToolItem } from '@/types'
 import { ListFilterPicker } from './OptionFilter'
 import { CartList } from './CartList'
@@ -74,8 +76,54 @@ function SaleBanner() {
   )
 }
 
+/**
+ * Banner ngày thường (không sale) cùng khuôn `SaleBanner` nhưng tông cam Shopii: đếm ngày tới đợt sale kế,
+ * dòng phụ tự chọn theo tình huống (kiện đã tới kệ cửa / giỏ đang có hàng / mẹo giao tiết kiệm miễn phí)
+ */
+function ShopBanner({ day, arrived, cartN }: { day: number; arrived: number; cartN: number }) {
+  const left = nextSaleDay(day) - day
+  const sub = arrived
+    ? `${arrived} kiện đã tới kệ nhận hàng cuối hành lang, ra cửa nhận nhé`
+    : cartN
+      ? `Giỏ đang có ${cartN} món, chọn tốc độ giao rồi đặt hàng`
+      : `Giao ${SHIP_SPEEDS.saver.name} miễn phí · ${SHIP_SPEEDS.express.name} tới cửa trong ngày`
+  return (
+    <div
+      className="relative flex min-w-0 flex-1 items-center gap-3 overflow-hidden rounded-2xl px-4 py-2 shadow-[0_4px_0_rgba(0,0,0,0.35)]"
+      style={{
+        background:
+          'repeating-linear-gradient(-45deg, rgba(255,255,255,0.06) 0 10px, transparent 10px 22px), linear-gradient(100deg, #c2410c 0%, #ea580c 50%, #f59e0b 100%)',
+      }}
+    >
+      <span className="pointer-events-none absolute -top-10 right-24 size-28 rounded-full bg-yellow/25 blur-2xl" />
+      <span className="grid size-11 shrink-0 place-items-center rounded-full bg-white/20 ring-2 ring-white/40">
+        {arrived ? (
+          <Truck className="size-6 text-white" />
+        ) : (
+          <ShoppingBag className="size-6 text-white" />
+        )}
+      </span>
+      <div className="relative min-w-0 flex-1">
+        <div className="font-head text-2xl leading-none font-black tracking-wide text-white italic drop-shadow-[0_2px_0_rgba(0,0,0,0.35)]">
+          SHOPII LINH KIỆN PHÍM
+        </div>
+        <div className="mt-1 truncate text-sm font-extrabold text-[#ffe9c2]">{sub}</div>
+      </div>
+      <span
+        title={`Cứ ${SALE_EVERY} ngày có 1 đợt sale linh kiện`}
+        className="relative shrink-0 rotate-[-4deg] rounded-lg bg-white px-2.5 py-1 font-head text-sm font-black text-[#9a3412] shadow-[0_3px_0_rgba(0,0,0,0.35)]"
+      >
+        {left === 1 ? 'MAI SALE!' : `SALE SAU ${left} NGÀY`}
+      </span>
+    </div>
+  )
+}
+
 /** chờ ngừng gõ bao lâu (ms) mới tìm */
 const SEARCH_MS = 300
+
+/** mảng rỗng cố định cho selector (trả `[]` mới mỗi lần thì Zustand render lặp vô hạn) */
+const NO_IDS: string[] = []
 
 /** chữ thường bỏ dấu (gõ "ban phim" vẫn ra "bàn phím") */
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase()
@@ -91,10 +139,12 @@ export function Shopii() {
   const solderOwned = useGame((s) => s.solderOwned)
   const { buyTool, addCart } = useGame.getState()
   const cart = useGame((s) => s.cart)
-  // kiện đã đặt chưa nhận (khu "Đơn đang giao")
+  // số món đã thêm (cộng số lượng từng dòng) cho badge giỏ hàng
+  const cartQty = cart.reduce((a, l) => a + l.qty, 0)
+  // kiện đã đặt chưa nhận (khu "Chờ giao hàng")
   const parcels = useGame((s) => s.parcels)
   const arrived = parcels.filter((p) => p.arrive <= day).length
-  // khu bên phải: lưới sản phẩm / Đơn đang giao / Giỏ hàng
+  // khu bên phải: lưới sản phẩm / Chờ giao hàng / Giỏ hàng
   const [view, setView] = useState<'grid' | 'ship' | 'cart'>('grid')
   const shipView = view !== 'grid'
   const setShipView = (on: boolean) => setView(on ? 'ship' : 'grid')
@@ -126,7 +176,7 @@ export function Shopii() {
   // ngày sale: 3 mục linh kiện ngẫu nhiên, mỗi mục 1–5 món giảm 5–30%
   const sales = useMemo(() => saleMap(catalog, day), [catalog, day])
   // mỗi món sale được giảm 1 lần: đã mua giá sale hôm nay / giá sale đang nằm trong giỏ thì thẻ về giá thường
-  const saleBought = useGame((s) => (s.saleBought?.day === s.day ? s.saleBought.ids : []))
+  const saleBought = useGame((s) => (s.saleBought?.day === s.day ? s.saleBought.ids : NO_IDS))
   const saleUsed = useMemo(
     () => new Set([...saleBought, ...cart.filter((l) => l.sale).map((l) => l.product)]),
     [saleBought, cart],
@@ -159,42 +209,20 @@ export function Shopii() {
   const list = active ? found.filter(active.match) : found
 
   return (
-    // khung cao cố định: thông báo sale đứng yên trên cùng, cột trái + lưới sản phẩm tự cuộn riêng
-    <div className="flex h-[min(680px,74vh)] flex-col gap-3 group-data-fill/win:h-full max-md:h-auto">
-      {/* hàng trên cùng: banner sale (chỉ ngày sale) + nút giỏ hàng nằm riêng góc phải (số món + tổng tiền) */}
-      <div className="flex shrink-0 items-stretch justify-end gap-3">
-        {isSaleDay(day) && <SaleBanner />}
-        {/* nút giỏ hàng: số món + tổng tiền hàng (chưa phí giao), bấm mở giỏ để thanh toán */}
-        <button
-          type="button"
-          aria-pressed={view === 'cart'}
-          onClick={() => setView('cart')}
-          title="Xem giỏ hàng, chọn hình thức giao rồi đặt hàng"
-          className={cn(
-            'flex shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 transition-colors',
-            view === 'cart'
-              ? 'bg-yellow text-[#3a2b00] shadow-[0_3px_0_rgba(0,0,0,0.35),inset_0_2px_0_rgba(255,255,255,0.3)]'
-              : 'bg-panel-2 hover:bg-line',
-          )}
-        >
-          <ShoppingCart className="size-6" />
-          <span className="flex flex-col items-end leading-tight">
-            <span className="font-head text-sm font-extrabold">Giỏ hàng ({cart.length})</span>
-            <span
-              className={cn(
-                'font-head text-sm font-extrabold',
-                view === 'cart' ? 'text-[#3a2b00]' : 'text-green',
-              )}
-            >
-              {fmt(cart.reduce((a, l) => a + cartBase(l), 0))}
-            </span>
-          </span>
-        </button>
+    // khung cao cố định (co theo `--win-max-h` của Window): banner đứng yên trên cùng, cột trái + lưới sản phẩm tự cuộn riêng
+    <div className="flex h-[min(680px,74vh,calc(var(--win-max-h,100vh)-84px))] flex-col gap-3 group-data-fill/win:h-full max-md:h-auto">
+      {/* hàng trên cùng: banner sale (ngày sale) / banner thường (ngày khác) */}
+      <div className="flex shrink-0 items-stretch gap-3">
+        {isSaleDay(day) ? (
+          <SaleBanner />
+        ) : (
+          <ShopBanner day={day} arrived={arrived} cartN={cartQty} />
+        )}
       </div>
       <div className="flex min-h-0 flex-1 gap-3 max-md:flex-col">
-        {/* cột trái cố định (cuộn riêng nếu dài) */}
-        <div className="flex w-[200px] shrink-0 flex-col gap-1.5 overflow-y-auto max-md:w-auto">
-          <div className="flex flex-col gap-1.5 max-md:flex-row max-md:flex-wrap">
+        {/* cột trái cố định: mục hàng cuộn riêng nếu dài, giỏ hàng + đơn đang giao ghim đáy cột */}
+        <div className="flex w-[200px] shrink-0 flex-col gap-3 max-md:w-auto">
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto max-md:flex-row max-md:flex-wrap">
             {(Object.entries(SHOP_CATS) as [ShopCategory, string][]).map(([id, name]) => (
               <TabChip
                 key={id}
@@ -209,19 +237,37 @@ export function Shopii() {
               </TabChip>
             ))}
           </div>
-          {/* kiện đã đặt chưa nhận: đang giao / đã tới cửa */}
-          <TabChip
-            active={view === 'ship'}
-            icon={Truck}
-            count={parcels.length}
-            title={
-              arrived ? `${arrived} kiện đã tới cửa, ra cửa nhận` : 'Kiện hàng đã đặt chưa nhận'
-            }
-            onClick={() => (clearSearch(), setShipView(true))}
-            className="w-full"
-          >
-            Đơn đang giao
-          </TabChip>
+          <div className="flex shrink-0 flex-col gap-1.5">
+            {/* giỏ hàng: cùng kiểu tab "Chờ giao hàng" (ô số món), có hàng thì viền cam */}
+            <TabChip
+              active={view === 'cart'}
+              icon={ShoppingCart}
+              count={cartQty}
+              title="Xem giỏ hàng, chọn hình thức giao rồi đặt hàng"
+              onClick={() => setView('cart')}
+              className={cn(
+                'w-full',
+                view !== 'cart' &&
+                  cartQty > 0 &&
+                  'bg-orange/15 ring-2 ring-orange ring-inset hover:bg-orange/25',
+              )}
+            >
+              Giỏ hàng
+            </TabChip>
+            {/* kiện đã đặt chưa nhận: đang giao / đã tới cửa */}
+            <TabChip
+              active={view === 'ship'}
+              icon={Truck}
+              count={parcels.length}
+              title={
+                arrived ? `${arrived} kiện đã tới cửa, ra cửa nhận` : 'Kiện hàng đã đặt chưa nhận'
+              }
+              onClick={() => (clearSearch(), setShipView(true))}
+              className="w-full"
+            >
+              Chờ giao hàng
+            </TabChip>
+          </div>
         </div>
         {/* khung bo góc có đệm; lớp cuộn bên trong không bo → thanh cuộn không bị góc bo che */}
         <div className="relative flex min-h-[260px] min-w-0 flex-1 flex-col rounded-2xl bg-black/15 p-1.5">
@@ -286,7 +332,7 @@ export function Shopii() {
                 onCart={(p, o, qty) => {
                   addCart(cartLine(p, o, p.sale ? 1 : qty))
                   const base = catalog.find((x) => x.id === p.id)
-                  const bo = base?.options.find((x) => x.label === o.label)
+                  const bo = base?.options.find((x) => optName(x) === optName(o))
                   if (p.sale && qty > 1 && base && bo) addCart(cartLine(base, bo, qty - 1))
                 }}
               />

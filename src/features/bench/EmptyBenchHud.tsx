@@ -1,8 +1,7 @@
 import { useEffect } from 'react'
-import { ArrowLeft } from 'lucide-react'
 import { useGame } from '@/store'
 import { CATS, checkInventory } from '@/data/parts'
-import { IconButton } from '@/components/ui'
+import { BackButton } from '@/components/ui'
 import { StatusChips } from '@/components/game/StatusChips'
 import { ControlsHint, KeyCap, MouseIcon } from '@/components/game/ControlsHint'
 import { boxCustomer, isPackedBox } from '@/store/carrySlice'
@@ -66,12 +65,6 @@ function BenchStatus() {
           {missing.map((m) => (
             <li key={m.cat} className="rounded-lg bg-panel-2 px-3 py-1.5 text-sm">
               <b>{CATS[m.cat]}</b>: <span className="text-yellow">{m.msg}</span>
-              {/* đã đặt Shopii cho đơn này, chưa nhận */}
-              {s.parcels.some((p) =>
-                p.items.some(
-                  (it) => it.kind === 'part' && it.cat === m.cat && (it.job ?? p.job) === box,
-                ),
-              ) && <span className="text-muted"> · đang giao, tới cửa thì ra nhận</span>}
             </li>
           ))}
         </ul>,
@@ -135,11 +128,7 @@ export function EmptyBenchHud() {
     <>
       <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
         <div className="flex gap-2">
-          <IconButton
-            icon={<ArrowLeft />}
-            label="Đứng dậy ra phòng (Esc)"
-            onClick={() => s.standUp('bench')}
-          />
+          <BackButton onClick={() => s.standUp('bench')} />
           <ResetCamButton />
         </div>
         <StatusChips />

@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
 import { PiggyBank, ShoppingCart, Trash2, Truck, X, Zap, type LucideIcon } from 'lucide-react'
 import { Badge, Button, OptionSelect, QtyInput } from '@/components/ui'
-import { cartBase, cartLine, cartMax } from '@/data/cart'
+import { cartBase, cartLine, cartMax, optName } from '@/data/cart'
 import { buildCatalog } from '@/data/parts'
 import { saleMap, withSale } from '@/data/sale'
 import { SHIP_ORDER, SHIP_SPEEDS, arriveDay, arriveText, type ShipSpeed } from '@/data/shipping'
 import { cn, fmt } from '@/lib/format'
 import { useGame } from '@/store'
+import type { ProductOption } from '@/types'
 
 /** icon thẻ hình thức giao hàng */
 const SHIP_ICONS: Record<ShipSpeed, LucideIcon> = { express: Zap, fast: Truck, saver: PiggyBank }
@@ -14,6 +15,56 @@ const SHIP_ICONS: Record<ShipSpeed, LucideIcon> = { express: Zap, fast: Truck, s
 /** phí giao hiện trên thẻ hình thức giao: Tiết kiệm miễn phí, còn lại +phí / món */
 const feeText = (k: ShipSpeed) =>
   SHIP_SPEEDS[k].fee ? `+${fmt(SHIP_SPEEDS[k].fee)} / món` : 'Miễn phí'
+
+/**
+ * Đổi loại 1 dòng giỏ: có nhóm (chất liệu: keycap, dòng case) thì 2 ô riêng chất liệu → màu (đổi chất liệu giữ màu nếu có,
+ * giá chỉ ghi ở ô chất liệu), không thì 1 ô
+ */
+function OptionPick({
+  opts,
+  cur,
+  onPick,
+}: {
+  opts: ProductOption[]
+  cur: number
+  onPick: (i: number) => void
+}) {
+  const groups = [...new Set(opts.flatMap((o) => (o.group ? [o.group] : [])))]
+  if (groups.length < 2)
+    return (
+      <OptionSelect
+        className="max-w-[260px]"
+        value={cur}
+        onChange={onPick}
+        options={opts.map((o) => ({ label: optName(o), swatch: o.swatch, note: fmt(o.price) }))}
+      />
+    )
+  const opt = opts[cur]
+  const inGroup = opts.flatMap((o, i) => (o.group === opt.group ? [i] : []))
+  const pickGroup = (g: string) => {
+    const same = opts.findIndex((o) => o.group === g && o.label === opt.label)
+    onPick(same >= 0 ? same : opts.findIndex((o) => o.group === g))
+  }
+  return (
+    <div className="flex max-w-[360px] gap-1.5">
+      <OptionSelect
+        className="min-w-0 flex-1"
+        value={groups.indexOf(opt.group!)}
+        onChange={(gi) => pickGroup(groups[gi])}
+        options={groups.map((g) => ({
+          label: g,
+          note: fmt(opts.find((o) => o.group === g)!.price),
+        }))}
+      />
+      <OptionSelect
+        className="min-w-0 flex-1"
+        value={inGroup.indexOf(cur)}
+        onChange={(i) => onPick(inGroup[i])}
+        options={inGroup.map((i) => ({ label: opts[i].label, swatch: opts[i].swatch }))}
+      />
+    </div>
+  )
+}
 
 /**
  * Giỏ hàng Shopii (khuôn danh sách bảng xếp hạng): mỗi dòng đổi loại (option) được, chỉnh số lượng (ô nhập / + −), bỏ món;
@@ -104,15 +155,10 @@ export function CartList() {
                   </div>
                   {/* đổi loại (màu / chất liệu / số gói...) ngay trong giỏ, giữ số lượng */}
                   {p && opts.length > 1 && cur >= 0 && (
-                    <OptionSelect
-                      className="max-w-[260px]"
-                      value={cur}
-                      onChange={(i) => swap(l.key, cartLine(p, opts[i], l.qty))}
-                      options={opts.map((o) => ({
-                        label: o.group ? `${o.group} · ${o.label}` : o.label,
-                        swatch: o.swatch,
-                        note: fmt(o.price),
-                      }))}
+                    <OptionPick
+                      opts={opts}
+                      cur={cur}
+                      onPick={(i) => swap(l.key, cartLine(p, opts[i], l.qty))}
                     />
                   )}
                   <div className="text-xs font-bold text-muted">

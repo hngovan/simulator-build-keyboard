@@ -897,3 +897,156 @@
 - (2026-10-30, người dùng: "vẫn lỗi zoom in xong zoom out ra") Ngồi xuống bàn: `sitAtBench` bay camera tới `benchPose` không tính thùng
   (bàn phím / bàn trống), bay xong `CameraRig` / `EmptyBench` mới đặt góc lùi xa có thùng → giật ra. Gom về `benchView({ width, unbox, box }, fit)`
   (`scene/common/benchPose.ts`) dùng chung cho cả 3 chỗ: bước mở hộp hoặc bàn có thùng = `benchPose(null, fit × 1.5)`.
+
+## Shopii: sửa đen màn hình + banner ngày thường (2026-10-31)
+
+- (người dùng: "vào mục shoppi thì bị lỗi đen màn hình", console "The result of getSnapshot should be cached to avoid an infinite loop")
+  Selector `saleBought` trong `Shopii.tsx` trả `[]` mới mỗi lần khi chưa mua sale hôm nay → Zustand render lặp vô hạn, cây React sập.
+  Đổi sang hằng `NO_IDS`. Cùng lỗi ở `Gaskets` (BoardDetails.tsx, `?? {}` khi build null) → `NO_GASKETS`.
+  **Quy tắc**: selector `useGame` không trả mảng / object mới (`[]`, `{}`, `.filter`, `.map`); dùng hằng ngoài component hoặc `useMemo` sau selector.
+- (người dùng: "ko có ngày sale thì hiển thị banner thường ... ko thì chỗ đấy bị rỗng kì lắm") Ngày không sale hiện `ShopBanner` cùng khuôn
+  `SaleBanner`, tông cam Shopii: nhãn "SALE SAU N NGÀY" / "MAI SALE!" (`nextSaleDay`), dòng phụ tự chọn: kiện đã tới kệ cửa > giỏ đang có hàng
+  > mẹo giao Tiết kiệm miễn phí / Hoả tốc trong ngày (`SHIP_SPEEDS`).
+- (người dùng: "giỏ hàng nằm kế bên thanh search hiển thị badge số lượng ... icon nằm kế bên ô search luôn chứ ko phải sau filter")
+  Bỏ nút giỏ hàng to (số món + tổng tiền) ở hàng banner; thay bằng nút icon `ShoppingCart` ngay sau ô tìm (trước bộ lọc), `Badge solid tone="red"`
+  góc trên phải = tổng `qty` các dòng giỏ (> 99 thì "99+"), tổng tiền chuyển vào tooltip. Banner giờ chiếm trọn hàng trên.
+- (người dùng: "ở giỏ hàng mục keycap đã thêm 2 option chọn riêng là loại keycap với màu mà? tại sao h lại gộp chung") Kiểm git: option keycap
+  chưa từng tách nhóm (luôn `label: "PBT · Đen"`, không `group`), giỏ hàng xưa nay 1 `OptionSelect` "nhóm · nhãn". Tách: keycap option
+  `group` = chất liệu, `label` = màu (thẻ sản phẩm `OptionFilter` tự thành 2 cột chất liệu | màu như dòng case). Giỏ hàng `OptionPick`
+  (CartList.tsx): có ≥ 2 nhóm thì 2 ô `OptionSelect` chất liệu (kèm giá) → màu (chấm màu), đổi chất liệu giữ màu; không nhóm thì 1 ô.
+  `optName(o)` (data/cart.ts) = "nhóm · nhãn" dùng cho `key` / `label` dòng giỏ → key keycap giữ nguyên chuỗi cũ (giỏ đã lưu vẫn khớp).
+  Sửa kèm lỗi cũ: key dòng giỏ case gộp dòng chỉ theo màu (`${id}:${label}`) nên "Nhôm · Đen" và "PC · Đen" trùng key (8 sản phẩm case),
+  thêm món này cộng dồn vào món kia; nay key theo `optName`. `Shopii` tách phần giá thường khi thêm món sale cũng tìm option theo `optName`.
+- (người dùng đưa ảnh mẫu: "hiển thị giỏ hàng và đơn đang giao ở góc trái màn hình, fixed ở góc dưới bên trái") Bỏ icon giỏ cạnh ô tìm.
+  Cột trái Shopii: mục hàng `flex-1 overflow-y-auto` (cuộn riêng), dưới là khối ghim đáy: nút Giỏ hàng (icon + "Giỏ hàng" + tổng tiền hàng
+  vàng, `Badge solid` số món bên phải: cam khi có hàng / xám khi trống; có hàng thì nền cam nhạt viền cam `ring-orange`, đang mở giỏ thì vàng
+  đặc như `TabChip`) + `TabChip` "Đơn đang giao".
+- (2026-10-31, "ở giỏ hàng menu bên trái chỉ cần hiển thị số lượng, không cần tổng tiền") Nút Giỏ hàng cột trái Shopii bỏ dòng tổng tiền,
+  chỉ còn icon + "Giỏ hàng" + `Badge` số món (Shopii.tsx); tổng tiền xem trong giỏ (CartList).
+- (2026-10-31, "màn hình thấp không đủ chỗ icon thì tự sang cột bên cạnh, đang bị ẩn") Icon desktop (Desktop.tsx): cột `flex-col flex-wrap
+content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(--taskbar-h)+1rem)]`) nên thiếu chỗ thì sang cột 2; mobile giữ lưới 4 cột.
+- (2026-10-31, "vào máy tính kiểu đang nhìn màn hình: màn chiếm 9/10, còn lại thấy chút không gian bên ngoài, icon back ở góc; bỏ icon đứng dậy
+  trong máy tính") Ngồi máy tính (`screen = 'pc'`) vẫn dựng `Bench` làm nền (App.tsx); `PcView` (Bench.tsx) đặt camera nhìn thẳng màn hình ở
+  `pcEye` sao cho mặt kính trùng khung desktop `pcFrame` (computerLayout.ts: đúng tỉ lệ kính, cao 90% / rộng tối đa 94%, điện thoại phủ kín),
+  `frameloop = 'demand'` + useFrame ưu tiên 1 tự render (đè CameraRig / camKey), `Controls` không dựng. Bay vào (`PcZoom`) và đứng dậy
+  (`WalkControls`) cũng từ / tới `pcEye` nên liền mạch (bỏ `screenEye`). Desktop nằm trong khung `transform` (phần tử fixed bên trong theo khung),
+  `Window` kẹp vị trí theo cỡ khung. Bỏ `STAND_ICON`; nút tròn `ArrowLeft` góc trên trái màn thật = `standUp('pc')` (điện thoại: góc phải).
+- (người dùng: "mục đơn đang giao => đổi tên thành chờ giao hàng + table trạng thái ở trên rõ ràng: kiện hàng, trạng thái, hình thức")
+  "Đơn đang giao" → "Chờ giao hàng" (tab cột trái, `ParcelList`, tooltip ProductCard). `ParcelList`: đầu mục kiểu bảng xếp hạng (ô icon xe tải +
+  tiêu đề + dòng phụ số kiện đã tới kệ) + hàng tiêu đề cột Kiện hàng | Trạng thái ("Đã tới cửa" vàng / "Tới ngày X") | Hình thức (tốc độ giao,
+  kiện chợ = "Hội Phím Cơ · người bán") | (nút Huỷ) | Đã trả.
+- (người dùng đưa ảnh mẫu: "nên sửa UI preview sản phẩm như thế này") Khung xem 3D sản phẩm Shopii 2 cột:
+  - `ModelViewerFrame`: thêm `side` (cột phải 340px, panel tự chia vùng cuộn + đáy ghim), `corner` (nổi góc trên phải), `hint` (dòng "Kéo để
+    xoay · Cuộn để phóng to · Nhấp đúp để đặt lại"), `role="dialog"` — trước thiếu nên Esc đóng khung xem còn làm đứng dậy khỏi máy tính
+    (`useAppShortcuts` dò `[role="dialog"]`).
+  - `scene/common/ViewPresets.tsx`: `ViewTabs` (Nghiêng / Trên / Trước / Đáy, góc trên trái), `CameraView` (bay mượt tới góc, kéo chuột thì
+    dừng; lùi camera theo tỉ lệ khung `BASE_ASPECT` 1.6 vì khung hẹp lại do panel), `useViewState` (nhấp đúp canvas = về Nghiêng). Dùng ở
+    `ShopProductViewer` (bỏ giới hạn góc polar để xem được đáy) và `KeyboardViewer` (đơn, case, kệ).
+  - `CaseViewer`: công tắc "Xem khi lắp đủ" (`corner`, `caseOnly` tắt → ghép PCB / switch / keycap trắng).
+  - Panel `shop/ProductPanel.tsx` (dựng trong `ProductCard`, chung state với thẻ): tên + nhãn (`productTags`), chip chất liệu, ô màu to 4 cột
+    (cùng 1 màu, vd switch 10 / 70 con → chip chữ), cỡ gói vật tư, âm thanh, bảng thông số (`shop/productSpecs.ts` đọc CASES / SWITCHES /
+    STABS / KEYCAP_KITS / PLATES / TOOLS...), mô tả; đáy ghim: số lượng, giá (giá gốc gạch), nút cam to "Thêm vào giỏ" (nút mua tách hàm
+    `action(big)` dùng chung thẻ / panel). Tiêu đề khung "SHOPII · <mục>" cam + tên + option đang chọn. Bỏ dãy chip màu nổi đáy cảnh (`picker`).
+  - Window xuất `--win-max-h` (chiều cao tối đa cửa sổ): Shopii cao `min(680px, 74vh, --win-max-h − 84px)` để nút ghim đáy cột trái không
+    bị tràn rồi cuộn cả app.
+  - Kiểm bằng playwright-core + Chrome hệ thống (`--use-angle=d3d11`; swiftshader chụp canvas bị timeout), dev server cổng 5199.
+- (người dùng đưa ảnh mẫu: "danh sách đơn hàng h chỉ còn từng này thôi, rút gọn lại") App Danh sách đơn viết lại theo mẫu:
+  - Bỏ đầu app to; tab `TabChip` Đang làm · n / Chờ nhận · n (`packed` chưa gửi) / Đã giao (gửi trong ngày: sao + đã / chưa thu tiền).
+  - `OrderCard`: đóng = avatar, tên + `TimeBadge` ("Còn 3 ngày"), thanh mảnh "Linh kiện x/y" (`partCount`), tiền công, nút "Nhận làm"
+    (= `switchJob`, trước là "Đổi sang làm"); mở = dòng phụ "Bàn phím <layout> · <mount> · <loại switch>", tiền công + "tiền công".
+    Bỏ thanh % tiến độ build.
+  - Thân đơn (`OrderDetail`): "Linh kiện x/y" + "Thiếu: ..."; khối "Linh kiện cần có" mỗi món 1 dòng (✓ xanh / vòng đỏ, tên món có hoặc món
+    khách muốn `wantText`, dòng phụ cần / có cho switch / stab, badge "Khách gửi", thiếu = nền đỏ + nút "Mua ở Shopii" `openShop(cat)`,
+    `SwitchPick` ngay dòng switch); "Kiểu lắp" (chỉ đơn đang làm chưa build: `OptionSelect` mount, plateless lọc còn tray + `Toggle`) — mẫu
+    không có nhưng bỏ thì không chọn được mount / plateless; "Yêu cầu của khách" chip (`wishChips`: biến thể layout, O-ring, lube, foam) + dòng
+    âm thanh khách muốn / dự đoán; "Ngân sách linh kiện" chi / budget, "Dự kiến nhận: công + dư"; đáy "Mua đồ còn thiếu (n)" cam + "Ra bàn build"
+    (thiếu đồ = khung viền đứt "cần đủ y/y").
+  - Bỏ `OrderListFrame`, bảng `OrderSpec` / `StepDot` / `OptionChip big` mount / thẻ âm thanh `SoundBars` trong app này.
+- (2026-10-31, "lúc mới vào game chưa tải xong khung hình đã hiện chào mừng trở lại ngày 1, chưa xong thì không hiển thị gì") Ngồi máy tính
+  cũng có `BenchLoader` phủ kín ("Đang mở xưởng phím...") tới khi phòng 3D tải xong lần đầu (`settled`; không phủ mờ khi đổi bước).
+  Lời chào `newGame` / `continueGame` chạy qua `afterLoad` (loadingStore.ts) = sau khi tải xong; App.tsx ẩn ReviewPops / PayBanner /
+  GuideNpc / BenchDialog lúc đang tải.
+- (người dùng đưa ảnh mẫu: "sửa lại UI tải game") `BenchLoader` màn phủ kín (lần đầu vào cảnh): nền như màn tiêu đề, "SIMULATOR / BUILD
+  KEYBOARD" góc trên trái, Keeb-chan (`GuideGirl`) nhún giữa màn + bóng chân, khung "MẸO" xoay mỗi 4,5s (`data/loadTips.ts` `LOAD_TIPS`, mẹo
+  chung, khác mẹo theo tình huống của Keeb-chan), dòng trạng thái theo tệp đang tải (`PHASES`: case / switch / stab / dụng cụ / phòng / ánh
+  sáng / âm thanh / hình ảnh) + %, thanh vàng full ngang, dưới: "x MB đã tải · loaded / total tệp" + `v__APP_VERSION__`.
+  % = `loaded / total` (progress của drei tính theo từng đợt, đợt mới về 0 → từng hiện 0% lúc 199/200). MB cộng dồn bằng `PerformanceObserver`
+  (`getEntriesByType` chỉ giữ 250 mục, dev Vite lấp đầy bằng module → từng hiện 0 MB); tổng dung lượng không biết trước nên không ghi.
+  Phủ mờ khi đổi bước giữ như cũ.
+- (người dùng: "ở màn hình preview khi chọn sản phẩm khác thì bị nháy đi xong mở lại or bị ẩn đi luôn") Đổi option → ảnh thẻ chụp lại,
+  `ProductImage` nhánh loading trả `<div>` không bọc `ImageZoom` → `ImageZoom` bị gỡ, mất state `open` → khung xem đóng (chụp xong không mở
+  lại). Nhánh loading (trừ case, case giữ nhánh riêng khi `viewing`) giờ bọc `ImageZoom` cùng vị trí. `ProductModel` (ShopProductViewer) giữ
+  model cũ tới khi model mới dựng xong (trước trả null → nháy trống). Kiểm playwright: đổi 3 lần option switch / keycap / PCB / case, khung luôn mở.
+- (người dùng: "icon back lại khi vào máy tính không đồng bộ UI => chỉ hiển thị icon, không nền như button") `components/ui/BackButton`:
+  chỉ icon `ArrowLeft` (trắng, bóng đổ đậm, rê = vàng + nhích trái), dùng ở Desktop (góc trên trái khung máy tính, điện thoại sang phải),
+  BenchHud, EmptyBenchHud (thay `IconButton` / nút tròn nền tối).
+- (người dùng: "bỏ text esc ra khỏi button back") `BackButton` (đã được đổi sang khối `Button` + `ChevronLeft` + phím "ESC"): bỏ `<kbd>ESC</kbd>`, nút vuông `size-11` chỉ mũi tên; Esc vẫn ở tooltip. Bỏ chip "Ngày N" ở `StatusChips` (người dùng: ngày đã có trên lịch treo tường).
+- (2026-10-31, "tiến trình tải lúc nào cũng hiển thị 100%") Model gọi `useGLTF.preload` lúc import (32 chỗ) nên tải xong từ màn tiêu đề:
+  `useProgress` báo hết tệp ngay → 100%, thời gian chờ thật là dựng cảnh. `BenchLoader` tính % theo giai đoạn: tải tệp 0–80 (`loaded / total`),
+  dựng cảnh 80–95 tăng chậm dần (`BUILD_TAU` 3s, chữ "Đang dựng xưởng..."), Suspense xong chờ model bước đầu 99; chỉ tăng (giữ max trong state,
+  đợt tải giữa chừng như HDR không làm tụt).
+- (2026-10-31, "badge ở giỏ hàng không giống badge ở chờ giao hàng") Nút Giỏ hàng cột trái Shopii đổi sang `TabChip` (icon `ShoppingCart`,
+  `count` = số món) giống "Chờ giao hàng"; có hàng (chưa mở giỏ) vẫn nền cam nhạt viền cam.
+- (2026-10-31, "có icon back lại nào đẹp hơn không") `BackButton` (dùng chung máy tính + bàn build) đổi từ mũi tên trần sang khối `Button`
+  kiểu game (cùng bóng đổ với `IconButton`, size-11) + `ChevronLeft` dày; phím tắt Esc ghi ở tooltip.
+- (người dùng đưa ảnh mẫu: "sửa lại ui lịch giống style này") `CalendarDialog` (popup lịch treo tường) viết lại giao diện, logic giữ:
+  trái = tờ lịch trên tấm gỗ nâu `#7a4a2b`, gáy 18 vòng lò xo, đầu cam đỏ `#ef6c50` "LỊCH XƯỞNG PHÍM / NGÀY n" + "Đã làm · Sale tiếp",
+  lưới 4 tuần giấy kem `#f6f1e7` kẻ ô mảnh, ô sale nền hồng + "SALE" đỏ, chấm cam đồng hồ = hạn giao (`DueDot`), hộp xanh = hàng tới
+  (`ParcelIcon`), hôm nay viền vàng + số khoanh xanh, ngày đang chọn viền cam, ngày qua mờ; chú thích đáy. Phải = giấy note vàng
+  `#fdf1a0` dán băng dính, góc dưới phải gấp (`clip-path`), "Ngày n · Hôm nay / Đã qua", việc ngày đang chọn (`NoteItem` chấm màu + tiêu đề +
+  chi tiết); nút xanh to "Kết thúc ngày n" + nút sáng "Quay lại làm việc" (`Button` ghi đè màu). Đã thử font viết tay Caveat
+  (`public/fonts/Caveat.ttf`) cho giấy note nhưng file thiếu glyph tiếng Việt có dấu (chữ "tới", "cửa" lẫn font) → bỏ, dùng Nunito.
+- (người dùng: "tờ giấy bên cạnh nên giống 1 tờ take note hơn, có đoạn bị xé, xéo 1 xíu; khung lịch bên trong nên giống bên ngoài, cho to lên")
+  `CalendarDialog`: tờ lịch dùng đúng màu / bố cục của lịch 3D `WallCalendar` (`drawCalendar`): đầu đỏ `#c0392b` chữ căn giữa (21% chiều cao),
+  giấy `#fbf8f1`, lưới 7 × 4 không hàng thứ, ô viền `#d9d2c3`, sale `#ffe1dc` + "SALE", hôm nay số xanh `#1e7a44` khoanh bầu dục, ngày qua gạch
+  chéo bút đỏ (SVG), hạn giao chấm cam góc trái + tên khách, hàng tới hộp xanh góc phải (chỉ popup), chân "Đã làm n ngày" + chú thích + sale
+  tiếp; bìa nâu `#6b4a33`, 13 vòng lò xo + đinh. Tỉ lệ 520 × 700 như lịch 3D, cao `min(86vh, 800px)`. Giấy note = tờ xé từ sổ: mép trên
+  răng cưa (`TORN` clip-path cố định), dòng kẻ xanh 28px + lề đỏ, nghiêng 2,5°, băng dính, bóng bằng `drop-shadow` lớp ngoài (clip-path cắt
+  box-shadow).
+- (người dùng: "bị thanh scroll bên dưới; chọn ngày 1 thì hiển thị hôm nay là được; button cái to cái nhỏ; bỏ sale tiếp; hàng tới cửa không
+  thấy icon trên lịch tường; lịch dài quá, khoanh ngày bị méo; table nét liền, đang chia 2 nét") `CalendarDialog`: khung ngoài
+  `overflow-x-hidden` + đệm (vòng lò xo / giấy nghiêng thò ra làm cuộn ngang); lịch thấp lại tỉ lệ 520 × 600, cao `min(78vh, 700px)`; lưới kẻ
+  nét liền (khung `border-t/l`, ô `border-r/b`, bỏ `m-px` + viền 4 cạnh mỗi ô), ngày đang chọn = viền đỏ `inset box-shadow`; số ngày trong ô
+  vuông `size-[clamp(30px,5.4vh,50px)] rounded-full` → vòng khoanh hôm nay luôn tròn; bỏ "Sale tiếp"; giấy note hôm nay chỉ ghi "Hôm nay";
+  2 nút cùng `size="lg"`. Lịch 3D (`WallCalendar` `drawCalendar`): hộp xanh `drawBox` góc phải trên ô ngày có kiện tới (`arriveKey` từ
+  `parcels`, vẽ sau vòng khoanh, lót nền giấy) + "hàng tới" trong chú thích chân lịch (chữ 19px cho vừa 4 mục).
+- (người dùng: "cho tờ giấy take note dài ra bằng chiều cao của lịch, 2 button nhỏ lại, hiện hơi cao") `CalendarDialog`: hàng ngoài `items-stretch` → cột phải cao bằng tờ lịch; giấy note `flex-1 min-h-0` + `h-full` (nội dung dài thì cuộn trong giấy); 2 nút về cỡ `md` (bỏ `size="lg"`), cách nhau `gap-3`.
+- (người dùng: "tờ giấy take note cho thẳng lại, không cần xiên") Bỏ `rotate-[2.5deg]` giấy note `CalendarDialog` (băng dính vẫn xéo nhẹ).
+- (2026-10-31, "giao diện load game luôn tải từ mốc 80%, phải chạy từ 0%") `BenchLoader` ghi mốc lúc màn chờ vừa hiện (`start`: có tệp đang tải
+  không + số tệp đã tải khi đó): chỉ đếm tệp tải từ lúc đó; không còn tệp đang tải (đã tải sẵn từ màn tiêu đề) thì bỏ giai đoạn tải tệp, dựng cảnh
+  chạy 0 → 95; render đầu chưa có mốc = 0 (không bị giữ số cũ vì % chỉ tăng). Đo: tải sẵn 0 → 26 → 36 → xong.
+- (2026-10-31, "bỏ text đang giao, tới cửa thì ra nhận, không cần thiết") Bỏ dòng phụ này ở khung thiếu linh kiện (`EmptyBenchHud`) và
+  danh sách thiếu dụng cụ (`ModPanels`).
+- (2026-10-31, "mở lịch thì góc trên phải hiển thị button back giống lúc vào máy tính / bàn build") `CalendarDialog` có `BackButton` góc trên trái
+  (cùng chỗ máy tính / bàn build), bấm = đóng lịch như Esc / "Quay lại làm việc".
+- (người dùng: "mở màn hình máy tính bây giờ sẽ không auto mở app msg nữa") `metaSlice` `newGame` / `continueGame`: `windows: []` (trước `[messenger]`) → ngồi vào máy tính là desktop trống; Mezzenger chỉ mở khi bấm icon / taskbar / banner thu tiền.
+- (người dùng: "bỏ button đứng dậy ra lịch ở msg chat") Mezzenger: bỏ nút xanh "Đứng dậy ra lịch" dưới danh sách hội thoại (+ import `Footprints`); dòng "Hết tin nhắn mới: đứng dậy ra lịch..." vẫn giữ làm hướng dẫn.
+- (2026-10-31, "ghi chung text khi đóng màn hình là quay lại, không cần mỗi cái 1 text") `BackButton` bỏ prop `label`, tooltip cố định
+  "Quay lại (Esc)" ở máy tính / bàn build / lịch.
+- (người dùng: "sao bị scroll ở bên ngoài app msg? đáng lẽ chỉ scroll trong chat và list đơn") Desktop giờ nằm trong khung màn hình 3D (nhỏ hơn cửa sổ trình duyệt) nên khung cao cố định `min(620px, 72vh)` của app lố thân cửa sổ (`overflow-auto`) → cuộn cả app. Mezzenger, Hội Phím Cơ (`GroupFeed`), Bảng xếp hạng, Đánh giá thêm cận `calc(var(--win-max-h,100vh) - 84px)` như Shopii. Đo playwright 1440×900 + 1280×720: thân cửa sổ 5 app `scrollHeight = clientHeight` (không cuộn ngoài). App mới có khung cao cố định thì dùng cùng công thức.
+- (2026-10-31, "không cần icon lá thư khi có đơn mới, thay bằng chấm đỏ khi chưa đọc, ấn vào xem rồi thì mất") Mezzenger bỏ `Envelope`,
+  thẻ đơn chào chưa xem có `UnreadDot` (chấm `bg-red` góc phải trên); bấm hội thoại = `seeOffer(id)` (shopSlice) ghi `Order.seen = true`
+  lên đơn chào (lưu sẵn qua `offers`). Chấm đỏ icon Mezzenger trên desktop chỉ khi còn đơn chào chưa xem.
+- (người dùng: "thêm hiệu ứng lấy dao rọc giấy rạch thùng hàng khi mở, và dán băng kéo giấy khi đóng gói, tự vẽ model or tìm trên mạng")
+  Tự dựng model bằng code (không cần file / giấy phép), `scene/models/PackingTools.tsx` (đơn vị m, gốc = điểm chạm mặt thùng, kéo về +z):
+  `BoxCutter` (cán vàng bo góc + cao su đen 2 bên, nút trượt, mũi kim loại, lưỡi vát `ExtrudeGeometry`), `TapeGun` (cuộn băng màu băng thùng,
+  lõi giấy, trục, tấm khung xám, tay cầm đỏ, con lăn, lưỡi răng cưa, dải băng xuống con lăn).
+  - Mở hộp (`ShippingBox`): bấm thùng → dao hạ xuống mép sau, rạch dọc băng keo về trước (vết rạch tối dài theo dao), nhấc lên
+    (`CUT_MS` 1300) → thùng rung + 2 nắp bật như cũ (`OPEN_MS` 1400) → tự sang bước. `ORDER_BOX` export từ DoorParcels.
+  - Đóng gói / cất đơn (`PackBox`): sau khi gập nắp (`PACK_MS`), súng băng keo (×0,65 cỡ thật cho cân thùng) hạ xuống mép sau, kéo về trước,
+    băng 48mm dài dần theo súng (`scale.z`, chừa 2 đầu gập xuống vách), nhấc lên (`TAPE_MS` 1300) → giữ `HOLD_MS` → `deliver` / `pickBench`.
+  - Âm thanh `sound.ts`: `playCut` (chuỗi tiếng sột ngắn cao dần), `playTape` (sample bóc băng keo chậm hơn + tiếng xé cuối).
+  - Kiểm playwright build thử case 60 nhựa: mở hộp thấy dao + vết rạch, tự sang bước stabMod; đóng gói chụp theo đồng hồ ảo (đè
+    `performance.now`, chặn hẹn giờ, chặn `deliver`) thấy súng chạy + băng dán dọc nắp.
+- (người dùng: "icon check đủ đồ ở danh sách đơn trước giống trong bàn build, giờ đang khác") `OrderApp` "Linh kiện cần có": thay `CircleCheck` /
+  `Circle` bằng `StepDot` (✓ xanh / số thứ tự) như danh sách bước bàn build.
+- (2026-10-31, "góc trên màn hình đổi thành UI như hình: 2 thùng hàng ở hành lang") `RoomHud` góc trái trên: viên cam kiểu nút game
+  (`BUTTON_TONES.orange`, bóng đổ như `Button`) + ô icon trắng hộp cam + "n thùng hàng ở hành lang"; đếm cả thùng đơn khách ở kệ cửa
+  (`boxes[].at === 'door'`) + kiện Shopii / chợ đã tới.
+- (2026-10-31, "Shopii chỉ hiển thị img thay vì model 3D để giảm tải lúc đầu, chỉ tải khi bấm vào preview") Ảnh thẻ Shopii / ô Kho trước chụp
+  lúc chơi từ model 3D (tải GLB + dựng cảnh). Nay chụp sẵn bằng `bun run bake:thumbs` (scripts/bake-shop-thumbs.ts: Chrome ngầm mở dev server,
+  `window.__bakeThumbs.keys()` = mọi khoá ảnh từ `buildCatalog` qua `productThumb` (tách từ ProductImage, dùng chung), `shoot(key)` = cùng
+  code chụp `buildScene` / `buildKeyboardModel` qua `shootFresh` ra WebP) → `public/thumbs/` (584 ảnh, 2,46 MB) + bảng tra
+  `src/data/generated/thumbs.json`. `bakedThumb(key)`: `useModelThumb` / `useCaseThumb` / `cachedThumb` có ảnh sẵn thì dùng ngay (không
+  loading, không tải model); khoá chưa có thì vẫn chụp như cũ. Khung xem 3D (bấm ảnh) mới tải model. Đo: mở Shopii + đổi mục không tải GLB
+  nào (GLB tải lúc đó là ảnh đơn Mezzenger `order:` — không chụp sẵn được vì đơn ngẫu nhiên).

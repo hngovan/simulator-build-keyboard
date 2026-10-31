@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { Badge, Button, OptionChip, QtyInput, SoundBars, Tooltip } from '@/components/ui'
+import { ShoppingCart } from 'lucide-react'
+import { Badge, Button, QtyInput, SoundBars, Tooltip } from '@/components/ui'
+import { optName } from '@/data/cart'
 import { stabStock } from '@/data/parts'
-import { fmt } from '@/lib/format'
+import { cn, fmt } from '@/lib/format'
 import { toolOnWay } from '@/data/shipping'
 import type { Product, ProductOption, StabItem, SupplyItem, ToolItem } from '@/types'
 import { OptionFilter } from './OptionFilter'
 import { ProductImage } from './ProductImage'
+import { ProductPanel } from './ProductPanel'
 import { SaleRibbon } from './SaleRibbon'
 import { useGame } from '@/store'
 
@@ -67,6 +70,38 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
   const onWay = !!toolItem && !canEquip && toolOnWay(parcels, toolItem.kind, toolItem.level)
   // giá gốc (phí giao tính lúc thanh toán giỏ theo tốc độ giao)
   const total = opt.price * (stackable ? qty : 1)
+  // nút mua: thẻ = nút nhỏ, panel khung xem 3D = nút to full ngang có icon giỏ
+  const action = (big?: boolean) =>
+    equipped || canEquip ? (
+      <Button
+        size={big ? 'lg' : 'sm'}
+        tone="orange"
+        disabled={equipped}
+        onClick={() => onEquip(opt)}
+        className={cn(big && 'w-full')}
+      >
+        {equipped ? 'Đang dùng' : 'Dùng máy này'}
+      </Button>
+    ) : (
+      <Button
+        tone="orange"
+        size={big ? 'lg' : 'sm'}
+        disabled={onWay}
+        title={
+          onWay
+            ? 'Đang trên đường giao, xem ở Chờ giao hàng'
+            : product.sale
+              ? 'Giá sale chỉ cho 1 món, mua thêm là giá thường'
+              : 'Thêm vào giỏ hàng, chọn tốc độ giao lúc thanh toán'
+        }
+        onClick={() => onCart(product, opt, stackable ? qty : 1)}
+        className={cn(big && 'inline-flex w-full items-center justify-center gap-2')}
+      >
+        {big && !onWay && <ShoppingCart className="size-5" />}
+        {onWay ? 'Đang giao' : 'Thêm vào giỏ'}
+      </Button>
+    )
+  const kindName = (o: ProductOption) => (isPack(o) ? o.label.split(' · ')[0] : o.label)
   return (
     <div className="relative flex flex-col gap-1.5 rounded-xl bg-panel-2 p-2.5 hover:ring-2 hover:ring-yellow hover:ring-inset">
       {/* món đang sale: ruy băng đỏ SALE chéo góc */}
@@ -88,23 +123,25 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
             ) : null
           })
         }
-        // chọn màu / loại ngay trong khung xem 3D (đồng bộ với lựa chọn trên thẻ)
-        picker={
-          // khác màu hoặc khác loại; stab luôn hiện (bộ / lẻ 2u / 6.25u / 7u xem được dây dài khác nhau);
-          // chỉ khác số lượng (switch 10 / 70 con...) thì không hiện
-          (product.cat === 'stab' ||
-            new Set(shown.map(([o]) => `${o.swatch}|${(o.item as { type?: string }).type ?? ''}`))
-              .size > 1) &&
-          chips.map(([o, i]) => (
-            <OptionChip
-              key={o.label}
-              active={kindOf(o) === kindOf(opt)}
-              swatch={o.swatch}
-              onClick={() => pickKind(o, i)}
-            >
-              {isPack(o) ? o.label.split(' · ')[0] : o.label}
-            </OptionChip>
-          ))
+        // khung xem 3D: panel thông tin cột phải, chọn option / mua ngay trong đó (đồng bộ với thẻ)
+        subtitle={product.options.length > 1 ? optName(opt) : undefined}
+        panel={
+          <ProductPanel
+            product={product}
+            opt={opt}
+            groups={groups}
+            onGroup={pickGroup}
+            tiles={chips}
+            tileActive={(o) => kindOf(o) === kindOf(opt)}
+            onTile={pickKind}
+            tileLabel={kindName}
+            packs={isPack(opt) ? shown.filter(([o]) => kindOf(o) === kindOf(opt)) : []}
+            onPack={setSel}
+            qty={stackable ? qty : null}
+            onQty={setQty}
+            total={total}
+            action={action(true)}
+          />
         }
       />
       <div className="flex items-center gap-1.5">
@@ -156,27 +193,7 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
             <s className="text-xs font-bold text-muted">{fmt(opt.was * (stackable ? qty : 1))}</s>
           )}
         </span>
-        {equipped || canEquip ? (
-          <Button size="sm" tone="orange" disabled={equipped} onClick={() => onEquip(opt)}>
-            {equipped ? 'Đang dùng' : 'Dùng máy này'}
-          </Button>
-        ) : (
-          <Button
-            tone="orange"
-            size="sm"
-            disabled={onWay}
-            title={
-              onWay
-                ? 'Đang trên đường giao, xem ở Đơn đang giao'
-                : product.sale
-                  ? 'Giá sale chỉ cho 1 món, mua thêm là giá thường'
-                  : 'Thêm vào giỏ hàng, chọn tốc độ giao lúc thanh toán'
-            }
-            onClick={() => onCart(product, opt, stackable ? qty : 1)}
-          >
-            {onWay ? 'Đang giao' : 'Thêm vào giỏ'}
-          </Button>
-        )}
+        {action()}
       </div>
     </div>
   )

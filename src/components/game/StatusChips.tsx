@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { CalendarDays, Star, UserRound, Wallet } from 'lucide-react'
+import { Star, UserRound, Wallet } from 'lucide-react'
 import { useGame } from '@/store'
 import { TOOLS } from '@/data/parts'
 import { CERT_BONUS, REP_RULES, REP_TIERS, certBonus, repTier } from '@/data/reputation'
@@ -195,13 +195,12 @@ function MoneyInfo({ money, cert }: { money: number; cert: number }) {
 }
 
 /**
- * Tên thợ, tiền, uy tín, ngày: icon lucide + chữ, rê chuột hiện tooltip; tiền / uy tín rê chuột hiện luôn bảng giải thích.
+ * Tên thợ, tiền, uy tín (ngày xem ở lịch treo tường): icon lucide + chữ, rê chuột hiện tooltip; tiền / uy tín rê chuột hiện luôn bảng giải thích.
  * `tipSide`: taskbar sát đáy màn hình thì tooltip + bảng mở lên trên
  */
 export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
   const money = useGame((s) => s.money)
   const rep = useGame((s) => s.rep)
-  const day = useGame((s) => s.day)
   const name = useGame((s) => s.name)
   const cert = useGame((s) => s.tools.cert ?? 0)
   return (
@@ -241,12 +240,7 @@ export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
       >
         <RepInfo rep={rep} />
       </InfoChip>
-      <Tooltip content="Ngày hiện tại" side={tipSide}>
-        <Chip tone="day">
-          <CalendarDays className="text-[#9cc2ff]" />
-          Ngày {day}
-        </Chip>
-      </Tooltip>
+      {/* không còn chip ngày: ngày xem ở lịch treo tường trong phòng */}
       <NotifyBell side={tipSide} />
     </div>
   )

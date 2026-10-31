@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react'
-import { ChevronDown, CircleAlert, ClipboardList, Clock } from 'lucide-react'
+import { ChevronDown, Clock } from 'lucide-react'
 import { useGame } from '@/store'
-import { SCREW_FULL, checkInventory, partSpent } from '@/data/parts'
-import { buildPercent, contextFor } from '@/data/steps'
-import { Badge, ProgressBar, progressTone } from '@/components/ui'
+import { LAYOUTS } from '@/data/layouts'
+import { MOUNTS, SWITCH_KINDS, checkInventory } from '@/data/parts'
+import { Badge } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
 import type { Order } from '@/types'
 import type { JobSession } from '@/store/persistence'
@@ -17,36 +17,26 @@ export interface OrderEntry {
   session?: Pick<JobSession, 'inventory' | 'build' | 'mount' | 'provided' | 'spent'>
 }
 
-/**
- * Tiền dư linh kiện của đơn = budget khách trả − tiền đã mua linh kiện (`partSpent`, như "Đã chi" ở Chi tiết đơn).
- * Chỉ biết khi đã đủ linh kiện (hoặc đã vào build); âm = mua lố budget, shop chịu
- */
-function leftover(c: OrderEntry, missing: { ok: boolean }[] | null) {
-  if (c.order.cancel || !c.session || (!c.session.build && (!missing || missing.length)))
-    return null
-  return c.order.budget - partSpent(c.session.inventory, c.order, c.session.spent)
-}
-
 /** Badge thời gian: đơn mới = số ngày làm; đã nhận = còn bao nhiêu ngày tới hạn / trễ */
-function TimeBadge({ order, day }: { order: Order; day: number }) {
+export function TimeBadge({ order, day }: { order: Order; day: number }) {
   const left = order.dueDay === undefined ? null : order.dueDay - day
   const [text, tone] =
     left === null
       ? [`${order.days} ngày`, 'blue' as const]
       : left < 0
-        ? [`trễ ${-left} ngày`, 'red' as const]
+        ? [`Trễ ${-left} ngày`, 'red' as const]
         : left === 0
-          ? ['hạn hôm nay', 'yellow' as const]
-          : [`còn ${left} ngày`, left === 1 ? ('yellow' as const) : ('green' as const)]
+          ? ['Hạn hôm nay', 'yellow' as const]
+          : [`Còn ${left} ngày`, left === 1 ? ('yellow' as const) : ('green' as const)]
   return (
-    <Badge solid tone={tone} className="ml-0">
+    <Badge solid tone={tone} className="ml-0 shrink-0">
       <Clock className="size-3" strokeWidth={3} />
       {text}
     </Badge>
   )
 }
 
-/** Danh sách đơn dùng chung (bàn build + app Danh sách đơn): đơn đang làm → đơn đã nhận (gấp trước) */
+/** Danh sách đơn dùng chung: đơn đang làm → đơn đã nhận (gấp trước) */
 export function useOrderEntries(): OrderEntry[] {
   const s = useGame()
   return [
@@ -57,59 +47,29 @@ export function useOrderEntries(): OrderEntry[] {
   ]
 }
 
-/** % tiến độ build của 1 đơn (chưa vào bàn build = 0) */
-function useProgress(c: OrderEntry) {
-  const clicks = SCREW_FULL
-  const ctxNow = useGame((s) => s.ctx)
-  const b = c.session?.build
-  if (!b) return 0
-  const ctx =
-    c.kind === 'active'
-      ? ctxNow
-      : c.session && contextFor(c.order, c.session.inventory, c.session.mount)
-  return ctx ? buildPercent(b, ctx, clicks) : 0
+/** đếm món linh kiện đã đạt / tổng số ô đối chiếu của đơn */
+export function partCount(c: OrderEntry) {
+  if (!c.session) return { ok: 0, all: 0 }
+  const placed = c.session.build ? Object.keys(c.session.build.switches).length : 0
+  const checks = checkInventory(c.session.inventory, c.order, placed)
+  return { ok: checks.filter((x) => x.ok).length, all: checks.length }
 }
 
-/**
- * Khung danh sách đơn cùng kiểu bảng xếp hạng: đầu (icon + tiêu đề + dòng phụ + ⓘ) → khung nền tối có hàng tiêu đề cột
- * → các dòng đơn (`OrderCard`). Dùng ở app Danh sách đơn
- */
-export function OrderListFrame({ children }: { children: ReactNode }) {
+/** thanh tiến độ mảnh (xanh khi đủ, vàng khi thiếu) */
+export function Bar({ value, className }: { value: number; className?: string }) {
   return (
-    <div className="flex min-h-0 flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-yellow/15 text-yellow">
-          <ClipboardList className="size-9" strokeWidth={2.2} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-head text-2xl leading-tight font-extrabold text-yellow">
-            Danh sách đơn
-          </div>
-          <div className="truncate text-sm text-muted">Đơn đang làm và đơn đã nhận</div>
-        </div>
-        <span
-          className="shrink-0 self-start text-muted hover:text-ink"
-          title="Bấm vào đơn để xem chi tiết · ở bàn build bấm phím M để mở / đóng"
-        >
-          <CircleAlert className="size-5" />
-        </span>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col rounded-2xl bg-black/15 p-1.5">
-        <div className="flex items-center gap-3 px-3 pt-1 pb-2 text-[13px] font-bold text-muted">
-          <div className="flex-1">Khách</div>
-          <div title="Tiền công + tiền dư linh kiện (budget − đã chi, hiện khi đủ linh kiện)">
-            Tiền công + dư
-          </div>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">{children}</div>
-      </div>
+    <div className={cn('h-1.5 overflow-hidden rounded-full bg-black/35', className)}>
+      <div
+        className={cn('h-full rounded-full', value >= 1 ? 'bg-green' : 'bg-green/80')}
+        style={{ width: `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%` }}
+      />
     </div>
   )
 }
 
 /**
- * Dòng 1 đơn (kiểu dòng bảng xếp hạng): avatar, tên + hạn, tiến độ / linh kiện thiếu, tiền công bên phải, nút hành động
- * (`action`); đơn đang làm viền vàng. Bấm vào dòng để mở `detail` bên dưới, bấm lần nữa để đóng
+ * Thẻ 1 đơn (đơn đang làm viền vàng). Đóng: avatar, tên + hạn, thanh "Linh kiện x/y", tiền công, nút hành động (`action`).
+ * Mở: dòng phụ layout · mount · loại switch, tiền công to, phần thân `detail` (linh kiện, yêu cầu, ngân sách, nút)
  */
 export function OrderCard({
   c,
@@ -125,30 +85,34 @@ export function OrderCard({
   const day = useGame((s) => s.day)
   const [open, setOpen] = useState(defaultOpen)
   const { order, kind, session } = c
-  const missing = session ? checkInventory(session.inventory, order).filter((x) => !x.ok) : null
-  const pct = useProgress(c)
   const active = kind === 'active'
-  const left = leftover(c, missing)
-  // đủ linh kiện: đã vào build (startBuild đã kiểm kho) hoặc kho đơn không thiếu món nào
-  const ready = !!session?.build || (!!missing && !missing.length)
   const cancelled = order.cancel === 'sold'
+  const parts = partCount(c)
+  const mount = session?.mount ?? order.mount
+  const sub = [
+    `Bàn phím ${LAYOUTS[order.layout].name}`,
+    mount && MOUNTS[mount] && MOUNTS[mount].name,
+    order.switchKind && SWITCH_KINDS[order.switchKind],
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const toggle = () => setOpen(!open)
   return (
     <div
       className={cn(
-        'rounded-xl px-3 py-2',
-        active ? 'bg-[#3a3418] ring-2 ring-yellow ring-inset' : 'bg-panel-2',
+        'rounded-2xl',
+        active ? 'bg-[#2c2a1c] ring-2 ring-yellow ring-inset' : 'bg-panel-2',
         cancelled && 'opacity-70',
       )}
     >
-      {/* bấm phần đầu dòng để mở / đóng chi tiết */}
       <div
         role="button"
         tabIndex={0}
         aria-expanded={open}
-        title={open ? 'Thu gọn chi tiết đơn' : 'Xem chi tiết đơn'}
-        className="flex cursor-pointer items-center gap-3"
-        onClick={() => setOpen(!open)}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpen(!open)}
+        title={open ? 'Thu gọn đơn' : 'Xem chi tiết đơn'}
+        className="flex cursor-pointer items-center gap-3 px-3 py-2.5"
+        onClick={toggle}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggle()}
       >
         <CustomerAvatar
           avatar={order.avatar}
@@ -158,54 +122,43 @@ export function OrderCard({
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-1.5">
             <span
-              className={cn('truncate font-head text-base font-extrabold', active && 'text-yellow')}
+              className={cn('truncate font-head text-lg font-extrabold', active && 'text-yellow')}
             >
               {order.customer}
             </span>
             <TimeBadge order={order} day={day} />
           </div>
-          {/* trạng thái: đủ / không đủ linh kiện; khách huỷ kèo vì bị bán đồ thì báo đỏ */}
-          <div className="truncate text-xs font-bold">
-            {cancelled ? (
-              <span className="text-red">Khách huỷ kèo vì phát hiện bạn bán đồ của khách</span>
-            ) : ready ? (
-              <span className="text-green">Đủ linh kiện</span>
-            ) : (
-              <span className="text-yellow">Không đủ linh kiện</span>
-            )}
-          </div>
-        </div>
-        {/* tiền công + tiền dư linh kiện (đủ linh kiện mới biết), lố budget thì trừ đỏ */}
-        <div
-          className="flex items-baseline gap-1 font-head text-xl font-extrabold whitespace-nowrap"
-          title={
-            left === null
-              ? 'Tiền công (đủ linh kiện mới tính được tiền dư)'
-              : `Tiền công ${fmt(order.labor)} + dư linh kiện ${fmt(left)}`
-          }
-        >
-          <span className="text-green">{fmt(order.labor)}</span>
-          {left !== null && (
-            <>
-              <span className="text-muted">{left < 0 ? '−' : '+'}</span>
-              <span className={left < 0 ? 'text-red' : 'text-green'}>{fmt(Math.abs(left))}</span>
-            </>
+          {cancelled ? (
+            <span className="truncate text-xs font-bold text-red">
+              Khách huỷ kèo vì phát hiện bạn bán đồ của khách
+            </span>
+          ) : open ? (
+            <span className="truncate text-xs font-bold text-muted">{sub}</span>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-bold text-muted">
+              <Bar value={parts.all ? parts.ok / parts.all : 0} className="w-16" />
+              Linh kiện {parts.ok}/{parts.all}
+            </div>
           )}
         </div>
-        {/* bấm nút hành động không mở / đóng dòng */}
+        <div className="flex flex-col items-end leading-none">
+          <span className="font-head text-xl font-extrabold text-green">{fmt(order.labor)}</span>
+          {open && <span className="mt-1 text-[11px] font-bold text-muted">tiền công</span>}
+        </div>
+        {/* bấm nút hành động không mở / đóng thẻ */}
         <div className="flex shrink-0 items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          {/* đơn khách đã huỷ kèo: không làm tiếp được */}
-          {!cancelled && action}
-          <ChevronDown
-            className={cn('size-5 text-muted transition-transform', open && 'rotate-180')}
-            onClick={() => setOpen(!open)}
-          />
+          {!open && !cancelled && action}
+          <button
+            type="button"
+            aria-label={open ? 'Thu gọn' : 'Mở chi tiết'}
+            onClick={toggle}
+            className="grid size-8 place-items-center rounded-lg bg-black/25 text-muted hover:text-ink"
+          >
+            <ChevronDown className={cn('size-5 transition-transform', open && 'rotate-180')} />
+          </button>
         </div>
       </div>
-      {session?.build && pct < 1 && !cancelled && (
-        <ProgressBar value={pct} tone={progressTone(pct)} className="mt-2" />
-      )}
-      {open && <div className="mt-2">{detail}</div>}
+      {open && <div className="px-3 pb-3">{detail}</div>}
     </div>
   )
 }

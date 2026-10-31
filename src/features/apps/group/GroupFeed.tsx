@@ -29,7 +29,7 @@ export function GroupFeed() {
     )
   return (
     // cùng kiểu bảng xếp hạng: đầu (icon + tiêu đề + ⓘ) → tab lọc kiểu Shopii (đứng yên) → khung nền tối cuộn riêng
-    <div className="flex h-[min(680px,74vh)] flex-col gap-3 group-data-fill/win:h-full">
+    <div className="flex h-[min(680px,74vh,calc(var(--win-max-h,100vh)-84px))] flex-col gap-3 group-data-fill/win:h-full">
       <div className="flex items-center gap-3">
         <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-yellow/15 text-yellow">
           <UsersRound className="size-9" strokeWidth={2.2} />

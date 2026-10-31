@@ -702,3 +702,19 @@ kiện chợ không; tên trên thùng bỏ "chị / anh".
   `standUp` khi đang ngồi (đang đi lại thì cầm luôn, không bay camera).
 - (2026-10-30) Sửa: đơn build thử Dev (`order.dev`, không có thùng / `benchBox` null, `onBench` luôn đúng) mà đứng dậy đi lại thì bàn build
   tính là trống ("Chưa có đơn hàng nào", bấm không vào lại được) → `benchMode` coi đơn dev là 'sit' (đang cầm thùng khác thì 'busy').
+- (2026-10-31, "chưa có đơn hàng nào trên bàn build thì phải hiển thị block như kiện hàng đặt trên kệ để người dùng hiểu") Bàn build chưa có
+  thùng (`!benchBox`) luôn hiện `GhostBlock` cỡ thùng đơn giữa tấm lót (EmptyBench.tsx, cả lúc ngồi lẫn đi lại; trước chỉ hiện khi đang cầm
+  thùng đơn), ẩn khi đang cầm thùng đã đóng gói; viền sáng chỉ khi cầm thùng trỏ vào bàn. Camera bàn trống luôn lùi xa như có thùng
+  (`benchView box: true`) cho thấy trọn khối.
+- (2026-10-31, "không còn giới hạn phải làm ít nhất 1 đơn thì mới kết thúc ngày được → bỏ đi") Bỏ chặn trong `nextDay` (shopSlice) + Alert /
+  nút disabled ở `EndDayDialog` + dòng tỉ lệ ở `odds.ts`; README / CLAUDE.md sửa theo. `acceptedToday` giữ để hiện "Đơn nhận" ở tổng kết ngày.
+  Phạt đơn đã nhận mà cả ngày không làm (`NO_WORK_FINE`) vẫn giữ.
+- (2026-10-31, "trên lịch không cần ghi tên anh Dũng, anh Khoa vì bấm chi tiết đã xem được") Ô lịch (popup `CalendarDialog` + lịch 3D
+  `WallCalendar`) chỉ còn chấm cam hạn giao, bỏ dòng tên khách / "n đơn"; tên khách xem ở giấy note khi bấm ô.
+
+## Đếm thùng ở hành lang khớp số thùng trên kệ (2026-10-31)
+
+- Người dùng: "ở ngoài kệ chỉ có 1 đơn hàng được đóng gói (có thể là đơn mua chung) nhưng thông báo là 2 đơn" + "chỉ có 2 thùng nhưng vẫn đếm
+  là 3". Kệ cửa gộp kiện cùng nguồn + cùng tên thành 1 thùng ("×2"), nhưng HUD `RoomHud` đếm `arrivedParcels().length` (từng kiện) và
+  thông báo hàng tới liệt kê từng kiện. Gộp chung 1 hàm `parcelStacks(parcels, day)` (`data/shipping.ts`) cho kệ 3D (`DoorParcels`) + đếm HUD
+  ("N thùng hàng ở hành lang" = số thùng nhìn thấy + thùng đơn khách); thông báo "Có hàng tới cửa" ghi gộp `stackLabels` ("PCB 40% Hotswap ×2").

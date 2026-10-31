@@ -20,6 +20,7 @@ import { ShelfViewer } from '@/features/bench/ShelfViewer'
 import { Bench } from '@/scene/Bench'
 import { PayBanner } from '@/components/game/PayBanner'
 import { onBench } from '@/store/carrySlice'
+import { useSceneLoading } from '@/scene/common/loadingStore'
 import { applyAudioSettings, startBgm, stopBgm } from '@/sound'
 
 export default function App() {
@@ -34,6 +35,8 @@ export default function App() {
   const calendar = useRoom((r) => r.calendar)
   const guide = useGame((s) => !s.guideHidden)
   const audio = useGame((s) => s.audio)
+  // phòng 3D chưa tải xong lần đầu: chỉ hiện màn chờ, xong mới hiện NPC / thông báo
+  const loading = useSceneLoading((s) => !s.settled) && (screen === 'pc' || screen === 'bench')
   // fast bid ở Hội Phím Cơ: bot ghé bid / bình luận, hết giờ thì chốt bán (kể cả khi không mở tab chợ)
   const hasBid = useGame((s) => s.listings.some((l) => l.bid))
   useEffect(() => {
@@ -55,12 +58,18 @@ export default function App() {
   return (
     <>
       {screen === 'title' && <TitleScreen />}
-      {screen === 'pc' && <Desktop />}
+      {/* phòng 3D dựng cả lúc ngồi máy tính: làm nền quanh khung desktop (camera đứng yên nhìn màn hình) */}
+      {(screen === 'bench' || screen === 'pc') && <Bench />}
+      {screen === 'pc' && (
+        <>
+          <Desktop />
+          <BenchLoader />
+        </>
+      )}
       {screen === 'bench' && (
         <>
-          <Bench />
           {!zooming && (walk ? <RoomHud /> : hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
-          {!zooming && !walk && guide && <BenchDialog />}
+          {!zooming && !walk && guide && !loading && <BenchDialog />}
           <ShelfViewer />
           {calendar && <CalendarDialog />}
           <BenchLoader />
@@ -68,9 +77,13 @@ export default function App() {
       )}
       <Toasts />
       <GlobalTooltip />
-      <ReviewPops />
-      <PayBanner />
-      {!zooming && guide && <GuideNpc />}
+      {!loading && (
+        <>
+          <ReviewPops />
+          <PayBanner />
+          {!zooming && guide && <GuideNpc />}
+        </>
+      )}
       <GameOverDialog />
     </>
   )

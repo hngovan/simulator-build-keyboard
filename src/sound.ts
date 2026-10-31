@@ -152,6 +152,32 @@ export function playOpenBox() {
   }, 280)
 }
 
+/** Dao rọc giấy rạch dọc băng keo thùng carton (`dur` giây): chuỗi tiếng sột ngắn, cao dần */
+export function playCut(dur = 0.7) {
+  const t = ac().currentTime
+  const n = Math.round(dur / 0.045)
+  for (let i = 0; i < n; i++)
+    noiseBurst(t + i * 0.045 + Math.random() * 0.01, {
+      freq: 2600 + (i / n) * 1400 + Math.random() * 400,
+      q: 2.5,
+      dur: 0.035,
+      gain: 0.16,
+    })
+}
+
+/** Súng băng keo kéo dán dọc nắp thùng: tiếng băng bong khỏi cuộn (sample bóc băng keo, chậm hơn) + tiếng xé cuối */
+export function playTape(dur = 0.8) {
+  if (!playSfx('open-box/tape.wav', 0.6, 0.82)) {
+    const t = ac().currentTime
+    for (let i = 0; i < 10; i++)
+      noiseBurst(t + (i * dur) / 10, { freq: 900 + i * 90, q: 1.2, dur: 0.09, gain: 0.14 })
+  }
+  setTimeout(
+    () => noiseBurst(ac().currentTime, { freq: 3800, q: 2, dur: 0.05, gain: 0.25 }),
+    dur * 1000,
+  )
+}
+
 export function playTipWipe() {
   const t = ac().currentTime
   for (let i = 0; i < 6; i++) noiseBurst(t + i * 0.23, { freq: 3500, q: 0.7, dur: 0.16, gain: 0.1 })

@@ -18,6 +18,7 @@ import { createSolderSpool, createSpoolHolder } from '@/scene/models/solderSpool
 import { createScrewTray } from '@/scene/models/screwTrayModel'
 import { DIPLOMA_URL, createDiploma } from '@/scene/models/diplomaModel'
 import { createScroll } from '@/scene/models/scrollModel'
+import baked from '@/data/generated/thumbs.json'
 
 // Ảnh sản phẩm Shopii chụp từ chính model 3D trong game: 1 renderer ẩn dùng chung, chụp lần lượt
 // rồi giữ ảnh theo loại (không mở canvas WebGL cho từng thẻ sản phẩm)
@@ -32,6 +33,11 @@ const loader = new GLTFLoader()
 const gltfs = new Map<string, Promise<Record<string, THREE.Mesh>>>()
 const keycapGltfs = new Map<string, Promise<THREE.Group>>()
 const cache = new Map<string, Promise<string | null>>()
+
+/** ảnh chụp sẵn (`bun run bake:thumbs`): khoá → tệp trong `public/thumbs/` */
+const BAKED: Record<string, string> = baked
+/** ảnh tĩnh chụp sẵn của khoá (có thì không cần tải model 3D để chụp) */
+export const bakedThumb = (key: string) => (BAKED[key] ? `/thumbs/${BAKED[key]}` : undefined)
 let queue: Promise<unknown> = Promise.resolve()
 
 function meshes(url: string) {
@@ -431,8 +437,8 @@ export async function buildScene(kind: ThumbKind, type: string) {
 /** khoảng cách tâm → slider (mm) của stab phím dài: 6.25u theo CAD, 7u = 57.15mm (chuẩn Cherry) */
 const STAB_SPAN_MM: Record<string, number> = { '6.25u': stabModel.spans['6.25u'], '7u': 57.15 }
 
-/** Chụp 1 vật thể (đã dựng sẵn) thành ảnh PNG, canh khung theo khối bao */
-async function shootObject(model: THREE.Object3D) {
+/** Chụp 1 vật thể (đã dựng sẵn) thành ảnh (mặc định PNG), canh khung theo khối bao */
+async function shootObject(model: THREE.Object3D, mime = 'image/png', quality?: number) {
   const r = setup()
   const scene = new THREE.Scene()
   scene.environment = envMap
@@ -450,7 +456,7 @@ async function shootObject(model: THREE.Object3D) {
   camera.position.copy(center).add(new THREE.Vector3(0, 0, fit * 1.15 + size.z / 2))
   camera.lookAt(center)
   r.render(scene, camera)
-  return r.domElement.toDataURL('image/png')
+  return r.domElement.toDataURL(mime, quality)
 }
 
 /** Ảnh PNG (data URL) của sản phẩm; null nếu máy không có WebGL */
@@ -458,14 +464,23 @@ function modelThumb(kind: ThumbKind, type: string) {
   return cachedThumb(`${kind}:${type}`, () => buildScene(kind, type))
 }
 
-/** Chụp theo khoá (mỗi khoá chụp 1 lần, chụp lần lượt trên renderer chung) */
+/** Chụp theo khoá (mỗi khoá chụp 1 lần, chụp lần lượt trên renderer chung); có ảnh chụp sẵn thì dùng luôn */
 export function cachedThumb(key: string, build: () => Promise<THREE.Object3D>) {
+  const file = bakedThumb(key)
+  if (file) return Promise.resolve(file)
   if (!cache.has(key)) {
     const job = queue.then(async () => shootObject(await build())).catch(() => null)
     queue = job
     cache.set(key, job)
   }
   return cache.get(key)!
+}
+
+/** Chụp mới (bỏ qua cache / ảnh sẵn) ra WebP để lưu tệp: dùng cho script chụp sẵn `bake:thumbs` */
+export function shootFresh(build: () => Promise<THREE.Object3D>) {
+  const job = queue.then(async () => shootObject(await build(), 'image/webp', 0.88))
+  queue = job.catch(() => null)
+  return job
 }
 
 /** Tải mesh từ file glb (dùng chung cache) */
@@ -486,14 +501,15 @@ export function glbScene(url: string) {
 export function useModelThumb(kind: ThumbKind | null, type: string | undefined) {
   const key = kind && type ? `${kind}:${type}` : null
   const [shot, setShot] = useState<{ key: string; url: string | null } | null>(null)
+  const file = key ? bakedThumb(key) : undefined
   useEffect(() => {
-    if (!kind || !type || !key) return
+    if (!kind || !type || !key || file) return
     let alive = true
     modelThumb(kind, type).then((url) => alive && setShot({ key, url }))
     return () => {
       alive = false
     }
-  }, [kind, type, key])
-  // undefined = đang chụp (lần đầu tải model), null = không có model 3D (dùng ảnh vẽ)
-  return !key ? null : shot?.key === key ? shot.url : undefined
+  }, [kind, type, key, file])
+  // có ảnh chụp sẵn: dùng ngay; undefined = đang chụp (lần đầu tải model), null = không có model 3D (dùng ảnh vẽ)
+  return !key ? null : (file ?? (shot?.key === key ? shot.url : undefined))
 }

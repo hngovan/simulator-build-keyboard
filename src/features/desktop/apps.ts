@@ -78,13 +78,3 @@ export const APPS: Record<AppId, AppDef> = {
 }
 
 export const APP_IDS = Object.keys(APPS) as AppId[]
-
-/**
- * icon "Đứng dậy": rời máy tính, đi lại trong phòng (lấy hàng ở cửa, xem lịch / kết thúc ngày trên tường).
- * Kết thúc ngày không còn ở máy tính, chỉ ở lịch treo tường
- */
-export const STAND_ICON: Omit<AppDef, 'Component' | 'width'> = {
-  title: 'Đứng dậy',
-  icon: '/icons/apps/footprints.svg',
-  color: '#34407a',
-}

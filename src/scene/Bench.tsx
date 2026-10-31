@@ -24,7 +24,7 @@ import { benchView } from './common/benchPose'
 import { CuttingMat } from './common/CuttingMat'
 import { EmptyBench } from './EmptyBench'
 import { fitAspect } from './common/fitAspect'
-import { screenCenter, screenEye } from './models/computerLayout'
+import { pcEye, screenCenter } from './models/computerLayout'
 import { M } from './room/roomLayout'
 
 /** Báo cảnh đã sẵn sàng khi Suspense ngoài cùng tải xong */
@@ -136,6 +136,7 @@ function PcZoom() {
   const zoom = useGame((s) => s.pcZoom)
   const camera = useThree((s) => s.camera)
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
+  const size = useThree((s) => s.size)
   const anim = useRef<{ t: number; from: THREE.Vector3; look: THREE.Vector3 } | null>(null)
   useFrame((_, dt) => {
     if (!zoom) return (anim.current = null)
@@ -153,7 +154,13 @@ function PcZoom() {
     // máy chậm (khung hình dài) vẫn thấy đường bay: mỗi khung tối đa 1/30s
     a.t = Math.min(1, a.t + Math.min(dt, 1 / 30) / 0.9)
     const e = a.t * a.t * (3 - 2 * a.t)
-    camera.position.lerpVectors(a.from, new THREE.Vector3(...screenEye()), e)
+    // dừng ở chỗ mặt kính trùng khung desktop (PcView giữ tiếp)
+    const fov = camera instanceof THREE.PerspectiveCamera ? camera.fov : 42
+    camera.position.lerpVectors(
+      a.from,
+      new THREE.Vector3(...pcEye(fov, size.width, size.height)),
+      e,
+    )
     const look = new THREE.Vector3().lerpVectors(a.look, new THREE.Vector3(...screenCenter()), e)
     if (controls) {
       controls.target.copy(look)
@@ -171,11 +178,34 @@ function PcZoom() {
 }
 
 /**
+ * Đang ngồi máy tính (screen 'pc'): cảnh làm nền sau khung desktop, camera đứng yên nhìn thẳng màn hình (mặt kính trùng khung
+ * desktop, quanh đó thấy bàn / phòng). Chỉ vẽ lại khi cần (frameloop demand); useFrame ưu tiên 1 = tự render sau khi đặt camera,
+ * đè mọi chỗ khác vừa dời camera (CameraRig, camKey...)
+ */
+function PcView() {
+  const setFrameloop = useThree((s) => s.setFrameloop)
+  const invalidate = useThree((s) => s.invalidate)
+  useEffect(() => {
+    setFrameloop('demand')
+    invalidate()
+    return () => setFrameloop('always')
+  }, [setFrameloop, invalidate])
+  useFrame(({ gl, scene, camera, size }) => {
+    const fov = camera instanceof THREE.PerspectiveCamera ? camera.fov : 42
+    camera.position.set(...pcEye(fov, size.width, size.height))
+    camera.lookAt(...screenCenter())
+    gl.render(scene, camera)
+  }, 1)
+  return null
+}
+
+/**
  * Camera neo quanh tâm vật đang làm (CameraRig đặt tâm theo bước, Space về góc mặc định, lật xem đáy bằng Q):
  * chuột trái / phải / 1 ngón kéo xoay quanh tâm, cuộn / 2 ngón zoom vào tâm; không kéo trượt khung nhìn, không xuống dưới mặt bàn
  */
 function Controls() {
   const walk = useGame((s) => s.walk)
+  const pc = useGame((s) => s.screen === 'pc')
   // đang giữ chuột thao tác (hàn...) thì khoá camera
   const locked = useCamLock((s) => s.locked)
   // đang ngồi bàn build mà bấm WASD: đứng dậy đi luôn (như PC Building Simulator)
@@ -199,6 +229,8 @@ function Controls() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [walk])
+  // ngồi máy tính: camera đứng yên (PcView), không điều khiển
+  if (pc) return null
   // đi lại trong phòng: góc nhìn người (WASD + kéo chuột nhìn)
   if (walk) return <WalkControls />
   return (
@@ -256,8 +288,9 @@ function Scene() {
   )
 }
 
-// Cảnh 3D bàn build
+// Cảnh 3D bàn build (ngồi máy tính thì làm nền đứng yên quanh khung desktop)
 export function Bench() {
+  const pc = useGame((s) => s.screen === 'pc')
   return (
     // con trỏ mũi tên mặc định (theo body), rê vào vật bấm được thì `useHover` đổi sang bàn tay
     <Canvas shadows camera={{ position: [0, 14, 11], fov: 42 }} className="!fixed inset-0">
@@ -284,6 +317,7 @@ export function Bench() {
       {/* kéo (chuột phải / Shift + chuột trái) trượt theo mặt bàn thay vì theo màn hình */}
       <Controls />
       <PcZoom />
+      {pc && <PcView />}
     </Canvas>
   )
 }

@@ -4,20 +4,30 @@ import * as THREE from 'three'
 import { useGame, useCtx, useStep } from '@/store'
 import { Y } from '@/data/steps'
 import { requestPack, usePack } from '@/features/bench/packStore'
+import { playTape } from '@/sound'
 import { Clickable, HintArrow } from '../stations/StationKit'
+import { TapeGun } from '../models/PackingTools'
+import { M } from '../room/roomLayout'
 
 // Cất đơn dở (nút "Cầm thùng đơn lên"): cùng hoạt cảnh, băng keo xanh, xong thì cầm thùng lên (`pickBench`), không chấm điểm.
 // Đóng gói (bước cuối `pack`): thùng carton mở 2 nắp nằm sau bàn phím, bấm thì thùng nhấc lên bay tới úp bao lấy bàn phím,
-// 2 nắp gập lại + dán băng keo đỏ, xong mới `deliver` (bàn còn lại thùng đã đóng gói để cầm ra kệ giao hàng)
+// 2 nắp gập lại, súng băng keo kéo dán dọc nắp (băng đỏ dài dần theo súng), xong mới `deliver` (bàn còn lại thùng đã đóng gói để cầm ra kệ giao hàng)
 
 const CARD = new THREE.MeshStandardMaterial({ color: '#b98a55', roughness: 0.9 })
 const INSIDE = new THREE.MeshStandardMaterial({ color: '#9c7140', roughness: 0.95 })
 const TAPE = new THREE.MeshStandardMaterial({ color: '#ff5d5d', roughness: 0.5 })
 /** băng keo xanh của thùng đơn (cất đơn dở) */
 const TAPE_ORDER = new THREE.MeshStandardMaterial({ color: '#3d8bff', roughness: 0.5 })
-/** hoạt cảnh: bay tới + gập nắp (ms), giữ thêm 1 chút rồi mới đóng gói */
+/** hoạt cảnh: bay tới + gập nắp (ms), súng băng keo dán dọc nắp (ms), giữ thêm 1 chút rồi mới đóng gói */
 const PACK_MS = 1700
+const TAPE_MS = 1300
 const HOLD_MS = 350
+/** bề rộng băng keo 48mm (u) */
+const TAPE_W = 0.048 * M
+/** băng keo chừa ra 2 đầu (gập xuống vách trước / sau, u) */
+const TAPE_OVER = 0.05
+/** súng băng keo nhỏ hơn cỡ thật 1 chút cho cân với thùng bàn phím */
+const GUN_SCALE = 0.65
 /** độ dày vách thùng, cao thùng (u) */
 const T = 0.1
 const H = 2.4
@@ -39,7 +49,8 @@ export function PackBox() {
   const ref = useRef<THREE.Group>(null)
   const back = useRef<THREE.Group>(null)
   const front = useRef<THREE.Group>(null)
-  const tape = useRef<THREE.Mesh>(null)
+  const tape = useRef<THREE.Group>(null)
+  const gun = useRef<THREE.Group>(null)
 
   // xong hoạt cảnh: đóng gói (chấm điểm, thùng nằm lại trên bàn)
   useEffect(() => {
@@ -51,9 +62,14 @@ export function PackBox() {
         if (stash) useGame.getState().pickBench()
         else useGame.getState().deliver()
       },
-      Math.max(0, at + PACK_MS + HOLD_MS - performance.now()),
+      Math.max(0, at + PACK_MS + TAPE_MS + HOLD_MS - performance.now()),
     )
-    return () => clearTimeout(t)
+    // tiếng kéo băng keo lúc súng bắt đầu chạy dọc nắp
+    const snd = setTimeout(
+      () => playTape((TAPE_MS * 0.6) / 1000),
+      Math.max(0, at + PACK_MS + TAPE_MS * 0.2 - performance.now()),
+    )
+    return () => [t, snd].forEach(clearTimeout)
   }, [at])
 
   useFrame(() => {
@@ -66,7 +82,22 @@ export function PackBox() {
     const f = ease(Math.max(0, (t - 0.6) / 0.4))
     if (back.current) back.current.rotation.x = -OPEN * (1 - f)
     if (front.current) front.current.rotation.x = OPEN * (1 - f)
-    if (tape.current) tape.current.visible = f >= 1
+    // súng băng keo: 0–0.2 hạ xuống mép sau, 0.2–0.8 kéo về trước (băng dài theo), 0.8–1 nhấc lên; ngoài khoảng đó ẩn
+    const el = at === null ? -1 : performance.now() - at - PACK_MS
+    const c = el < 0 ? -1 : Math.min(1, el / TAPE_MS)
+    const slide = ease(Math.min(1, Math.max(0, (c - 0.2) / 0.6)))
+    const z0 = -D / 2 - TAPE_OVER
+    const z1 = D / 2 + TAPE_OVER
+    if (gun.current) {
+      gun.current.visible = c >= 0 && c < 1
+      const down = ease(Math.min(1, c / 0.2))
+      const up = ease(Math.max(0, (c - 0.8) / 0.2))
+      gun.current.position.set(0, H + T * 0.3 + (1 - down + up) * H * 0.8, z0 + (z1 - z0) * slide)
+    }
+    if (tape.current) {
+      tape.current.visible = c > 0.2
+      tape.current.scale.z = Math.max(0.001, slide)
+    }
   })
 
   const idle = step === 'pack' && at === null
@@ -97,15 +128,16 @@ export function PackBox() {
             <boxGeometry args={[W, T * 0.6, D / 2]} />
           </mesh>
         </group>
-        {/* băng keo đỏ dán dọc nắp khi đóng xong */}
-        <mesh
-          ref={tape}
-          position-y={H + T * 0.35}
-          material={stash ? TAPE_ORDER : TAPE}
-          visible={false}
-        >
-          <boxGeometry args={[W * 0.12, 0.02, D + 0.1]} />
-        </mesh>
+        {/* băng keo dán dọc nắp: gốc ở mép sau, dài dần theo súng (scale z) */}
+        <group ref={tape} position={[0, H + T * 0.35, -D / 2 - TAPE_OVER]} visible={false}>
+          <mesh position-z={(D + 2 * TAPE_OVER) / 2} material={stash ? TAPE_ORDER : TAPE}>
+            <boxGeometry args={[TAPE_W, 0.02, D + 2 * TAPE_OVER]} />
+          </mesh>
+        </group>
+        {/* súng dán băng keo (m → u), cùng màu băng */}
+        <group ref={gun} visible={false}>
+          <TapeGun tape={stash ? TAPE_ORDER : TAPE} scale={M * GUN_SCALE} />
+        </group>
         {idle && <HintArrow at={[0, H + 0.6, 0]} size={2.5} />}
       </group>
     </Clickable>

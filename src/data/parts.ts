@@ -2129,12 +2129,13 @@ export function buildCatalog(): Product[] {
       name: `Keycap ${keycapKitShort(kit.name)}`,
       desc: `Profile ${kit.profile.toUpperCase()}, có 3 chất liệu: PBT / ABS / mix PBT + ABS`,
       layouts: kit.layouts,
-      // chất liệu × màu
+      // chất liệu (group) × màu: thẻ / giỏ hàng chọn riêng chất liệu rồi màu
       options: (
         Object.entries(KEYCAP_MATERIALS) as [KeycapMaterial, (typeof KEYCAP_MATERIALS)['pbt']][]
       ).flatMap(([m, mat]) =>
         Object.entries(KEYCAP_COLORS).map(([c, col]) => ({
-          label: `${mat.name} · ${col.name}`,
+          group: mat.name,
+          label: col.name,
           swatch: col.hex,
           price: Math.round((kit.price * mat.mult) / 10) * 10,
           item: { kit: k, color: c, material: m },

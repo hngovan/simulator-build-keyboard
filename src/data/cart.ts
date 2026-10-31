@@ -60,13 +60,16 @@ export function unitItem(p: Product, o: ProductOption): ParcelItem {
   return { kind: 'part', cat: p.cat as PartCategory, item: o.item as PartItem, price: o.price }
 }
 
+/** tên đủ của option: có nhóm (chất liệu) thì "nhóm · nhãn" (vd "PBT · Đen"), không thì nhãn — khác nhau trong 1 sản phẩm */
+export const optName = (o: ProductOption) => (o.group ? `${o.group} · ${o.label}` : o.label)
+
 /** dòng giỏ từ sản phẩm + option (key = sản phẩm + option: thêm lại cùng option thì cộng số lượng) */
 export const cartLine = (p: Product, o: ProductOption, qty: number): CartLine => ({
   // giá sale tách dòng riêng với giá thường cùng option
-  key: `${p.id}:${o.label}${p.sale ? ':sale' : ''}`,
+  key: `${p.id}:${optName(o)}${p.sale ? ':sale' : ''}`,
   product: p.id,
   sale: !!p.sale,
-  label: p.options.length > 1 ? `${p.name} · ${o.label}` : p.name,
+  label: p.options.length > 1 ? `${p.name} · ${optName(o)}` : p.name,
   unit: unitItem(p, o),
   qty,
 })

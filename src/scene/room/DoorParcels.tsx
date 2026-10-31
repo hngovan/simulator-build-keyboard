@@ -2,8 +2,7 @@ import { useMemo, useRef, useState, type ReactNode, type RefObject } from 'react
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGame, type GameState } from '@/store'
-import { arrivedParcels } from '@/data/shipping'
-import type { Parcel } from '@/types'
+import { parcelStacks } from '@/data/shipping'
 import {
   DOOR_RACK_SLOTS,
   SHELF_SLOTS,
@@ -66,7 +65,8 @@ const GHOST = new THREE.MeshBasicMaterial({
 const NO_RAY = () => {}
 
 /** cỡ thùng (m): thùng của khách (đơn mới nhận / đã đóng gói) chữ nhật dẹt dài cỡ hộp bàn phím, vừa sâu kệ 0,38m */
-const ORDER_BOX: [number, number, number] = [0.28, 0.14, 0.36]
+/** cỡ thùng đơn (rộng × cao × sâu, m) */
+export const ORDER_BOX: [number, number, number] = [0.28, 0.14, 0.36]
 const PACKED_BOX = ORDER_BOX
 
 /** số giả ngẫu nhiên [0, 1) cố định theo id kiện (cỡ thùng, góc xoay không nhảy khi vẽ lại) */
@@ -625,14 +625,7 @@ export function DoorParcels(props: JSX.IntrinsicElements['group']) {
   const day = useGame((s) => s.day)
   const orders = useBoxesAt('door')
   // kiện đã tới: cùng nguồn (Shopii / chợ) + cùng sản phẩm thì gộp 1 thùng (bấm nhận cả chồng)
-  const groups = useMemo(() => {
-    const map = new Map<string, Parcel[]>()
-    for (const p of arrivedParcels(parcels, day)) {
-      const k = `${p.from ?? 'shopii'}|${p.label}`
-      map.set(k, [...(map.get(k) ?? []), p])
-    }
-    return [...map.values()]
-  }, [parcels, day])
+  const groups = useMemo(() => parcelStacks(parcels, day), [parcels, day])
   // kiện lấp các ô nhận hàng còn trống (thùng đơn khách xếp trước), hết kệ thì đổ đống dưới sàn
   const parcelItems = useMemo(() => {
     const used = new Set(orders.map((o) => o.slot))

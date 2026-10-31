@@ -13,6 +13,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.21',
+    date: '2026-10-31',
+    commits: [],
+    title: 'Khung xem 3D Shopii mới, lịch treo tường, dao rọc thùng + súng băng keo, màn tải game',
+    items: [
+      'Shopii: sửa đen màn hình, banner ngày thường, giỏ hàng + Chờ giao hàng ghim góc trái dưới, bảng kiện hàng có cột trạng thái / hình thức',
+      'Khung xem 3D sản phẩm 2 cột: chọn chất liệu / màu, bảng thông số, giá + thêm vào giỏ; tab góc nhìn Nghiêng / Trên / Trước / Đáy; đổi option không bị nháy',
+      'Keycap chọn riêng chất liệu và màu (cả trong giỏ hàng); ảnh thẻ Shopii / Kho chụp sẵn, chỉ khung xem mới tải model 3D',
+      'Danh sách đơn gọn lại: tab Đang làm / Chờ nhận / Đã giao, mở đơn xem linh kiện cần có (icon giống bàn build), kiểu lắp, yêu cầu khách, ngân sách',
+      'Popup lịch giống lịch treo tường + tờ note xé, lịch tường có icon hàng tới cửa; bỏ chip ngày ở góc trên',
+      'Mở thùng có dao rọc giấy rạch băng keo, đóng gói có súng dán băng keo (kèm tiếng)',
+      'Số thùng ở hành lang + thông báo hàng tới đếm theo thùng trên kệ (kiện cùng loại gộp)',
+      'Màn tải game mới (mẹo, % thật, MB đã tải), nút quay lại chung mọi màn, vào máy tính không tự mở Mezzenger, các app không còn cuộn ngoài',
+    ],
+  },
+  {
     version: '0.1.20',
     date: '2026-10-30',
     commits: ['0d30899'],

@@ -33,7 +33,7 @@ export function ReviewsApp() {
     .reverse()
     .filter((r) => filter === 'all' || (filter === 'good' ? r.stars >= 4 : r.stars <= 3))
   return (
-    <div className="flex h-[min(560px,68vh)] flex-col gap-3 group-data-fill/win:h-full">
+    <div className="flex h-[min(560px,68vh,calc(var(--win-max-h,100vh)-84px))] flex-col gap-3 group-data-fill/win:h-full">
       <div className="flex items-center gap-3">
         <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-yellow/15 text-yellow">
           <Star className="size-9 fill-yellow/30" strokeWidth={2.2} />

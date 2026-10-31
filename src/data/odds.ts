@@ -120,7 +120,6 @@ export const ODDS: OddsGroup[] = [
         what: 'Qua ngày mà đơn đã nhận cả ngày không làm (khách report)',
         odds: `Đền ${pct(NO_WORK_FINE)} tiền công mỗi đơn`,
       },
-      { what: 'Qua ngày mới', odds: 'Phải nhận ít nhất 1 đơn trong ngày' },
       { what: 'Muốn lube · cấm lube · tuỳ shop', odds: '40% · 20% · 40%' },
     ],
   },

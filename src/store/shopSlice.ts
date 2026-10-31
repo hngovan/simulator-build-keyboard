@@ -24,8 +24,9 @@ import { cartItems, cartMax } from '@/data/cart'
 import {
   SHIP_SPEEDS,
   arriveDay,
-  arrivedParcels,
   parcelId,
+  parcelStacks,
+  stackLabels,
   toolOnWay,
   type ShipSpeed,
 } from '@/data/shipping'
@@ -104,9 +105,11 @@ export interface ShopSlice {
   lubePick: LubePick
   acceptOrder: (id: string) => void
   declineOrder: (id: string) => void
+  /** đánh dấu đơn chào đã xem (bấm hội thoại ở Mezzenger) */
+  seeOffer: (id: string) => void
   /** đơn đã từ chối hôm nay (hội thoại vẫn còn ở Mezzenger tới hết ngày) */
   rejected: Order[]
-  /** số đơn đã nhận hôm nay (qua ngày phải nhận ít nhất 1 đơn) */
+  /** số đơn đã nhận hôm nay (hiện ở bảng tổng kết ngày) */
   acceptedToday: number
   /** tiền / uy tín lúc bắt đầu ngày (popup tổng kết ngày so chênh lệch); null = bản lưu cũ chưa có */
   dayStart: { money: number; rep: number } | null
@@ -586,6 +589,10 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       'good',
     )
   },
+  seeOffer: (id) => {
+    if (!get().offers.some((o) => o.id === id && !o.seen)) return
+    set((s) => ({ offers: s.offers.map((o) => (o.id === id ? { ...o, seen: true } : o)) }))
+  },
   // từ chối quá DECLINE_FREE đơn / ngày: khách bực, để lại đánh giá xấu, trừ uy tín
   declineOrder: (id) => {
     const s = get()
@@ -667,12 +674,6 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   payBanner: null,
   // sang ngày mới: gửi nốt đơn đã đóng gói, đợt đơn mới, đơn chờ quá hạn lâu thì khách huỷ
   nextDay: () => {
-    {
-      // phải nhận làm ít nhất 1 đơn mỗi ngày (hết đơn chào vì từ chối hết thì thôi, đã bị trừ uy tín rồi)
-      const s = get()
-      if (!s.acceptedToday && !s.worked.length && !s.packed.length && s.offers.length)
-        return s.toast('Phải nhận làm ít nhất 1 đơn trong ngày mới qua ngày mới được!', 'bad')
-    }
     // phím của khách đang đăng bán mà chưa bán: trả về chờ gửi (gửi luôn bên dưới), vụ chuộc quá hạn thì mất
     get().closeSellDay(get().day + 1)
     const s = get()
@@ -750,13 +751,13 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     }
     if (get().order || get().jobs.length) s.toast('🛒 Hội Phím Cơ có đợt hàng pass mới hôm nay')
     if (isSaleDay(day)) s.toast('🔥 Hôm nay Shopii sale 3 mục linh kiện, giảm 5–30%!', 'good')
-    // kiện Shopii tới cửa hôm nay (không tự nhận: ra cửa bấm thùng hàng)
-    const arrived = arrivedParcels(get().parcels, day).filter((p) => p.arrive === day)
+    // kiện Shopii tới cửa hôm nay (không tự nhận: ra cửa bấm thùng hàng); ghi gộp theo thùng trên kệ ("×2")
+    const arrived = parcelStacks(
+      get().parcels.filter((p) => p.arrive === day),
+      day,
+    )
     if (arrived.length)
-      s.notify(
-        '📦 Có hàng tới cửa',
-        `${arrived.map((p) => p.label).join(', ')}. Ra cửa phòng bấm thùng hàng để nhận`,
-      )
+      s.notify('📦 Có hàng tới cửa', `${stackLabels(arrived)}. Ra cửa phòng bấm thùng hàng để nhận`)
     s.addReviews([
       ...unsent.map((p) => shipReview(p.order, p.result, s.day)),
       ...cancelled.map((j) => cancelReview(j.order, s.day, -CANCEL_REP)),

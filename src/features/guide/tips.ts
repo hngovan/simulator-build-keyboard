@@ -33,7 +33,7 @@ export const TIPS: Tip[] = [
   {
     id: 'ready',
     when: (s) => s.screen === 'pc' && ready(s),
-    text: 'Đủ đồ rồi! Bấm "Đứng dậy" (hoặc Esc) rồi sang bàn build bên cạnh để bắt đầu lắp nào ⌨️',
+    text: 'Đủ đồ rồi! Bấm nút quay lại ở góc trên (hoặc Esc) rồi sang bàn build bên cạnh để bắt đầu lắp nào ⌨️',
   },
   {
     id: 'ship',

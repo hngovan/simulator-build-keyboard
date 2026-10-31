@@ -281,6 +281,8 @@ export interface Kit {
 export interface Order {
   /** mã đơn (nhiều đơn cùng lúc) */
   id: string
+  /** đơn chào đã mở xem ở Mezzenger (chưa xem thì chấm đỏ) */
+  seen?: boolean
   /** số ngày khách cho để làm, tính từ lúc nhận */
   days: number
   /** ngày phải giao (đặt khi nhận đơn) */

@@ -18,9 +18,24 @@ export const screenCenter = (): [number, number, number] => [
   MONITOR_AT[1] + (SCREEN.y + SCREEN.h / 2) * M,
   MONITOR_AT[2] + Math.cos(MONITOR_ROT) * (SCREEN.d / 2) * M,
 ]
-/** chỗ camera dừng trước màn hình (cách mặt kính ~53cm, nhìn thẳng) */
-export const screenEye = (): [number, number, number] => {
+/** tỉ lệ ngang / dọc mặt kính */
+const SCREEN_RATIO = SCREEN.w / SCREEN.h
+
+/**
+ * Khung desktop trên màn hình thật (px) khi ngồi máy tính: đúng tỉ lệ mặt kính, cao ~90% (rộng tối đa 94%) để vẫn thấy
+ * chút bàn / phòng xung quanh; màn hẹp (điện thoại, < 768px) phủ kín
+ */
+export function pcFrame(vw: number, vh: number) {
+  if (vw < 768) return { w: vw, h: vh, full: true }
+  const h = Math.min(vh * 0.9, (vw * 0.94) / SCREEN_RATIO)
+  return { w: Math.round(h * SCREEN_RATIO), h: Math.round(h), full: false }
+}
+
+/** chỗ camera nhìn thẳng mặt kính sao cho kính trùng đúng khung desktop `pcFrame` (fov dọc theo độ) */
+export const pcEye = (fov: number, vw: number, vh: number): [number, number, number] => {
   const [x, y, z] = screenCenter()
-  const d = 0.53 * M
+  const { h, full } = pcFrame(vw, vh)
+  // điện thoại: sát mặt kính (cách ~53cm)
+  const d = full ? 0.53 * M : (SCREEN.h * M * vh) / (2 * Math.tan((fov * Math.PI) / 360) * h)
   return [x + Math.sin(MONITOR_ROT) * d, y, z + Math.cos(MONITOR_ROT) * d]
 }

@@ -48,6 +48,9 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 - `bun run gen:plates-universal`: plate universal 60 / 75 / TKL / full bằng lõi ai03 Plate Generator (kbplate.ai03.com,
   AGPL — clone ngoài repo, đặt `YAKB_DIR`): layout game gộp mọi variant → KLE + DXF trong `assets/plates/universal/`
   → `src/data/generated/plateUniversal.ts` (Board.tsx dùng, trừ 60 chuẩn giữ plate CAD typ60).
+- `bun run bake:thumbs` (cần `bun run dev` đang chạy): chụp sẵn ảnh mọi sản phẩm Shopii (option, case + màu) bằng Chrome ngầm
+  (`window.__bakeThumbs`, `shop/bakeThumbs.ts` chỉ nạp khi dev) → `public/thumbs/*.webp` + `src/data/generated/thumbs.json`; thẻ Shopii / Kho
+  dùng ảnh này (`bakedThumb`), không tải model 3D, chỉ khung xem 3D mới tải. Đổi model / thêm sản phẩm thì chạy lại.
 - `bun run convert:dtb`: daughterboard ai03 Unified C3 (STEP, MIT) `assets/dtb/` → `public/models/dtb/unified-c3.glb`
   (node pcb / usb / jst / parts; đầu JST dùng lại làm cổng trên PCB, dây JST dựng bằng code trong `scene/parts/Daughterboard.tsx`).
 - `bun run convert:switch` / `bun run convert:stab` — chuyển CAD STEP trong `assets/switch/` / `assets/stab/` thành
@@ -75,6 +78,7 @@ vào `window.__r3f` để debug trong console.
 - Tooltip: chỉ cần ghi `title="..."` (1 dòng ngắn), `GlobalTooltip` tự vẽ kiểu game (căn giữa phần tử, `data-tip-align="start"` = căn mép trái); không dùng dòng phụ trong tooltip.
   Nội dung nhiều dòng (mô tả, gạch đầu dòng): `<Tooltip wide content={...}>`. Cả 2 đo kích thước rồi đặt bằng `placeTip` (tự lật, nằm trong
   màn hình); không tự vẽ khung nổi `absolute` (bị khung cuộn cắt).
+- Nút quay lại / đứng dậy (Esc): `BackButton` (khối nút vuông kiểu game, chỉ mũi tên, tooltip chung "Quay lại (Esc)") ở mọi màn.
 - Badge / nhãn trạng thái: luôn dùng `<Badge solid tone="...">` (khối màu đặc + bóng đổ giống `Button`, màu lấy từ `BUTTON_TONES`:
   default / green / yellow / red / blue / orange / purple); đứng đầu dòng / trong flex thì thêm `className="ml-0"`. Không dùng Badge viền mảnh
   (không `solid`) hay tự vẽ span màu; nút chọn dùng `OptionChip`, nút bấm dùng `Button`. Sửa UI thì đồng bộ theo các component này.
@@ -108,12 +112,15 @@ vào `window.__r3f` để debug trong console.
   - `apps/`: messenger, shop (Shopii), group, inventory, settings.
   - `bench/`: HUD bàn build (StepList, ModPanels, SoundMeter) dùng `HudPanel` / `HudSection`
     (`components/ui/HudPanel.tsx`: thu gọn được, nhớ trạng thái; `StepDot` = chấm ✓ / số);
-    Khung xem 3D dùng chung: `components/ui/ModelViewerFrame.tsx` (sản phẩm Shopii, case, đơn hàng);
+    Khung xem 3D dùng chung: `components/ui/ModelViewerFrame.tsx` (sản phẩm Shopii, case, đơn hàng; `side` = panel phải,
+    `corner`, gợi ý chuột đáy; tab góc nhìn Nghiêng / Trên / Trước / Đáy + nhấp đúp đặt lại: `scene/common/ViewPresets.tsx`);
+    Shopii: panel `ProductPanel` (chọn chất liệu / màu, bảng `productSpecs`, giá + thêm vào giỏ), case có công tắc "Xem khi lắp đủ";
     công tắc bật / tắt: `Toggle` (thay checkbox); khung cảnh báo nổi bật: `Alert`.
     giao hàng khi build chưa xong thì hỏi lại (`ConfirmDeliver` trong BenchHud).
     App "Kho" (`apps/inventory/InventoryApp`): chỉ đồ đang có (linh kiện đơn đang làm, dụng cụ, vật tư),
     lưới ô kiểu túi đồ game (kéo thả vào ô bất kỳ) + ảnh model 3D như Shopii + số lần còn dùng (`OwnedItems`).
-    App "Chi tiết đơn" (`apps/inventory/OrderApp`): yêu cầu khách + đối chiếu linh kiện (✓ `StepDot`), mount, âm thanh.
+    App "Danh sách đơn" (`apps/inventory/OrderApp`, thẻ `components/game/OrderCard`): tab Đang làm / Chờ nhận / Đã giao;
+    mở đơn = linh kiện cần có (thiếu → "Mua ở Shopii" `openShop`), kiểu lắp + plateless, chip yêu cầu khách, ngân sách.
     `EmptyBenchHud`: bàn chưa vào build — trống / thùng đơn còn thiếu đồ (khung liệt kê, không nút) / mọi thùng có dòng `ControlsHint`
     (chuột phải nhả không kéo = `pickBench` cầm thùng, phím B = `buildOrder` / `unpackBox`, `useBoxKeys`). `title/`: màn hình tiêu đề.
 - Phòng đi lại (kiểu PC Building Simulator): `screen = 'bench'` + `walk` (metaSlice, không lưu; `standUp('pc' | 'bench')`).
@@ -192,7 +199,7 @@ vào `window.__r3f` để debug trong console.
   chọn màu, vỉ 4 cái), `build.feet` lưu loại; `FeetPanel` (ModPanels) chọn màu. Save rev 4: build cũ đã qua chỗ chèn bước thì dời stepIdx (`addFeetStep`).
   Đơn full có `pcbType` thì kho phải đúng loại PCB. Save có `rev` để nâng cấp bản cũ (`loadSave`).
 - Đơn có thể đòi đích danh `switchType` / `caseId` / `stabType` / `plateMaterial` (món khách không gửi), `checkInventory` bắt đúng; thiếc / vật tư không bị đòi.
-- Keycap có chất liệu `material` (PBT / ABS / Mix, `KEYCAP_MATERIALS`), đơn có thể đòi `keycapMaterial` (`keycapCheck`); bộ `KEYCAP_KITS.base` ẩn (`hidden`).
+- Keycap có chất liệu `material` (PBT / ABS / Mix, `KEYCAP_MATERIALS`; option Shopii `group` = chất liệu, `label` = màu, giỏ hàng 2 ô `OptionPick`), đơn có thể đòi `keycapMaterial` (`keycapCheck`); bộ `KEYCAP_KITS.base` ẩn (`hidden`).
 - Đơn có `switchKind` (Linear / Tactile / Clicky / Silent / SilentTactile, `SWITCH_KINDS`): kho phải hợp loại (`switchFits`: Silent Tactile hợp cả Tactile / Silent).
   ~35% đơn có thêm `switchType` = đòi đúng 1 con (vd Cherry MX Đen): kiểm bằng `switchOk(type, order)`, tên hiện bằng `switchWant(order)`.
   Đơn kit: khách gửi từng món ngẫu nhiên (`Kit.case? / pcb? / plate? / stab?`, ít nhất 1 món); chỉ có `mount` khi gửi case,
@@ -202,7 +209,7 @@ vào `window.__r3f` để debug trong console.
   "Kết thúc ngày" (`nextDay()`) gửi nốt đơn chưa gửi.
   Kết thúc ngày = bấm lịch treo tường trong phòng (`CalendarDialog`) → popup `EndDayDialog` (tổng kết so `dayStart` tiền / uy tín đầu ngày, lưu Session).
   Chat khách Mezzenger: tin ngắn `chatIntro` + bảng `OrderSpec` (không liệt kê từng yêu cầu thành tin).
-  Mezzenger là app chat (hội thoại đơn mới / đã nhận / chờ gửi / đã gửi / từ chối, nút icon lọc `FilterMenu` Mới / Đang làm / Xong / Huỷ; trạng thái là vật gắn lên thẻ: phong bì (đơn mới) / ghim / kẹp giấy + hạn / tem bưu kiện / dấu mộc ĐÃ GIAO, HUỶ; đơn đã gửi + từ chối mất khi sang ngày; câu trả lời nhanh = tin gửi khách).
+  Mezzenger là app chat (hội thoại đơn mới / đã nhận / chờ gửi / đã gửi / từ chối, nút icon lọc `FilterMenu` Mới / Đang làm / Xong / Huỷ; trạng thái là vật gắn lên thẻ: chấm đỏ (đơn mới chưa xem, `seeOffer` → `Order.seen`) / ghim / kẹp giấy + hạn / tem bưu kiện / dấu mộc ĐÃ GIAO, HUỶ; đơn đã gửi + từ chối mất khi sang ngày; câu trả lời nhanh = tin gửi khách).
   Từ chối quá `DECLINE_FREE` đơn / ngày thì −1 uy tín; khách để lại đánh giá (`data/reviews.ts`, `Profile.reviews`) → thông báo
   góc phải trên (`ReviewPops`) + app "Đánh giá".
   Tin khách tô đậm / màu chữ cần chú ý (`messenger/highlight.tsx`); "Nhận đơn" gửi tin "Ok shop nhận đơn này nhé";
@@ -235,8 +242,8 @@ vào `window.__r3f` để debug trong console.
   (`caseBores` khoét CSG: hốc chìm + lỗ xuyên thành case dưới, lỗ ren case trên; tháo hết vít thì tách 2 mảnh `useCaseSplit`), mica xuyên mọi tấm
   (`caseScrewHoles`). Vỏ khoét bằng `three-bvh-csg` (`caseShellGeometry` notches / bores). Top mount: plate phủ kín lòng case, không bỏ qua bước plate. Mica: tấm trên mặt plate khoét theo `keyRegions` (khung chặn liền tấm, không `Blockers` rời).
 - Shopii gộp case cùng dòng (`CASE_LINES`): 1 sản phẩm, chọn chất liệu (`ProductOption.group`) rồi màu; id case giữ riêng.
-- Shopii: hàng trên cùng = banner sự kiện sale (`SaleBanner`, chỉ ngày sale) + nút giỏ hàng góc phải (số món + tổng tiền); cột trái ghim
-  (mục hàng, Đơn đang giao); trên lưới sản phẩm đứng yên ô tìm trong mục đang chọn + bộ lọc trong mục. Sale cứ 3 ngày 1 lần
+- Shopii: hàng trên cùng = banner sự kiện sale (`SaleBanner`, ngày sale; ngày thường `ShopBanner` đếm ngày tới sale); cột trái: mục hàng cuộn, đáy ghim nút Giỏ hàng (badge số món) + Đơn đang giao;
+  trên lưới sản phẩm đứng yên ô tìm trong mục đang chọn + bộ lọc trong mục. Sale cứ 3 ngày 1 lần
   (`data/sale.ts`: `isSaleDay` ngày chia hết 3, `saleCats` 3 mục linh kiện ngẫu nhiên, `saleMap` mỗi mục 1–5 món giảm 5–30% cố định theo ngày + id,
   `withSale(p, pct)` → `ProductOption.was` + `Product.sale`); mục / thẻ đang sale gắn ruy băng đỏ `SaleRibbon`; mỗi món sale giảm 1 lần (dòng giỏ `:sale` tối đa 1, mua rồi / đang trong giỏ thì thẻ về giá thường); budget khách không đổi.
 - Ảnh đơn / case Shopii / cửa sổ xem 3D dùng chung `buildKeyboardModel` (`features/apps/messenger/orderThumb.ts`).
@@ -264,7 +271,7 @@ vào `window.__r3f` để debug trong console.
   −`CANCEL_REP` uy tín + đánh giá 1★ `soldReview`); đơn vẫn hiện ở danh sách đơn / Mezzenger (dấu HUỶ) tới hết ngày, không làm tiếp được. `listings` / `stolen` / `unlists` / `marketBanWhy` trong Profile.
 - Hàng pass lỗi keycap / switch / stab (`FLAW_UNUSABLE`): mua về vào thẳng kho chung (viền đỏ + badge "Hàng lỗi" ở app Kho),
   `checkInventory` không cho lắp cho khách, chỉ bán lại (giá gốc ½, `FLAW_CAUGHT` 10% bị tố → ban chợ 3 ngày).
-- Qua ngày (`nextDay`): phải nhận ≥ 1 đơn trong ngày (`acceptedToday`, hoặc đã làm / đóng gói đơn); đơn đã nhận mà cả ngày không làm
+- Qua ngày (`nextDay`): không bắt nhận đơn (bỏ giới hạn ≥ 1 đơn / ngày); đơn đã nhận mà cả ngày không làm
   (`worked`, ghi ở subscribe trong `store/index.ts`) thì đền `NO_WORK_FINE` 20% `labor`.
 - Test phím: PCB hàn còn phím chưa hàn / cháy thì bấm không ăn (`deadKey`, `build.testFaults` → StepList sáng "!" bước hàn để quay lại sửa);
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút

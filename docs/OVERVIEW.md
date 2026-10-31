@@ -102,8 +102,8 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
 
 1. **Title** (`features/title/TitleScreen.tsx`): chơi mới thì nhập tên thợ; nếu đã có bản lưu thì
    có nút tiếp tục kèm ngày và số tiền.
-2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar. Chơi mới mở sẵn
-   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: icon **Đứng dậy** (hoặc Esc)
+2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar, hiện trong khung đúng mặt kính màn hình 3D (~90%, quanh đó thấy bàn / phòng). Chơi mới mở sẵn
+   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc Esc)
    rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), kéo chuột nhìn, cuộn chuột giữa phóng to;
    đang ngồi bàn build bấm WASD / mũi tên cũng tự đứng dậy).
    Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
@@ -118,8 +118,9 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
 5. **Kho**: xem linh kiện của đơn đang làm, dụng cụ (kèm độ bền còn lại) và vật tư; kéo thả đổi chỗ.
    Hiện cả đồ của đơn đang chờ (ghi tên khách) và **kho chung** (mua dư, bị thay, thừa sau khi giao); nhận / chuyển đơn
    thì tự lấy món hợp yêu cầu, bấm ô để "Dùng cho đơn đang làm" / "Cất về kho chung".
-6. **Danh sách đơn** (app `order`, trước đây là "Chi tiết đơn"): yêu cầu khách, đối chiếu linh kiện,
-   chọn mount, dự đoán âm thanh, ngân sách; nhận đơn / đổi đơn / ra bàn build.
+6. **Danh sách đơn** (app `order`, trước đây là "Chi tiết đơn"): tab Đang làm / Chờ nhận (đã đóng gói) / Đã giao.
+   Mở đơn: linh kiện cần có (món thiếu có nút "Mua ở Shopii"), kiểu lắp + plateless, yêu cầu khách, ngân sách;
+   "Mua đồ còn thiếu" / ra bàn build; đơn đã nhận khác bấm "Nhận làm" để đổi sang.
 7. **Hội Phím Cơ VN**: bài pass đồ của người chơi khác. Hàng rẻ hơn 20–40% nhưng có khoảng 20% khả
    năng bị seller bùng tiền. Mua xong người bán gửi kiện tới kệ cửa trong ngày (không tag Shopii), mở kiện mới biết lỗi. Inbox: tự nhập giá trả (popup, 3 lần), "Đi ăn xin" xin free (10% được, 70% bị người bán chặn, 20% bị ban chợ 3 ngày).
 8. **Bảng xếp hạng**: bảng server, xếp theo điểm tổng (đơn + uy tín + ngày + tiền, lọc theo từng thông số) các lượt chơi đã kết thúc (thua / phá sản / chơi lại) + lượt đang chơi.

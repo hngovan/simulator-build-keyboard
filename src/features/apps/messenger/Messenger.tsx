@@ -8,7 +8,6 @@ import {
   Check,
   EyeOff,
   ListFilter,
-  Footprints,
   Handshake,
   Keyboard,
   MapPin,
@@ -122,23 +121,13 @@ const MSG = {
   sold: 'Shop đem đồ mình gửi lên chợ bán à? Huỷ kèo, khỏi làm nữa 😡',
 }
 
-/** Phong bì thư chưa mở (vàng, nắp gập, dấu sáp đỏ) dán chéo ở góc phải trên thẻ: đơn mới = tin khách chưa trả lời */
-function Envelope() {
+/** Chấm đỏ góc phải trên thẻ: đơn mới chưa mở xem (bấm vào hội thoại thì mất), như chấm trên icon app */
+function UnreadDot() {
   return (
-    <svg
-      viewBox="0 0 30 22"
-      aria-label="Đơn mới"
-      className="pointer-events-none absolute -top-2 right-1 h-[22px] w-[30px] rotate-[10deg] drop-shadow-[0_2px_1px_rgba(0,0,0,0.4)]"
-    >
-      <rect x="0.5" y="0.5" width="29" height="21" rx="2.5" fill="#ffe08a" stroke="#d9a93a" />
-      {/* nếp gấp 2 bên + nắp trên */}
-      <path d="M1.5 20.5L12.5 12.5M28.5 20.5L17.5 12.5" stroke="#d9a93a" strokeLinecap="round" />
-      <path d="M1 1.5L15 13L29 1.5" fill="#ffd04d" stroke="#d9a93a" strokeLinejoin="round" />
-      {/* dấu sáp */}
-      <circle cx="15" cy="12.6" r="3.8" fill="#d62828" />
-      <circle cx="15" cy="12.6" r="2.3" fill="none" stroke="#ff8080" strokeWidth="0.7" />
-      <circle cx="13.8" cy="11.3" r="0.8" fill="#fff" opacity="0.6" />
-    </svg>
+    <span
+      aria-label="Chưa xem"
+      className="pointer-events-none absolute top-1.5 right-1.5 size-3 rounded-full bg-red ring-2 ring-panel-2"
+    />
   )
 }
 
@@ -368,9 +357,9 @@ function FilterMenu({
 /** Dòng hội thoại ở cột trái: avatar, tên, trạng thái */
 function ThreadRow({ t, active, onPick }: { t: Thread; active: boolean; onPick: () => void }) {
   const day = useGame((s) => s.day)
-  // trạng thái = vật gắn lên thẻ (không chữ): mới = phong bì, đang làm = ghim, đã nhận = kẹp giấy + hạn,
+  // trạng thái = vật gắn lên thẻ (không chữ): mới chưa xem = chấm đỏ, đang làm = ghim, đã nhận = kẹp giấy + hạn,
   // chờ gửi = tem bưu kiện, đã giao / huỷ = dấu mộc
-  const fresh = t.kind === 'offer'
+  const fresh = t.kind === 'offer' && !t.order.seen
   const cut = dropped(t) || t.kind === 'rejected'
   const pinned = t.kind === 'accepted' && t.active && !cut
   const clipped = t.kind === 'accepted' && !t.active && !cut
@@ -403,7 +392,7 @@ function ThreadRow({ t, active, onPick }: { t: Thread; active: boolean; onPick: 
           className={cn(
             'flex items-center justify-between gap-1',
             cut && 'pr-10',
-            fresh && 'pr-8',
+            fresh && 'pr-4',
             pinned && 'pr-5',
           )}
         >
@@ -415,7 +404,7 @@ function ThreadRow({ t, active, onPick }: { t: Thread; active: boolean; onPick: 
           {due && <span className={cn('shrink-0 text-xs font-bold', due[1])}>{due[0]}</span>}
         </div>
       </div>
-      {fresh && <Envelope />}
+      {fresh && <UnreadDot />}
       {pinned && <Pin />}
       {clipped && <Clip />}
       {t.kind === 'packed' && <PostStamp />}
@@ -700,7 +689,7 @@ export function Messenger() {
   const current = threads.find((t) => t.order.id === pick) ?? shown[0]
 
   return (
-    <div className="flex h-[min(620px,72vh)] gap-3 group-data-fill/win:h-full">
+    <div className="flex h-[min(620px,72vh,calc(var(--win-max-h,100vh)-84px))] gap-3 group-data-fill/win:h-full">
       {/* danh sách hội thoại */}
       <div
         className={cn(
@@ -715,7 +704,7 @@ export function Messenger() {
           </div>
           <FilterMenu threads={threads} value={filter} onChange={setFilter} />
         </div>
-        {/* gap-2 + pt-3: chừa chỗ phong bì / ghim nhô lên trên mép thẻ; pr-2.5: ghim lòi ra phải 10px
+        {/* gap-2 + pt-3: chừa chỗ ghim / dấu mộc nhô lên trên mép thẻ; pr-2.5: ghim lòi ra phải 10px
             (không chừa thì overflow-y-auto tự bật cuộn ngang), overflow-x-hidden chặn hẳn */}
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto pt-3 pr-2.5">
           {shown.map((t) => (
@@ -724,6 +713,7 @@ export function Messenger() {
               t={t}
               active={t === current}
               onPick={() => {
+                useGame.getState().seeOffer(t.order.id)
                 setPick(t.order.id)
                 setChatOpen(true)
               }}
@@ -736,19 +726,6 @@ export function Messenger() {
           ) : (
             !shown.length && <Muted className="px-2 py-3">Không có hội thoại nào ở mục này.</Muted>
           )}
-        </div>
-        {/* kết thúc ngày chỉ còn ở lịch treo tường trong phòng: nút đứng dậy đi ra đó;
-            cao h-16 bằng thanh trả lời bên khung chat */}
-        <div className="flex h-16 shrink-0 items-center px-1">
-          <Button
-            tone="green"
-            className="flex w-full items-center justify-center gap-2 [&_svg]:size-4"
-            title="Kết thúc ngày ở lịch treo tường"
-            onClick={() => useGame.getState().standUp('pc')}
-          >
-            <Footprints />
-            Đứng dậy ra lịch
-          </Button>
         </div>
       </div>
       <div className={cn('flex min-w-0 flex-1', !chatOpen && '@max-xl:hidden')}>

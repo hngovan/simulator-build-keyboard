@@ -5,7 +5,8 @@ import { ENV_HDR } from '@/scene/common/envMap'
 import type * as THREE from 'three'
 import { LAYOUTS, getLayout } from '@/data/layouts'
 import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS } from '@/data/parts'
-import { ModelViewerFrame } from '@/components/ui'
+import { ModelViewerFrame, Toggle } from '@/components/ui'
+import { CameraView, ViewTabs, useViewState } from '@/scene/common/ViewPresets'
 import type { Order } from '@/types'
 import { buildKeyboardModel, caseSpec, orderSpec, type KeyboardSpec } from './orderThumb'
 
@@ -33,6 +34,9 @@ export function KeyboardViewer({
   onClose,
   caseOnly,
   footer,
+  side,
+  corner,
+  subtitle,
 }: {
   spec: KeyboardSpec
   title: ReactNode
@@ -40,28 +44,46 @@ export function KeyboardViewer({
   /** chỉ xem vỏ case (Shopii), không có PCB / switch / keycap */
   caseOnly?: boolean
   footer?: ReactNode
+  /** panel thông tin cột phải (Shopii) */
+  side?: ReactNode
+  /** nổi góc trên phải cảnh (công tắc "Xem khi lắp đủ") */
+  corner?: ReactNode
+  /** thay dòng phụ mặc định (layout · case · keycap) */
+  subtitle?: ReactNode
 }) {
   const viewW = Math.max(15, getLayout(spec.layout, spec.variant).width)
+  const view = useViewState()
   return (
     <ModelViewerFrame
       title={title}
+      side={side}
+      corner={corner}
       subtitle={
-        <>
-          {LAYOUTS[spec.layout].name} · Case {CASES[spec.caseId].name} (
-          {CASE_COLORS[spec.color]?.name})
-          {!caseOnly && (
-            <>
-              {' '}
-              · Keycap {KEYCAP_KITS[spec.keycapKit].name} màu {KEYCAP_COLORS[spec.keycapColor].name}
-            </>
-          )}
-        </>
+        subtitle ?? (
+          <>
+            {LAYOUTS[spec.layout].name} · Case {CASES[spec.caseId].name} (
+            {CASE_COLORS[spec.color]?.name})
+            {!caseOnly && (
+              <>
+                {' '}
+                · Keycap {KEYCAP_KITS[spec.keycapKit].name} màu{' '}
+                {KEYCAP_COLORS[spec.keycapColor].name}
+              </>
+            )}
+          </>
+        )
       }
       onClose={onClose}
       footer={footer}
     >
       {/* camera lùi theo bề rộng layout (60% = 15u → [0, 10.5, 15]) để TKL / full không bị cắt 2 bên */}
-      <Canvas shadows camera={{ position: [0, 0.7 * viewW, viewW], fov: 40 }}>
+      <ViewTabs view={view.view} onView={view.pick} />
+      <Canvas
+        shadows
+        camera={{ position: [0, 0.7 * viewW, viewW], fov: 40 }}
+        onDoubleClick={view.reset}
+      >
+        <CameraView view={view.view} nonce={view.nonce} dist={Math.hypot(0.7, 1) * viewW} />
         {/* sáng như studio chụp sản phẩm: môi trường phòng + đèn chính + đèn hắt từ dưới (xem đáy case không tối) */}
         <Environment files={ENV_HDR} />
         <hemisphereLight args={['#ffffff', '#8a90a0', 0.9]} />
@@ -83,28 +105,47 @@ export function OrderViewer({ order, onClose }: { order: Order; onClose: () => v
   return <KeyboardViewer spec={spec} title={`Đơn của ${order.customer}`} onClose={onClose} />
 }
 
-/** Xem case trên Shopii: chỉ vỏ case đúng màu đang chọn (không ghép PCB / keycap) */
+/**
+ * Xem case trên Shopii / Kho: mặc định chỉ vỏ case đúng màu đang chọn, công tắc "Xem khi lắp đủ" ghép PCB + switch + keycap
+ * (keycap trắng bộ Cherry) để xem dáng lúc thành phím
+ */
 export function CaseViewer({
   caseId,
   color,
   onClose,
   footer,
+  side,
+  title,
+  subtitle,
 }: {
   caseId: string
   color: string
   onClose: () => void
   /** dãy nút chọn màu trong khung xem */
   footer?: ReactNode
+  /** panel thông tin cột phải (Shopii) */
+  side?: ReactNode
+  title?: ReactNode
+  subtitle?: ReactNode
 }) {
   // đổi màu trong khung xem thì dựng lại case
   const spec = useMemo(() => caseSpec(caseId, color), [caseId, color])
+  const [full, setFull] = useState(false)
   return (
     <KeyboardViewer
       spec={spec}
-      title={`🛒 ${CASES[caseId].name}`}
+      title={title ?? `🛒 ${CASES[caseId].name}`}
+      subtitle={subtitle}
       onClose={onClose}
-      caseOnly
+      caseOnly={!full}
       footer={footer}
+      side={side}
+      corner={
+        <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-black/45 py-1 pr-1.5 pl-3 font-head text-xs font-extrabold backdrop-blur-sm">
+          Xem khi lắp đủ
+          <Toggle checked={full} onChange={setFull} label="Ghép PCB, switch, keycap vào case" />
+        </label>
+      }
     />
   )
 }

@@ -18,24 +18,23 @@ const BOX_SCALE = 1
 
 /**
  * Bàn build chưa vào build: tấm lót trống, hoặc thùng đang đặt trên bàn — thùng đơn còn thiếu đồ (bấm để thử mở thùng
- * bắt đầu build) / thùng vừa đóng gói (bấm để cầm lên mang đi giao). Đang đi lại cầm thùng đơn thì hiện ô mờ chỗ đặt
+ * bắt đầu build) / thùng vừa đóng gói (bấm để cầm lên mang đi giao). Bàn chưa có thùng thì luôn hiện khối mờ chỗ đặt thùng đơn
  */
 export function EmptyBench() {
   const camera = useThree((s) => s.camera)
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
   // bấm "Góc nhìn mặc định" (camKey tăng) thì đưa camera về nhìn cả bàn
   const camKey = useGame((s) => s.camKey)
-  const hasBox = useGame((s) => !!s.benchBox)
   // màn dọc (điện thoại): lùi xa cho thấy đủ bề ngang bàn
   const fit = useThree((s) => fitAspect(s.size.width / s.size.height))
   useEffect(() => {
     // đang đi lại trong phòng: không kéo camera về bàn
     if (useGame.getState().walk) return
-    // có thùng trên bàn (cỡ thật, cao gần 10u): lùi xa thêm cho thấy trọn thùng + mặt bàn
-    camera.position.set(...benchView({ width: null, box: hasBox }, fit))
+    // trên bàn luôn có thùng hoặc khối mờ chỗ đặt thùng (cỡ thật, cao gần 10u): lùi xa cho thấy trọn thùng + mặt bàn
+    camera.position.set(...benchView({ width: null, box: true }, fit))
     controls?.target.set(0, 0, 0)
     controls?.update()
-  }, [camera, controls, camKey, fit, hasBox])
+  }, [camera, controls, camKey, fit])
   const box = useGame((s) => s.benchBox)
   const packed = useGame((s) => !!s.benchBox && isPackedBox(s, s.benchBox))
   const walk = useGame((s) => s.walk)
@@ -46,8 +45,11 @@ export function EmptyBench() {
       (isPackedBox(s, s.benchBox) ||
         (s.order?.id === s.benchBox && checkInventory(s.inventory, s.order).every((c) => c.ok))),
   )
-  // đang cầm thùng đơn đi tới bàn trống: ô mờ chỉ chỗ đặt (bấm bàn để đặt)
-  const placing = useGame((s) => s.walk && !!s.held && !s.benchBox && !isPackedBox(s, s.held))
+  // bàn chưa có thùng: khối mờ đúng cỡ thùng đơn chỉ chỗ đặt (như ô trống trên kệ), cho biết phải mang thùng đơn tới;
+  // đang cầm thùng đã đóng gói (không đặt lên bàn được) thì ẩn
+  const placing = useGame((s) => !s.benchBox && !(s.held && isPackedBox(s, s.held)))
+  // đang cầm thùng đơn trỏ vào bàn thì sáng viền (bấm bàn để đặt)
+  const carrying = useGame((s) => s.walk && !!s.held)
   const benchHover = useRoom((r) => r.benchHover)
   const act = () => {
     const g = useGame.getState()
@@ -71,7 +73,7 @@ export function EmptyBench() {
       {placing && (
         // khối xanh nhạt viền mảnh đúng cỡ thùng: chỗ đặt (bấm bàn để đặt)
         <group position-y={Y.table} scale={M * BOX_SCALE}>
-          <GhostBlock hot={benchHover} />
+          <GhostBlock hot={carrying && benchHover} />
         </group>
       )}
     </>

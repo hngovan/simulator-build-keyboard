@@ -17,7 +17,8 @@ import { WEIGHT_METALS, WOOD_TEX, prepWood, woodTexFor, woodUV } from '@/scene/m
 import { boardOutline, outlineSlab } from '@/scene/parts/boardOutline'
 import { capGeometry, keycapModel, keycapShape, stretchCap } from '@/scene/models/keycapShape'
 import type { FormFactor, Key, LayoutId, Order, Variant } from '@/types'
-import { cachedThumb, glbMeshes, glbScene } from '../shop/modelThumb'
+import { bakedThumb, cachedThumb, glbMeshes, glbScene } from '../shop/modelThumb'
+import { caseKey } from '../shop/productThumb'
 
 // Ảnh minh hoạ đơn hàng: ghép bàn phím hoàn chỉnh (case CAD thật nếu có + keycap theo layout),
 // phối màu theo yêu cầu khách; khách không dặn màu case thì bốc ngẫu nhiên (cố định theo mã đơn)
@@ -361,10 +362,12 @@ export function useOrderThumb(order: Order) {
 
 /** Ảnh case trên Shopii: chỉ vỏ case đúng màu option đang chọn */
 export function useCaseThumb(caseId: string | undefined, color: string | undefined) {
-  const key = caseId && color ? `caseonly:${caseId}:${color}` : null
+  const key = caseId && color ? caseKey(caseId, color) : null
   const [shot, setShot] = useState<{ key: string; src: string | null } | null>(null)
+  // ảnh chụp sẵn (`bake:thumbs`): dùng ngay, không dựng bàn phím 3D
+  const file = key ? bakedThumb(key) : undefined
   useEffect(() => {
-    if (!key || !caseId || !color) return
+    if (!key || !caseId || !color || file) return
     let alive = true
     cachedThumb(key, () => buildKeyboardModel(caseSpec(caseId, color), true, true)).then(
       (src) => alive && setShot({ key, src }),
@@ -372,7 +375,7 @@ export function useCaseThumb(caseId: string | undefined, color: string | undefin
     return () => {
       alive = false
     }
-  }, [key, caseId, color])
+  }, [key, caseId, color, file])
   // undefined = đang chụp, null = không chụp được
-  return !key ? null : shot?.key === key ? shot.src : undefined
+  return !key ? null : (file ?? (shot?.key === key ? shot.src : undefined))
 }

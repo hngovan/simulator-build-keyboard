@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGame } from '@/store'
-import { screenCenter, screenEye } from '../models/computerLayout'
+import { pcEye, screenCenter } from '../models/computerLayout'
 import { BLOCKS, BODY_R, EYE_Y, M, SPOTS, WALK_AREAS } from './roomLayout'
 import { useRoom } from './roomStore'
 
@@ -103,9 +103,11 @@ export function WalkControls() {
   useEffect(() => {
     const s = st.current
     const { spot } = useRoom.getState()
-    // từ máy tính vào: Canvas mới dựng, đặt camera sát màn hình như vừa ngả người ra
+    // từ máy tính ra: đặt camera ở chỗ nhìn màn hình (PcView) rồi bay ra chỗ đứng như vừa ngả người ra
     if (spot === 'pc') {
-      camera.position.set(...screenEye())
+      const fov = camera instanceof THREE.PerspectiveCamera ? camera.fov : 42
+      // Canvas phủ kín cửa sổ: cỡ cửa sổ = cỡ khung vẽ
+      camera.position.set(...pcEye(fov, window.innerWidth, window.innerHeight))
       camera.lookAt(...screenCenter())
     }
     const pose = standPose(spot)

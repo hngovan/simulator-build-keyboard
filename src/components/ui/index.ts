@@ -1,5 +1,6 @@
 export { Button, type ButtonTone } from './Button'
 export { IconButton } from './IconButton'
+export { BackButton } from './BackButton'
 export { CloseButton } from './CloseButton'
 export { Panel, HudCard, Heading, Muted } from './Panel'
 export { HudPanel, HudSection, StepDot, useOpen, type StepDotState } from './HudPanel'

@@ -9,6 +9,7 @@ import {
 import { Copy, Minus, Square, X } from 'lucide-react'
 import { cn } from '@/lib/format'
 import { useNarrow } from '@/hooks/useNarrow'
+import { pcFrame } from '@/scene/models/computerLayout'
 
 /** Nút trên thanh tiêu đề (thu nhỏ / phóng to / đóng) cùng 1 kiểu, icon căn giữa; nút đóng rê chuột thì đỏ */
 export function TitleButton({
@@ -71,12 +72,13 @@ const TASKBAR_HEIGHT = 58
 const VIEWPORT_GAP = 8
 const MIN_VISIBLE_HEIGHT = 160
 
+/** cỡ khung desktop (màn hình máy tính trong phòng, không phải cả cửa sổ trình duyệt) */
+const screenSize = () => pcFrame(window.innerWidth, window.innerHeight)
+
 function clampPosition(pos: { x: number; y: number }, width: number) {
-  const maxX = Math.max(VIEWPORT_GAP, window.innerWidth - width - VIEWPORT_GAP)
-  const maxY = Math.max(
-    VIEWPORT_GAP,
-    window.innerHeight - TASKBAR_HEIGHT - MIN_VISIBLE_HEIGHT - VIEWPORT_GAP,
-  )
+  const { w, h } = screenSize()
+  const maxX = Math.max(VIEWPORT_GAP, w - width - VIEWPORT_GAP)
+  const maxY = Math.max(VIEWPORT_GAP, h - TASKBAR_HEIGHT - MIN_VISIBLE_HEIGHT - VIEWPORT_GAP)
 
   return {
     x: Math.min(Math.max(VIEWPORT_GAP, pos.x), maxX),
@@ -112,7 +114,7 @@ export function Window({
 
   const maxHeight = Math.max(
     MIN_VISIBLE_HEIGHT,
-    window.innerHeight - pos.y - TASKBAR_HEIGHT - VIEWPORT_GAP,
+    screenSize().h - pos.y - TASKBAR_HEIGHT - VIEWPORT_GAP,
   )
 
   return (
@@ -121,7 +123,7 @@ export function Window({
         'absolute flex flex-col overflow-hidden bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]',
         full
           ? 'max-w-none rounded-none border-0'
-          : 'max-w-[calc(100vw-16px)] rounded-2xl border-[3px] border-black/40',
+          : 'max-w-[calc(100%-16px)] rounded-2xl border-[3px] border-black/40',
       )}
       style={
         full
@@ -137,6 +139,8 @@ export function Window({
               top: pos.y,
               width,
               maxHeight,
+              // app có khung cao cố định (Shopii) co theo chiều cao tối đa cửa sổ, không tràn rồi cuộn cả app
+              ['--win-max-h' as string]: `${maxHeight}px`,
               zIndex,
               display: minimized ? 'none' : undefined,
             }

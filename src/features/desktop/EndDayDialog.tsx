@@ -35,7 +35,6 @@ export function EndDayDialog({ onClose }: { onClose: () => void }) {
     .filter((o) => !s.worked.includes(o.id))
     .filter((o) => !cancelled.some((j) => j.order.id === o.id))
   const fine = idle.reduce((a, o) => a + Math.round((o.labor * NO_WORK_FINE) / 10) * 10, 0)
-  const blocked = !s.acceptedToday && !s.worked.length && !s.packed.length && s.offers.length > 0
 
   const rows: [string, ReactNode][] = [
     [
@@ -63,12 +62,7 @@ export function EndDayDialog({ onClose }: { onClose: () => void }) {
       <HudCard className="flex w-[min(440px,100%)] flex-col gap-3">
         <h3 className="font-head text-2xl font-extrabold text-yellow">🌙 Tổng kết ngày {s.day}</h3>
         <KeyValueTable rows={rows} />
-        {blocked && (
-          <Alert title="Chưa qua ngày được">
-            Phải nhận làm ít nhất 1 đơn trong ngày mới qua ngày mới được.
-          </Alert>
-        )}
-        {!blocked && (unsent.length > 0 || fine > 0 || cancelled.length > 0) && (
+        {(unsent.length > 0 || fine > 0 || cancelled.length > 0) && (
           <Alert title="Khi kết thúc ngày">
             <ul className="list-disc pl-5">
               {unsent.length > 0 && (
@@ -97,7 +91,6 @@ export function EndDayDialog({ onClose }: { onClose: () => void }) {
           <Button
             tone="green"
             className="flex-1"
-            disabled={blocked}
             onClick={() => {
               s.nextDay()
               onClose()

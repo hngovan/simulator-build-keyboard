@@ -7,7 +7,7 @@ import { CALENDAR } from './roomLayout'
 import { RoomSpot } from './RoomSpot'
 import { useRoom } from './roomStore'
 
-// Lịch treo tường lớn phía trên bàn build: 4 tuần quanh hôm nay (ngày trong game), gạch chéo ngày đã qua,
+// Lịch treo tường lớn phía trên bàn build: 4 tuần quanh hôm nay (ngày trong game), gạch chéo ngày đã qua, hộp xanh ngày có kiện tới,
 // khoanh hôm nay, đánh dấu ngày Shopii sale + hạn giao các đơn đang làm. Bấm (đi lại hay ngồi bàn build đều được)
 // → popup lịch chi tiết (`CalendarDialog`: kết thúc ngày / làm tiếp).
 // Đơn vị mét; gốc = tâm tờ lịch, mặt quay +z
@@ -19,9 +19,35 @@ interface CalendarData {
   day: number
   /** hạn giao: ngày → tên khách */
   due: Record<number, string[]>
+  /** ngày có kiện hàng tới cửa (Shopii / chợ) */
+  arrive: Set<number>
 }
 
-function drawCalendar({ day, due }: CalendarData) {
+/** hộp hàng xanh (kiện tới cửa) vẽ ở góc phải trên ô ngày, cạnh `s` px */
+function drawBox(g: CanvasRenderingContext2D, x: number, y: number, s: number) {
+  g.save()
+  g.strokeStyle = '#2f6fd6'
+  // lót nền giấy cho khỏi lẫn vòng khoanh hôm nay
+  g.fillStyle = '#fbf8f1'
+  g.fillRect(x - 2, y - 2, s + 4, s + 4)
+  g.fillStyle = 'rgba(47,111,214,0.15)'
+  g.lineWidth = 3
+  g.lineJoin = 'round'
+  g.fillRect(x, y + s * 0.25, s, s * 0.75)
+  g.strokeRect(x, y + s * 0.25, s, s * 0.75)
+  // nắp thùng + băng keo giữa
+  g.beginPath()
+  g.moveTo(x, y + s * 0.25)
+  g.lineTo(x + s * 0.2, y)
+  g.lineTo(x + s * 0.8, y)
+  g.lineTo(x + s, y + s * 0.25)
+  g.moveTo(x + s / 2, y)
+  g.lineTo(x + s / 2, y + s * 0.6)
+  g.stroke()
+  g.restore()
+}
+
+function drawCalendar({ day, due, arrive }: CalendarData) {
   const c = document.createElement('canvas')
   c.width = CW
   c.height = CH
@@ -59,19 +85,12 @@ function drawCalendar({ day, due }: CalendarData) {
     g.fillStyle = d === day ? '#1e7a44' : '#3a3530'
     g.font = `${d === day ? 900 : 700} 36px system-ui, sans-serif`
     g.fillText(String(d), x + cell / 2, y + 48)
-    // hạn giao đơn: chấm cam + tên khách
-    const names = due[d]
-    if (names?.length) {
+    // hạn giao đơn: chấm cam (tên khách xem ở popup lịch)
+    if (due[d]?.length) {
       g.fillStyle = '#e67e22'
       g.beginPath()
       g.arc(x + 14, y + 14, 8, 0, Math.PI * 2)
       g.fill()
-      g.font = '700 15px system-ui, sans-serif'
-      g.fillText(
-        names.length > 1 ? `${names.length} đơn` : names[0].slice(0, 7),
-        x + cell / 2,
-        y + 74,
-      )
     }
     if (d < day) {
       // ngày đã qua: gạch chéo bút đỏ
@@ -94,17 +113,22 @@ function drawCalendar({ day, due }: CalendarData) {
       g.strokeStyle = '#d9d2c3'
       g.lineWidth = 2
     }
+    // kiện tới cửa: hộp xanh góc phải trên, vẽ sau cùng nên nằm trên vòng khoanh hôm nay
+    if (arrive.has(d)) drawBox(g, x + cell - 24, y + 6, 18)
   }
   // chân lịch: chú thích
   const fy = top + 4 * rowH + 34
   g.textAlign = 'left'
-  g.font = '700 22px system-ui, sans-serif'
+  g.font = '700 19px system-ui, sans-serif'
   g.fillStyle = '#3a3530'
-  g.fillText(`Đã làm ${day - 1} ngày`, 18, fy)
+  g.fillText(`Đã làm ${day - 1} ngày`, 14, fy)
   g.fillStyle = '#e67e22'
-  g.fillText('● hạn giao', 220, fy)
+  g.fillText('● hạn giao', 160, fy)
+  drawBox(g, 272, fy - 17, 20)
+  g.fillStyle = '#2f6fd6'
+  g.fillText('hàng tới', 298, fy)
   g.fillStyle = '#c0392b'
-  g.fillText('SALE Shopii', 370, fy)
+  g.fillText('SALE Shopii', 400, fy)
   const t = new THREE.CanvasTexture(c)
   t.colorSpace = THREE.SRGBColorSpace
   t.anisotropy = 4
@@ -120,6 +144,8 @@ export function WallCalendar(props: JSX.IntrinsicElements['group']) {
       .map((o) => `${o.dueDay}:${o.customer}`)
       .join('|'),
   )
+  // ngày có kiện tới cửa (chuỗi để so sánh theo giá trị, như dueKey)
+  const arriveKey = useGame((s) => [...new Set(s.parcels.map((p) => p.arrive))].sort().join(','))
   const tex = useMemo(() => {
     const due: CalendarData['due'] = {}
     for (const part of dueKey ? dueKey.split('|') : []) {
@@ -129,8 +155,9 @@ export function WallCalendar(props: JSX.IntrinsicElements['group']) {
       ]
       ;(due[d] ??= []).push(name)
     }
-    return drawCalendar({ day, due })
-  }, [day, dueKey])
+    const arrive = new Set(arriveKey ? arriveKey.split(',').map(Number) : [])
+    return drawCalendar({ day, due, arrive })
+  }, [day, dueKey, arriveKey])
   useEffect(() => () => tex.dispose(), [tex])
   const { w, h } = CALENDAR
   return (

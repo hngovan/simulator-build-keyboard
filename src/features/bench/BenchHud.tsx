@@ -13,8 +13,8 @@ import {
 } from '@/data/steps'
 import { SCREW_FULL, SWITCHES, TOOLS, screwLevel } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
-import { ArrowLeft, FlipVertical2, Hand, PackageCheck, Undo2 } from 'lucide-react'
-import { Alert, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
+import { FlipVertical2, Hand, PackageCheck, Undo2 } from 'lucide-react'
+import { Alert, BackButton, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
 import { StatusChips } from '@/components/game/StatusChips'
@@ -187,11 +187,7 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
     <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
       <div className="flex gap-2">
         {/* chỉ 1 nút quay lại (= Esc) đứng dậy ra phòng; về máy tính thì bấm máy tính trong phòng */}
-        <IconButton
-          icon={<ArrowLeft />}
-          label="Đứng dậy ra phòng (Esc)"
-          onClick={() => useGame.getState().standUp('bench')}
-        />
+        <BackButton onClick={() => useGame.getState().standUp('bench')} />
         <IconButton
           tone="yellow"
           icon={<FlipVertical2 />}
