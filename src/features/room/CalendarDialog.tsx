@@ -223,15 +223,19 @@ export function CalendarDialog() {
         <div className="flex w-[300px] shrink-0 flex-col gap-3 max-md:w-[min(92vw,360px)]">
           {/* drop-shadow ở lớp ngoài: clip-path cắt mất box-shadow */}
           <div className="min-h-0 flex-1 drop-shadow-[0_10px_14px_rgba(0,0,0,0.5)]">
-            <div className="relative h-full">
+            {/* min-h: màn hẹp (xếp dọc) không có tờ lịch kéo cao */}
+            <div className="relative h-full min-h-[360px]">
               <span className="absolute -top-2 left-1/2 z-10 h-7 w-24 -translate-x-1/2 -rotate-6 bg-[#f2c9a8]/80 shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
               <div
-                className="relative h-full min-h-[360px] overflow-y-auto pt-9 pr-5 pb-6 pl-12 text-[#3b3423]"
+                // absolute: nhiều việc thì cuộn trong tờ note, không đẩy cao cả popup (cao bằng tờ lịch)
+                className="absolute inset-0 overflow-y-auto pt-9 pr-5 pb-6 pl-12 text-[#3b3423]"
                 style={{
                   clipPath: TORN,
                   // dòng kẻ xanh mờ + lề đỏ như giấy sổ
                   background: `linear-gradient(90deg, transparent 34px, rgba(214,80,80,0.55) 34px, rgba(214,80,80,0.55) 36px, transparent 36px), repeating-linear-gradient(180deg, transparent 0 27px, rgba(70,110,170,0.22) 27px 28px), #fdf3b4`,
                   backgroundPosition: '0 0, 0 8px, 0 0',
+                  // dòng kẻ cuộn theo chữ
+                  backgroundAttachment: 'local',
                 }}
               >
                 <div className="font-head text-2xl leading-7 font-extrabold">
@@ -256,9 +260,17 @@ export function CalendarDialog() {
                     </NoteItem>
                   ))}
                   {sel.parcels.map((p) => (
-                    <NoteItem key={p.id} color="#2f6fd6" title="Hàng tới cửa">
+                    <NoteItem
+                      key={p.id}
+                      color="#2f6fd6"
+                      // đã tới cửa = đã giao; chưa tới thì đếm số ngày còn lại tính từ hôm nay
+                      title={
+                        p.arrive <= day
+                          ? 'Đơn đã được giao'
+                          : `Chờ giao hàng · còn ${p.arrive - day} ngày`
+                      }
+                    >
                       {p.label} · {SHIP_SPEEDS[p.speed].name}
-                      {p.arrive <= day ? ', đang chờ ở hành lang' : ''}
                     </NoteItem>
                   ))}
                   {sel.day === day && packed > 0 && (

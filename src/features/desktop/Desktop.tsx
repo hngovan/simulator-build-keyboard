@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useGame } from '@/store'
 import { BackButton, Window } from '@/components/ui'
 import { cn } from '@/lib/format'
-import { pcFrame } from '@/scene/models/computerLayout'
+import { BEZEL, pcFrame } from '@/scene/models/computerLayout'
 import { APPS, APP_IDS } from './apps'
 import { DesktopIcon } from './DesktopIcon'
 import { Taskbar } from './Taskbar'
@@ -32,9 +32,30 @@ export function Desktop() {
   const hasOffer = useGame((s) => s.offers.some((o) => !o.seen))
   const wallpaper = useGame((s) => s.wallpaper)
   const { openApp, minimizeApp, closeApp, standUp } = useGame.getState()
+  // bấm vùng phòng quanh màn hình = đứng dậy (như nút quay lại / Esc); viền vỏ màn hình (`BEZEL`) vẫn tính là trong.
+  // Nhấn và nhả đều phải ở vùng ngoài (kéo cửa sổ / bôi chữ lố ra mép không tính), có popup đang mở thì bỏ qua
+  const downOut = useRef(false)
+  const outside = (e: MouseEvent) => {
+    if (e.target !== e.currentTarget) return false
+    const fw = frame.w
+    const fh = frame.h
+    const x0 = (window.innerWidth - fw) / 2 - fw * BEZEL.side
+    const y0 = (window.innerHeight - fh) / 2 - fh * BEZEL.top
+    const x1 = (window.innerWidth + fw) / 2 + fw * BEZEL.side
+    const y1 = (window.innerHeight + fh) / 2 + fh * BEZEL.bottom
+    return e.clientX < x0 || e.clientX > x1 || e.clientY < y0 || e.clientY > y1
+  }
 
   return (
-    <div className="fixed inset-0 z-[1] grid place-items-center">
+    <div
+      className="fixed inset-0 z-[1] grid place-items-center"
+      onPointerDown={(e) => (downOut.current = outside(e))}
+      onClick={(e) => {
+        if (!downOut.current || !outside(e)) return
+        if (document.querySelector('[role="dialog"]')) return
+        standUp('pc')
+      }}
+    >
       {/* transform: khung là gốc toạ độ cho phần tử fixed bên trong (popup, cửa sổ phóng to) */}
       <div
         className="relative [transform:translateZ(0)] overflow-hidden"

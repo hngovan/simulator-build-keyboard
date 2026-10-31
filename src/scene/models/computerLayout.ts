@@ -39,3 +39,9 @@ export const pcEye = (fov: number, vw: number, vh: number): [number, number, num
   const d = full ? 0.53 * M : (SCREEN.h * M * vh) / (2 * Math.tan((fov * Math.PI) / 360) * h)
   return [x + Math.sin(MONITOR_ROT) * d, y, z + Math.cos(MONITOR_ROT) * d]
 }
+
+/**
+ * Viền vỏ màn hình quanh mặt kính, tính theo phần bề ngang / chiều cao mặt kính (đo từ asus-monitor.glb: kính 1,190 × 0,685,
+ * vỏ dư 0,021 mỗi bên, 0,018 trên, 0,042 dưới). Desktop dùng để bấm viền không tính là bấm ra ngoài
+ */
+export const BEZEL = { side: 0.0175, top: 0.027, bottom: 0.062 }

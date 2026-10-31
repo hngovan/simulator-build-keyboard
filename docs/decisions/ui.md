@@ -1050,3 +1050,29 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
   `src/data/generated/thumbs.json`. `bakedThumb(key)`: `useModelThumb` / `useCaseThumb` / `cachedThumb` có ảnh sẵn thì dùng ngay (không
   loading, không tải model); khoá chưa có thì vẫn chụp như cũ. Khung xem 3D (bấm ảnh) mới tải model. Đo: mở Shopii + đổi mục không tải GLB
   nào (GLB tải lúc đó là ảnh đơn Mezzenger `order:` — không chụp sẵn được vì đơn ngẫu nhiên).
+- (2026-10-31, "lịch chi tiết: Hàng tới cửa => đơn đã được giao") `CalendarDialog` giấy note: mục kiện Shopii / chợ đổi tiêu đề
+  "Hàng tới cửa" → "Đơn đã được giao" (chú thích chân lịch "hàng tới" giữ nguyên); bỏ đuôi ", đang chờ ở hành lang". Kiện chưa tới (`arrive > day`) ghi "Chờ giao hàng · còn n ngày" (n tính từ hôm nay).
+- (2026-10-31, "plate và case sao không mua số lượng được + khi bấm preview không cần chữ shopii case") Thẻ / panel Shopii: ô số lượng
+  mở cho mọi mục trừ dụng cụ / chứng chỉ (`SINGLE` thay `STACKABLE` trong ProductCard; giỏ hàng vốn cho tới 99, `cartMax` = 1 với tool / dòng sale;
+  case / PCB / plate / keycap số lượng N = N món riêng `cartItems`). Tiêu đề khung xem 3D chỉ còn tên sản phẩm (bỏ "SHOPII · <mục>").
+- (2026-10-31, "pcb của model 3d khi preview mặt đáy bị lỗi, chỉ thấy 1 mặt phẳng") `buildScene` PCB (modelThumb.ts) chỉ có khối đùn trơn
+  - mặt mạch in phía trên (1 chiều) → lật xem đáy thấy khối trơn. Thêm mặt đáy cùng texture (`BackSide`, như `PcbSurface` bàn build) và
+    PCB hotswap có socket Kailh + chân đồng mặt dưới mỗi phím (số đo như `HotswapSockets`). Ảnh thẻ chụp sẵn nhìn từ trên nên không đổi.
+- (2026-10-31, "chờ giao hàng Shopii: đã giao / 4 ngày tới") `ParcelList` cột trạng thái: kiện đã tới cửa "Đã giao" (trước "Đã tới cửa"),
+  chưa tới "n ngày tới" (n = `arrive - day`, trước "Tới ngày n").
+- (2026-10-31, "chung 1 món đồ sao lại ghi +2 món" / "phải ghi x2") Tên kiện Shopii (`parcelLabel` trong shopSlice): giỏ tách món
+  số lượng N thành N món riêng nên 3 plate cùng loại thành "Plate ... +2 món". Nay gộp trùng tên: "Plate ... x3", "+n món" chỉ đếm loại
+  khác. Thông báo hàng tới (`stackLabels`) đổi "×" → "x" cho giống. Kiện đã đặt trước đó giữ tên cũ (tên lưu trong `Parcel.label`).
+- (2026-10-31, "rê chuột vào tên kiện thì hiện danh sách các món") `ParcelList` (Shopii Chờ giao hàng): tên kiện bọc `<Tooltip wide>`
+  liệt kê đủ món trong kiện, gộp trùng tên kèm "x2" (`parcelContents` trong `data/shipping.ts`). `parcelItemName` / `parcelLabel`
+  chuyển từ shopSlice sang `data/shipping.ts` để UI dùng chung; `parcelLabel(items)` nhận thẳng `ParcelItem[]`.
+- (2026-10-31, "vào màn hình máy tính rồi click ra khỏi rìa ngoài màn hình cũng out ra ngoài, miễn không nằm trong khuôn màn hình";
+  sau đó "bấm viền máy tính cũng out" → viền phải tính là trong) `Desktop`: lớp phủ ngoài bắt click vùng phòng quanh khung → `standUp('pc')`.
+  Vùng "trong" = khung desktop (mặt kính) nới thêm viền vỏ `BEZEL` (computerLayout.ts, đo asus-monitor.glb theo tỉ lệ kính: 2 bên 1,75% ngang,
+  trên 2,7% / dưới 6,2% cao). Cả lúc nhấn và nhả đều phải ở ngoài (kéo cửa sổ / bôi chữ lố ra mép không đứng dậy), có `[role="dialog"]` thì bỏ qua.
+- (2026-10-31, "đơn hàng nhiều thì phải scroll được ở take note chưa") `CalendarDialog` giấy note: trước khung cuộn `h-full` nhưng cha cao
+  theo nội dung → nhiều việc thì đẩy cao cả popup (cuộn cả popup, không cuộn tờ note). Nay khung cuộn `absolute inset-0` trong lớp
+  `relative h-full min-h-[360px]` (cao bằng tờ lịch, màn hẹp tối thiểu 360px), `backgroundAttachment: 'local'` cho dòng kẻ cuộn theo chữ.
+  Kiểm Chrome ngầm 14 kiện cùng ngày: tờ note scrollHeight 904 / 466, popup không cao thêm.
+- (2026-10-31, "hover tăng giảm số lượng button, thanh tiến trình không cần hiệu ứng nhảy lên nữa") `Button` thêm prop `still` (hover chỉ sáng
+  hơn, không nổi lên; nhấn vẫn lún), dùng cho nút − / + của `QtyInput`. `Slider`: bỏ hiệu ứng núm kéo nhảy lên khi rê.

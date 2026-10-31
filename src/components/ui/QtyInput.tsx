@@ -17,6 +17,7 @@ export function QtyInput({ value, onChange, min = 1, max = 99, className }: Prop
     <div className={cn('flex items-center gap-1', className)}>
       <Button
         size="sm"
+        still
         aria-label="Giảm số lượng"
         disabled={value <= min}
         className="grid size-7 place-items-center !p-0 [&_svg]:size-4"
@@ -35,6 +36,7 @@ export function QtyInput({ value, onChange, min = 1, max = 99, className }: Prop
       />
       <Button
         size="sm"
+        still
         aria-label="Tăng số lượng"
         disabled={value >= max}
         className="grid size-7 place-items-center !p-0 [&_svg]:size-4"

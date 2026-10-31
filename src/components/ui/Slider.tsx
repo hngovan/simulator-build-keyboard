@@ -37,7 +37,7 @@ export function Slider({
         '[&::-webkit-slider-runnable-track]:h-2.5 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-[linear-gradient(to_right,var(--color-orange)_var(--fill),#ffffff_var(--fill))] [&::-webkit-slider-runnable-track]:shadow-[inset_0_2px_0_rgba(0,0,0,0.25)]',
         '[&::-moz-range-track]:h-2.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-[linear-gradient(to_right,var(--color-orange)_var(--fill),#ffffff_var(--fill))] [&::-moz-range-track]:shadow-[inset_0_2px_0_rgba(0,0,0,0.25)]',
         // núm
-        '[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-md [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-orange [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_2px_0_rgba(0,0,0,0.4),inset_0_-2px_0_rgba(0,0,0,0.18)] [&::-webkit-slider-thumb]:transition-transform hover:[&::-webkit-slider-thumb]:-translate-y-0.5',
+        '[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-md [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-orange [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-[0_2px_0_rgba(0,0,0,0.4),inset_0_-2px_0_rgba(0,0,0,0.18)]',
         '[&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:rounded-md [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-orange [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-[0_2px_0_rgba(0,0,0,0.4),inset_0_-2px_0_rgba(0,0,0,0.18)]',
         className,
       )}

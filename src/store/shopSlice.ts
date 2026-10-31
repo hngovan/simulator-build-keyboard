@@ -25,6 +25,8 @@ import {
   SHIP_SPEEDS,
   arriveDay,
   parcelId,
+  parcelItemName,
+  parcelLabel,
   parcelStacks,
   stackLabels,
   toolOnWay,
@@ -376,18 +378,6 @@ function toolBlock(s: GameState, kind: ToolKind, level: number): string | null {
   return null
 }
 
-/** tên kiện: 1 món = tên món, nhiều món = món đầu + số món còn lại */
-const parcelLabel = (labels: string[]) =>
-  labels.length > 1 ? `${labels[0]} +${labels.length - 1} món` : labels[0]
-
-/** tên 1 món trong kiện */
-const parcelItemName = (it: ParcelItem) =>
-  it.kind === 'part'
-    ? itemName(it.cat, it.item)
-    : it.kind === 'supply'
-      ? SUPPLIES[it.id].name
-      : TOOLS[it.tool][it.level].name
-
 /**
  * Đặt cả giỏ Shopii thành 1 kiện: kiểm tra (dụng cụ đã có / đang giao), trừ tiền theo tốc độ giao, linh kiện
  * vào được đơn đang làm thì gắn đơn (lúc nhận vào thẳng đơn), không thì nhận xong cất kho chung
@@ -415,7 +405,7 @@ function placeOrder(
   const cost = priced.reduce((a, it) => a + it.price, 0) + fee
   if (s.money < cost) return fail('Không đủ tiền!')
   const arrive = arriveDay(s.day, speed)
-  const label = parcelLabel(priced.map(parcelItemName))
+  const label = parcelLabel(priced)
   const parcel: Parcel = {
     id: parcelId(),
     ordered: s.day,

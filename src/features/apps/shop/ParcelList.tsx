@@ -1,6 +1,6 @@
 import { Truck } from 'lucide-react'
-import { Button } from '@/components/ui'
-import { SHIP_SPEEDS, arriveText } from '@/data/shipping'
+import { Button, Tooltip } from '@/components/ui'
+import { SHIP_SPEEDS, parcelContents } from '@/data/shipping'
 import { cn, fmt } from '@/lib/format'
 import { useGame } from '@/store'
 
@@ -60,23 +60,36 @@ export function ParcelList() {
                   here ? 'bg-[#3a3418] ring-2 ring-yellow ring-inset' : 'bg-panel-2',
                 )}
               >
-                <div
-                  title={p.label}
-                  data-tip-align="start"
-                  className={cn(
-                    'min-w-0 flex-1 truncate font-head text-base font-extrabold',
-                    here && 'text-yellow',
-                  )}
+                {/* rê tên kiện: danh sách đủ các món trong kiện (tên chỉ ghi món đầu + "+n món") */}
+                <Tooltip
+                  wide
+                  content={
+                    <ul className="flex flex-col gap-0.5">
+                      {parcelContents(p.items).map((it) => (
+                        <li key={it.name}>
+                          • {it.name}
+                          {it.qty > 1 && <b className="text-yellow"> x{it.qty}</b>}
+                        </li>
+                      ))}
+                    </ul>
+                  }
                 >
-                  {p.label}
-                </div>
+                  <div
+                    className={cn(
+                      'min-w-0 flex-1 truncate font-head text-base font-extrabold',
+                      here && 'text-yellow',
+                    )}
+                  >
+                    {p.label}
+                  </div>
+                </Tooltip>
                 <div
                   className={cn(
                     'w-[130px] text-sm font-bold',
                     here ? 'text-yellow' : 'text-ink/85',
                   )}
                 >
-                  {here ? 'Đã tới cửa' : `Tới ${arriveText(p.arrive, day).toLowerCase()}`}
+                  {here ? 'Đã giao' : `${p.arrive - day} ngày tới`}
                 </div>
                 <div
                   title={market ? `Người bán: ${p.seller}` : SHIP_SPEEDS[p.speed].desc}

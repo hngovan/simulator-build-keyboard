@@ -35,16 +35,8 @@ export function ProductImage({
   /** nhãn nổi góc dưới phải ảnh (vd số stab nhận được) */
   tags?: ReactNode
 }) {
-  // tiêu đề khung xem: "SHOPII · <mục>" cam nhỏ + tên sản phẩm
-  const heading = (
-    <>
-      <span className="mr-2 font-head text-xs font-extrabold tracking-wider text-orange uppercase">
-        Shopii · {SHOP_CATS[product.cat]}
-      </span>
-      {product.name}
-    </>
-  )
-  const zoom = { heading, subtitle, side: panel }
+  // tiêu đề khung xem: chỉ tên sản phẩm
+  const zoom = { heading: product.name, subtitle, side: panel }
   const frame = cn(
     'relative flex h-[110px] items-center justify-center overflow-hidden rounded-[10px] bg-black/15',
     className,
@@ -131,7 +123,7 @@ export function ProductImage({
             caseId={caseItem.id}
             color={caseItem.color}
             onClose={() => setViewing(false)}
-            title={heading}
+            title={product.name}
             subtitle={subtitle}
             side={panel}
           />

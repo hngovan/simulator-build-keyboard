@@ -26,15 +26,15 @@ const STAB_SIZES = [
   ['long', '6.25u'],
   ['long7', '7u'],
 ] as const
-/** món mua nhiều lần được cộng dồn (switch / stab / vật tư / sách phép): có ô số lượng */
-const STACKABLE: Product['cat'][] = ['switch', 'stab', 'supply', 'spell']
+/** món có ô số lượng: mọi món trừ dụng cụ / chứng chỉ (mỗi loại chỉ cần 1, `cartMax`) */
+const SINGLE: Product['cat'][] = ['tool', 'cert']
 /** option vật tư gộp nhiều loại (nhãn "loại · số gói") */
 const isPack = (o: ProductOption) => 'n' in o.item && o.label.includes(' · ')
 /** Thẻ sản phẩm: chọn option (màu / chất liệu / số lượng) rồi thêm vào giỏ hàng */
 export function ProductCard({ product, onEquip, onCart }: Props) {
   const [sel, setSel] = useState(0)
   const [qty, setQty] = useState(1)
-  const stackable = STACKABLE.includes(product.cat)
+  const stackable = !SINGLE.includes(product.cat)
   const opt = product.options[sel] ?? product.options[0]
   // option 2 cấp (case: chất liệu → màu): chỉ hiện các option cùng nhóm đang chọn
   const groups = [...new Set(product.options.flatMap((o) => (o.group ? [o.group] : [])))]

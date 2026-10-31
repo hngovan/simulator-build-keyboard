@@ -386,7 +386,45 @@ export async function buildScene(kind: ThumbKind, type: string) {
       new THREE.MeshStandardMaterial({ map: texture, roughness: 0.68, metalness: 0.08 }),
     )
     face.position.y = Y.pcbTop + 0.002
-    group.add(body, face)
+    // mặt đáy: cùng mạch in như bàn build (trước chỉ có mặt trên 1 chiều → lật xem đáy chỉ thấy khối trơn)
+    const back = new THREE.Mesh(
+      face.geometry,
+      new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.68,
+        metalness: 0.08,
+        side: THREE.BackSide,
+      }),
+    )
+    back.position.y = Y.pcbBot - 0.002
+    group.add(body, face, back)
+    // PCB hotswap: socket Kailh + 2 chân đồng mặt dưới mỗi phím (giống `HotswapSockets` trên bàn build)
+    if (dark) {
+      const socketGeo = new THREE.BoxGeometry(0.5, 0.09, 0.28)
+      const socketMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.6 })
+      const padGeo = new THREE.BoxGeometry(0.12, 0.02, 0.14)
+      const padMat = new THREE.MeshStandardMaterial({
+        color: '#d4a64a',
+        metalness: 0.9,
+        roughness: 0.3,
+      })
+      for (const k of keys) {
+        const s = new THREE.Group()
+        s.position.set(
+          k.cx + 0.05 * Math.cos(k.rot) + 0.1 * Math.sin(k.rot),
+          Y.pcbBot - 0.045,
+          k.cz - 0.05 * Math.sin(k.rot) + 0.1 * Math.cos(k.rot),
+        )
+        s.rotation.y = k.rot
+        s.add(new THREE.Mesh(socketGeo, socketMat))
+        for (const x of [-0.3, 0.3]) {
+          const pad = new THREE.Mesh(padGeo, padMat)
+          pad.position.x = x
+          s.add(pad)
+        }
+        group.add(s)
+      }
+    }
     group.rotation.set(0.62, -0.25, 0)
     return group
   }

@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.22',
+    date: '2026-10-31',
+    commits: [],
+    title: 'Kiện hàng Shopii rõ hơn, lịch chi tiết cuộn được, mua nhiều case / plate',
+    items: [
+      'Chờ giao hàng: trạng thái "Đã giao" / "n ngày tới"; rê tên kiện xem đủ các món; mua nhiều cái cùng món ghi "x2" thay vì "+1 món"',
+      'Lịch chi tiết: kiện đã tới ghi "Đơn đã được giao", chưa tới ghi "Chờ giao hàng · còn n ngày"; nhiều việc thì cuộn trong tờ note',
+      'Shopii: case / PCB / plate / keycap chọn được số lượng; khung xem 3D chỉ ghi tên sản phẩm; PCB xem mặt đáy có mạch in + socket hotswap',
+      'Bấm vùng phòng quanh màn hình máy tính (ngoài viền) để đứng dậy; nút +/− số lượng và thanh kéo không còn nhảy lên khi rê',
+    ],
+  },
+  {
     version: '0.1.21',
     date: '2026-10-31',
     commits: ['49a09e0'],
