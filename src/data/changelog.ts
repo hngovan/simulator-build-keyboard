@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.21',
     date: '2026-10-31',
-    commits: [],
+    commits: ['49a09e0'],
     title: 'Khung xem 3D Shopii mới, lịch treo tường, dao rọc thùng + súng băng keo, màn tải game',
     items: [
       'Shopii: sửa đen màn hình, banner ngày thường, giỏ hàng + Chờ giao hàng ghim góc trái dưới, bảng kiện hàng có cột trạng thái / hình thức',
