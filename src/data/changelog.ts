@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.23',
     date: '2026-11-01',
-    commits: [],
+    commits: ['f838dad'],
     title: 'Daughterboard cho mọi case, kệ giao hàng trong phòng, giỏ hàng gọn hơn',
     items: [
       'Mọi case đều lắp được daughterboard: mica khoét rãnh cổng USB, case model thật đặt theo lỗ USB / bệ bắt ốc có sẵn, dây JST đi theo rãnh của case',
