@@ -202,7 +202,7 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
           disabled={!canUndo}
         />
         <ResetCamButton />
-        {/* đổi đơn: cầm thùng đơn đang làm lên (giữ nguyên tiến độ), đứng dậy cất vào kệ cất đơn rồi lấy thùng khác */}
+        {/* đổi đơn: cầm thùng đơn đang làm lên (giữ nguyên tiến độ), đứng dậy cất lại kệ cuối hành lang rồi lấy thùng khác */}
         <IconButton
           tone="blue"
           icon={<Hand />}
@@ -390,7 +390,7 @@ function TestDone() {
           <b className="text-green">
             Test đủ {total}/{total} phím, mọi phím đều nhận.
           </b>{' '}
-          Bàn phím của {order.customer} đã build xong, cho vào thùng đóng gói rồi mang ra kệ giao
+          Bàn phím của {order.customer} đã build xong, cho vào thùng đóng gói rồi đặt lên kệ giao
           hàng thôi!
         </p>
         <div className="flex justify-end gap-2">

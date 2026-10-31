@@ -24,13 +24,13 @@ export const benchTopics = (step: StepId | undefined, hasOrder: boolean, mica = 
 const EMPTY = [
   'Ơ, bàn build còn trống trơn nè! Mình là Keeb-chan, trợ lý của thợ phím mới 💕',
   'Muốn build thì phải có đơn đã. Bấm Esc đứng dậy, ra máy tính mở Mezzenger xem khách nhắn.',
-  'Chọn đơn hợp sức rồi bấm "Nhận đơn". Khách gửi đồ thì thùng tới kệ ngoài cửa, không gửi gì thì thùng trống để sẵn ở kệ cất đơn, mang về đặt lên bàn này nha!',
+  'Chọn đơn hợp sức rồi bấm "Nhận đơn". Thùng đơn (khách gửi đồ, hoặc thùng trống nếu khách không gửi gì) nằm ở kệ cuối hành lang, mang về đặt lên bàn này nha!',
 ]
 
 const PICK = [
   'Có đơn rồi đó! Đứng dậy (WASD) ra kệ hàng cuối hành lang, bấm thùng đơn để cầm lên.',
   'Mang về bấm bàn build để đặt xuống: đủ linh kiện là vào build luôn, thiếu thì mua thêm ở Shopii, đủ rồi nhấn B để build.',
-  'Đổi đơn thì nhấn chuột phải cầm thùng trên bàn lên (đang build thì nút bàn tay), cất vào kệ cất đơn trong phòng. Build xong đóng gói, cầm thùng ra kệ giao hàng cạnh chậu cây là gửi khách!',
+  'Đổi đơn thì nhấn chuột phải cầm thùng trên bàn lên (đang build thì nút bàn tay), cất lại kệ cuối hành lang. Build xong đóng gói, đặt thùng lên kệ giao hàng trong phòng là gửi khách!',
 ]
 
 const INTRO = [
@@ -105,10 +105,10 @@ const STEP_LINES: Record<StepId, string[]> = {
   ],
   dtb: [
     'Case này dùng daughterboard: bảng mạch nhỏ mang cổng USB-C, nối với PCB bằng dây JST 4 pin.',
-    'Click hốc ở vách sau để đặt DTB cho cổng USB-C khớp lỗ, bắt 2 vít M2, rồi cắm đầu dây JST vào DTB.',
+    'Click hốc ở vách sau để đặt DTB cho cổng USB-C khớp lỗ, nhấn giữ canh lực siết 2 vít M2 (quá tay là trượt ren), rồi cắm dây vào cổng JST có sẵn trên DTB.',
   ],
   jst: [
-    'Board đang nhấc trên case. Click đầu dây JST trong case để cắm vào cổng mặt dưới PCB.',
+    'Board dựng lên cho thấy mặt dưới rồi đó. Click đầu dây JST trong case để cắm vào cổng có sẵn dưới PCB.',
     'Cắm thẳng, đúng chiều nha, dây JST mà cắm lệch là phím không lên đâu.',
   ],
   topCase: ['Top mount: úp case trên xuống plate trước. Click vào case trên nhé.'],
@@ -134,6 +134,6 @@ const STEP_LINES: Record<StepId, string[]> = {
   ],
   pack: [
     'Xong rồi! Bấm thùng carton cạnh bàn phím để cho phím vào thùng nha 📦',
-    'Đóng thùng xong thì cầm thùng lên, mang ra kệ giao hàng cạnh chậu cây là gửi khách, tiền về liền!',
+    'Đóng thùng xong thì cầm thùng lên, đặt lên kệ giao hàng trong phòng là gửi khách, tiền về liền!',
   ],
 }

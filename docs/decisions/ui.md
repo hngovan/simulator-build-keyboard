@@ -1076,3 +1076,21 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
   Kiểm Chrome ngầm 14 kiện cùng ngày: tờ note scrollHeight 904 / 466, popup không cao thêm.
 - (2026-10-31, "hover tăng giảm số lượng button, thanh tiến trình không cần hiệu ứng nhảy lên nữa") `Button` thêm prop `still` (hover chỉ sáng
   hơn, không nổi lên; nhấn vẫn lún), dùng cho nút − / + của `QtyInput`. `Slider`: bỏ hiệu ứng núm kéo nhảy lên khi rê.
+- (2026-10-31, "chưa vào màn hình game đã hiển thị 1 thùng hàng ở hành lang") App.tsx: `RoomHud` chỉ hiện khi cảnh tải xong (`!loading`):
+  đoạn cuối màn chờ (đã dựng cảnh, còn model đang tải) chỉ phủ mờ z-4 nên viên đếm thùng z-5 lộ ra trước khi vào game.
+- (2026-10-31, "đơn hàng ở hành lang chỉ icon và số: ô vuông cam có thùng hàng, số ở góc, vòng sáng lan ra, rê chuột mới hiện chữ")
+  `RoomHud` góc trái trên: ô vuông cam 44px (`BUTTON_TONES.orange` + viền cam đậm 3px, icon `Box`), ô số trắng viền cam chữ cam đậm góc trên phải (theo ảnh mẫu),
+  vòng `animate-ping` cam lan ra; chữ "N thùng hàng ở hành lang" chỉ ở tooltip (`title`).
+- (2026-10-31, "cắt hộp giấy dọc mà đang mở trước mặt, không phải mở qua 2 bên") Thùng mở hộp (`CardBox` flaps, `ShippingBox`) và thùng đóng gói
+  (`PackBox`): băng keo + đường dao / súng chạy dọc trước – sau giữa nắp, nhưng 2 nắp lại chia trước / sau (bản lề mép trước / sau) → nắp
+  lật ra trước mặt. Đổi đúng thùng thật: 2 nắp chia trái / phải (`flaps: { left, right }`), khe giữa nằm dưới băng keo (mỗi nắp nửa bề ngang
+  băng), bản lề mép trái / phải, xoay quanh z (`rotation.z` trái +, phải −) → rạch dọc xong nắp bật ra 2 bên; đóng gói gập 2 nắp từ 2 bên vào.
+- (2026-10-31, "món trong giỏ => tên sản phẩm") `CartList`: tiêu đề cột "Món trong giỏ" → "Tên sản phẩm".
+- (2026-10-31, "số lượng đã ghi rõ ở cột x1 rồi, không cần ghi 20k × 1 ở dưới nữa => thêm 1 label là giá tiền rồi ghi giá gốc") `CartList`:
+  bỏ dòng phụ dưới tên ("giá × số lượng · ship ... phí"); thêm cột "Giá tiền" (giá 1 món, dòng sale ghi thêm giá gốc gạch ngang) giữa
+  Tên sản phẩm và Số lượng. Phí ship chỉ còn ở khung hình thức giao hàng + cộng trong Thành tiền.
+- (2026-10-31) `CartList`: bỏ dòng "Hình thức giao hàng: ..." và "Thời gian giao hàng: ..." dưới khung chọn tốc độ giao (thẻ đang chọn viền vàng đã ghi tên + "Tới cửa"), chỉ còn Tổng tiền + nút Đặt hàng.
+- (2026-10-31, "chữ tới cửa => thời gian + bỏ mục chờ giao hàng đi không cần nữa") `CartList` thẻ tốc độ giao: "Tới cửa: ..." → "Thời gian: ...".
+  Shopii bỏ tab "Chờ giao hàng" ở đáy cột trái + xoá `ParcelList.tsx` (view chỉ còn `grid` / `cart`); kiện vẫn xem ở lịch treo tường / kệ cửa.
+  `cancelParcel` còn trong shopSlice nhưng không còn nút huỷ kiện.
+- (2026-10-31, "icon xoá phải màu đỏ chứ sao lại màu xám") `CartList`: nút "Xoá tất cả" + nút X bỏ từng dòng đổi `tone="red"`.

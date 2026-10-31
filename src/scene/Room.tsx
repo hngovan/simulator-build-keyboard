@@ -23,13 +23,12 @@ import {
   HALL_DOOR_Z,
   HALL_WINDOW,
   HALL_PLANT,
-  SHIP_RACK,
   RACK,
   BACK_M,
   FRONT_M,
   HALF_W,
   WALL_T,
-  STORE_SHELF,
+  SHIP_SHELF,
   inReach,
   PC_DESK,
   ROOM,
@@ -51,7 +50,7 @@ import { FrogPainting } from './room/FrogPainting'
 import { LIT_SHADE, RoomWindow } from './room/RoomWindow'
 import { WallCalendar } from './room/WallCalendar'
 import { WallPoster } from './room/WallPoster'
-import { DoorParcels, HeldBox, SHELF_SCALE_Y, ShipRack, StorageShelf } from './room/DoorParcels'
+import { DoorParcels, HeldBox, SHELF_SCALE_Y, ShipShelf } from './room/DoorParcels'
 import { sitAtBench } from './room/sitAtBench'
 import { useRoom } from './room/roomStore'
 import { useHoverOutline } from './common/hoverOutline'
@@ -617,8 +616,12 @@ const BENCH_HINT: Record<BenchMode, [string | null, string | null, string | null
     'Chưa có đơn hàng nào, lấy thùng đơn từ kệ cuối hành lang để tiến hành build',
   ],
   place: ['để đặt thùng đơn lên bàn build', null, null],
-  heldPacked: [null, null, 'Thùng đã đóng gói: mang ra kệ giao hàng cạnh chậu cây'],
-  busy: [null, null, 'Bàn build đang có thùng khác: cất thùng đang cầm lên kệ trước'],
+  heldPacked: [null, null, 'Thùng đã đóng gói: đặt lên kệ giao hàng trong phòng'],
+  busy: [
+    null,
+    null,
+    'Bàn build đang có thùng khác: cất thùng đang cầm lại kệ cuối hành lang trước',
+  ],
   sit: ['để vào bàn build', null, null],
   closed: ['để vào bàn build', 'để cầm thùng đơn lên', null],
   packed: ['để vào bàn build', 'để cầm thùng đã đóng gói lên', null],
@@ -841,7 +844,7 @@ const HALL_LIGHTS_Z = [-1.6, (DOORWAY.z0 + DOORWAY.z1) / 2, 3.4]
 
 /**
  * Hành lang ngoài ô cửa: sàn, trần, tường ngoài, 2 đầu (cửa chính ở đầu xa, cửa sổ rèm lá ở đầu gần);
- * hàng giao tới để cạnh cửa chính, đơn đóng gói chờ gửi + chậu cây nhỏ dựa tường ngoài cạnh cửa sổ
+ * hàng giao tới để cạnh cửa chính, chậu cây nhỏ dựa tường ngoài cạnh cửa sổ
  */
 function Hallway({ maps }: { maps: MapSet }) {
   const { x0, x1, z0, z1 } = HALL
@@ -881,14 +884,6 @@ function Hallway({ maps }: { maps: MapSet }) {
         <RoomWindow size={HALL_WINDOW} />
       </group>
       <Model url={MODELS.plant} position={[HALL_PLANT.x * M, FLOOR_Y, HALL_PLANT.z * M]} />
-      {/* kệ giao hàng 2 tầng sau chậu cây: đặt thùng đã đóng gói vào = gửi khách */}
-      <group
-        position={[SHIP_RACK.x * M, FLOOR_Y, SHIP_RACK.z * M]}
-        rotation-y={Math.PI / 2}
-        scale={M}
-      >
-        <ShipRack />
-      </group>
       {/* 3 đèn âm trần dọc giữa hành lang (model MozillaHubs), 1 cái ngay trước ô cửa vào phòng */}
       {HALL_LIGHTS_Z.map((z) => (
         <Downlight key={z} height={ROOM.h / M} position={[cx, FLOOR_Y + ROOM.h, z * M]} scale={M} />
@@ -981,14 +976,14 @@ export function Room() {
       <group position={[PC_DESK.x * M, FLOOR_Y, PC_DESK.z * M]} rotation-y={PC_DESK.rot} scale={M}>
         <PcDesk />
       </group>
-      {/* kệ cất đơn dựa tường phải (mặt trước quay vào phòng): thùng đơn chờ làm / làm dở */}
+      {/* kệ giao hàng dựa tường phải (mặt trước quay vào phòng): đặt thùng đã đóng gói vào = gửi khách */}
       <group
-        position={[STORE_SHELF.x * M, FLOOR_Y, STORE_SHELF.z * M]}
+        position={[SHIP_SHELF.x * M, FLOOR_Y, SHIP_SHELF.z * M]}
         rotation-y={-Math.PI / 2}
         scale={M}
       >
         <MetalRack scale-y={SHELF_SCALE_Y} />
-        <StorageShelf />
+        <ShipShelf />
       </group>
       {/* thùng đang cầm trên tay (đi lại) */}
       <HeldBox />

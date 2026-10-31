@@ -5,10 +5,10 @@ import { useGame, type GameState } from '@/store'
 import { parcelStacks } from '@/data/shipping'
 import {
   DOOR_RACK_SLOTS,
-  SHELF_SLOTS,
   NEAT_PER_ROW,
   SHIP_SLOTS,
   SLOTS_PER_ROW,
+  freeSlot,
   slotTaken,
   type BoxAt,
   type BoxSpot,
@@ -16,7 +16,7 @@ import {
 import { boxCustomer, isPackedBox } from '@/store/carrySlice'
 import { Text } from '../common/Text3D'
 import { RoomSpot } from './RoomSpot'
-import { MetalRack, RACK_TIERS } from './HallProps'
+import { RACK_TIERS } from './HallProps'
 import { M, RACK, inReach } from './roomLayout'
 import {
   NO_OUTLINE,
@@ -26,10 +26,10 @@ import {
 } from '../common/hoverOutline'
 
 // Thùng hàng trong phòng (dựng bằng code), đơn vị mét, gốc = chân kệ, mặt trước kệ +z:
-// - `DoorParcels` (kệ sắt cuối hành lang, 4 tầng): nhận hàng = thùng đơn khách gửi tới (bấm để cầm) + kiện Shopii / chợ
-//   (bấm để nhận vào kho, cùng sản phẩm gộp 1 chồng), hết kệ thì đổ đống dưới sàn trước kệ (nghiêng, chồng lộn xộn)
-// - `ShipRack` (kệ 2 tầng cạnh chậu cây): ô giao hàng (đặt thùng đã đóng gói vào = gửi khách)
-// - `StorageShelf` (kệ cất đơn trong phòng): cất thùng đơn đang làm dở / chưa làm
+// - `DoorParcels` (kệ sắt cuối hành lang, 4 tầng): nhận hàng = thùng đơn (khách gửi tới / thùng trống đơn full; bấm để cầm,
+//   đổi đơn thì cất thùng đơn dở lại đây) + kiện Shopii / chợ (bấm để nhận vào kho, cùng sản phẩm gộp 1 chồng),
+//   hết kệ thì đổ đống dưới sàn trước kệ (nghiêng, chồng lộn xộn)
+// - `ShipShelf` (kệ giao hàng trong phòng, tường phải): đặt thùng đã đóng gói vào = gửi khách
 // - `HeldBox`: thùng đang cầm, bay theo camera trước mặt
 // Đang cầm thùng thì các ô đặt được hiện khối mờ vàng (bấm để đặt)
 
@@ -132,8 +132,8 @@ export function CardBox({
   kind: keyof typeof TAPES
   big?: boolean
   name?: string
-  /** thùng mở được (bước mở hộp): mặt trên là 2 nắp gập bản lề mép sau / mép trước, xoay quanh x qua 2 ref; lòng thùng tối */
-  flaps?: { back: RefObject<THREE.Group>; front: RefObject<THREE.Group> }
+  /** thùng mở được (bước mở hộp): mặt trên là 2 nắp gập trái / phải (khe giữa nằm dưới băng keo dọc), bản lề mép trái / phải, xoay quanh z qua 2 ref; lòng thùng tối */
+  flaps?: { left: RefObject<THREE.Group>; right: RefObject<THREE.Group> }
 }) {
   const [w, h, d] = size
   const fragile = kind === 'order' || kind === 'packed'
@@ -150,15 +150,15 @@ export function CardBox({
       <planeGeometry args={[tag * 1.2, tag * 1.2]} />
     </mesh>
   )
-  /** 1 nắp gập (nửa sau `side` −1 / nửa trước +1): tấm carton + nửa băng keo, bản lề ở mép ngoài */
+  /** 1 nắp gập (nửa trái `side` −1 / nửa phải +1): tấm carton + nửa bề ngang băng keo (dọc mép khe giữa), bản lề ở mép ngoài */
   const flap = (side: -1 | 1, ref: RefObject<THREE.Group>, extra?: ReactNode) => (
-    <group ref={ref} position={[0, h, (side * d) / 2]}>
-      <group position={[0, -h, (-side * d) / 2]}>
-        <mesh position={[0, h + 0.0015, (side * d) / 4]} material={CARD} castShadow>
-          <boxGeometry args={[w, 0.003, d / 2]} />
+    <group ref={ref} position={[(side * w) / 2, h, 0]}>
+      <group position={[(-side * w) / 2, -h, 0]}>
+        <mesh position={[(side * w) / 4, h + 0.0015, 0]} material={CARD} castShadow>
+          <boxGeometry args={[w / 2, 0.003, d]} />
         </mesh>
-        <mesh position={[0, h + 0.0035, (side * d) / 4]} material={TAPES[kind]} name={NO_OUTLINE}>
-          <boxGeometry args={[0.05, 0.0016, d / 2]} />
+        <mesh position={[side * 0.0125, h + 0.0035, 0]} material={TAPES[kind]} name={NO_OUTLINE}>
+          <boxGeometry args={[0.025, 0.0016, d + 0.002]} />
         </mesh>
         {extra}
       </group>
@@ -172,8 +172,8 @@ export function CardBox({
           <mesh position-y={h / 2} material={OPEN_MATS} castShadow receiveShadow>
             <boxGeometry args={size} />
           </mesh>
-          {flap(-1, flaps.back)}
-          {flap(1, flaps.front, topTag)}
+          {flap(-1, flaps.left)}
+          {flap(1, flaps.right, topTag)}
         </>
       ) : (
         <>
@@ -244,7 +244,7 @@ export function JobBox({
 }: {
   id: string
   /** thùng đơn mở được (bước mở hộp) */
-  flaps?: { back: RefObject<THREE.Group>; front: RefObject<THREE.Group> }
+  flaps?: { left: RefObject<THREE.Group>; right: RefObject<THREE.Group> }
 }) {
   const packed = useGame((s) => isPackedBox(s, id))
   const name = useGame((s) => shortName(boxCustomer(s, id)))
@@ -304,7 +304,7 @@ interface Spot {
 /**
  * Xếp thùng trên 1 tầng kệ cho lộn xộn như thật: theo thứ tự, mỗi thùng xoay / lệch / cách nhau ngẫu nhiên (cố định theo `key`),
  * nằm vào chỗ trống đầu tiên từ trái sang; hết chỗ (`messy`: cả ngẫu nhiên ~1/4, kệ nhận hàng) thì chồng lên thùng khác còn chỗ tới tầng trên.
- * Kệ cất đơn / kệ giao hàng không chồng bừa: còn chỗ là nằm cạnh nhau
+ * Kệ giao hàng không chồng bừa: còn chỗ là nằm cạnh nhau
  * Bề ngang thùng (sau khi xoay) luôn kẹp trong lòng kệ `IN_X` nên không lấn vào cột.
  * `memo` (kệ cửa): thùng đã xếp lần trước cùng tầng giữ nguyên chỗ (lấy 1 thùng đi thì thùng khác đứng yên), chỉ thùng mất
  * thùng đỡ bên dưới mới rơi xuống xếp lại; thùng mới lấp chỗ trống
@@ -536,7 +536,7 @@ function Posed({ pose, children }: { pose: Pose; children: ReactNode }) {
 }
 
 /**
- * Kệ cất đơn / kệ giao hàng: chỗ cố định theo ô (2 ô / tầng, trái / phải, không chồng) để mỗi ô trống có khối mờ riêng.
+ * Kệ giao hàng: chỗ cố định theo ô (2 ô / tầng, trái / phải, không chồng) để mỗi ô trống có khối mờ riêng.
  * Xoay / lệch nhẹ theo id thùng cho đỡ thẳng tắp
  */
 const NEAT_X = 0.2
@@ -623,7 +623,14 @@ function useBoxesAt(at: BoxAt) {
 export function DoorParcels(props: JSX.IntrinsicElements['group']) {
   const parcels = useGame((s) => s.parcels)
   const day = useGame((s) => s.day)
-  const orders = useBoxesAt('door')
+  const boxes = useGame((s) => s.boxes)
+  const placed = useBoxesAt('door')
+  // đang cầm thùng đơn: khối mờ đúng chỗ thùng sẽ nằm (ô `placeDoor` chọn, key = id thùng nên đặt xong giữ nguyên chỗ)
+  const ghost = useGame((s) => (heldKind(s) === 'order' ? s.held : null))
+  const orders = useMemo(
+    () => (ghost ? [...placed, { id: ghost, slot: freeSlot(boxes, 'door') }] : placed),
+    [placed, ghost, boxes],
+  )
   // kiện đã tới: cùng nguồn (Shopii / chợ) + cùng sản phẩm thì gộp 1 thùng (bấm nhận cả chồng)
   const groups = useMemo(() => parcelStacks(parcels, day), [parcels, day])
   // kiện lấp các ô nhận hàng còn trống (thùng đơn khách xếp trước), hết kệ thì đổ đống dưới sàn
@@ -691,7 +698,16 @@ export function DoorParcels(props: JSX.IntrinsicElements['group']) {
           </RoomSpot>
         )
       })}
-      {orders.map(({ id }) => {
+      {ghost && (
+        <GhostSlot
+          label="Cất thùng đơn lại kệ"
+          onAct={() => g().placeDoor()}
+          position={door.get(ghost)!.pos}
+          rotation-y={door.get(ghost)!.rot}
+          size={ORDER_BOX}
+        />
+      )}
+      {placed.map(({ id }) => {
         const pose = door.get(id)!
         return (
           <RoomSpot
@@ -711,22 +727,25 @@ export function DoorParcels(props: JSX.IntrinsicElements['group']) {
   )
 }
 
-/** tầng ván kệ giao hàng (2 tầng: ván dưới + mặt trên) */
-const SHIP_TIERS = [0.1, 0.55]
+/** tầng kệ giao hàng: kệ sắt hạ thấp còn 80% (không chạm tranh treo phía trên) */
+export const SHELF_SCALE_Y = 0.8
+const SHELF_TIERS = RACK_TIERS.map((y) => y * SHELF_SCALE_Y)
 
-/** Kệ giao hàng 2 tầng (cạnh chậu cây hành lang): đặt thùng đã đóng gói vào = gửi khách, thùng nằm chờ shipper (sang ngày thì đi) */
-export function ShipRack(props: JSX.IntrinsicElements['group']) {
+/**
+ * Kệ giao hàng (trong phòng, tường phải): đặt thùng đã đóng gói vào = gửi khách, thùng nằm chờ shipper (sang ngày thì đi).
+ * Đang cầm thùng đã đóng gói thì mỗi ô trống hiện khối mờ để đặt
+ */
+export function ShipShelf(props: JSX.IntrinsicElements['group']) {
   const boxes = useGame((s) => s.boxes)
   const kind = useGame(heldKind)
   const held = useGame((s) => s.held) ?? ''
   const ships = useBoxesAt('ship')
-  // mỗi ô giao hàng còn trống 1 khối mờ (đúng chỗ, cùng độ lệch thùng đang cầm)
+  // mỗi ô trống 1 khối mờ (đúng chỗ, cùng độ lệch thùng đang cầm)
   const free = kind === 'packed' ? neatFree(boxes, 'ship', SHIP_SLOTS) : []
-  const pose = (slot: number, seed: string) => neatPose(slot, SHIP_TIERS, seed)
+  const pose = (slot: number, seed: string) => neatPose(slot, SHELF_TIERS, seed)
   const g = useGame.getState
   return (
     <group {...props}>
-      <MetalRack tiers={SHIP_TIERS} />
       {ships.map(({ id, slot }) => (
         <group key={id} position={pose(slot, id).pos} rotation-y={pose(slot, id).rot}>
           <JobBox id={id} />
@@ -740,47 +759,6 @@ export function ShipRack(props: JSX.IntrinsicElements['group']) {
           position={pose(i, held).pos}
           rotation-y={pose(i, held).rot}
           size={PACKED_BOX}
-        />
-      ))}
-    </group>
-  )
-}
-
-/** tầng kệ cất đơn: kệ sắt hạ thấp còn 80% (không chạm tranh treo phía trên) */
-export const SHELF_SCALE_Y = 0.8
-const SHELF_TIERS = RACK_TIERS.map((y) => y * SHELF_SCALE_Y)
-
-/** Kệ cất đơn (trong phòng): thùng đơn chờ làm / làm dở, đang cầm thùng đơn thì hiện ô mờ để cất */
-export function StorageShelf(props: JSX.IntrinsicElements['group']) {
-  const boxes = useGame((s) => s.boxes)
-  const kind = useGame(heldKind)
-  const held = useGame((s) => s.held) ?? ''
-  const here = useBoxesAt('shelf')
-  // mỗi ô trống 1 khối mờ (đúng chỗ, cùng độ lệch thùng đang cầm)
-  const free = kind ? neatFree(boxes, 'shelf', SHELF_SLOTS) : []
-  const pose = (slot: number, seed: string) => neatPose(slot, SHELF_TIERS, seed)
-  const g = useGame.getState
-  return (
-    <group {...props}>
-      {here.map(({ id, slot }) => (
-        <RoomSpot
-          key={id}
-          label={`Cầm thùng ${isPackedBox(g(), id) ? 'đã đóng gói' : 'đơn'} của ${boxCustomer(g(), id)}`}
-          onAct={() => g().pickBox(id)}
-          position={pose(slot, id).pos}
-          rotation-y={pose(slot, id).rot}
-        >
-          <JobBox id={id} />
-        </RoomSpot>
-      ))}
-      {free.map((i) => (
-        <GhostSlot
-          key={i}
-          label="Cất thùng lên kệ"
-          onAct={() => g().placeShelf(i)}
-          position={pose(i, held).pos}
-          rotation-y={pose(i, held).rot}
-          size={kind === 'packed' ? PACKED_BOX : ORDER_BOX}
         />
       ))}
     </group>

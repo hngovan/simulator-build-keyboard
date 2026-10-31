@@ -268,6 +268,8 @@ export function micaLayerGeometry(
    * khung chặn giữa các cụm phím liền 1 tấm với mặt case
    */
   cutouts: [number, number][][] = [],
+  /** rãnh xuyên vách sau hết bề dày tấm (lớp nằm ngang tầm cổng USB daughterboard): tâm x + bề ngang (u) */
+  slots: { x: number; w: number }[] = [],
 ) {
   const shape = punch(roundedRect(new THREE.Shape(), W, D, OUTER_R) as THREE.Shape, [
     ...pockets,
@@ -286,6 +288,13 @@ export function micaLayerGeometry(
   })
   // đùn theo +z → xoay cho nằm ngang, bề dày theo +y
   g.rotateX(-Math.PI / 2)
+  if (slots.length)
+    return carve(
+      g,
+      slots.map((o) =>
+        new THREE.BoxGeometry(o.w, h + 0.04, wall + 0.1).translate(o.x, h / 2, -D / 2 + wall / 2),
+      ),
+    )
   if (!pockets.length) return g
   // trần hốc trong tấm đáy: hốc chỉ sâu p.depth như case liền khối (không lõm xuyên cả tấm, feet lồi ra được)
   const parts = [g, ...pocketCeilings(pockets, 0, h)]
@@ -307,6 +316,10 @@ export const micaEdgeMaterial = new THREE.LineBasicMaterial({
  */
 export const micaLayerKind = (i: number, y: number, floor: number) =>
   i === 0 && floor ? 'base' : i < floor ? 'solid' : y >= -0.01 ? 'frame' : 'ring'
+
+/** tấm mica (đáy ở `y`, dày `h`) có chạm khoảng cao của lỗ cổng USB `o` không: chạm thì khoét rãnh vách sau */
+export const micaHitsPort = (y: number, h: number, o: WallPort) =>
+  y < o.y + o.h / 2 - 0.005 && y + h > o.y - o.h / 2 + 0.005
 
 /** số lớp + bề dày mỗi lớp (đã trừ khe) cho đoạn cao y0 → y1 */
 export function micaStackPlan(y0: number, y1: number) {

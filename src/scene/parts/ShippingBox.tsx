@@ -22,7 +22,7 @@ const SLIT = new THREE.MeshBasicMaterial({ color: '#2a1d10' })
 /**
  * Bước mở hộp: đúng thùng carton đơn hàng đang đặt trên bàn (cỡ thật, băng keo xanh, tên khách, tem dễ vỡ — `JobBox`).
  * Bấm vào thùng: dao rọc giấy hạ xuống mép sau, rạch dọc đường băng keo về phía trước (vết rạch dài dần), nhấc dao lên,
- * thùng rung nhẹ rồi 2 nắp gập bật ra trước / sau, xong tự sang bước sau (không cần nút tiếp tục)
+ * thùng rung nhẹ rồi 2 nắp gập (khe giữa dưới băng keo vừa rạch) bật ra 2 bên trái / phải, xong tự sang bước sau (không cần nút tiếp tục)
  */
 export function ShippingBox() {
   const id = useGame((s) => s.order?.id)
@@ -30,8 +30,8 @@ export function ShippingBox() {
   const unboxed = useBuild().unboxed
   const [openAt, setOpenAt] = useState<number | null>(null)
   const ref = useRef<THREE.Group>(null)
-  const back = useRef<THREE.Group>(null)
-  const front = useRef<THREE.Group>(null)
+  const left = useRef<THREE.Group>(null)
+  const right = useRef<THREE.Group>(null)
   const knife = useRef<THREE.Group>(null)
   const slit = useRef<THREE.Group>(null)
   // mở xong → tự sang bước sau
@@ -68,9 +68,9 @@ export function ShippingBox() {
     const t = el < CUT_MS ? 0 : Math.min(1, (el - CUT_MS) / OPEN_MS)
     g.rotation.z = t > 0 && t < 0.25 ? Math.sin(t * 90) * 0.04 * (1 - t / 0.25) : 0
     const e = ease(Math.max(0, (t - 0.25) / 0.6))
-    // nắp sau bản lề mép sau lật ra sau, nắp trước lật ra trước
-    if (back.current) back.current.rotation.x = -e * 2.3
-    if (front.current) front.current.rotation.x = e * 2.3
+    // nắp trái bản lề mép trái lật ra trái, nắp phải lật ra phải
+    if (left.current) left.current.rotation.z = e * 2.3
+    if (right.current) right.current.rotation.z = -e * 2.3
   })
   if (!id) return null
   return (
@@ -84,7 +84,7 @@ export function ShippingBox() {
         }}
       >
         <group ref={ref} position-y={Y.table} scale={M}>
-          <JobBox id={id} flaps={{ back, front }} />
+          <JobBox id={id} flaps={{ left, right }} />
         </group>
       </Clickable>
       {/* dao rọc giấy + vết rạch (ngoài Clickable: không viền khi rê chuột) */}

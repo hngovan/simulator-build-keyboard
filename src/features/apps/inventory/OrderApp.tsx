@@ -174,8 +174,9 @@ function OrderDetail({ c }: { c: OrderEntry }) {
       <Block title="Linh kiện cần có">
         <div className="flex flex-col gap-1">
           {checks.map((x, i) => {
-            const has = inventory[x.cat]
-            const sub = subOf(x.cat)
+            // món sai loại / hết (`wrong`) = coi như chưa có: hiện loại khách cần, không hiện tên món đang có
+            const has = x.wrong ? undefined : inventory[x.cat]
+            const sub = x.wrong ? null : subOf(x.cat)
             return (
               <div
                 key={x.cat}
@@ -384,7 +385,7 @@ export function OrderApp() {
                 </span>
                 <span className="text-xs font-bold text-muted">
                   {tab === 'wait'
-                    ? 'Đã đóng gói · mang thùng ra kệ giao hàng cạnh chậu cây'
+                    ? 'Đã đóng gói · đặt thùng lên kệ giao hàng trong phòng'
                     : `${'★'.repeat(p.result.stars)}${'☆'.repeat(5 - p.result.stars)} · ${
                         p.paid === false ? 'chưa thu tiền ở Mezzenger' : 'đã thu tiền'
                       }`}

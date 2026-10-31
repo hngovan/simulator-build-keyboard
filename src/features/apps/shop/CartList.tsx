@@ -105,6 +105,7 @@ export function CartList() {
         </div>
         {cart.length > 0 && (
           <Button
+            tone="red"
             size="sm"
             onClick={clear}
             title="Bỏ hết món trong giỏ"
@@ -117,7 +118,8 @@ export function CartList() {
         )}
       </div>
       <div className="flex items-center gap-3 px-3 pt-1 pb-2 text-[13px] font-bold text-muted">
-        <div className="flex-1">Món trong giỏ</div>
+        <div className="flex-1">Tên sản phẩm</div>
+        <div className="w-20 text-right">Giá tiền</div>
         <div className="w-[104px] text-center">Số lượng</div>
         <div className="w-24 text-right">Thành tiền</div>
         <div className="w-7" />
@@ -161,15 +163,13 @@ export function CartList() {
                       onPick={(i) => swap(l.key, cartLine(p, opts[i], l.qty))}
                     />
                   )}
-                  <div className="text-xs font-bold text-muted">
-                    {fmt(l.unit.price)} × {l.qty}
-                    {/* giá gốc gạch ngang (dòng sale) */}
-                    {l.sale && cur >= 0 && opts[cur].was !== undefined && (
-                      <s className="ml-1.5">{fmt(opts[cur].was!)}</s>
-                    )}{' '}
-                    · ship {SHIP_SPEEDS[speed].name}{' '}
-                    <span className="text-green">{lineFee ? `+${fmt(lineFee)}` : 'miễn phí'}</span>
-                  </div>
+                </div>
+                {/* giá 1 món (số lượng ở cột bên, phí ship ở khung hình thức giao hàng); dòng sale thêm giá gốc gạch ngang */}
+                <div className="flex w-20 flex-col items-end font-head text-sm font-extrabold">
+                  {fmt(l.unit.price)}
+                  {l.sale && cur >= 0 && opts[cur].was !== undefined && (
+                    <s className="text-xs text-muted">{fmt(opts[cur].was!)}</s>
+                  )}
                 </div>
                 {cartMax(l) > 1 ? (
                   <QtyInput
@@ -186,6 +186,7 @@ export function CartList() {
                 </div>
                 <Button
                   size="sm"
+                  tone="red"
                   title="Bỏ khỏi giỏ"
                   aria-label={`Bỏ ${l.label} khỏi giỏ`}
                   className="grid size-7 place-items-center !p-0"
@@ -240,17 +241,15 @@ export function CartList() {
                       {SHIP_SPEEDS[k].name} · {feeText(k)}
                     </span>
                     <span className="truncate text-xs text-muted">
-                      Tới cửa: {arriveText(arriveDay(day, k), day)}
+                      Thời gian: {arriveText(arriveDay(day, k), day)}
                     </span>
                   </span>
                 </button>
               )
             })}
           </div>
-          <div className="flex items-end justify-between gap-2">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col text-xs font-bold text-muted">
-              <span>Hình thức giao hàng: {SHIP_SPEEDS[speed].name}</span>
-              <span>Thời gian giao hàng: {arriveText(arriveDay(day, speed), day)}</span>
               <span className="font-head text-xl font-extrabold text-green">
                 Tổng tiền {fmt(base + fee)}
               </span>

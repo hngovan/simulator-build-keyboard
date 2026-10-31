@@ -136,9 +136,12 @@ export interface BuildSlice {
   placeGasket: (i: number) => void
   /** dán 1 feet (loại feetPick) vào hốc thứ i dưới đáy case */
   placeFoot: (i: number) => void
-  /** daughterboard: đặt DTB vào hốc vách sau case / bắt vít M2 lỗ thứ i / cắm dây JST vào DTB */
+  /**
+   * daughterboard: đặt DTB vào hốc vách sau case / siết vít M2 lỗ thứ i (skill check canh lực như vít assem: thiếu = chưa vào,
+   * quá = trượt ren, `STRIP_TRIES` lần thì tuôn ren, vít lỏng) / cắm dây JST vào DTB
+   */
   placeDtb: () => void
-  screwDtb: (i: number) => void
+  screwDtb: (i: number, result: SkillResult) => void
   plugDtb: () => void
   /** cắm đầu dây JST còn lại vào cổng mặt dưới PCB (board đang nhấc trên case) */
   plugJst: () => void
@@ -968,12 +971,31 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       commit(snapshot())
       s.patchBuild({ dtb: { ...s.build.dtb, placed: true } })
     },
-    screwDtb: (i) => {
+    screwDtb: (i, result) => {
       const s = at('dtb')
       const d = s?.build.dtb
       if (!s || !d?.placed || d.screws?.[i]) return
+      const id = `dtb-${i}`
+      if (result === 'low')
+        return s.toast('Chưa đủ lực, vít DTB mới vào 1 phần: giữ chuột lâu hơn', 'bad')
       commit(snapshot())
-      s.patchBuild({ dtb: { ...d, screws: { ...d.screws, [i]: true } } })
+      const done = { dtb: { ...d, screws: { ...d.screws, [i]: true as const } } }
+      if (result === 'high') {
+        const n = (s.build.slips?.[id] ?? 0) + 1
+        if (n < STRIP_TRIES) {
+          s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
+          return s.toast(
+            `⚠️ Trượt ren vít DTB (quá tay) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
+            'bad',
+          )
+        }
+        s.patchBuild({ ...done, stripped: { ...s.build.stripped, [id]: true } })
+        return s.toast('🔩 Tuôn ren lỗ vít DTB: vít lỏng, daughterboard hơi lắc', 'bad')
+      }
+      s.patchBuild({
+        ...done,
+        ...(result === 'perfect' ? { perfect: { ...s.build.perfect, [id]: true } } : {}),
+      })
     },
     plugDtb: () => {
       const s = at('dtb')
@@ -1069,8 +1091,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       // giao trễ hạn: mỗi ngày trễ trừ 1 uy tín
       const late = Math.max(0, s.day - (s.order.dueDay ?? s.day))
       if (late) result.late = late
-      // đóng gói: chấm điểm sẵn, phím vào thùng nằm trên bàn build (`benchBox` giữ id đơn); cầm thùng ra kệ giao hàng
-      // cạnh chậu cây mới là gửi khách (tiền + uy tín, `placeShip`)
+      // đóng gói: chấm điểm sẵn, phím vào thùng nằm trên bàn build (`benchBox` giữ id đơn); cầm thùng đặt lên kệ giao hàng
+      // trong phòng mới là gửi khách (tiền + uy tín, `placeShip`)
       set({
         // cất nguyên dữ liệu đơn vào thùng: chưa gửi thì mở ra build lại được; switch / stab thừa vào kho chung lúc gửi khách
         packed: [
@@ -1105,7 +1127,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         supplyUsed: {},
       })
       s.toast(
-        `📦 Đã đóng gói đơn ${s.order.customer}: bấm thùng trên bàn để cầm lên, mang ra kệ giao hàng cạnh chậu cây`,
+        `📦 Đã đóng gói đơn ${s.order.customer}: bấm thùng trên bàn để cầm lên, đặt vào kệ giao hàng trong phòng`,
         'good',
       )
       get().save()

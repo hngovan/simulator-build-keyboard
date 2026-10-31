@@ -22,6 +22,8 @@ const TAPE_ORDER = new THREE.MeshStandardMaterial({ color: '#3d8bff', roughness:
 const PACK_MS = 1700
 const TAPE_MS = 1300
 const HOLD_MS = 350
+/** đáy thùng: ngay trên mặt thảm cắt (thảm đặt Y.table + 0,005, dày 0,07 — thấp hơn thì bị thảm che, nhìn xuyên thấy thảm) */
+const FLOOR_Y = 0.08
 /** bề rộng băng keo 48mm (u) */
 const TAPE_W = 0.048 * M
 /** băng keo chừa ra 2 đầu (gập xuống vách trước / sau, u) */
@@ -47,8 +49,9 @@ export function PackBox() {
   // chỗ chờ: ngay sau bàn phím (góc nhìn mặc định còn thấy miệng thùng + mũi tên)
   const startZ = -(D + 0.4)
   const ref = useRef<THREE.Group>(null)
-  const back = useRef<THREE.Group>(null)
-  const front = useRef<THREE.Group>(null)
+  const floor = useRef<THREE.Mesh>(null)
+  const left = useRef<THREE.Group>(null)
+  const right = useRef<THREE.Group>(null)
   const tape = useRef<THREE.Group>(null)
   const gun = useRef<THREE.Group>(null)
 
@@ -76,12 +79,14 @@ export function PackBox() {
     const g = ref.current
     if (!g) return
     const t = at === null ? 0 : Math.min(1, (performance.now() - at) / PACK_MS)
-    // 0 → 0.6: nhấc lên vòng qua bàn phím rồi úp xuống; 0.6 → 1: gập 2 nắp
+    // 0 → 0.6: nhấc lên vòng qua bàn phím rồi úp xuống; 0.6 → 1: gập 2 nắp trái / phải (khe giữa dọc đường băng keo)
     const m = ease(Math.min(1, t / 0.6))
     g.position.set(0, Y.table + Math.sin(m * Math.PI) * H * 1.3, startZ * (1 - m))
+    // đáy ẩn lúc thùng bay úp xuống (không xuyên qua phím), đứng chờ / đã úp xong thì hiện
+    if (floor.current) floor.current.visible = m === 0 || m === 1
     const f = ease(Math.max(0, (t - 0.6) / 0.4))
-    if (back.current) back.current.rotation.x = -OPEN * (1 - f)
-    if (front.current) front.current.rotation.x = OPEN * (1 - f)
+    if (left.current) left.current.rotation.z = OPEN * (1 - f)
+    if (right.current) right.current.rotation.z = -OPEN * (1 - f)
     // súng băng keo: 0–0.2 hạ xuống mép sau, 0.2–0.8 kéo về trước (băng dài theo), 0.8–1 nhấc lên; ngoài khoảng đó ẩn
     const el = at === null ? -1 : performance.now() - at - PACK_MS
     const c = el < 0 ? -1 : Math.min(1, el / TAPE_MS)
@@ -109,23 +114,23 @@ export function PackBox() {
   return (
     <Clickable active={idle} onAct={requestPack}>
       <group ref={ref} position={[0, Y.table, startZ]}>
-        {/* 4 vách (không đáy: thùng úp xuống bao lấy bàn phím) + lòng thùng tối hơn */}
+        {/* 4 vách + đáy (lòng thùng tối hơn, ngay trên mặt thảm); thùng úp xuống bao lấy bàn phím, đáy ẩn lúc bay */}
         {wall(W, T, 0, -D / 2)}
         {wall(W, T, 0, D / 2)}
         {wall(T, D, -W / 2, 0)}
         {wall(T, D, W / 2, 0)}
-        <mesh position-y={0.02} rotation-x={-Math.PI / 2} material={INSIDE}>
+        <mesh ref={floor} position-y={FLOOR_Y} rotation-x={-Math.PI / 2} material={INSIDE}>
           <planeGeometry args={[W - T, D - T]} />
         </mesh>
-        {/* 2 nắp gập: bản lề ở mép sau / mép trước miệng thùng */}
-        <group ref={back} position={[0, H, -D / 2]}>
-          <mesh position-z={D / 4} material={CARD} castShadow>
-            <boxGeometry args={[W, T * 0.6, D / 2]} />
+        {/* 2 nắp gập: bản lề ở mép trái / mép phải miệng thùng, khép lại thành khe giữa dọc trước – sau (băng keo dán lên khe) */}
+        <group ref={left} position={[-W / 2, H, 0]}>
+          <mesh position-x={W / 4} material={CARD} castShadow>
+            <boxGeometry args={[W / 2, T * 0.6, D]} />
           </mesh>
         </group>
-        <group ref={front} position={[0, H, D / 2]}>
-          <mesh position-z={-D / 4} material={CARD} castShadow>
-            <boxGeometry args={[W, T * 0.6, D / 2]} />
+        <group ref={right} position={[W / 2, H, 0]}>
+          <mesh position-x={-W / 4} material={CARD} castShadow>
+            <boxGeometry args={[W / 2, T * 0.6, D]} />
           </mesh>
         </group>
         {/* băng keo dán dọc nắp: gốc ở mép sau, dài dần theo súng (scale z) */}

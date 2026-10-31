@@ -53,7 +53,7 @@ import type {
 } from '@/types'
 import type { GameState } from '.'
 import { onBench } from './carrySlice'
-import { SHELF_SLOTS, freeSlot } from '@/data/boxes'
+import { freeSlot } from '@/data/boxes'
 import { newBuild } from './buildSlice'
 import {
   DECLINE_FREE,
@@ -556,17 +556,10 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     }
     // chưa làm đơn nào thì làm luôn đơn này, không thì xếp vào danh sách chờ
     // (vừa giao xong thì cũng xếp chờ: phải bấm kết thúc ngày để sang ngày mới)
-    // khách gửi đồ (đơn kit): thùng đơn tới kệ ngoài cửa (hết ô nhận đơn thì xếp dưới sàn trước kệ), ra lấy mang về bàn build.
-    // Khách không gửi gì (đơn full): không có thùng gửi tới, shop lấy thùng trống để sẵn ở kệ cất đơn (đầy thì ra kệ cửa)
+    // thùng đơn nằm ở kệ cuối hành lang (hết ô thì xếp dưới sàn trước kệ), ra lấy mang về bàn build:
+    // khách gửi đồ (đơn kit) = thùng khách gửi tới, khách không gửi gì (đơn full) = thùng trống shop để sẵn
     const boxes = get().boxes
-    const shelf = order.kit ? -1 : freeSlot(boxes, 'shelf', SHELF_SLOTS)
-    set({
-      boxes: {
-        ...boxes,
-        [order.id]:
-          shelf >= 0 ? { at: 'shelf', slot: shelf } : { at: 'door', slot: freeSlot(boxes, 'door') },
-      },
-    })
+    set({ boxes: { ...boxes, [order.id]: { at: 'door', slot: freeSlot(boxes, 'door') } } })
     if (!s.order) {
       const job = freshSession(order, s.day)
       set({ offers, order, ...job, ctx: null, result: null, pressed: {}, future: [] })
@@ -575,7 +568,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       set({ offers, jobs: [...s.jobs, { order, session: freshSession(order, s.day) }] })
     }
     s.toast(
-      `Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}. ${shelf >= 0 ? 'Khách không gửi đồ: thùng trống để sẵn ở kệ cất đơn' : 'Thùng đơn tới kệ ngoài cửa'}, mang về bàn build`,
+      `Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}. ${order.kit ? 'Thùng đơn tới kệ cuối hành lang' : 'Khách không gửi đồ: thùng trống để sẵn ở kệ cuối hành lang'}, mang về bàn build`,
       'good',
     )
   },
@@ -1070,7 +1063,19 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (!p) return
     if (p.arrive > s.day) return s.toast(`Kiện ${p.label} chưa tới, hẹn ngày ${p.arrive}`, 'bad')
     set({ parcels: s.parcels.filter((x) => x !== p) })
-    for (const it of p.items) receiveParcelItem(get, set, it, it.job ?? p.job)
+    // mỗi món tự báo 1 toast, mà toast chỉ giữ 4 cái cùng lúc → kiện nhiều món mất bớt: gom lại, mỗi loại (lỗi / nhận) 1 toast nhiều dòng
+    const toast = s.toast
+    const msgs: { text: string; kind: Parameters<typeof toast>[1] }[] = []
+    set({ toast: (text, kind) => msgs.push({ text, kind }) })
+    try {
+      for (const it of p.items) receiveParcelItem(get, set, it, it.job ?? p.job)
+    } finally {
+      set({ toast })
+    }
+    for (const kind of ['bad', 'info', 'good'] as const) {
+      const same = msgs.filter((m) => (m.kind ?? 'info') === kind)
+      if (same.length) toast(same.map((m) => m.text).join('\n'), kind)
+    }
   },
   cancelParcel: (id) => {
     const s = get()
@@ -1172,7 +1177,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (s.result) return s.toast('Đơn này đã giao rồi', 'bad')
     // phải mang thùng đơn đặt lên bàn build trước (đơn build thử dev thì thôi)
     if (s.order && !onBench(s))
-      return s.toast('Mang thùng đơn (kệ ngoài cửa / kệ cất đơn) đặt lên bàn build trước đã', 'bad')
+      return s.toast('Mang thùng đơn ở kệ cuối hành lang đặt lên bàn build trước đã', 'bad')
     if (s.build) return set({ screen: 'bench' })
     if (!s.order || !s.mount || !checkInventory(s.inventory, s.order).every((c) => c.ok))
       return s.toast('Chưa đủ linh kiện!', 'bad')

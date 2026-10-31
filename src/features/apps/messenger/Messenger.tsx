@@ -632,11 +632,11 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
                 Xin địa chỉ giao hàng
               </Reply>
             )}
-            {/* gửi hàng: cầm thùng đã đóng gói ra kệ giao hàng cạnh chậu cây (không bấm gửi ở đây nữa) */}
+            {/* gửi hàng: cầm thùng đã đóng gói đặt lên kệ giao hàng trong phòng (không bấm gửi ở đây nữa) */}
             {packed && !shipped && (pickup || askedAddr) && (
               <span className="flex items-center gap-1.5 px-1 text-sm text-muted">
                 {pickup ? <Handshake className="size-4" /> : <Truck className="size-4" />}
-                Cầm thùng ra kệ giao hàng cạnh chậu cây để{' '}
+                Đặt thùng lên kệ giao hàng trong phòng để{' '}
                 {pickup ? 'khách qua lấy' : 'gửi cho khách'}
               </span>
             )}

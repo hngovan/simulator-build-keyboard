@@ -41,6 +41,7 @@ import {
   caseShellGeometry,
   ledgeGeometry,
   micaEdgeMaterial,
+  micaHitsPort,
   micaLayerGeometry,
   micaLayerKind,
   micaStackPlan,
@@ -48,7 +49,7 @@ import {
   type WallNotch,
   type WallPort,
 } from './caseShell'
-import { Daughterboard, DTB_GAP, usbPort } from './Daughterboard'
+import { Daughterboard, DTB_GAP, jstStand, usbPort } from './Daughterboard'
 import { caseModelOf } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { MM } from '../models/Switch'
@@ -158,6 +159,7 @@ function Layers({
   pockets,
   holes,
   cutouts,
+  ports = [],
 }: ShellProps & {
   floor?: boolean
   pockets?: FootPocket[]
@@ -165,10 +167,15 @@ function Layers({
   holes?: FootPocket[]
   /** vùng phím khoét ở tấm trên mặt plate: khung chặn liền 1 tấm với mặt case */
   cutouts?: [number, number][][]
+  /** cổng USB daughterboard: tấm viền nằm ngang tầm cổng khoét rãnh xuyên vách sau (mica cắt laser) */
+  ports?: WallPort[]
 }) {
-  const { n, step } = micaStackPlan(y0, y1)
+  const { n, step, h: layerH } = micaStackPlan(y0, y1)
+  const portKey = JSON.stringify(ports)
   const geo = useMemo(() => {
     const { h } = micaStackPlan(y0, y1)
+    const slots = (JSON.parse(portKey) as WallPort[]).map((o) => ({ x: o.x, w: o.w }))
+    const slot = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes, [], slots)
     const ring = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes)
     const solid = micaLayerGeometry(W, D, h, CASE_WALL, true, [], holes)
     const base = micaLayerGeometry(W, D, h, CASE_WALL, true, pockets, holes)
@@ -178,13 +185,15 @@ function Layers({
       solid,
       base,
       frame,
+      slot,
+      slotEdges: new EdgesGeometry(slot, 30),
       ringEdges: new EdgesGeometry(ring, 30),
       solidEdges: new EdgesGeometry(solid, 30),
       // viền tấm đáy lấy theo tấm liền: không vẽ vòng tròn lỗ feet (mica trong, nhìn từ trong case vẫn thấy)
       baseEdges: new EdgesGeometry(solid, 30),
       frameEdges: new EdgesGeometry(frame, 30),
     }
-  }, [W, D, y0, y1, pockets, holes, cutouts])
+  }, [W, D, y0, y1, pockets, holes, cutouts, portKey])
   useEffect(
     () => () => {
       for (const g of Object.values(geo)) g.dispose()
@@ -192,7 +201,9 @@ function Layers({
     [geo],
   )
   return Array.from({ length: n }, (_, i) => {
-    const kind = micaLayerKind(i, y0 + i * step, floor ? 2 : 0)
+    const y = y0 + i * step
+    const base = micaLayerKind(i, y, floor ? 2 : 0)
+    const kind = base === 'ring' && ports.some((o) => micaHitsPort(y, layerH, o)) ? 'slot' : base
     return (
       <group key={i} position-y={y0 + i * step}>
         <mesh geometry={geo[kind]} castShadow receiveShadow>
@@ -516,6 +527,7 @@ function CaseModel({
   part = 'all',
   screws,
   badgeScrews,
+  seeThroughWeight = false,
   children,
 }: {
   model: string
@@ -529,6 +541,8 @@ function CaseModel({
   screws?: CaseDef['weightScrews']
   /** vít cố định bắt badge (đi cùng nắp) */
   badgeScrews?: CaseDef['badgeScrews']
+  /** tạ mờ đi (bước lắp / cắm dây daughterboard: tạ trong lòng case như Exodus60 che DTB nằm bên dưới) */
+  seeThroughWeight?: boolean
   children: ReactNode
 }) {
   const { nodes } = useGLTF(`/models/keyboards/${model}.glb`) as unknown as {
@@ -549,7 +563,13 @@ function CaseModel({
       )}
       {nodes.weight && part !== 'top' && (
         <mesh geometry={nodes.weight.geometry} castShadow receiveShadow>
-          <meshStandardMaterial {...WEIGHT_METALS[weight]} side={DoubleSide} />
+          <meshStandardMaterial
+            {...WEIGHT_METALS[weight]}
+            side={DoubleSide}
+            transparent={seeThroughWeight}
+            opacity={seeThroughWeight ? 0.25 : 1}
+            depthWrite={!seeThroughWeight}
+          />
         </mesh>
       )}
       {screws && part !== 'top' && <FixedScrews list={screws} kind="flat" />}
@@ -571,7 +591,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const color = useGame((s) => s.inventory.case!.color)
   const step = useStep()
   const stepIdx = useStepIdx()
-  const { closed, inCase } = useBuild()
+  const { closed, inCase, jst } = useBuild()
   const { dropInCase, closeCase, placeTopCase, nextStep } = useGame.getState()
   const topRef = useRef<THREE.Group>(null)
   const { caseDef, screwSide } = ctx
@@ -639,8 +659,13 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const topFlip = viewFlip && placing && !!step && TOP_FLIP_STEPS.includes(step)
   const flipRef = useRef<THREE.Group>(null)
   const topMid = (Y.split + Y.caseTop) / 2
+  // top mount: case trên đã bắt vít vào plate → bước cắm dây JST dựng lên cùng board
+  const stand = topMount && step === 'jst' && !jst ? jstStand(ctx.depth) : null
   useFrame((_, dt) => {
-    lerpTo(topRef, 'y', topY, dt, 6)
+    lerpTo(topRef, 'y', stand?.y ?? topY, dt, 6)
+    lerpTo(topRef, 'z', stand?.z ?? 0, dt, 6)
+    const tr = topRef.current?.rotation
+    if (tr) tr.x += ((stand?.tilt ?? 0) - tr.x) * Math.min(1, dt * 6)
     const r = flipRef.current?.rotation
     if (r) r.x += ((topFlip ? Math.PI : 0) - r.x) * Math.min(1, dt * 5)
   })
@@ -694,6 +719,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               part={two ? 'bottom' : 'all'}
               screws={caseDef.weightScrews}
               badgeScrews={caseDef.badgeScrews}
+              seeThroughWeight={!!ctx.dtb && (step === 'dtb' || step === 'jst')}
             >
               {/* STL in 3D hay có mặt lật chiều → vẽ 2 mặt cho khỏi trong suốt */}
               <CaseMaterial
@@ -713,6 +739,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               floor
               pockets={ctx.feet}
               holes={screwHoles}
+              ports={ports}
               cutouts={cutouts}
             />
           ) : (
@@ -844,6 +871,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
                     y1={Y.plateBot}
                     mat={mat(top.hover)}
                     holes={screwHoles}
+                    ports={ports}
                   />
                   <Layers
                     W={W}
@@ -852,6 +880,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
                     y1={Y.caseTop}
                     mat={mat(top.hover)}
                     holes={screwHoles}
+                    ports={ports}
                     cutouts={cutouts}
                   />
                 </>
@@ -863,6 +892,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
                   y1={Y.caseTop}
                   mat={mat(top.hover)}
                   holes={screwHoles}
+                  ports={ports}
                   cutouts={cutouts}
                 />
               ) : (

@@ -14,7 +14,12 @@ const OUT = 'public/models/keyboards'
 // turn: xoay thêm 180° quanh trục đứng. Planck là khay phẳng (2 mép cao bằng nhau) nên đoán mặt trước theo
 // "phía thấp hơn" bị ngược → lỗ cổng USB-C ra trước phải; xoay lại để cổng ở sau bên trái như bàn thật
 const SOURCES = {
-  'bakeneko60/case': { file: 'assets/keyboards/bakeneko60/case/case.step', kind: 'step' },
+  // Bakeneko: đáy vát nên đoán theo "phía thấp hơn" cũng ngược → lỗ USB-C (cổng daughterboard) ra trước, xoay lại ra sau
+  'bakeneko60/case': {
+    file: 'assets/keyboards/bakeneko60/case/case.step',
+    kind: 'step',
+    turn: true,
+  },
   'planck/case': { file: 'assets/keyboards/planck/case/planck.stl', kind: 'stl', turn: true },
 }
 

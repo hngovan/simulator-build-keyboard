@@ -445,6 +445,20 @@ export interface ScrewPoint extends Point {
   key?: string
 }
 
+/**
+ * Chỗ đặt daughterboard (u, toạ độ cảnh): tâm x, z + cao độ `y` mặt dưới mạch, nghiêng `tilt` (rad, quanh trục x, theo sàn
+ * case CAD dốc); `floor` = sàn ngay dưới (mạch kê trụ đỡ cao hơn sàn thì có trụ, đầu dây chưa cắm nằm trên sàn)
+ */
+export interface DtbSpot {
+  x: number
+  z: number
+  y: number
+  tilt: number
+  floor: number
+  /** case CAD có rãnh đi dây JST: đường dây dọc rãnh từ miệng JST DTB tới đầu rãnh ([x, y đáy rãnh, z], u, toạ độ cảnh);
+   * cổng JST trên PCB nằm ngay trên đầu rãnh */
+  groove?: [number, number, number][]
+}
 export interface BuildContext {
   layout: LayoutId
   variant: Variant
@@ -466,8 +480,8 @@ export interface BuildContext {
   gaskets: (Point & { w?: number; rot?: number })[]
   /** hốc feet dưới đáy case (u, toạ độ cảnh): tâm x, z + bán kính r */
   feet: FootPocket[]
-  /** daughterboard (u, toạ độ cảnh): tâm x, z mặt dưới mạch nằm trên sàn case; null = case không lắp DTB */
-  dtb: { x: number; z: number } | null
+  /** daughterboard (u, toạ độ cảnh); null = case không lắp DTB */
+  dtb: DtbSpot | null
   screwSide: 'top' | 'bottom'
   pcbType: string
   /** không plate: bỏ bước foam + plate, switch hàn thẳng vào PCB */

@@ -3,6 +3,7 @@
 // chụp ảnh trong game) → public/thumbs/<khoá>.webp + bảng tra src/data/generated/thumbs.json. Đổi model / thêm sản phẩm thì chạy lại.
 //   bun run dev   (cửa sổ khác)
 //   bun run bake:thumbs [url dev, mặc định http://localhost:5173]
+//   ONLY=bakeneko60 bun run bake:thumbs   (chỉ chụp lại ảnh có khoá chứa chuỗi này, giữ ảnh khác, gộp vào bảng tra cũ)
 // Chrome: đặt CHROME=<đường dẫn> nếu không nằm chỗ mặc định.
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
@@ -13,6 +14,8 @@ const URL_DEV = process.argv[2] ?? 'http://localhost:5173'
 const OUT_DIR = 'public/thumbs'
 const MANIFEST = 'src/data/generated/thumbs.json'
 const PORT = 9341
+/** chỉ chụp lại khoá chứa chuỗi này (đổi 1 model), không xoá ảnh cũ */
+const ONLY = process.env.ONLY
 const CHROME =
   process.env.CHROME ??
   {
@@ -88,14 +91,18 @@ try {
   await send('Page.navigate', { url: URL_DEV })
   for (let i = 0; i < 120 && !(await ev<boolean>('!!window.__bakeThumbs').catch(() => false)); i++)
     await sleep(500)
-  const keys = await ev<string[]>('window.__bakeThumbs.keys()')
-  if (!keys?.length) throw new Error('Không lấy được danh sách ảnh (window.__bakeThumbs)')
+  const all = await ev<string[]>('window.__bakeThumbs.keys()')
+  if (!all?.length) throw new Error('Không lấy được danh sách ảnh (window.__bakeThumbs)')
+  const keys = ONLY ? all.filter((k) => k.includes(ONLY)) : all
+  if (!keys.length) throw new Error(`Không có ảnh nào khớp ONLY=${ONLY}`)
 
-  fs.rmSync(OUT_DIR, { recursive: true, force: true })
+  // chụp lại toàn bộ thì xoá ảnh cũ (bỏ ảnh của sản phẩm đã gỡ); ONLY thì giữ ảnh khác + bảng tra cũ
+  if (!ONLY) fs.rmSync(OUT_DIR, { recursive: true, force: true })
   fs.mkdirSync(OUT_DIR, { recursive: true })
-  const manifest: Record<string, string> = {}
+  const manifest: Record<string, string> = ONLY ? JSON.parse(fs.readFileSync(MANIFEST, 'utf8')) : {}
   const used = new Set<string>()
   let bytes = 0
+  let shot = 0
   for (const [i, key] of keys.entries()) {
     const file = fileOf(key)
     if (used.has(file)) throw new Error(`Trùng tên tệp: ${file} (${key})`)
@@ -108,11 +115,12 @@ try {
     fs.writeFileSync(path.join(OUT_DIR, file), buf)
     manifest[key] = file
     bytes += buf.length
+    shot++
     if ((i + 1) % 20 === 0) console.log(`  ${i + 1} / ${keys.length}`)
   }
   fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n')
   console.log(
-    `Xong: ${Object.keys(manifest).length} / ${keys.length} ảnh, ${(bytes / 1024 / 1024).toFixed(2)} MB → ${OUT_DIR}`,
+    `Xong: chụp ${shot} / ${keys.length} ảnh, ${(bytes / 1024 / 1024).toFixed(2)} MB → ${OUT_DIR} (bảng tra ${Object.keys(manifest).length} ảnh)`,
   )
 } finally {
   ws?.close()

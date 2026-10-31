@@ -1165,3 +1165,61 @@
   z 2,03), nắp có lỗ ren Ø2,06 cùng chỗ (z 3,7–4,6) → 2 vít đầu trụ M2 bắt từ trong nắp lên (`heads.badgeScrews` → `CaseDef.badgeScrews`).
   `WeightScrews` gộp thành `FixedScrews` (kind flat = ốc nón tạ còn 4mm / socket = M2 model dài 8mm còn 5mm, đầu nhô `lift` 2mm); badge vít vẽ
   cùng nắp. Đã đo bằng tia trong game: đỉnh vít 0,263u < thân badge 0,289u < mặt badge 0,41u → không xuyên.
+
+## Feet Bakeneko 60 dán sai chỗ (2026-10-31)
+
+- (người dùng gửi ảnh: "vị trí dán feet bị sai, case sai là bakeneko") `caseFeet.json` thiếu `bakeneko60/case` (các case CAD khác đều có)
+  → `feetPockets` rơi về 4 hốc của case dựng bằng code (`W/2 − 0.9`) nằm sát mép, lệch khỏi hốc thật dưới đáy. Chạy
+  `bun scripts/probe-case-feet.mjs bakeneko60/case` (bun chạy được script .mjs, máy không có node) → 4 hốc ±124,7mm, z −46 / 40, r 4,2;
+  đáy Bakeneko nghiêng nên 2 hốc sau cao 9,5mm. Script ghi JSON khác định dạng → chạy prettier lại cho diff chỉ còn mục mới.
+  Thêm case CAD mới mà quên dò feet thì bị y như vậy.
+
+## Bakeneko 60 quay ngược: lỗ USB ra phía người gõ (2026-10-31)
+
+- (người dùng gửi ảnh: "hướng đặt case cũng bị ngược, vị trí cổng dtb phải nằm phía trên mới đúng sao lại hướng vào người")
+  `convert-cases.mjs` đoán mặt trước = "phía có đỉnh thấp hơn"; Bakeneko đoán ngược (vách cao 29mm ra trước, lỗ USB-C ra trước, đáy vát
+  ngược). Thêm `turn: true` cho `bakeneko60/case` (xoay 180°, như Planck) → `bun scripts/convert-cases.mjs` (bun chạy .mjs; Planck ra file
+  khác byte nên chép lại bản cũ, chỉ đổi Bakeneko). Đo lại: vách trong ±46mm (z) / ±133mm (x) cân đối → board vẫn giữa lòng case.
+  Dò lại feet (`probe-case-feet.mjs bakeneko60/case`): 2 hốc cao 9,5mm giờ ở phía trước = case dày dần về sau, đúng góc gõ (trước khi xoay ở
+  phía sau, xác nhận hướng cũ sai). Ảnh thẻ chụp lại riêng 9 màu: `bake-shop-thumbs.ts` thêm `ONLY` (chỉ chụp khoá chứa chuỗi, giữ ảnh khác
+  - gộp bảng tra), `ONLY=bakeneko60 bun scripts/bake-shop-thumbs.ts`.
+
+## Thùng đóng gói không thấy đáy (2026-10-31)
+
+- (người dùng gửi ảnh: "bước cho phím vào thùng mà đáy thùng không có") `PackBox`: mặt lòng thùng đặt y = 0,02 (u, so mặt bàn) thấp hơn
+  mặt thảm cắt (Y.table + 0,005, dày 0,07) → bị thảm che, nhìn xuyên thấy thảm. Đáy lên `FLOOR_Y` 0,08 (ngay trên thảm); ẩn lúc thùng
+  bay vòng qua bàn phím úp xuống (không xuyên qua phím), đứng chờ / úp xong thì hiện (đáy nằm dưới đáy case).
+
+## Chữ keycap hiện sau khi lắp (2026-10-31)
+
+- (người dùng: "tới bước gắn keycap thì phải render đủ kí tự trên keycap rồi mới hiển thị màn build, hiện tại gắn vào rồi mới show kí tự")
+  Chữ keycap là drei `Text` (troika) dựng glyph bất đồng bộ, không suspend → keycap hiện trước, chữ hiện sau. `Keycap.tsx` truyền
+  `characters={LEGEND_CHARS}` (ASCII 33–126 + '→←'; ↑ ↓ vẽ bằng '→' xoay): drei `preloadFont` + suspend tới khi font + glyph xong →
+  Suspense bàn build (`StepLoading`) giữ lớp chờ. Chỉ chờ lần đầu (cache theo font + chuỗi ký tự). Khung xem 3D có `Board` cũng suspend
+  (Canvas R3F tự bọc Suspense). Thêm ký tự nhãn mới ngoài ASCII thì thêm vào `LEGEND_CHARS`.
+
+## Daughterboard cho mọi case: mica + case CAD, vít canh lực, board dựng, rãnh dây (2026-11-01)
+
+- Người dùng: "đáng lẽ tất cả các case phải lắp được chứ", "1 số model đã có lỗ bắt ốc dtb sẵn rồi ko cần thêm vào, nhớ thêm lực bắt ốc như lúc
+  assem", "cổng jst trên dtb / pcb phải có sẵn, chỉ có step cắm dây", "các case có sẵn model 1 số có rãnh đi dây jst rồi nên check theo",
+  "đến bước lắp jst vào pcb thì phải lệch pcb lên dọc để thấy".
+- Mica xếp lớp: tấm viền nằm ngang tầm cổng USB khoét rãnh xuyên vách sau hết bề dày tấm (`micaLayerGeometry` `slots`, `micaHitsPort`,
+  `Layers ports`, kind `slot`); `dtbSpot` bỏ chặn mica.
+- Case CAD: `node scripts/probe-case-usb.mjs` → `src/data/caseUsb.json` (17 model): lưới tia ngang vào vách sau tìm cụm ô "sâu" kín cỡ lỗ USB
+  (không thấy lỗ xuyên thì dò lại hốc lõm nông — Exodus60 nắp HHKB / WKL chỉ có hốc 12,5 × 1,5mm); mặt trong vách = mặt thứ 2 của tia từ ngoài
+  ngay trên / dưới lỗ (tia từ trong ra vướng trụ); sàn 2 điểm dọc thân DTB (dốc > 12° coi là bậc: bỏ dốc). Bệ DTB có sẵn: bản đồ cao độ
+  quanh 2 lỗ vít dự kiến (±7, +6,25mm), cụm lõm (lỗ ốc trên bệ) / nhô (trụ) gần tâm cửa sổ nhất, không chạm mép → `mount` (13 / 17 model có).
+  Rãnh dây: BFS ô sàn thấp ≤ 3mm từ miệng JST, phần ngoài hốc DTB là dải hẹp (diện tích / chiều dài ≤ 20mm) → đường ngắn nhất tới đầu xa,
+  tối đa 60mm (`groove`: Bakeneko60, Repent75, RF Bruh, TA65; case mà miệng JST bị tạ / nắp che từ trên thì không dò được).
+- Game: `DtbSpot` (types) thêm `y` / `tilt` / `floor` / `groove`. Có bệ → nằm trên bệ, nghiêng theo sàn; không bệ → tâm USB-C ngang tâm lỗ,
+  lỗ cao hơn sàn > 0,5mm thì kê 2 trụ đỡ (vẽ trong `Daughterboard`). Tạ trong lòng case (Exodus60) mờ đi ở bước `dtb` / `jst`
+  (`CaseModel seeThroughWeight`) vì DTB nằm dưới tạ.
+- Vít M2 DTB: skill check canh lực như vít assem (`startSkill` + `torqueSpec` tua vít đang dùng, `SkillBar` trên lỗ): thiếu = chưa vào,
+  quá = trượt ren (`slips` `dtb-i`), `STRIP_TRIES` lần thì tuôn ren (`stripped`, vít coi như xong, chưa trừ điểm khi giao).
+- Cổng JST trên DTB (trong model) và trên PCB (`PcbJst`, vẽ cùng PCB từ đầu) có sẵn, không có bước gắn cổng; chỉ cắm dây (bước `dtb` cắm
+  vào DTB, bước `jst` cắm vào PCB). Case có rãnh: cổng PCB đặt ngay trên đầu rãnh (`pcbJstAt`), dây nằm dọc rãnh (`wireGeometries via`),
+  đầu chưa cắm nằm cuối rãnh.
+- Bước `jst`: board dựng gần đứng (`jstStand`: xoay x −1,35 rad, mép sau trên mép sau case, mặt dưới quay ra trước); top mount thì case trên
+  dựng theo. Đầu dây đã cắm đọc vị trí cổng theo group board thật (`boardGroup`, gán trong Board) → đi đúng khi dựng / nhấc / ngồi theo `seat`.
+- Đã thử Chrome ngầm (đơn dev): mica 60 có bước DTB, rãnh khoét; Exodus60 DTB trên bệ dưới tạ mờ; bước jst board dựng thấy cổng JST + socket
+  hotswap; Repent75 cổng PCB trên đầu rãnh phải. Chưa thử chơi tay trọn bước (bấm giữ vít, cắm dây, thả board vào case xem dây theo).

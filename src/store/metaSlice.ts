@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand'
-import { SHELF_SLOTS, fitBoxes, type BoxSpot } from '@/data/boxes'
+import { fitBoxes, type BoxSpot } from '@/data/boxes'
 import { randomOffers } from '@/data/orders'
 import { buildContext } from '@/data/steps'
 import type {
@@ -223,12 +223,12 @@ function fixVariant(layout: LayoutId, v: Variant = {}): Variant {
   return out
 }
 
-/** nâng cấp bản lưu chưa có thùng hàng: đơn đang build nằm trên bàn, còn lại xếp kệ cất đơn (quá ô thì ra kệ cửa) */
+/** nâng cấp bản lưu chưa có thùng hàng: đơn đang build nằm trên bàn, còn lại xếp kệ cuối hành lang */
 function oldBoxes(order: Order | null, building: boolean, waiting: string[]) {
   const boxes: Record<string, BoxSpot> = {}
   const rest = order && !building ? [order.id, ...waiting] : waiting
   rest.forEach((id, i) => {
-    boxes[id] = i < SHELF_SLOTS ? { at: 'shelf', slot: i } : { at: 'door', slot: i - SHELF_SLOTS }
+    boxes[id] = { at: 'door', slot: i }
   })
   return { boxes, benchBox: order && building ? order.id : null, held: null }
 }
@@ -259,7 +259,9 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   toast: (text, kind = 'info') => {
     const id = ++toastId
     set((s) => ({ toasts: [...s.toasts, { id, text, kind }].slice(-4) }))
-    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 3500)
+    // nhiều dòng (vd nhận kiện nhiều món) thì hiện lâu hơn cho kịp đọc
+    const ms = 3500 + 700 * (text.split('\n').length - 1)
+    setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), ms)
   },
   addReviews: (reviews) => {
     if (!reviews.length) return
@@ -356,7 +358,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       offers: (offers ?? (offer ? [offer] : randomOffers())).map(fix),
       jobs: (jobs ?? []).map((j) => ({ ...j, order: fix(j.order) })),
       packed: session?.packed ?? [],
-      // bản lưu cũ chưa có thùng: đơn đang build coi như trên bàn, đơn chờ / đơn chưa build / đơn đóng gói chưa gửi xếp lên kệ cất đơn
+      // bản lưu cũ chưa có thùng: đơn đang build coi như trên bàn, đơn chờ / đơn chưa build / đơn đóng gói chưa gửi xếp kệ cuối hành lang
       ...(session?.boxes
         ? { boxes: fitBoxes(session.boxes) }
         : oldBoxes(order, !!rest.build, [

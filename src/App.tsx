@@ -68,7 +68,9 @@ export default function App() {
       )}
       {screen === 'bench' && (
         <>
-          {!zooming && (walk ? <RoomHud /> : hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
+          {/* HUD đi lại (số thùng ở hành lang, trạng thái) chỉ hiện khi đã tải xong: lúc còn tải màn chờ chỉ phủ mờ */}
+          {!zooming &&
+            (walk ? !loading && <RoomHud /> : hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
           {!zooming && !walk && guide && !loading && <BenchDialog />}
           <ShelfViewer />
           {calendar && <CalendarDialog />}

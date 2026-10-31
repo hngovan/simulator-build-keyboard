@@ -1,4 +1,4 @@
-import { Package } from 'lucide-react'
+import { Box } from 'lucide-react'
 import { useGame } from '@/store'
 import { parcelStacks } from '@/data/shipping'
 import { BUTTON_TONES } from '@/components/ui/buttonTones'
@@ -47,25 +47,31 @@ export function RoomHud() {
       <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-end max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
         <StatusChips />
       </div>
-      {/* viên cam kiểu nút game: ô icon trắng (hộp cam) + chữ trắng đậm */}
+      {/* gọn nhất: ô vuông cam viền cam đậm hình thùng + ô số trắng viền cam ở góc + vòng sáng lan ra; rê chuột mới hiện chữ (tooltip) */}
       {atDoor > 0 && (
         <div
-          className={cn(
-            'pointer-events-none fixed top-3 left-3 z-[5] flex items-center gap-2.5 rounded-xl py-1.5 pr-4 pl-1.5 font-head text-base font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.35),inset_0_2px_0_rgba(255,255,255,0.25)] [text-shadow:0_1px_0_#0004]',
-            BUTTON_TONES.orange,
-          )}
+          title={`${atDoor} thùng hàng ở hành lang`}
+          className="fixed top-3 left-3 z-[5] size-11"
         >
-          <span className="grid size-7 place-items-center rounded-lg bg-white/90 text-orange shadow-[0_2px_0_rgba(0,0,0,0.2)]">
-            <Package className="size-[18px]" strokeWidth={2.6} />
+          <span className="absolute inset-0 animate-ping rounded-xl bg-orange/60" />
+          <span
+            className={cn(
+              'relative grid size-11 place-items-center rounded-xl border-[3px] border-[#b4471d] shadow-[0_4px_0_rgba(0,0,0,0.35)]',
+              BUTTON_TONES.orange,
+            )}
+          >
+            <Box className="size-6" strokeWidth={2.6} />
           </span>
-          {atDoor} thùng hàng ở hành lang
+          <span className="absolute -top-2.5 -right-2.5 grid h-6 min-w-6 place-items-center rounded-lg border-[3px] border-orange bg-white px-1 font-head text-sm leading-none font-extrabold text-[#b4471d]">
+            {atDoor}
+          </span>
         </div>
       )}
       {heldWho && !hover && !hoverNote && (
         <div className="pointer-events-none fixed bottom-16 left-1/2 z-[5] -translate-x-1/2 rounded-xl bg-[rgba(14,16,24,0.85)] px-4 py-2 font-head text-lg font-bold text-ink max-md:bottom-3">
           {heldPacked
-            ? `Đang cầm thùng đã đóng gói của ${heldWho}: mang ra kệ giao hàng cạnh chậu cây`
-            : `Đang cầm thùng đơn của ${heldWho}: bấm bàn build để đặt, hoặc cất vào kệ cất đơn`}
+            ? `Đang cầm thùng đã đóng gói của ${heldWho}: đặt lên kệ giao hàng trong phòng`
+            : `Đang cầm thùng đơn của ${heldWho}: bấm bàn build để đặt, hoặc cất lại kệ cuối hành lang`}
         </div>
       )}
       {/* rê vào vật bấm được: dòng hướng dẫn đổi thành "Nhấn [chuột trái] {việc}" (cùng kiểu chữ trắng, không khung) */}

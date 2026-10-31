@@ -9,7 +9,7 @@ import { ResetCamButton } from './CamModeButton'
 
 /**
  * Khung giữa đáy khi bàn build chưa vào build: bàn trống (ra kệ cửa lấy thùng đơn), thùng đơn còn thiếu linh kiện (danh sách
- * thiếu + chỗ mua, đủ thì bắt đầu build), hoặc thùng vừa đóng gói (cầm ra kệ giao hàng)
+ * thiếu + chỗ mua, đủ thì bắt đầu build), hoặc thùng vừa đóng gói (cầm đặt lên kệ giao hàng trong phòng)
  */
 function BenchStatus() {
   const s = useGame()
@@ -28,8 +28,8 @@ function BenchStatus() {
       'Bàn build đang trống',
       <div className="text-base">
         {s.order || s.jobs.length
-          ? 'Đứng dậy ra kệ hàng cuối hành lang (hoặc kệ cất đơn) cầm thùng đơn, mang về bấm bàn để đặt lên'
-          : 'Chưa nhận đơn nào: về máy tính mở Mezzenger nhận đơn, thùng đơn tới kệ ngoài cửa / kệ cất đơn'}
+          ? 'Đứng dậy ra kệ hàng cuối hành lang cầm thùng đơn, mang về bấm bàn để đặt lên'
+          : 'Chưa nhận đơn nào: về máy tính mở Mezzenger nhận đơn, thùng đơn tới kệ cuối hành lang'}
       </div>,
     )
   const who = boxCustomer(s, box)
@@ -37,7 +37,7 @@ function BenchStatus() {
   if (isPackedBox(s, box))
     return (
       <ControlsHint>
-        Nhấn <MouseIcon btn="right" /> để cầm thùng lên mang ra kệ giao hàng
+        Nhấn <MouseIcon btn="right" /> để cầm thùng lên đặt vào kệ giao hàng
         {s.packed.some((p) => p.order.id === box && p.session?.build) && (
           <>
             , nhấn <KeyCap>B</KeyCap> để mở thùng build lại

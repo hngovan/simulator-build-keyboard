@@ -19,7 +19,6 @@ import { cartLine, optName } from '@/data/cart'
 import type { ShopCategory, ToolItem } from '@/types'
 import { ListFilterPicker } from './OptionFilter'
 import { CartList } from './CartList'
-import { ParcelList } from './ParcelList'
 import { ProductCard } from './ProductCard'
 import { SaleRibbon } from './SaleRibbon'
 import { shopFilters } from './shopFilters'
@@ -141,13 +140,11 @@ export function Shopii() {
   const cart = useGame((s) => s.cart)
   // số món đã thêm (cộng số lượng từng dòng) cho badge giỏ hàng
   const cartQty = cart.reduce((a, l) => a + l.qty, 0)
-  // kiện đã đặt chưa nhận (khu "Chờ giao hàng")
-  const parcels = useGame((s) => s.parcels)
-  const arrived = parcels.filter((p) => p.arrive <= day).length
-  // khu bên phải: lưới sản phẩm / Chờ giao hàng / Giỏ hàng
-  const [view, setView] = useState<'grid' | 'ship' | 'cart'>('grid')
+  // số kiện đã tới cửa chờ nhận (dòng phụ banner)
+  const arrived = useGame((s) => s.parcels.filter((p) => p.arrive <= s.day).length)
+  // khu bên phải: lưới sản phẩm / Giỏ hàng
+  const [view, setView] = useState<'grid' | 'cart'>('grid')
   const shipView = view !== 'grid'
-  const setShipView = (on: boolean) => setView(on ? 'ship' : 'grid')
   // mục đang xem nằm trong store để chỗ khác mở thẳng đúng mục (vd ô đồ thiếu trên bàn mod)
   const cat = useGame((s) => s.shopCat)
   // ô tìm kiếm: `query` = chữ đang gõ, `applied` = chữ đã tìm (debounce SEARCH_MS sau lần gõ cuối)
@@ -161,9 +158,8 @@ export function Shopii() {
   // lúc đang gõ thì chưa (trước tính cả `query !== applied` nên vừa gõ đã loading)
   const shownQuery = useDeferredValue(applied)
   const searchBusy = shownQuery !== applied
-  const clearSearch = () => (setQuery(''), setApplied(''))
   const setCat = (shopCat: ShopCategory) => {
-    setShipView(false)
+    setView('grid')
     useGame.setState({ shopCat })
   }
   // bộ lọc trong mục (case theo form factor, switch theo loại, dụng cụ theo nhóm); đổi mục thì về "Tất cả"
@@ -220,7 +216,7 @@ export function Shopii() {
         )}
       </div>
       <div className="flex min-h-0 flex-1 gap-3 max-md:flex-col">
-        {/* cột trái cố định: mục hàng cuộn riêng nếu dài, giỏ hàng + đơn đang giao ghim đáy cột */}
+        {/* cột trái cố định: mục hàng cuộn riêng nếu dài, giỏ hàng ghim đáy cột */}
         <div className="flex w-[200px] shrink-0 flex-col gap-3 max-md:w-auto">
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto max-md:flex-row max-md:flex-wrap">
             {(Object.entries(SHOP_CATS) as [ShopCategory, string][]).map(([id, name]) => (
@@ -238,7 +234,7 @@ export function Shopii() {
             ))}
           </div>
           <div className="flex shrink-0 flex-col gap-1.5">
-            {/* giỏ hàng: cùng kiểu tab "Chờ giao hàng" (ô số món), có hàng thì viền cam */}
+            {/* giỏ hàng: tab có ô số món, có hàng thì viền cam */}
             <TabChip
               active={view === 'cart'}
               icon={ShoppingCart}
@@ -253,19 +249,6 @@ export function Shopii() {
               )}
             >
               Giỏ hàng
-            </TabChip>
-            {/* kiện đã đặt chưa nhận: đang giao / đã tới cửa */}
-            <TabChip
-              active={view === 'ship'}
-              icon={Truck}
-              count={parcels.length}
-              title={
-                arrived ? `${arrived} kiện đã tới cửa, ra cửa nhận` : 'Kiện hàng đã đặt chưa nhận'
-              }
-              onClick={() => (clearSearch(), setShipView(true))}
-              className="w-full"
-            >
-              Chờ giao hàng
             </TabChip>
           </div>
         </div>
@@ -302,7 +285,6 @@ export function Shopii() {
               )}
             </div>
           )}
-          {view === 'ship' && <ParcelList />}
           {view === 'cart' && <CartList />}
           <div
             hidden={shipView}

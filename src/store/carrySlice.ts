@@ -1,12 +1,12 @@
 import type { StateCreator } from 'zustand'
-import { SHELF_SLOTS, SHIP_SLOTS, slotTaken, type BoxSpot } from '@/data/boxes'
+import { SHIP_SLOTS, freeSlot, slotTaken, type BoxSpot } from '@/data/boxes'
 import type { GameState } from '.'
 import { stashActive } from './shopSlice'
 import { buildContext } from '@/data/steps'
 
 /**
  * Cầm / đặt thùng hàng trong phòng (đi lại, góc nhìn người): nhận đơn thì thùng đơn tới kệ ngoài cửa, cầm về đặt lên bàn build
- * mới build được; đổi đơn thì cầm đơn dở cất lên kệ cất đơn; đóng gói xong cầm thùng ra kệ giao hàng cạnh chậu cây = gửi khách.
+ * mới build được; đổi đơn thì cầm đơn dở cất lại kệ cuối hành lang; đóng gói xong cầm thùng đặt lên kệ giao hàng trong phòng = gửi khách.
  * Mỗi lúc cầm 1 thùng, bàn build để 1 thùng. Id thùng = id đơn (đơn đã đóng gói vẫn giữ id)
  */
 export interface CarrySlice {
@@ -20,11 +20,11 @@ export interface CarrySlice {
   pickBox: (id: string) => void
   /** cầm thùng trên bàn lên (đơn dở giữ nguyên tiến độ); đang ngồi thì đứng dậy */
   pickBench: () => void
-  /** cất thùng đang cầm vào ô kệ cất đơn */
-  placeShelf: (slot: number) => void
+  /** cất thùng đơn đang cầm lại kệ cuối hành lang (ô trống đầu tiên, hết kệ thì xếp sàn) */
+  placeDoor: () => void
   /** đặt thùng đơn đang cầm lên bàn build: chuyển sang đơn đó (bấm B mới vào build); trả về false nếu không đặt được */
   placeBench: () => boolean
-  /** đặt thùng đã đóng gói vào kệ giao hàng (cạnh chậu cây) = gửi cho khách */
+  /** đặt thùng đã đóng gói vào kệ giao hàng (trong phòng) = gửi cho khách */
   placeShip: (slot: number) => void
   /** thùng đã đóng gói (chưa gửi) trên bàn: mở ra, trả đơn về đang build nguyên trạng để sửa / làm tiếp, đóng gói lại thì chấm lại */
   unpackBox: () => void
@@ -68,10 +68,15 @@ export const createCarrySlice: StateCreator<GameState, [], [], CarrySlice> = (se
     // đang ngồi thì đứng dậy; đang đi lại (chuột phải vào bàn) thì cầm luôn
     if (!s.walk) s.standUp('bench')
   },
-  placeShelf: (slot) => {
+  placeDoor: () => {
     const s = get()
-    if (!s.held || slot < 0 || slot >= SHELF_SLOTS || slotTaken(s.boxes, 'shelf', slot)) return
-    set({ boxes: { ...s.boxes, [s.held]: { at: 'shelf', slot } }, held: null })
+    if (!s.held) return
+    if (isPackedBox(s, s.held))
+      return s.toast('Thùng này đóng gói rồi: đặt lên kệ giao hàng trong phòng', 'bad')
+    set({
+      boxes: { ...s.boxes, [s.held]: { at: 'door', slot: freeSlot(s.boxes, 'door') } },
+      held: null,
+    })
   },
   placeBench: () => {
     const s = get()
@@ -82,7 +87,7 @@ export const createCarrySlice: StateCreator<GameState, [], [], CarrySlice> = (se
       return false
     }
     if (isPackedBox(s, id)) {
-      s.toast('Thùng này đóng gói rồi: mang ra kệ giao hàng cạnh chậu cây', 'bad')
+      s.toast('Thùng này đóng gói rồi: đặt lên kệ giao hàng trong phòng', 'bad')
       return false
     }
     if (s.order?.id !== id) {

@@ -2209,6 +2209,8 @@ export interface InventoryCheck {
   cat: PartCategory
   ok: boolean
   msg: string
+  /** có món nhưng sai loại khách cần (coi như chưa có: UI hiện loại khách cần, không hiện tên món đang có) */
+  wrong?: boolean
 }
 
 // ---------- số lượng stab ----------
@@ -2272,20 +2274,27 @@ function keycapCheck(inv: Inventory, order: Order): InventoryCheck {
   if (!inv.keycap) return { cat: 'keycap', ok: false, msg: 'Chưa có keycap' }
   const kit = KEYCAP_KITS[inv.keycap.kit]
   if (!kit.layouts.includes(order.layout))
-    return { cat: 'keycap', ok: false, msg: 'Kit keycap không đủ phím cho layout' }
+    return {
+      cat: 'keycap',
+      ok: false,
+      wrong: true,
+      msg: `Chưa có keycap đủ phím layout ${LAYOUTS[order.layout].name}`,
+    }
   const want = order.keycapKit && KEYCAP_KITS[order.keycapKit].profile
   if (want && kit.profile !== want)
     return {
       cat: 'keycap',
       ok: false,
-      msg: `Khách muốn profile ${want.toUpperCase()}, đang có ${kit.profile.toUpperCase()}`,
+      wrong: true,
+      msg: `Chưa có keycap profile ${want.toUpperCase()}`,
     }
   const mat = keycapMaterialOf(inv.keycap)
   if (order.keycapMaterial && mat !== order.keycapMaterial)
     return {
       cat: 'keycap',
       ok: false,
-      msg: `Khách muốn keycap ${KEYCAP_MATERIALS[order.keycapMaterial].name}, đang có ${KEYCAP_MATERIALS[mat].name}`,
+      wrong: true,
+      msg: `Chưa có keycap ${KEYCAP_MATERIALS[order.keycapMaterial].name}`,
     }
   return { cat: 'keycap', ok: true, msg: 'OK' }
 }
@@ -2346,26 +2355,34 @@ function checkParts(inv: Inventory, order: Order, installedSwitches: number): In
         caseFits(c, order.layout) &&
         (!order.caseId || inv.case!.id === order.caseId) &&
         (!order.mount || c.mounts.includes(order.mount)),
+      wrong:
+        !!c &&
+        (!caseFits(c, order.layout) ||
+          (!!order.caseId && inv.case!.id !== order.caseId) ||
+          (!!order.mount && !c.mounts.includes(order.mount))),
       msg: !c
         ? 'Chưa có case'
         : !caseFits(c, order.layout)
-          ? `Case không vừa layout ${lay.name}`
+          ? `Chưa có case vừa layout ${lay.name}`
           : order.caseId && inv.case!.id !== order.caseId
-            ? `Khách cần case ${CASES[order.caseId]?.name ?? order.caseId}, đang có ${c.name}`
+            ? `Chưa có case ${CASES[order.caseId]?.name ?? order.caseId}`
             : order.mount && !c.mounts.includes(order.mount)
-              ? `Khách cần ${MOUNTS[order.mount].name}, case ${c.name} không làm được`
+              ? `Chưa có case làm được ${MOUNTS[order.mount].name}`
               : 'OK',
     },
     {
       cat: 'pcb',
       // khách đòi PCB hàn / hotswap thì phải mua đúng loại
       ok: inv.pcb?.layout === order.layout && (!order.pcbType || inv.pcb.type === order.pcbType),
+      wrong:
+        !!inv.pcb &&
+        (inv.pcb.layout !== order.layout || (!!order.pcbType && inv.pcb.type !== order.pcbType)),
       msg: !inv.pcb
         ? 'Chưa có PCB'
         : inv.pcb.layout !== order.layout
-          ? `Cần PCB ${lay.name}`
+          ? `Chưa có PCB ${lay.name}`
           : order.pcbType && inv.pcb.type !== order.pcbType
-            ? `Khách cần PCB ${PCB_TYPES[order.pcbType].name}`
+            ? `Chưa có PCB ${PCB_TYPES[order.pcbType].name}`
             : 'OK',
     },
     {
@@ -2374,14 +2391,18 @@ function checkParts(inv: Inventory, order: Order, installedSwitches: number): In
         inv.plate?.layout === order.layout &&
         (!order.plateMaterial || inv.plate.material === order.plateMaterial) &&
         !platelessIssue(inv),
+      wrong:
+        !!inv.plate &&
+        (inv.plate.layout !== order.layout ||
+          (!!order.plateMaterial && inv.plate.material !== order.plateMaterial)),
       msg: !inv.plate
         ? 'Chưa có plate'
         : inv.plate.layout !== order.layout
-          ? `Cần plate ${lay.name}`
+          ? `Chưa có plate ${lay.name}`
           : platelessIssue(inv)
             ? platelessIssue(inv)!
             : order.plateMaterial && inv.plate.material !== order.plateMaterial
-              ? `Khách cần plate ${PLATES[order.plateMaterial]?.name ?? order.plateMaterial}, đang có ${PLATES[inv.plate.material].name}`
+              ? `Chưa có plate ${PLATES[order.plateMaterial]?.name ?? order.plateMaterial}`
               : 'OK',
     },
     // khách đòi đúng loại stab thì phải đúng loại đó
@@ -2389,17 +2410,20 @@ function checkParts(inv: Inventory, order: Order, installedSwitches: number): In
       ? {
           cat: 'stab',
           ok: false,
-          msg: `Khách cần stab ${STABS[order.stabType]?.name ?? order.stabType}, đang có ${STABS[inv.stab.type].name}`,
+          wrong: true,
+          msg: `Chưa có stab ${STABS[order.stabType]?.name ?? order.stabType}`,
         }
       : stabCheck(inv.stab, stabNeed(keys), needStab),
     {
       cat: 'switch',
       // khách đòi loại switch nào thì phải đúng loại đó
       ok: (inv.switch?.count ?? 0) >= need && (!inv.switch || switchOk(inv.switch.type, order)),
+      // switch sai loại / hết con = coi như chưa có, không nhắc loại đang có (dễ hiểu nhầm là có rồi)
+      wrong: !!inv.switch && (!inv.switch.count || !switchOk(inv.switch.type, order)),
       msg:
-        inv.switch && !switchOk(inv.switch.type, order)
-          ? `Khách cần switch ${switchWant(order)}, đang có ${order.switchType ? SWITCHES[inv.switch.type].name : SWITCH_KINDS[switchKindOf(inv.switch.type)]}`
-          : `Cần ${need} con, đang có ${inv.switch?.count ?? 0}`,
+        !inv.switch?.count || !switchOk(inv.switch.type, order)
+          ? `Chưa có switch${switchWant(order) ? ` ${switchWant(order)}` : ''}, cần ${need} con`
+          : `Cần ${need} con, đang có ${inv.switch.count}`,
     },
     keycapCheck(inv, order),
   ]

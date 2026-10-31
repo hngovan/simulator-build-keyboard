@@ -1,6 +1,7 @@
 import type {
   BuildContext,
   BuildState,
+  DtbSpot,
   FootPocket,
   Inventory,
   Key,
@@ -14,6 +15,7 @@ import type {
 import { blockerGaps, getLayout } from './layouts'
 import { CASES, STABS, TOOLS, caseModelOf, isPlateless } from './parts'
 import CASE_FEET from './caseFeet.json'
+import CASE_USB from './caseUsb.json'
 import { stabModRules } from './mods'
 import stabModel from './stabModel.json'
 import { plateUniversal } from './generated/plateUniversal'
@@ -72,11 +74,11 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   dtb: {
     title: 'Lắp daughterboard',
-    hint: 'Click hốc vách sau case để đặt daughterboard (cổng USB-C quay ra lỗ), click 2 lỗ vít M2 để bắt vít, rồi click đầu cắm JST để cắm dây',
+    hint: 'Click hốc vách sau case để đặt daughterboard (cổng USB-C quay ra lỗ), nhấn giữ 2 lỗ vít M2 canh lực siết, rồi click đầu dây để cắm vào cổng JST có sẵn trên DTB',
   },
   jst: {
     title: 'Cắm dây JST vào PCB',
-    hint: 'Board đang nhấc trên case: click đầu dây JST nằm trong case để cắm vào cổng JST mặt dưới PCB',
+    hint: 'Board dựng lên cho thấy mặt dưới: click đầu dây JST nằm trong case để cắm vào cổng JST có sẵn dưới PCB',
   },
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
   trayScrew: {
@@ -98,7 +100,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   pack: {
     title: 'Đóng gói',
-    hint: 'Bấm thùng carton cạnh bàn phím để cho phím vào thùng. Đóng xong cầm thùng ra kệ giao hàng cạnh chậu cây (đầu hành lang) để gửi khách',
+    hint: 'Bấm thùng carton cạnh bàn phím để cho phím vào thùng. Đóng xong cầm thùng đặt lên kệ giao hàng trong phòng (tường phải) để gửi khách',
   },
 }
 
@@ -299,7 +301,13 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   // dán feet vào đáy case trước khi lắp board vào case
   steps.push('feet')
   // daughterboard: bắt vào case dưới khi case còn trống, cắm dây vào PCB ngay trước lúc thả board
-  const dtb = dtbSpot(caseDef, width, depth, caseDef.pieces === 2 ? caseScrews : [])
+  const dtb = dtbSpot(
+    caseModelOf(caseDef, order.layout, order.variant),
+    width,
+    depth,
+    origin,
+    caseDef.pieces === 2 ? caseScrews : [],
+  )
   if (dtb) steps.push('dtb')
   if (topMount) steps.push('topCase', 'topScrew')
   if (dtb) steps.push('jst')
@@ -468,22 +476,64 @@ export const DTB_MM = {
 export const USB_PORT_MM = { w: 11.5, h: 5.5, r: 2 }
 
 /**
- * Chỗ đặt DTB (u, tâm mặt dưới mạch trên sàn case): sát mặt trong vách sau, x gần giữa nhất mà lỗ cổng USB không chạm
- * lỗ vít case trong vách sau. Chỉ case dựng bằng code, vỏ liền khối (không mica xếp lớp; case CAD chưa dò lỗ USB) → null
+ * Chỗ đặt DTB. Case dựng bằng code: trên sàn, sát mặt trong vách sau, x gần giữa nhất mà lỗ cổng USB không chạm lỗ vít case
+ * trong vách sau (vỏ liền khối khoét lỗ, mica khoét rãnh ở tấm ngang tầm cổng). Case CAD: theo lỗ USB có sẵn trong model
+ * (`caseUsb.json`, `node scripts/probe-case-usb.mjs`): model có bệ / trụ bắt ốc DTB sẵn thì nằm đúng đó; không thì tâm cổng
+ * USB-C ngang tâm lỗ, mép sau sát mặt trong vách, lỗ cao hơn sàn thì kê trụ đỡ (không nghiêng), không thì nằm trên sàn nghiêng
  */
+/** số đo lỗ USB / sàn / bệ DTB của 1 model case CAD (mm, hệ model; xem scripts/probe-case-usb.mjs) */
+interface CaseUsb {
+  hole: number[]
+  inner: number
+  floor: number
+  slope: number
+  mount?: number[]
+  groove?: number[][]
+}
 export function dtbSpot(
-  caseDef: { model?: string; material: string },
+  model: string | undefined,
   width: number,
   depth: number,
+  origin: [number, number],
   caseScrews: Point[],
-) {
-  if (caseDef.model || caseDef.material === 'mica') return null
+): DtbSpot | null {
+  if (model) {
+    const usb = (CASE_USB as Record<string, CaseUsb>)[model]
+    if (!usb) return null
+    const [hx, hy] = usb.hole
+    const floor = Y.floorBot + usb.floor * MM_U
+    // sàn lên dốc về phía trước (+z) → xoay quanh x ngược dấu
+    const tilt = -usb.slope
+    const groove = usb.groove?.map(
+      ([x, y, z]) =>
+        [x * MM_U - origin[0], Y.floorBot + y * MM_U, z * MM_U - origin[1]] as [
+          number,
+          number,
+          number,
+        ],
+    )
+    // model có sẵn bệ / trụ bắt ốc DTB: nằm đúng chỗ đó (trên bệ, nghiêng theo sàn), không kê thêm trụ
+    if (usb.mount) {
+      const [mx, mz] = usb.mount
+      return { x: mx * MM_U - origin[0], z: mz * MM_U - origin[1], y: floor, tilt, floor, groove }
+    }
+    // không có bệ: tâm cổng USB-C ngang tâm lỗ, mép sau sát vách; lỗ cao hơn sàn thì kê trụ đỡ (không nghiêng)
+    const raised = hy - DTB_MM.usb.y - usb.floor > 0.5
+    return {
+      x: hx * MM_U - origin[0],
+      z: (usb.inner + DTB_MM.d / 2) * MM_U - origin[1],
+      y: raised ? Y.floorBot + (hy - DTB_MM.usb.y) * MM_U : floor,
+      tilt: raised ? 0 : tilt,
+      floor,
+      groove,
+    }
+  }
   const z = -(depth / 2 + CASE_MARGIN) + (DTB_MM.d / 2) * MM_U
   const clear = (USB_PORT_MM.w / 2) * MM_U + CASE_BORE.thru + 0.1
   const back = caseScrews.filter((p) => p.z < 0)
   let x = 0
   for (let i = 0; i < 40 && back.some((p) => Math.abs(p.x - x) < clear); i++) x += 0.25
-  return x < width / 2 - 1 ? { x, z } : null
+  return x < width / 2 - 1 ? { x, z, y: Y.floorTop, tilt: 0, floor: Y.floorTop } : null
 }
 
 /** lỗ bắt vít case ở đáy / xuyên lớp mica (u, ~M2.5 + đầu vít) */

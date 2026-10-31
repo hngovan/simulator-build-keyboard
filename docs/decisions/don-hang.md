@@ -718,3 +718,36 @@ kiện chợ không; tên trên thùng bỏ "chị / anh".
   là 3". Kệ cửa gộp kiện cùng nguồn + cùng tên thành 1 thùng ("×2"), nhưng HUD `RoomHud` đếm `arrivedParcels().length` (từng kiện) và
   thông báo hàng tới liệt kê từng kiện. Gộp chung 1 hàm `parcelStacks(parcels, day)` (`data/shipping.ts`) cho kệ 3D (`DoorParcels`) + đếm HUD
   ("N thùng hàng ở hành lang" = số thùng nhìn thấy + thùng đơn khách); thông báo "Có hàng tới cửa" ghi gộp `stackLabels` ("PCB 40% Hotswap ×2").
+
+## Thông báo thiếu switch không nhắc loại đang có (2026-10-31)
+
+- (người dùng: "Khách cần switch Clicky, đang có Linear: không có thì bảo không có, ai mượn kêu có linear") `checkInventory` dòng switch:
+  sai loại hoặc hết con (count 0) → "Chưa có switch <loại khách cần>, cần N con" (khách không đòi loại thì chỉ "Chưa có switch"); đúng loại
+  mà thiếu số con vẫn "Cần N con, đang có M".
+- (người dùng: "tương tự với danh sách đơn hàng trong máy tính") App Danh sách đơn (`OrderDetail`): dòng Switch sai loại / hết con không
+  hiện tên switch đang có (in đậm loại khách cần `wantText`, dòng đỏ "Chưa có switch ..."); dòng phụ "tên · cần / có" chỉ khi đúng loại.
+
+## Kệ trong phòng thành kệ giao hàng, bỏ kệ cạnh chậu cây (2026-10-31)
+
+- Yêu cầu: "kệ trong phòng sẽ đóng vai trò là nơi đặt đơn hàng của khách để gửi đi chứ không phải để lấy đơn đặt vào nữa => kệ ở hành
+  lang gần chậu cây bỏ đi".
+- Kệ sắt tường phải trong phòng (trước là kệ cất đơn `StorageShelf`) → `ShipShelf`: chỉ nhận thùng đã đóng gói (`placeShip` = gửi khách),
+  4 tầng × 2 ô (`SHIP_SLOTS` 8, `neatPose`), `STORE_SHELF` → `SHIP_SHELF` (roomLayout). Bỏ `ShipRack` + `SHIP_RACK` + khối cản của nó.
+- Không còn chỗ cất đơn riêng (quyết định thay người dùng): thùng đơn (khách gửi tới, thùng trống đơn full, đơn dở cầm khỏi bàn) đều ở kệ cuối
+  hành lang (`BoxAt = 'door' | 'ship'`). Đổi đơn: cầm thùng trên bàn → cất lại kệ cuối hành lang (`placeDoor`, ô trống đầu tiên `freeSlot`,
+  hết kệ thì xếp sàn); đang cầm thùng đơn thì `DoorParcels` hiện 1 khối mờ đúng chỗ thùng sẽ nằm (đưa thùng đang cầm vào `pileRack` với key
+  = id thùng, đặt xong memo giữ nguyên tư thế). Thùng đã đóng gói không cất ở kệ cửa (toast chỉ ra kệ giao hàng).
+- Bản lưu cũ: `fitBoxes` (chạy mọi lần nạp) dời thùng `'shelf'` ra kệ cửa, thùng `'ship'` (kệ 4 ô cũ) giữ ô trên kệ mới; `oldBoxes` (save
+  chưa có thùng) xếp hết ra kệ cửa.
+- Chữ hướng dẫn (bước pack, HUD phòng / bàn, Mezzenger, Danh sách đơn, Keeb-chan, toast) đổi "kệ giao hàng cạnh chậu cây" / "kệ cất đơn"
+  → "kệ giao hàng trong phòng" / "kệ cuối hành lang". CLAUDE.md, OVERVIEW cập nhật.
+- Đã thử (Chrome ngầm, gọi store): nhận 2 đơn → 2 thùng ô 0, 1 kệ cửa; cầm → đặt bàn → cầm lại → `placeDoor` về đúng ô 0; `fitBoxes`
+  {shelf 0, ship 3, ship 9, door 0} → shelf ra door 1, ship 9 dời ô 0. Chưa chụp được ảnh khối mờ ở kệ cửa / kệ giao hàng (camera chụp ngầm
+  không bay tới kệ).
+- (người dùng: "Khách muốn profile OPK, đang có CHERRY ?? không có thì kêu không có") Mở rộng cho mọi món: `InventoryCheck.wrong` (có món
+  nhưng sai loại: case sai id / không vừa layout / không làm được mount, PCB sai layout / loại, plate sai layout / chất liệu, stab sai loại,
+  switch sai loại / hết con, keycap sai profile / chất liệu / không đủ phím) → câu báo "Chưa có <loại khách cần>", không nhắc món đang có.
+  App Danh sách đơn: `wrong` thì in đậm loại khách cần (`wantText`) và bỏ dòng phụ.
+- (2026-10-31, "hiển thị msg chỉ tối đa 4 món trong khi đơn hàng nhận nhiều hơn 4 kiện") Nhận kiện (`pickupParcel`): mỗi món tự `toast` mà
+  toast chỉ giữ 4 cái (`slice(-4)` metaSlice) → kiện ≥ 5 món mất thông báo món đầu. Giờ gom toast của cả kiện (tạm thay `toast` lúc nhận),
+  mỗi loại (lỗi / thường / đã nhận) 1 toast nhiều dòng; toast nhiều dòng hiện lâu hơn (3,5s + 0,7s / dòng thêm).

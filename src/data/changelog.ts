@@ -13,6 +13,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.23',
+    date: '2026-11-01',
+    commits: [],
+    title: 'Daughterboard cho mọi case, kệ giao hàng trong phòng, giỏ hàng gọn hơn',
+    items: [
+      'Mọi case đều lắp được daughterboard: mica khoét rãnh cổng USB, case model thật đặt theo lỗ USB / bệ bắt ốc có sẵn, dây JST đi theo rãnh của case',
+      'Vặn vít DTB phải canh lực như vít assem (quá tay trượt ren); bước cắm dây vào PCB dựng board lên cho thấy cổng JST mặt dưới',
+      'Kệ trong phòng thành kệ giao hàng (đặt thùng đã đóng gói vào là gửi), bỏ kệ cạnh chậu cây; thùng đơn cất lại kệ cuối hành lang',
+      'Giỏ hàng Shopii gọn hơn (bỏ mục Chờ giao hàng riêng, cột giá, nút xoá đỏ); số thùng ở hành lang chỉ hiện khi vào game xong',
+      'Mở thùng rạch băng keo dọc, nắp mở về trước mặt',
+    ],
+  },
+  {
     version: '0.1.22',
     date: '2026-10-31',
     commits: ['db53f68'],

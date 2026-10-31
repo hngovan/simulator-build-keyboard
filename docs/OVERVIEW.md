@@ -107,8 +107,8 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
    rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), kéo chuột nhìn, cuộn chuột giữa phóng to;
    đang ngồi bàn build bấm WASD / mũi tên cũng tự đứng dậy).
    Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
-   hành lang: kệ cuối hành lang nhận hàng (thùng đơn khách + kiện Shopii / chợ, hết kệ thì đổ đống sàn), kệ 2 tầng cạnh
-   chậu cây để thùng đã đóng gói chờ gửi; bấm thùng để nhận / đặt vào để gửi. **Kết thúc ngày** chỉ còn ở
+   hành lang: kệ cuối hành lang nhận hàng (thùng đơn khách + kiện Shopii / chợ, hết kệ thì đổ đống sàn), kệ giao hàng
+   tường phải trong phòng để thùng đã đóng gói chờ gửi; bấm thùng để nhận / đặt vào để gửi. **Kết thúc ngày** chỉ còn ở
    lịch treo tường: bấm lịch → popup lịch chi tiết (sale, hạn đơn, hàng tới) → "Kết thúc ngày" mở popup tổng kết
    (`EndDayDialog`) hoặc "Quay lại làm việc".
 3. **Mezzenger**: hội thoại đơn mới, đơn chờ gửi và đơn đã gửi. Có thể xem chi tiết yêu cầu (tin ngắn + bảng
@@ -130,10 +130,10 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
 ### Bàn build 3D
 
 - Nhận đơn ở Mezzenger thì **thùng đơn** của khách tới kệ hàng cuối hành lang (khách không gửi đồ thì không có thùng gửi tới:
-  thùng trống của shop để sẵn ở **kệ cất đơn**, lấy ở đó). Đứng dậy ra kệ bấm thùng để cầm lên, mang về
+  thùng trống của shop cũng để sẵn ở kệ này). Đứng dậy ra kệ bấm thùng để cầm lên, mang về
   bấm bàn build để đặt xuống (`placeBench`): đủ đồ thì vào build luôn, thiếu thì thùng nằm trên bàn kèm danh sách món còn thiếu
   (mua đủ rồi bấm thùng / "Mở thùng, bắt đầu build").
-- Đổi đơn: bấm **Cầm thùng đơn lên** (giữ nguyên tiến độ), cất vào ô mờ trên **kệ cất đơn** (tường phải) rồi lấy thùng khác.
+- Đổi đơn: bấm **Cầm thùng đơn lên** (giữ nguyên tiến độ), cất lại vào ô mờ trên **kệ cuối hành lang** rồi lấy thùng khác.
   Kho đồ, build và lịch sử của đơn được cất nguyên trạng vào `jobs`.
 - Cảnh 3D (`scene/Bench.tsx`) có camera xoay / kéo / zoom, tự lật board ở bước hàn hoặc vít đáy.
   Bấm màn hình trên bàn để quay về desktop.
@@ -182,7 +182,7 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   phím 3D. Máy đo âm thanh hiện độ khớp với yêu cầu của khách.
 - **Đóng gói**: bước cuối **Đóng gói** (sau test): bấm thùng carton sau bàn phím (hoặc nút **Cho phím vào thùng** / nút cam **Đóng gói đơn này**), thùng úp lên bàn phím rồi gọi `deliver()`; nếu build chưa
   xong thì hỏi lại. Đơn được chấm điểm ngay và đưa vào `packed`, phím vào thùng nằm trên bàn.
-- **Gửi**: cầm thùng đã đóng gói ra **kệ giao hàng** (2 tầng, cạnh chậu cây đầu hành lang), đặt vào là gửi (`shipOrder`):
+- **Gửi**: cầm thùng đã đóng gói đặt lên **kệ giao hàng** (kệ sắt tường phải trong phòng), đặt vào là gửi (`shipOrder`):
   cộng tiền và uy tín ngay. Không gửi thì **Kết thúc ngày** (`nextDay`) sẽ gửi nốt các đơn đã đóng gói.
 
 ### Chấm điểm và kết thúc ngày
@@ -282,7 +282,7 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   được mã thì click trực tiếp phím 3D. Càng nhiều phím được test càng gần 5 điểm.
 - Bấm **Đóng gói đơn này** để chấm điểm và đóng gói. Nếu chưa xong, game hỏi lại; giao sớm sẽ bị
   điểm thấp.
-- Cầm thùng đã đóng gói ra kệ giao hàng cạnh chậu cây để nhận tiền hoàn + tiền công và cộng/trừ uy tín. Có thể
+- Cầm thùng đã đóng gói đặt lên kệ giao hàng trong phòng để nhận tiền hoàn + tiền công và cộng/trừ uy tín. Có thể
   gửi từng đơn ngay hoặc để **Kết thúc ngày** gửi nốt.
 
 ### Tiền, uy tín, hạn, dụng cụ, chứng chỉ

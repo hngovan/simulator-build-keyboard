@@ -17,7 +17,7 @@ import {
 } from '@/data/steps'
 import type { Key, Point, StepId } from '@/types'
 import { playClick } from '@/sound'
-import { PcbJst } from './Daughterboard'
+import { PcbJst, boardGroup, jstStand } from './Daughterboard'
 import { Drop, lerpTo } from '../common/anim'
 import { MM } from '../models/Switch'
 import { useHover } from '../common/useHover'
@@ -256,12 +256,15 @@ export function Board() {
   const { hover, bind } = useHover(boardClick)
   // case CAD có plate nghiêng (Alice): thả vào case thì board nâng + nghiêng theo mặt case
   const seat = b.inCase ? ctx.caseDef.seat : undefined
+  // chờ cắm dây JST vào PCB: dựng board gần thẳng đứng cho thấy cổng JST mặt dưới
+  const stand = step === 'jst' && !b.jst ? jstStand(ctx.depth) : null
   useFrame((_, dt) => {
-    lerpTo(ref, 'y', lifted ? 2.6 : (seat?.rise ?? 0), dt, 6)
-    lerpTo(ref, 'z', seat?.dz ?? 0, dt, 6)
+    boardGroup.current = ref.current
+    lerpTo(ref, 'y', stand?.y ?? (lifted ? 2.6 : (seat?.rise ?? 0)), dt, 6)
+    lerpTo(ref, 'z', stand?.z ?? seat?.dz ?? 0, dt, 6)
     lerpTo(ref, 'x', seat?.dx ?? 0, dt, 6)
     const r = ref.current?.rotation
-    if (r) r.x += ((seat?.tilt ?? 0) - r.x) * Math.min(1, dt * 6)
+    if (r) r.x += ((stand?.tilt ?? seat?.tilt ?? 0) - r.x) * Math.min(1, dt * 6)
   })
 
   const onBoard = (e: ThreeEvent<PointerEvent>) => {

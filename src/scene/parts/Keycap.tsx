@@ -47,6 +47,12 @@ function UntestedOutline({ w, h, y }: { w: number; h: number; y: number }) {
 
 /** chữ in lệch về phía sau mặt keycap */
 const LEGEND_Z = -0.1
+/**
+ * Mọi ký tự có thể in trên keycap (ASCII in được + mũi tên): truyền `characters` cho Text thì drei suspend tới khi font + đủ glyph
+ * dựng xong → Suspense của bàn build giữ màn chờ, vào bước lắp keycap là chữ có sẵn (không lắp xong mới hiện chữ)
+ */
+const LEGEND_CHARS =
+  Array.from({ length: 94 }, (_, i) => String.fromCharCode(33 + i)).join('') + '→←'
 
 /**
  * Mặt phẳng in chữ khớp mặt keycap: bắn tia xuống lưới điểm quanh vùng chữ, khớp độ cao theo z (nghiêng theo hàng)
@@ -109,6 +115,7 @@ function CapOverlay({
           rotation-x={-Math.PI / 2 + (legend?.tilt ?? 0)}
         >
           <Text
+            characters={LEGEND_CHARS}
             rotation-z={ARROW_SPIN[k.label] ?? 0}
             fontSize={k.label.length > 1 ? 0.2 : 0.3}
             color={col.legend}
