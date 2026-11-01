@@ -1094,3 +1094,6 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
   Shopii bỏ tab "Chờ giao hàng" ở đáy cột trái + xoá `ParcelList.tsx` (view chỉ còn `grid` / `cart`); kiện vẫn xem ở lịch treo tường / kệ cửa.
   `cancelParcel` còn trong shopSlice nhưng không còn nút huỷ kiện.
 - (2026-10-31, "icon xoá phải màu đỏ chứ sao lại màu xám") `CartList`: nút "Xoá tất cả" + nút X bỏ từng dòng đổi `tone="red"`.
+- (2026-11-02, "tại sao bấm wasd lại bị out ra bàn build, đáng lẽ chỉ bấm esc mới được out ra") Bỏ hiệu ứng ngồi bàn build bấm W / A / S / D
+  là tự đứng dậy (`Controls` trong `scene/Bench.tsx`, `MOVE_KEYS`, bắt chước PC Building Simulator): giờ chỉ Esc (`useAppShortcuts`) / nút
+  quay lại mới đứng dậy. Sửa câu thoại Keeb-chan "Đứng dậy (WASD)" → "(Esc)" + OVERVIEW.

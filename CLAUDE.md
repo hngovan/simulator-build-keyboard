@@ -194,8 +194,10 @@ vào `window.__r3f` để debug trong console.
   Gasket mount: bước `gasket` dán dải Poron 20 × 4mm (vật tư `GASKET_ID`, mặt trên + mặt dưới tai / mép plate, `GASKET`; Blossom dải
   dài hết tai + xoay theo mép, `ctx.gaskets[].w / rot`; tiêu hao `gasketStrips` = số dải 20mm phủ hết × 2).
   Foam Poron PCB: bước tuỳ chọn `foam` trước `plate` (`placeFoam` trừ vật tư `FOAM_ID`, `build.foam`, âm thock hơn), cảnh `scene/parts/Foam.tsx`.
-  Daughterboard: bước `dtb` (sau `feet`: đặt DTB sát vách sau, 2 vít M2, cắm dây JST) + `jst` (trước `caseIn`, board nhấc: cắm dây vào PCB),
-  chỉ case dựng bằng code không mica (`dtbSpot`, lỗ USB-C khoét vách `WallPort`); `scene/parts/Daughterboard.tsx`, save rev 8 `addDtbSteps`.
+  Daughterboard: bước `dtb` (sau `feet`: đặt DTB sát vách sau, 2 vít M2 canh lực, cắm dây vào cổng JST có sẵn trên DTB) + `jst` (trước `caseIn`,
+  board dựng đứng `jstStand`: bấm đầu dây cầm lên `useJstPick` rồi bấm jack PCB = `plugJst`, không tự sang bước); mọi case (`dtbSpot`: case code
+  khoét lỗ USB-C `WallPort`, mica khoét rãnh tấm, case CAD theo `caseUsb.json`), jack PCB né socket / chân switch (`jackSpot` → `DtbSpot.jack`);
+  `scene/parts/Daughterboard.tsx`, save rev 8 `addDtbSteps`.
   Feet: bước `feet` (trước `topCase` / `caseIn`, case tự lật úp, chỉ hiện case) dán 1 feet vào mỗi hốc `ctx.feet`
   (`feetPockets` trong steps.ts: case CAD = hốc `caseFeet.json`, case dựng bằng code = 4 hốc CNC lõm `FOOT_R` / `FOOT_DEPTH`
   khoét trong `caseShellGeometry` / tấm mica đáy), `placeFoot(i)` trừ 1 vật tư `feetPick` (`FEET_IDS` nhiều màu, Shopii gộp 1 sản phẩm

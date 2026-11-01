@@ -458,6 +458,8 @@ export interface DtbSpot {
   /** case CAD có rãnh đi dây JST: đường dây dọc rãnh từ miệng JST DTB tới đầu rãnh ([x, y đáy rãnh, z], u, toạ độ cảnh);
    * cổng JST trên PCB nằm ngay trên đầu rãnh */
   groove?: [number, number, number][]
+  /** jack JST mặt dưới PCB (hệ board, u): tâm miệng x, z + xoay quanh trục đứng `ry` (miệng quay theo (−sin ry, −cos ry)) */
+  jack: { x: number; z: number; ry: number }
 }
 export interface BuildContext {
   layout: LayoutId

@@ -85,9 +85,6 @@ declare global {
   }
 }
 
-/** phím đi lại: đang ngồi bàn build bấm thì đứng dậy */
-const MOVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD']
-
 /** Đặt camera theo độ rộng bàn phím; bấm "Góc nhìn" để đưa về mặc định */
 function CameraRig() {
   const ctx = useCtx()
@@ -208,27 +205,7 @@ function Controls() {
   const pc = useGame((s) => s.screen === 'pc')
   // đang giữ chuột thao tác (hàn...) thì khoá camera
   const locked = useCamLock((s) => s.locked)
-  // đang ngồi bàn build mà bấm WASD: đứng dậy đi luôn (như PC Building Simulator)
-  useEffect(() => {
-    if (walk) return
-    const onKey = (e: KeyboardEvent) => {
-      if (!MOVE_KEYS.includes(e.code) || e.ctrlKey || e.metaKey || e.altKey) return
-      if (
-        (e.target as HTMLElement | null)?.closest(
-          'input, textarea, select, [contenteditable="true"]',
-        )
-      )
-        return
-      const s = useGame.getState()
-      // bước test (phím là phím test), đang bay vào máy tính, có bảng / popup đang mở thì thôi
-      if (s.screen !== 'bench' || s.pcZoom || s.step() === 'test') return
-      if (document.querySelector('[role="dialog"], [class*="z-[3000]"], [class*="z-[3500]"]'))
-        return
-      s.standUp('bench')
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [walk])
+  // đang ngồi bàn build: chỉ Esc / nút quay lại mới đứng dậy (WASD không đứng dậy, dễ bấm nhầm lúc thao tác)
   // ngồi máy tính: camera đứng yên (PcView), không điều khiển
   if (pc) return null
   // đi lại trong phòng: góc nhìn người (WASD + kéo chuột nhìn)

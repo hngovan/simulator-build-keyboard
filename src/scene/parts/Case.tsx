@@ -591,7 +591,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const color = useGame((s) => s.inventory.case!.color)
   const step = useStep()
   const stepIdx = useStepIdx()
-  const { closed, inCase, jst } = useBuild()
+  const { closed, inCase } = useBuild()
   const { dropInCase, closeCase, placeTopCase, nextStep } = useGame.getState()
   const topRef = useRef<THREE.Group>(null)
   const { caseDef, screwSide } = ctx
@@ -660,7 +660,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const flipRef = useRef<THREE.Group>(null)
   const topMid = (Y.split + Y.caseTop) / 2
   // top mount: case trên đã bắt vít vào plate → bước cắm dây JST dựng lên cùng board
-  const stand = topMount && step === 'jst' && !jst ? jstStand(ctx.depth) : null
+  const stand = topMount && step === 'jst' ? jstStand(ctx.depth) : null
   useFrame((_, dt) => {
     lerpTo(topRef, 'y', stand?.y ?? topY, dt, 6)
     lerpTo(topRef, 'z', stand?.z ?? 0, dt, 6)

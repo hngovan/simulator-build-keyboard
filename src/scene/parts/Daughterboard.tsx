@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Clone, Html, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { create } from 'zustand'
 import { useGame, useBuild, useCtx, useStep } from '@/store'
 import { DTB_MM, USB_PORT_MM, Y, torqueSpec } from '@/data/steps'
 import { screwLevel } from '@/data/parts'
@@ -34,13 +35,8 @@ export const usbPort = (x: number): WallPort => ({
   r: USB_PORT_MM.r * MM,
 })
 
-/** cổng JST trên PCB: lệch sang phải + tới trước so với DTB (dây chạy chéo dưới PCB), miệng quay ra sau (−z) */
-const PCB_JST = { dx: 0.9, dz: 1.2 }
-/** chỗ cổng JST trên PCB (x, z hệ board, u): case có rãnh đi dây thì ngay trên đầu rãnh, không thì lệch `PCB_JST` so với DTB */
-function pcbJstAt(at: DtbSpot): [number, number] {
-  const end = at.groove?.[at.groove.length - 1]
-  return end ? [end[0], end[2]] : [at.x + PCB_JST.dx, at.z + DTB_MM.jst.z * MM + PCB_JST.dz]
-}
+/** đầu dây chưa cắm nằm trên sàn trước DTB (case không rãnh dây): lệch so với DTB (u) */
+const LOOSE = { dx: 0.63, dz: 1.6 }
 /** đầu cắm dây (SHR-04V-S, mm): rộng, cao, dài; cắm lút vào cổng `IN` */
 const PLUG = { w: 5, h: 2.4, l: 4.2, in: 2 }
 /** dây 4 sợi bước 1mm (VBUS / D− / D+ / GND), bán kính sợi (mm) */
@@ -59,6 +55,9 @@ export function jstStand(depth: number) {
   const s = -Math.sin(STAND_TILT)
   return { y: Y.caseTop + 0.5 * depth * s + 0.35, z: -0.4 * depth, tilt: STAND_TILT }
 }
+
+/** bước `jst`: đã bấm cầm đầu dây (chờ bấm jack JST trên PCB để cắm) */
+export const useJstPick = create<{ picked: boolean }>(() => ({ picked: false }))
 
 /** group board đang vẽ (Board gán): đầu dây đã cắm đọc vị trí cổng JST theo board thật (nhấc / dựng / ngồi theo seat) */
 export const boardGroup: { current: THREE.Group | null } = { current: null }
@@ -137,7 +136,9 @@ function Plug({ at, dir, mat }: { at: THREE.Vector3; dir: 1 | -1; mat?: ReactNod
 
 /**
  * 4 sợi dây từ đuôi đầu cắm DTB (a, chạy tới +z) tới đuôi đầu cắm còn lại (b, dây chạy ra theo `out`); `via` = nằm dọc rãnh
- * đi dây của case (hệ DTB), không có thì chùng xuống giữa 2 đầu
+ * đi dây của case (hệ DTB), không có thì chùng xuống giữa 2 đầu.
+ * 4 sợi xếp dẹt như dây JST thật: lệch nhau theo phương ngang vuông góc hướng dây (trước lệch cố định theo x → đoạn dây chạy
+ * dọc trục z 4 sợi chồng khít nhau, chớp sọc); đoạn dựng đứng giữ phương lệch của đoạn trước
  */
 function wireGeometries(
   a: THREE.Vector3,
@@ -146,24 +147,34 @@ function wireGeometries(
   via: THREE.Vector3[],
 ) {
   const lead = 0.3
+  const ends = [b.clone().addScaledVector(out, lead), b.clone()]
+  const pts = [a.clone(), a.clone().add(new THREE.Vector3(0, 0, via.length ? 0.1 : lead))]
+  if (via.length) pts.push(...via.map((p) => p.clone()))
+  else {
+    // dây dài, chùng xuống giữa 2 đầu khi 2 đầu gần nhau (nằm dưới PCB)
+    const mid = pts[1].clone().lerp(ends[0], 0.5)
+    mid.y = Math.min(pts[1].y, ends[0].y) + 0.05
+    pts.push(mid)
+  }
+  pts.push(...ends)
+  const center = new THREE.CatmullRomCurve3(pts, false, 'centripetal')
+  const n = via.length ? 120 : 40
+  const up = new THREE.Vector3(0, 1, 0)
+  let side = new THREE.Vector3(1, 0, 0)
+  const samples = Array.from({ length: n + 1 }, (_, k) => {
+    const t = k / n
+    const tan = center.getTangentAt(t)
+    const s = new THREE.Vector3().crossVectors(tan, up)
+    // dây gần thẳng đứng: tích có hướng ≈ 0 → giữ phương cũ
+    if (s.lengthSq() > 0.04) side = s.normalize().multiplyScalar(Math.sign(s.dot(side)) || 1)
+    return { p: center.getPointAt(t), side: side.clone() }
+  })
   return WIRES.map((_, i) => {
-    const off = new THREE.Vector3((i - 1.5) * MM, 0, 0)
-    const ends = [b.clone().addScaledVector(out, lead), b.clone()]
-    const pts = [a.clone(), a.clone().add(new THREE.Vector3(0, 0, via.length ? 0.1 : lead))]
-    if (via.length) pts.push(...via.map((p) => p.clone()))
-    else {
-      // dây dài, chùng xuống giữa 2 đầu khi 2 đầu gần nhau (nằm dưới PCB)
-      const mid = pts[1].clone().lerp(ends[0], 0.5)
-      mid.y = Math.min(pts[1].y, ends[0].y) + 0.05
-      pts.push(mid)
-    }
-    pts.push(...ends)
-    return new THREE.TubeGeometry(
-      new THREE.CatmullRomCurve3(pts.map((p) => p.add(off))),
-      via.length ? 160 : 48,
-      WIRE_R * MM,
-      6,
+    const d = (i - 1.5) * MM
+    const curve = new THREE.CatmullRomCurve3(
+      samples.map((x) => x.p.clone().addScaledVector(x.side, d)),
     )
+    return new THREE.TubeGeometry(curve, n * 2, WIRE_R * MM, 6)
   })
 }
 
@@ -171,7 +182,6 @@ function wireGeometries(
 function JstCable({ at }: { at: DtbSpot }) {
   const step = useStep()
   const b = useBuild()
-  const plugJst = useGame((s) => s.plugJst)
   const meshes = useRef<(THREE.Mesh | null)[]>([])
   const plugRef = useRef<THREE.Group>(null)
   const plugged = !!b.jst
@@ -193,18 +203,16 @@ function JstCable({ at }: { at: DtbSpot }) {
     () =>
       via.length
         ? via[via.length - 1].clone().setY(via[via.length - 1].y + (PLUG.h / 2) * MM)
-        : new THREE.Vector3(
-            PCB_JST.dx * 0.7,
-            at.floor - at.y + (PLUG.h / 2) * MM,
-            mouth.z + PCB_JST.dz + 0.4,
-          ),
+        : new THREE.Vector3(LOOSE.dx, at.floor - at.y + (PLUG.h / 2) * MM, mouth.z + LOOSE.dz),
     [mouth, at, via],
   )
   // miệng cổng JST trên PCB (hệ board): cổng treo ngược dưới mặt PCB, miệng quay ra sau
-  const pcbLocal = useMemo(() => {
-    const [x, z] = pcbJstAt(at)
-    return new THREE.Vector3(x, PCB_MOUTH_Y, z)
-  }, [at])
+  const pcbLocal = useMemo(() => new THREE.Vector3(at.jack.x, PCB_MOUTH_Y, at.jack.z), [at])
+  // hướng jack trên PCB (xoay quanh trục đứng của board, né socket / chân switch: `DtbSpot.jack`)
+  const jackQ = useMemo(
+    () => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), at.jack.ry),
+    [at],
+  )
   const root = useRef<THREE.Group>(null)
   const last = useRef('')
   const q = useMemo(() => new THREE.Quaternion(), [])
@@ -218,7 +226,7 @@ function JstCable({ at }: { at: DtbSpot }) {
       end = root.current.worldToLocal(board.localToWorld(pcbLocal.clone()))
       board.getWorldQuaternion(q)
       root.current.getWorldQuaternion(tmp)
-      q.premultiply(tmp.invert())
+      q.premultiply(tmp.invert()).multiply(jackQ)
       back = back.applyQuaternion(q)
       plugRef.current?.position.copy(end)
       plugRef.current?.quaternion.copy(q)
@@ -239,6 +247,13 @@ function JstCable({ at }: { at: DtbSpot }) {
     last.current = ''
   }, [plugged])
   const active = step === 'jst' && !plugged
+  const picked = useJstPick((p) => p.picked)
+  // rời bước / cắm xong thì bỏ cầm
+  useEffect(() => {
+    useJstPick.setState({ picked: false })
+  }, [step, plugged])
+  // đang cầm: đầu dây nhấc khỏi sàn chờ cắm vào jack PCB
+  const held = loose.clone().setY(loose.y + 0.12)
   return (
     <group ref={root}>
       <Plug at={mouth} dir={1} />
@@ -253,17 +268,20 @@ function JstCable({ at }: { at: DtbSpot }) {
           <Plug at={ORIGIN} dir={-1} />
         </group>
       ) : active ? (
+        // bấm đầu dây = cầm lên (sáng viền), bấm lại = đặt xuống; cầm rồi thì bấm jack JST trên PCB để cắm (`PcbJst`)
         <>
           <Target
             onPick={() => {
-              plugJst()
-              playClick(1300)
+              useJstPick.setState({ picked: !picked })
+              playClick(picked ? 700 : 1000)
             }}
           >
-            {(hover) => <Plug at={loose} dir={-1} mat={ghostMat(hover)} />}
+            {(hover) => (
+              <Plug at={picked ? held : loose} dir={-1} mat={ghostMat(hover || picked)} />
+            )}
           </Target>
-          <Plug at={loose} dir={-1} />
-          <HintArrow at={[loose.x, loose.y + 0.05, loose.z]} size={0.8} />
+          <Plug at={picked ? held : loose} dir={-1} />
+          {!picked && <HintArrow at={[loose.x, loose.y + 0.05, loose.z]} size={0.8} />}
         </>
       ) : (
         <Plug at={loose} dir={-1} />
@@ -278,17 +296,45 @@ const ORIGIN = new THREE.Vector3()
 export function PcbJst() {
   const { dtb } = useCtx()
   const { nodes } = useGLTF(DTB_GLB) as unknown as { nodes: Nodes }
+  const step = useStep()
+  const plugged = !!useBuild().jst
+  const picked = useJstPick((p) => p.picked)
+  const plugJst = useGame((s) => s.plugJst)
   if (!dtb) return null
+  // đang cầm đầu dây: jack sáng lên, bấm để cắm (board vẫn dựng tới khi người chơi bấm sang bước kế)
+  const target = step === 'jst' && picked && !plugged
   return (
-    <group position={[pcbJstAt(dtb)[0], Y.pcbBot, pcbJstAt(dtb)[1]]} rotation-x={Math.PI}>
-      {/* cổng trong model DTB: đáy ở y 1,65mm, miệng ở z 7,8mm → dời về gốc rồi lật ngược (miệng quay −z) */}
-      <mesh
-        geometry={nodes.jst.geometry}
-        material={nodes.jst.material}
-        scale={MM}
-        position={[0, -1.65 * MM, -DTB_MM.jst.z * MM]}
-        castShadow
-      />
+    <group position={[dtb.jack.x, Y.pcbBot, dtb.jack.z]} rotation-y={dtb.jack.ry}>
+      <group rotation-x={Math.PI}>
+        {target && (
+          <>
+            <Target
+              onPick={() => {
+                plugJst()
+                useJstPick.setState({ picked: false })
+                playClick(1300)
+              }}
+            >
+              {(hover) => (
+                <mesh position={[0, 1.5 * MM, 2 * MM]}>
+                  <boxGeometry args={[8 * MM, 4 * MM, 6 * MM]} />
+                  {ghostMat(hover)}
+                </mesh>
+              )}
+            </Target>
+            {/* nhóm đã lật ngược: "lên" ở đây là phía mặt dưới PCB → mũi tên chĩa vào jack */}
+            <HintArrow at={[0, 0.3, 2 * MM]} size={0.8} />
+          </>
+        )}
+        {/* cổng trong model DTB: đáy ở y 1,65mm, miệng ở z 7,8mm → dời về gốc rồi lật ngược (miệng quay −z) */}
+        <mesh
+          geometry={nodes.jst.geometry}
+          material={nodes.jst.material}
+          scale={MM}
+          position={[0, -1.65 * MM, -DTB_MM.jst.z * MM]}
+          castShadow
+        />
+      </group>
     </group>
   )
 }

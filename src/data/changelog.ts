@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.24',
+    date: '2026-11-02',
+    commits: [],
+    title: 'Cắm dây JST 2 lần bấm, jack né switch, chỉ Esc mới đứng dậy',
+    items: [
+      'Cắm dây JST vào PCB: bấm đầu dây cầm lên rồi bấm jack trên PCB; cắm xong board vẫn dựng, bấm bước kế mới hạ xuống',
+      'Jack JST trên PCB tự né socket hotswap / chân switch / lỗ stab (dịch ra hoặc xoay hướng)',
+      'Dây JST 4 sợi xếp dẹt theo hướng dây, hết chớp sọc ở đoạn nằm trong rãnh',
+      'Ngồi bàn build bấm WASD không còn tự đứng dậy, chỉ Esc / nút quay lại',
+    ],
+  },
+  {
     version: '0.1.23',
     date: '2026-11-01',
     commits: ['f838dad'],

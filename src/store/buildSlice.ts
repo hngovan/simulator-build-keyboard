@@ -1015,11 +1015,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const s = at('jst')
       if (!s || s.build.jst) return
       commit(snapshot())
-      const build = get().build!
-      set({
-        build: { ...build, jst: true, stepIdx: build.stepIdx + 1 },
-        testIdleFrom: performance.now(),
-      })
+      // không tự sang bước: board còn dựng cho người chơi nhìn dây đã cắm, bấm bước kế mới hạ xuống
+      s.patchBuild({ jst: true })
     },
     press: (id, down) => {
       const s = at('test')

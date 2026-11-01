@@ -1223,3 +1223,20 @@
   dựng theo. Đầu dây đã cắm đọc vị trí cổng theo group board thật (`boardGroup`, gán trong Board) → đi đúng khi dựng / nhấc / ngồi theo `seat`.
 - Đã thử Chrome ngầm (đơn dev): mica 60 có bước DTB, rãnh khoét; Exodus60 DTB trên bệ dưới tạ mờ; bước jst board dựng thấy cổng JST + socket
   hotswap; Repent75 cổng PCB trên đầu rãnh phải. Chưa thử chơi tay trọn bước (bấm giữ vít, cắm dây, thả board vào case xem dây theo).
+
+## Cắm dây JST 2 lần bấm, board dựng tới khi sang bước, jack né socket, dây dẹt (2026-11-02)
+
+- Người dùng: "bước lắp dây jst phải click đầu dây jst rồi + với jack cắm jst trên pcb, cắm xong để vậy, khi nào người dùng bấm qua màn thì
+  mới lật lại"; "vị trí đặt dây đã đúng chưa? đang bị cấn vị trí đặt sw: 1 là né ra, 2 là quay đầu cổng jst lại để né"; "dây đoạn gập ở rãnh
+  bị lỗi à?" (ảnh: đoạn dây trong rãnh chớp sọc).
+- Bước `jst`: bấm đầu dây = cầm lên (`useJstPick` trong Daughterboard.tsx, đầu dây nhấc + sáng viền, bấm lại = đặt xuống) → jack trên PCB
+  sáng + mũi tên, bấm jack = `plugJst`. `plugJst` không tự sang bước nữa (`patchBuild({ jst: true })`); board (+ case trên top mount) dựng
+  suốt bước `jst` (`jstStand` khi `step === 'jst'`), người chơi bấm "Bước tiếp theo" mới hạ xuống `caseIn`.
+- Jack JST trên PCB: `jackSpot` (steps.ts) tính trong `buildContext` → `DtbSpot.jack` {x, z, ry}: từ chỗ muốn đặt (đầu rãnh dây, không rãnh
+  thì lệch `JACK_OFFSET` so với DTB) thử các vòng xa dần 0,05u, mỗi chỗ 4 hướng xoay (ưu tiên miệng quay về DTB); thân jack + đầu cắm
+  (`JACK_SAMPLES`) không chạm vùng cấm quanh mỗi phím (`KEY_KEEPOUT`: socket hotswap + pad + cụm chân switch, theo `rot` phím), lỗ stab
+  (`stabHoles`), phải nằm trong PCB. `PcbJst` xoay theo `ry`, đầu dây đã cắm quay theo jack (`jackQ`).
+- Dây: trước 4 sợi lệch cố định theo trục x → đoạn chạy dọc trục z (trong rãnh) 4 sợi chồng khít, chớp sọc. Nay `wireGeometries` dựng
+  đường tâm (CatmullRom centripetal) rồi 4 sợi lệch theo phương ngang vuông góc hướng dây (dây dẹt như JST thật), đoạn dựng đứng giữ phương cũ.
+- Đã thử Chrome ngầm (Repent75): `plugJst` giữ `stepIdx` ở `jst`, board vẫn dựng, "Bước tiếp theo" → `caseIn` hạ board; jack nằm khe giữa
+  2 hàng socket, dây dẹt đi theo rãnh lên jack. Chưa chụp được ảnh lúc đang cầm đầu dây (jack sáng) — chưa thử bấm tay.

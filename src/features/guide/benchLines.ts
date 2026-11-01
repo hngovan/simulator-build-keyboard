@@ -28,7 +28,7 @@ const EMPTY = [
 ]
 
 const PICK = [
-  'Có đơn rồi đó! Đứng dậy (WASD) ra kệ hàng cuối hành lang, bấm thùng đơn để cầm lên.',
+  'Có đơn rồi đó! Đứng dậy (Esc) ra kệ hàng cuối hành lang, bấm thùng đơn để cầm lên.',
   'Mang về bấm bàn build để đặt xuống: đủ linh kiện là vào build luôn, thiếu thì mua thêm ở Shopii, đủ rồi nhấn B để build.',
   'Đổi đơn thì nhấn chuột phải cầm thùng trên bàn lên (đang build thì nút bàn tay), cất lại kệ cuối hành lang. Build xong đóng gói, đặt thùng lên kệ giao hàng trong phòng là gửi khách!',
 ]
@@ -108,7 +108,7 @@ const STEP_LINES: Record<StepId, string[]> = {
     'Click hốc ở vách sau để đặt DTB cho cổng USB-C khớp lỗ, nhấn giữ canh lực siết 2 vít M2 (quá tay là trượt ren), rồi cắm dây vào cổng JST có sẵn trên DTB.',
   ],
   jst: [
-    'Board dựng lên cho thấy mặt dưới rồi đó. Click đầu dây JST trong case để cắm vào cổng có sẵn dưới PCB.',
+    'Board dựng lên cho thấy mặt dưới rồi đó. Click đầu dây JST trong case để cầm lên, rồi click jack JST trên PCB để cắm. Cắm xong bấm sang bước kế là board hạ xuống.',
     'Cắm thẳng, đúng chiều nha, dây JST mà cắm lệch là phím không lên đâu.',
   ],
   topCase: ['Top mount: úp case trên xuống plate trước. Click vào case trên nhé.'],

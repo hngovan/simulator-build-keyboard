@@ -78,7 +78,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   jst: {
     title: 'Cắm dây JST vào PCB',
-    hint: 'Board dựng lên cho thấy mặt dưới: click đầu dây JST nằm trong case để cắm vào cổng JST có sẵn dưới PCB',
+    hint: 'Board dựng lên cho thấy mặt dưới: click đầu dây JST nằm trong case để cầm lên, rồi click jack JST trên PCB để cắm. Xong bấm sang bước kế để hạ board',
   },
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
   trayScrew: {
@@ -301,13 +301,14 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   // dán feet vào đáy case trước khi lắp board vào case
   steps.push('feet')
   // daughterboard: bắt vào case dưới khi case còn trống, cắm dây vào PCB ngay trước lúc thả board
-  const dtb = dtbSpot(
+  const spot = dtbSpot(
     caseModelOf(caseDef, order.layout, order.variant),
     width,
     depth,
     origin,
     caseDef.pieces === 2 ? caseScrews : [],
   )
+  const dtb = spot && { ...spot, jack: jackSpot(spot, keys) }
   if (dtb) steps.push('dtb')
   if (topMount) steps.push('topCase', 'topScrew')
   if (dtb) steps.push('jst')
@@ -496,7 +497,7 @@ export function dtbSpot(
   depth: number,
   origin: [number, number],
   caseScrews: Point[],
-): DtbSpot | null {
+): Omit<DtbSpot, 'jack'> | null {
   if (model) {
     const usb = (CASE_USB as Record<string, CaseUsb>)[model]
     if (!usb) return null
@@ -534,6 +535,77 @@ export function dtbSpot(
   let x = 0
   for (let i = 0; i < 40 && back.some((p) => Math.abs(p.x - x) < clear); i++) x += 0.25
   return x < width / 2 - 1 ? { x, z, y: Y.floorTop, tilt: 0, floor: Y.floorTop } : null
+}
+
+/** jack JST trên PCB lệch so với DTB khi case không có rãnh dây (u): sang phải + tới trước */
+const JACK_OFFSET = { dx: 0.9, dz: 1.2 }
+/**
+ * vùng cấm quanh mỗi phím (hệ phím, u): socket hotswap (tâm lệch 0,05 / 0,1, rộng 0,5 + pad ±0,3) + cụm chân switch quanh tâm,
+ * chừa thêm lề
+ */
+const KEY_KEEPOUT = { x0: -0.36, x1: 0.46, z0: -0.18, z1: 0.29 }
+/** điểm mẫu thân jack + đầu cắm (hệ jack, u; miệng ở gốc quay −z): thân 6 × 4,2mm phía +z, đầu cắm + dây ló ra phía −z */
+const JACK_SAMPLES = [-0.18, 0, 0.18].flatMap((x) =>
+  [-0.22, -0.08, 0.06, 0.16, 0.26].map((z) => [x, z]),
+)
+
+/**
+ * Chỗ jack JST trên PCB không đè socket hotswap / chân switch / lỗ stab: thử từ chỗ muốn đặt (đầu rãnh dây, không có thì lệch
+ * `JACK_OFFSET` so với DTB) ra các vòng xa dần, mỗi chỗ thử 4 hướng xoay (ưu tiên miệng quay về phía DTB), phải nằm trong PCB
+ */
+function jackSpot(dtb: Omit<DtbSpot, 'jack'>, keys: Key[]): DtbSpot['jack'] {
+  const end = dtb.groove?.[dtb.groove.length - 1]
+  const want = end
+    ? { x: end[0], z: end[2] }
+    : { x: dtb.x + JACK_OFFSET.dx, z: dtb.z + DTB_MM.jst.z * MM_U + JACK_OFFSET.dz }
+  const x0 = Math.min(...keys.map((k) => k.cx - k.w / 2)) + 0.05
+  const x1 = Math.max(...keys.map((k) => k.cx + k.w / 2)) - 0.05
+  const z0 = Math.min(...keys.map((k) => k.cz - k.h / 2)) + 0.05
+  const z1 = Math.max(...keys.map((k) => k.cz + k.h / 2)) - 0.05
+  const holes = keys.filter((k) => k.stab).flatMap(stabHoles)
+  const blocked = (px: number, pz: number) =>
+    px < x0 ||
+    px > x1 ||
+    pz < z0 ||
+    pz > z1 ||
+    holes.some((h) => Math.hypot(px - h.x, pz - h.z) < h.r + 0.06) ||
+    keys.some((k) => {
+      const dx = px - k.cx
+      const dz = pz - k.cz
+      const lx = dx * Math.cos(k.rot) - dz * Math.sin(k.rot)
+      const lz = dx * Math.sin(k.rot) + dz * Math.cos(k.rot)
+      const o = KEY_KEEPOUT
+      return lx > o.x0 && lx < o.x1 && lz > o.z0 && lz < o.z1
+    })
+  const fits = (x: number, z: number, ry: number) =>
+    JACK_SAMPLES.every(
+      ([jx, jz]) =>
+        !blocked(
+          x + jx * Math.cos(ry) + jz * Math.sin(ry),
+          z - jx * Math.sin(ry) + jz * Math.cos(ry),
+        ),
+    )
+  for (let r = 0; r <= 2.5; r += 0.05) {
+    let best: (DtbSpot['jack'] & { score: number }) | null = null
+    const n = r === 0 ? 1 : Math.max(8, Math.round((2 * Math.PI * r) / 0.05))
+    for (let i = 0; i < n; i++) {
+      const x = want.x + r * Math.cos((i / n) * 2 * Math.PI)
+      const z = want.z + r * Math.sin((i / n) * 2 * Math.PI)
+      // miệng quay về phía DTB: hướng miệng (−sin ry, −cos ry) = hướng tới DTB
+      const face = Math.atan2(-(dtb.x - x), -(dtb.z - z))
+      ;[0, Math.PI / 2, -Math.PI / 2, Math.PI].forEach((turn, t) => {
+        const ry = face + turn
+        if (!fits(x, z, ry)) return
+        const score = t * 0.2 + Math.hypot(x - want.x, z - want.z)
+        if (!best || score < best.score) best = { x, z, ry, score }
+      })
+    }
+    if (best) {
+      const { x, z, ry } = best
+      return { x, z, ry }
+    }
+  }
+  return { ...want, ry: 0 }
 }
 
 /** lỗ bắt vít case ở đáy / xuyên lớp mica (u, ~M2.5 + đầu vít) */
