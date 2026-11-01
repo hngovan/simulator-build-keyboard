@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.24',
     date: '2026-11-02',
-    commits: [],
+    commits: ['4037c27'],
     title: 'Cắm dây JST 2 lần bấm, jack né switch, chỉ Esc mới đứng dậy',
     items: [
       'Cắm dây JST vào PCB: bấm đầu dây cầm lên rồi bấm jack trên PCB; cắm xong board vẫn dựng, bấm bước kế mới hạ xuống',
