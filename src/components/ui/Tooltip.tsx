@@ -64,7 +64,7 @@ export function Tooltip({
             role="tooltip"
             style={pos ?? { left: 0, top: 0 }}
             className={cn(
-              'pointer-events-none fixed z-[3000] max-w-[320px] animate-fade-in rounded-lg border border-white/10 bg-[#0e1018]/95 px-2.5 py-1.5 text-[13px] leading-snug text-white shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
+              'pointer-events-none fixed z-[5000] max-w-[320px] animate-fade-in rounded-lg border border-white/10 bg-[#0e1018]/95 px-2.5 py-1.5 text-[13px] leading-snug text-white shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
               wide
                 ? 'w-64 text-left text-xs leading-relaxed font-normal'
                 : 'text-center font-extrabold',

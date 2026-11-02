@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
-import { Clone, RoundedBox, useGLTF } from '@react-three/drei'
+import { Clone, Html, RoundedBox, useGLTF } from '@react-three/drei'
 import {
   CylinderGeometry,
   DoubleSide,
@@ -27,14 +27,20 @@ import {
   caseScrewHoles,
   caseScrewY,
   ringFrame,
+  torqueSpec,
 } from '@/data/steps'
+import { TOOLS, screwLevel } from '@/data/parts'
+import { SkillBar } from '@/components/game/SkillBar'
+import { SKILL_PORTAL } from '@/components/game/skillPortal'
+import { skillBusy, startSkill, useSkill } from '../common/skill'
 import { BLOCKER_SKIN, BLOCKER_TOP, blockerGaps, keyRegions } from '@/data/layouts'
 import type { CaseDef, FootPocket, Key, StepId } from '@/types'
-import { playClick } from '@/sound'
+import { playClick, playDrill, playScrew } from '@/sound'
 import { lerpTo } from '../common/anim'
 import { useHover } from '../common/useHover'
 import { CaseMaterial, WEIGHT_METALS, woodBoxGeometry, woodUV } from '../materials'
-import { ScrewSet } from './Screw'
+import { CurrentDriver, OUT_MS, ScrewSet } from './Screw'
+import { SCREW_SPIN, SPIN_MS } from '../models/HandTools'
 import { useCaseSplit } from './caseSplit'
 import { HintArrow } from '../stations/StationKit'
 import {
@@ -519,6 +525,336 @@ function FixedScrews({
   ))
 }
 
+/** tạ nhấc ra đặt trước case (phía người chơi), cách mép trước case (mm): bên phải thì khuất tầm nhìn, sau case bị board dựng che */
+const COVER_GAP = 8
+/** khối mờ chỗ ốc tạ (bấm tháo / nhấn giữ siết) */
+const coverGhost = (hot: boolean) => (
+  <meshBasicMaterial
+    color={hot ? '#7dffb2' : '#3ddc84'}
+    transparent
+    opacity={hot ? 0.85 : 0.5}
+    depthWrite={false}
+  />
+)
+
+/** ốc tạ trồi lên theo ren khi tháo hết (mm) */
+const COVER_LIFT = 7
+const easeIO = (t: number) => t * t * (3 - 2 * t)
+
+/**
+ * 1 ốc tạ có hoạt cảnh như vít assem (mm, hệ model): `p` = tiến độ tháo 0 → 1 (tua vít quay, ốc trồi lên theo ren, chạy dần theo nhịp
+ * quay), `outAt` = lúc ốc bay ra (tháo xong), `spinning` = đang siết (ốc nằm trên miệng lỗ, tua vít quay liên tục lúc giữ thanh lực);
+ * `tool` = hiện tua vít trên đầu ốc
+ */
+function CoverScrew({
+  s,
+  p,
+  outAt,
+  spinning,
+  tool,
+  spinKey,
+}: {
+  s: NonNullable<CaseDef['weightScrews']>[number]
+  p: number
+  outAt: number | null
+  spinning: boolean
+  tool: boolean
+  spinKey: number
+}) {
+  const [x, y, z, dx, dy, dz] = s
+  const electric = useGame((st) => screwLevel(st.tools, st.screwPick) > 0)
+  const spinMs = electric ? SPIN_MS.electric : SPIN_MS.manual
+  const axis = useMemo(() => new Vector3(dx, dy, dz).normalize(), [dx, dy, dz])
+  // tua vít dọc trục ốc, mũi chạm đầu ốc (model tua vít: mũi ở gốc, thân theo +y)
+  const toolQ = useMemo(
+    () => new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), axis.clone().negate()),
+    [axis],
+  )
+  const lift = useRef<THREE.Group>(null)
+  const spin = useRef<THREE.Group>(null)
+  const anim = useRef({ p, from: p, at: 0 })
+  const shown = useRef(p)
+  useFrame((_, dt) => {
+    const now = performance.now()
+    const a = anim.current
+    if (a.p !== p) {
+      a.from = shown.current
+      a.at = now
+      a.p = p
+    }
+    const k = Math.min(1, (now - a.at) / spinMs)
+    shown.current = a.from + (p - a.from) * (electric ? k : easeIO(k))
+    const t = outAt === null ? 0 : Math.min(1, Math.max(0, (now - outAt) / OUT_MS))
+    // siết: ốc nằm trên miệng lỗ (nhô 1/2 ren); tháo: trồi lên theo tiến độ rồi vọt ra
+    const out = spinning ? COVER_LIFT / 2 : shown.current * COVER_LIFT + easeIO(t) * 25
+    lift.current?.position.copy(axis).multiplyScalar(-out)
+    if (spin.current)
+      spin.current.rotation.y = spinning
+        ? spin.current.rotation.y - dt * 8
+        : shown.current * (electric ? SCREW_SPIN.electric : SCREW_SPIN.manual)
+  })
+  return (
+    <group ref={lift}>
+      <group
+        position={[x, y, z]}
+        quaternion={new Quaternion().setFromUnitVectors(
+          new Vector3(0, 1, 0),
+          axis.clone().negate(),
+        )}
+      >
+        <group ref={spin}>
+          <group
+            quaternion={new Quaternion().setFromUnitVectors(
+              axis.clone().negate(),
+              new Vector3(0, 1, 0),
+            )}
+          >
+            <group position={[-x, -y, -z]}>
+              <FixedScrews list={[s]} kind="flat" />
+            </group>
+          </group>
+        </group>
+      </group>
+      {tool && (
+        <group position={[x, y, z]} quaternion={toolQ}>
+          <group position-y={0.5} scale={1.6 / MM}>
+            <CurrentDriver spinKey={spinKey} dir={spinning ? -1 : 1} />
+          </group>
+        </group>
+      )}
+    </group>
+  )
+}
+
+/**
+ * Tấm tạ trong lòng case CAD (node `weight`) + ốc tạ cố định (`CaseDef.weightScrews`). Case có tạ đè chỗ DTB (`ctx.dtb.cover`):
+ * bước `coverOff` bấm từng ốc để tháo rồi bấm tạ nhấc ra (tạ nằm trước case), bước `coverOn` bấm tạ đặt lại rồi nhấn giữ từng lỗ
+ * ốc canh lực siết (skill check như vít assem). Toạ độ mm (trong group scale MM của CaseModel)
+ */
+function CoverWeight({
+  geometry,
+  metal,
+  seeThrough,
+  screws,
+  front,
+}: {
+  geometry: THREE.BufferGeometry
+  metal: keyof typeof WEIGHT_METALS
+  seeThrough: boolean
+  screws: NonNullable<CaseDef['weightScrews']>
+  /** mép trước vỏ case (z lớn nhất, mm hệ model) */
+  front: number
+}) {
+  const step = useStep()
+  const ctx = useCtx()
+  const build = useBuild()
+  const c = build.cover ?? {}
+  const jst = build.jst
+  const { unscrewCover, liftCover, placeCover, screwCover } = useGame.getState()
+  const toolLv = useGame((s) => screwLevel(s.tools, s.screwPick))
+  const skill = useSkill((k) => (k.active?.id.startsWith('cover-') ? k.active : null))
+  const ref = useRef<THREE.Group>(null)
+  const cover = !!ctx.dtb?.cover
+  // tạ đang ở ngoài (đã nhấc, chưa đặt lại); bản lưu cũ không có dữ liệu thì coi như nằm trong case
+  // bước lắp lại tạ, chưa đặt: tạ mờ ngay đúng chỗ trong case (bấm để đặt), không nằm ngoài
+  const ghost = cover && step === 'coverOn' && !c.on
+  const away = cover && !!c.off && !c.on && !ghost
+  // dời ra trước: mép sau tạ cách mép trước case 1 khe
+  const shift = useMemo(() => {
+    geometry.computeBoundingBox()
+    return front - geometry.boundingBox!.min.z + COVER_GAP
+  }, [geometry, front])
+  useFrame((_, dt) => lerpTo(ref, 'z', away ? shift : 0, dt, 6))
+  // cắm JST xong (bước `jst`) bấm tạ đang nằm ngoài là sang luôn bước lắp lại tạ + đặt vào, khỏi bấm "Bước tiếp theo"
+  const early = cover && step === 'jst' && !!jst && !!c.off && !c.on
+  // tạ mờ (bước DTB / JST, cho thấy DTB bên dưới) chỉ khi còn nằm trong case; nằm ngoài thì vẽ đặc cho dễ thấy
+  const see = seeThrough && !away
+  // mũi tên nhấc / đặt tạ: ngay trên giữa tấm tạ (tâm model case thì lệch xa tạ, bị board dựng che)
+  const weightTop = useMemo((): [number, number, number] => {
+    geometry.computeBoundingBox()
+    const b = geometry.boundingBox!
+    return [(b.min.x + b.max.x) / 2, b.max.y + 12, (b.min.z + b.max.z) / 2]
+  }, [geometry])
+  const removing = cover && step === 'coverOff'
+  const placing = cover && step === 'coverOn'
+  // ốc còn trên tạ: chưa nhấc thì trừ ốc đã tháo; đã đặt lại thì ốc đã siết (bước coverOn), qua bước rồi thì đủ
+  const shown = screws.map((_, i) =>
+    !cover ? true : !c.off ? !c.out?.[i] : c.on ? !placing || !!c.tight?.[i] : false,
+  )
+  const allOut = screws.every((_, i) => c.out?.[i])
+  const pickWeight = (removing && allOut && !c.off) || (placing && !c.on) || early
+  const { hover, bind } = useHover(pickWeight)
+  const next = removing
+    ? shown.findIndex((v) => v)
+    : placing && c.on
+      ? screws.findIndex((_, i) => !c.tight?.[i])
+      : -1
+  const u = 1 / MM
+  // hoạt cảnh tháo (cục bộ, không lưu): số nấc đã vặn mỗi ốc, lúc ốc bay ra; ốc đang rê (hiện tua vít)
+  const clicks = TOOLS.screw[toolLv]?.clicks ?? 1
+  const spinMs = toolLv ? SPIN_MS.electric : SPIN_MS.manual
+  const [turns, setTurns] = useState<Record<number, number>>({})
+  const [outAt, setOutAt] = useState<Record<number, number>>({})
+  const [hot, setHot] = useState(-1)
+  const [tick, setTick] = useState(0)
+  // hoàn tác / quay lại bước: ốc đã tháo (`cover.out`) trở lại trên tạ thì xoá tiến độ tháo cục bộ của ốc đó (không thì ốc vẫn
+  // "bay mất", bấm không ăn) + huỷ hẹn giờ tháo đang chờ
+  const outKey = screws.map((_, i) => (c.out?.[i] ? 1 : 0)).join('')
+  const [prevOut, setPrevOut] = useState(outKey)
+  const timers = useRef<Record<number, ReturnType<typeof setTimeout>[]>>({})
+  if (prevOut !== outKey) {
+    setPrevOut(outKey)
+    const back = screws.map((_, i) => i).filter((i) => prevOut[i] === '1' && outKey[i] !== '1')
+    if (back.length) {
+      const drop = <T,>(o: Record<number, T>) =>
+        Object.fromEntries(Object.entries(o).filter(([k]) => !back.includes(Number(k))))
+      setTurns(drop(turns))
+      setOutAt(drop(outAt))
+    }
+  }
+  // hoàn tác lúc ốc đang vặn dở / đang bay (chưa ghi vào store): thao tác trước đó bị lùi, ốc đang dở cũng về lại như chưa vặn
+  const history = useGame((st) => st.history.length)
+  const [prevHist, setPrevHist] = useState(history)
+  if (prevHist !== history) {
+    setPrevHist(history)
+    if (history < prevHist) {
+      const pending = screws.map((_, i) => i).filter((i) => turns[i] !== undefined && !c.out?.[i])
+      if (pending.length) {
+        const drop = <T,>(o: Record<number, T>) =>
+          Object.fromEntries(Object.entries(o).filter(([k]) => !pending.includes(Number(k))))
+        setTurns(drop(turns))
+        setOutAt(drop(outAt))
+      }
+    }
+  }
+  useEffect(() => {
+    // ốc bị xoá tiến độ thì huỷ hẹn giờ của nó (không tự tháo lại sau khi đã hoàn tác)
+    for (const k of Object.keys(timers.current))
+      if (turns[Number(k)] === undefined) {
+        timers.current[Number(k)].forEach(clearTimeout)
+        delete timers.current[Number(k)]
+      }
+  }, [turns])
+  useEffect(() => () => Object.values(timers.current).flat().forEach(clearTimeout), [])
+  const skillIdx = skill ? Number(skill.id.slice(6)) : -1
+  // đang siết (giữ thanh lực): tua vít quay mỗi nhịp
+  useFrame(() => {
+    if (!skill) return
+    const n = Math.floor((performance.now() - skill.check.at) / spinMs)
+    if (n !== tick) setTick(n)
+  })
+  const turnOut = (i: number) => {
+    if ((turns[i] ?? 0) >= clicks) return
+    const n = (turns[i] ?? 0) + 1
+    if (toolLv) playDrill()
+    else playScrew()
+    setTurns({ ...turns, [i]: n })
+    if (n < clicks) return
+    // tua vít quay xong nấc cuối thì ốc bay ra, bay xong mới tính là đã tháo
+    timers.current[i] = [
+      setTimeout(() => setOutAt((o) => ({ ...o, [i]: performance.now() })), spinMs),
+      setTimeout(() => {
+        delete timers.current[i]
+        unscrewCover(i)
+      }, spinMs + OUT_MS),
+    ]
+  }
+  return (
+    <group ref={ref}>
+      <group
+        onPointerDown={(e) => {
+          if (!pickWeight) return
+          if (early) useGame.getState().nextStep()
+          e.stopPropagation()
+          if (removing) liftCover()
+          else placeCover()
+          playClick(600)
+        }}
+        {...bind}
+      >
+        <mesh geometry={geometry} castShadow receiveShadow>
+          <meshStandardMaterial
+            {...WEIGHT_METALS[metal]}
+            side={DoubleSide}
+            transparent={see || ghost}
+            opacity={ghost ? (hover ? 0.75 : 0.45) : see ? 0.25 : 1}
+            depthWrite={!see && !ghost}
+            emissive={hover || ghost ? '#3ddc84' : '#000000'}
+            emissiveIntensity={hover ? 0.45 : ghost ? 0.2 : 0}
+          />
+        </mesh>
+      </group>
+      {screws.map((sc, i) =>
+        shown[i] || skillIdx === i ? (
+          <CoverScrew
+            key={i}
+            s={sc}
+            p={removing ? Math.min(1, (turns[i] ?? 0) / clicks) : 0}
+            outAt={removing ? (outAt[i] ?? null) : null}
+            spinning={skillIdx === i}
+            tool={
+              (removing && (hot === i || turns[i] !== undefined)) ||
+              skillIdx === i ||
+              (placing && hot === i)
+            }
+            spinKey={skillIdx === i ? tick : (turns[i] ?? 0)}
+          />
+        ) : null,
+      )}
+      {screws.map(([x, y, z, , , , d], i) => {
+        const r = (d || 6) / 2 + 0.6
+        // tháo: bấm ốc còn trên tạ; siết: nhấn giữ lỗ ốc chưa siết (thanh lực như vít assem)
+        const unscrew = removing && shown[i]
+        const tighten = placing && !!c.on && !c.tight?.[i]
+        if (!unscrew && !tighten) return null
+        return (
+          <mesh
+            key={i}
+            position={[x, y + 0.8, z]}
+            rotation-x={-Math.PI / 2}
+            onPointerOver={() => setHot(i)}
+            onPointerOut={() => setHot((h) => (h === i ? -1 : h))}
+            onPointerDown={(e) => {
+              e.stopPropagation()
+              if (unscrew) return turnOut(i)
+              if (skillBusy()) return
+              startSkill(`cover-${i}`, torqueSpec(toolLv), (res) => {
+                if (res !== 'low') playClick(res === 'high' ? 300 : 1100)
+                screwCover(i, res)
+              })
+            }}
+          >
+            <circleGeometry args={[r, 24]} />
+            {coverGhost(i === next)}
+          </mesh>
+        )
+      })}
+      {/* mũi tên + thanh lực (đơn vị u: thu nhỏ ngược scale mm của model) */}
+      {/* tháo: ẩn khi ốc đã vặn dở; siết lại (`turns` còn giữ từ lúc tháo) thì không xét */}
+      {next >= 0 && !skill && hot !== next && (!removing || turns[next] === undefined) && (
+        <group position={screws[next].slice(0, 3) as [number, number, number]} scale={u}>
+          <HintArrow at={[0, 0.3, 0]} size={0.7} />
+        </group>
+      )}
+      {pickWeight && (
+        <group position={weightTop} scale={u}>
+          <HintArrow at={[0, 0.3, 0]} size={1.4} />
+        </group>
+      )}
+      {skill && (
+        <Html
+          center
+          position={screws[Number(skill.id.slice(6))].slice(0, 3) as [number, number, number]}
+          zIndexRange={[6, 6]}
+          portal={SKILL_PORTAL}
+        >
+          <SkillBar check={skill.check} />
+        </Html>
+      )}
+    </group>
+  )
+}
+
 function CaseModel({
   model,
   origin,
@@ -548,6 +884,12 @@ function CaseModel({
   const { nodes } = useGLTF(`/models/keyboards/${model}.glb`) as unknown as {
     nodes: Record<string, THREE.Mesh>
   }
+  // mép trước vỏ (mm hệ model): tạ nhấc ra đặt trước mép này
+  const front = useMemo(() => {
+    const g = (nodes.bottom ?? nodes.case).geometry
+    g.computeBoundingBox()
+    return g.boundingBox!.max.z
+  }, [nodes])
   // vỏ tô theo chất liệu + màu khách chọn; tạ / badge (node "weight") tô kim loại riêng
   return (
     <group position={[-origin[0], Y.floorBot, -origin[1]]} scale={MM}>
@@ -562,17 +904,15 @@ function CaseModel({
         </mesh>
       )}
       {nodes.weight && part !== 'top' && (
-        <mesh geometry={nodes.weight.geometry} castShadow receiveShadow>
-          <meshStandardMaterial
-            {...WEIGHT_METALS[weight]}
-            side={DoubleSide}
-            transparent={seeThroughWeight}
-            opacity={seeThroughWeight ? 0.25 : 1}
-            depthWrite={!seeThroughWeight}
-          />
-        </mesh>
+        <CoverWeight
+          geometry={nodes.weight.geometry}
+          metal={weight}
+          seeThrough={seeThroughWeight}
+          screws={screws ?? []}
+          front={front}
+        />
       )}
-      {screws && part !== 'top' && <FixedScrews list={screws} kind="flat" />}
+      {!nodes.weight && screws && part !== 'top' && <FixedScrews list={screws} kind="flat" />}
       {badgeScrews && part !== 'bottom' && <FixedScrews list={badgeScrews} kind="socket" />}
       {/* badge (kim loại như tạ) gắn trên nắp: vẽ cùng nắp */}
       {nodes.badge && part !== 'bottom' && (
@@ -660,7 +1000,7 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const flipRef = useRef<THREE.Group>(null)
   const topMid = (Y.split + Y.caseTop) / 2
   // top mount: case trên đã bắt vít vào plate → bước cắm dây JST dựng lên cùng board
-  const stand = topMount && step === 'jst' ? jstStand(ctx.depth) : null
+  const stand = topMount && (step === 'jst' || step === 'coverOn') ? jstStand(ctx.depth) : null
   useFrame((_, dt) => {
     lerpTo(topRef, 'y', stand?.y ?? topY, dt, 6)
     lerpTo(topRef, 'z', stand?.z ?? 0, dt, 6)

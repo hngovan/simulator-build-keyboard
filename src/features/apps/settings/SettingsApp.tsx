@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { CircleAlert, Volume2, VolumeX } from 'lucide-react'
 import { useGame } from '@/store'
 import { Button, HudCard, Muted, Slider, Toggle } from '@/components/ui'
+import { TOUR_ID } from '@/features/guide/Tour'
 import { cn } from '@/lib/format'
 import { Wallpaper } from '@/features/desktop/Wallpaper'
 import { WALLPAPERS, WALLPAPER_IDS, wallpaperOf } from '@/features/desktop/wallpapers'
@@ -199,6 +200,7 @@ function WallpaperPanel() {
 /** Bật / tắt NPC Keeb-chan (mẹo ở máy tính + hội thoại bàn build) */
 function GuidePanel() {
   const shown = useGame((s) => !s.guideHidden)
+  const tourSeen = useGame((s) => s.guideSeen.includes(TOUR_ID))
   return (
     <Section title="Hướng dẫn" info="Lưu cùng tiến trình">
       <Row>
@@ -208,6 +210,22 @@ function GuidePanel() {
           onChange={(on) => useGame.setState({ guideHidden: !on })}
           label="Hiện Keeb-chan"
         />
+      </Row>
+      {/* chạy lại tour làm mờ nền chỉ chỗ cần bấm (đóng Cài đặt là tour hiện) */}
+      <Row>
+        <span className="flex-1 font-bold">Tour hướng dẫn lần đầu</span>
+        <Button
+          size="sm"
+          disabled={!tourSeen || !shown}
+          onClick={() =>
+            useGame.setState((s) => ({
+              guideSeen: s.guideSeen.filter((id) => id !== TOUR_ID),
+              windows: s.windows.filter((w) => w !== 'settings'),
+            }))
+          }
+        >
+          Xem lại
+        </Button>
       </Row>
     </Section>
   )

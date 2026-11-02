@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useGame, useStep } from '@/store'
-import { SCREW_STEPS } from '@/data/steps'
 import { useSceneLoading } from '@/scene/common/loadingStore'
 import { GuideGirl } from '@/components/art/GuideGirl'
 import { cn } from '@/lib/format'
@@ -38,8 +37,8 @@ export function BenchDialog() {
     setIdx(0)
   }
   const next = () => (idx + 1 < lines.length ? setIdx(idx + 1) : finish())
-  // vặn vít: bảng chọn đầu vít nằm giữa trên → hạ khung thoại xuống dưới nó
-  const top = step && step in SCREW_STEPS ? 'top-[136px]' : 'top-16'
+  // bảng chọn đầu vít cố định ở cột phải nên khung thoại luôn sát trên
+  const top = 'top-16'
   if (small)
     return (
       <button

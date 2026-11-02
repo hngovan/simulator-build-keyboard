@@ -17,7 +17,8 @@ const rand = (i: number, k: number) => {
 
 /**
  * Ốc case đã tháo (bước `caseOpen`) mà chưa vặn lại (`caseScrew`) + ốc tray mount / ốc M2 top mount kèm case chưa bắt
- * (`trayScrew` / `topScrew`, bấm lần đầu là lấy ra khỏi khay): có khay đựng ốc (`tools.screwTray`) thì nằm gọn trong lòng khay, không có thì vương vãi trên bàn. Đặt góc sau bên trái thảm (sau case, không chồng lên case trên đang tháo).
+ * (`trayScrew` / `topScrew`, bấm lần đầu là lấy ra khỏi khay) + ốc stab screw-in chưa bắt (`stabScrew`, có sẵn từ đầu build:
+ * tới bước lắp stab là thấy ốc để bắt): có khay đựng ốc (`tools.screwTray`) thì nằm gọn trong lòng khay, không có thì vương vãi trên bàn. Đặt góc sau bên trái thảm (sau case, không chồng lên case trên đang tháo).
  * Bấm khay để đổi màu (`nextTrayColor`). Khay chỉ để gọn, không tăng chỉ số
  */
 export function ScrewTray() {
@@ -67,10 +68,30 @@ export function ScrewTray() {
   const topLeft = ctx.steps.includes('topScrew')
     ? ctx.screws.topScrew.filter((s) => !b.screws[s.id]).length
     : 0
+  // ốc stab screw-in chưa bắt: nằm sẵn từ đầu (khách / shop có đủ ốc theo bộ stab), bắt con nào bớt con đó
+  const stabLeft = ctx.steps.includes('stabScrew')
+    ? ctx.screws.stabScrew.filter((s) => !b.screws[s.id]).length
+    : 0
   const len = screwLength('caseOpen', shaft)
   const trayLen = screwLength('trayScrew', TRAY_SHAFT)
   const topLen = screwLength('topScrew')
-  const total = n + trayLeft + topLeft
+  const stabLen = screwLength('stabScrew')
+  // ốc tạ che DTB đã tháo (bước coverOff) mà chưa siết lại (coverOn): chờ hoạt cảnh bay ra xong như ốc case
+  const coverOut = Object.keys(b.cover?.out ?? {}).length
+  const coverBack = Object.keys(b.cover?.tight ?? {}).length
+  const coverN = Math.max(0, coverOut - coverBack)
+  const total = n + trayLeft + topLeft + stabLeft + coverN
+  // thứ tự ốc trong khay: case tháo ra → tray → top → stab → ốc tạ
+  const kindOf = (i: number) =>
+    i < n
+      ? 'case'
+      : i < n + trayLeft
+        ? 'tray'
+        : i < n + trayLeft + topLeft
+          ? 'top'
+          : i < n + trayLeft + topLeft + stabLeft
+            ? 'stab'
+            : 'cover'
   const spots = useMemo(
     () =>
       Array.from({ length: total }, (_, i) => {
@@ -80,12 +101,27 @@ export function ScrewTray() {
           const z = (rand(i, 2) - 0.5) * 2.4
           return { x, y: 0, z, rot: rand(i, 3) * Math.PI * 2 }
         }
-        // xếp song song trong lòng khay, đầu ốc so le (thân xen kẽ nhau cho sát); hàng ngoài tì lên thành lòng chảo
-        const z = (i - (total - 1) / 2) * 0.22
-        const l = i < n ? len : i < n + trayLeft ? trayLen : topLen
-        return { x: 0, y: bowlY(Math.hypot(l / 2, z)), z, rot: i % 2 ? Math.PI : 0 }
+        // thả lộn xộn trong lòng khay: chỗ + hướng ngẫu nhiên cố định theo thứ tự, càng xa tâm càng tì lên thành lòng chảo;
+        // nhiều ốc thì chồng hơi cao lên (đè lên nhau)
+        const a = rand(i, 4) * Math.PI * 2
+        const r = Math.sqrt(rand(i, 5)) * 0.62
+        const x = Math.cos(a) * r
+        const z = Math.sin(a) * r
+        const rot = rand(i, 6) * Math.PI * 2
+        const l = {
+          case: len,
+          tray: trayLen,
+          top: topLen,
+          stab: stabLen,
+          cover: 0.3,
+        }[kindOf(i)]
+        // đầu / mũi ốc xa tâm nhất (thân dọc trục x sau khi xoay rot)
+        const reach = Math.hypot(x, z) + l / 2
+        const stack = Math.floor(i / 7) * 0.05
+        return { x, y: bowlY(Math.min(reach, 1.12)) + stack, z, rot }
       }),
-    [n, trayLeft, total, hasTray, len, trayLen, topLen],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- kindOf dẫn xuất từ n / trayLeft / topLeft / stabLeft
+    [n, trayLeft, topLeft, stabLeft, total, hasTray, len, trayLen, topLen, stabLen],
   )
   if (!hasTray && !total) return null
   return (
@@ -105,12 +141,17 @@ export function ScrewTray() {
       )}
       {spots.map((p, i) => (
         <group key={i} position={[p.x, p.y, p.z]} rotation-y={p.rot}>
-          {i < n ? (
+          {kindOf(i) === 'case' ? (
             <LooseScrew step="caseOpen" shaft={shaft} />
-          ) : i < n + trayLeft ? (
+          ) : kindOf(i) === 'tray' ? (
             <LooseScrew step="trayScrew" shaft={TRAY_SHAFT} />
-          ) : (
+          ) : kindOf(i) === 'top' ? (
             <LooseScrew step="topScrew" />
+          ) : kindOf(i) === 'stab' ? (
+            <LooseScrew step="stabScrew" />
+          ) : (
+            // ốc tạ (ốc nón đầu bằng, cùng kiểu ốc tháo case)
+            <LooseScrew step="caseOpen" />
           )}
         </group>
       ))}

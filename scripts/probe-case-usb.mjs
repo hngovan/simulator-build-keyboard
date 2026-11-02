@@ -6,7 +6,8 @@
 // Model thiết kế sẵn cho DTB (bệ phẳng có 2 lỗ ốc M2, hoặc 2 trụ nhô): dò bản đồ cao độ sàn quanh 2 lỗ vít dự kiến, cụm lõm
 // (lỗ ốc) / nhô (trụ) lệch sàn quanh đó > 0,8mm → DTB nằm đúng chỗ đó trên bệ / trụ (game không vẽ thêm trụ đỡ).
 // Ghi { hole: [x, y tâm lỗ, rộng, cao], inner: z mặt trong vách, floor: y sàn chỗ DTB, slope: dốc sàn (rad, quanh x),
-//       mount?: [x, z tâm DTB, y mặt trụ], groove?: [[x, y, z], ...] } (mm, hệ model).
+//       mount?: [x, z tâm DTB, y mặt trụ], groove?: [[x, y, z], ...], cover?: true } (mm, hệ model).
+// `cover`: tấm tạ (node weight) nằm đè lên chỗ DTB → phải tháo tạ mới lắp được (bước `coverOff` / `coverOn`); rãnh dây dò khi bỏ tạ.
 // Rãnh đi dây JST (vd Repent75, TA65): lan từ tâm DTB qua ô sàn thấp liền nhau (≤ 3mm trên mặt sàn DTB, theo dốc), phần lòi ra
 // ngoài hốc DTB = rãnh; đường ngắn nhất từ miệng JST tới đầu rãnh xa nhất (lấy mẫu ~4mm) → dây nằm dọc rãnh, cổng JST PCB trên đầu rãnh.
 // Dùng: node scripts/probe-case-usb.mjs [model...] (không tham số: mọi GLB trong public/models/keyboards)
@@ -96,7 +97,17 @@ const DTB_HOLES = [
   [7, 6.25],
 ]
 /** dò rãnh dây: lưới (mm), ô thấp hơn mặt sàn DTB + `low`, vùng tìm ± `x` / tới trước `z`, diện tích rãnh hợp lệ (mm²), dài tối thiểu */
-const GROOVE = { step: 0.5, low: 3, x: 90, z: 50, area: [20, 4000], len: 12, wide: 20, max: 60 }
+const GROOVE = {
+  step: 0.5,
+  low: 3,
+  x: 160,
+  z: 50,
+  area: [20, 8000],
+  len: 12,
+  wide: 20,
+  max: 160,
+  cut: 60,
+}
 /** miệng cổng JST trên DTB so với tâm mạch (mm, DTB_MM.jst.z) */
 const DTB_JST_Z = 7.8
 
@@ -173,15 +184,16 @@ function findGroove(mesh, cx, cz, floor, slope, yTop, inner) {
     path.push([x, h[k], z])
   }
   path.reverse()
-  // dây dài tối đa `max` theo rãnh (rãnh chạy tới tận vách xa thì cổng PCB không ở tít đầu kia)
-  let len = 0
-  for (let i = 1; i < path.length; i++) {
-    len += Math.hypot(path[i][0] - path[i - 1][0], path[i][2] - path[i - 1][2])
-    if (len > GROOVE.max) {
-      path.length = i
-      break
-    }
-  }
+  // rãnh dây thật kết thúc ở khe / hốc (Duality: khe phải ~120mm) → dây đi hết rãnh; dài quá `max` = khe dọc vách chạy tới mép case,
+  // không phải rãnh dây → chỉ lấy `cut` mm đầu
+  const lens = [0]
+  for (let i = 1; i < path.length; i++)
+    lens.push(lens[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][2] - path[i - 1][2]))
+  if (lens.at(-1) > GROOVE.max)
+    path.length = Math.max(
+      2,
+      lens.findIndex((l) => l > GROOVE.cut),
+    )
   const step = Math.max(1, Math.round(4 / g))
   return path.filter((_, i) => i % step === 0 || i === path.length - 1)
 }
@@ -277,11 +289,12 @@ const names = process.argv.slice(2).length
       .map((f) => f.replaceAll('\\', '/').slice(0, -4))
 
 /** lưới tam giác của nắp + đáy + tạ (bỏ badge) gộp 1 mesh có BVH */
-async function load(name) {
+/** lưới gộp các node (bỏ badge); `skip` = bỏ thêm node tên đó (tạ: dò rãnh dây nằm dưới tạ) */
+async function load(name, skip) {
   const doc = await io.read(`${DIR}/${name}.glb`)
   const pos = []
   for (const n of doc.getRoot().listNodes()) {
-    if (!n.getMesh() || n.getName() === 'badge') continue
+    if (!n.getMesh() || n.getName() === 'badge' || n.getName() === skip) continue
     for (const p of n.getMesh().listPrimitives()) {
       const a = p.getAttribute('POSITION').getArray()
       const idx = p.getIndices()?.getArray()
@@ -297,7 +310,7 @@ async function load(name) {
   g.boundsTree = new MeshBVH(g)
   g.computeBoundingBox()
   const mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }))
-  return { mesh, box: g.boundingBox }
+  return { mesh, box: g.boundingBox, empty: !pos.length }
 }
 
 const ray = new THREE.Raycaster()
@@ -326,6 +339,13 @@ const out =
   fs.existsSync(OUT) && process.argv.length > 2 ? JSON.parse(fs.readFileSync(OUT, 'utf8')) : {}
 for (const name of names) {
   const { mesh, box } = await load(name)
+  // không tạ (dò rãnh dưới tạ) + riêng tạ (tạ có che DTB không)
+  const bare = (await load(name, 'weight')).mesh
+  const doc = await io.read(`${DIR}/${name}.glb`)
+  const hasWeight = doc
+    .getRoot()
+    .listNodes()
+    .some((n) => n.getName() === 'weight' && n.getMesh())
   const { min, max } = box
   const xs = []
   for (let x = min.x + 3; x <= max.x - 3; x += STEP) xs.push(x)
@@ -387,17 +407,33 @@ for (const name of names) {
         ]
       : undefined
   const dc = mount ? [mount[0], mount[1]] : [pick.x, zc]
-  const groove = findGroove(mesh, dc[0], dc[1], floor, slope, pick.y + 6, inner)
+  const groove = findGroove(bare, dc[0], dc[1], floor, slope, pick.y + 6, inner)
+  // tạ che DTB: tia xuống tại tâm + 4 góc DTB, mặt đầu tiên trúng (cả case) cao hơn sàn DTB > 6mm mà bỏ tạ ra thì thấp → tạ đè lên
+  const cover =
+    hasWeight &&
+    [
+      [0, 0],
+      [-7, -6],
+      [7, -6],
+      [-7, 6],
+      [7, 6],
+    ].some(([dx, dz]) => {
+      const o = [dc[0] + dx, max.y + 5, dc[1] + dz]
+      const top = max.y + 5 - cast(mesh, o, [0, -1, 0])
+      const under = max.y + 5 - cast(bare, o, [0, -1, 0])
+      return top - under > 0.5 && top > floor + 4
+    })
   out[name] = {
     hole: [r(pick.x), r(pick.y - min.y), r(pick.w), r(pick.h)],
     inner: r(inner),
     floor: r(floor - min.y),
     slope: r(slope),
     ...(mount ? { mount } : {}),
+    ...(cover ? { cover: true } : {}),
     ...(groove ? { groove: groove.map(([x, y, z]) => [r(x), r(y - min.y), r(z)]) } : {}),
   }
   console.log(
-    `${name}: lỗ x ${r(pick.x)} (giữa case ${r(cx)}), y ${r(pick.y - min.y)}, ${pick.w}×${pick.h}mm, vách trong z ${r(inner)} (sau ${r(min.z)}), sàn ${r(floor - min.y)} dốc ${r((slope * 180) / Math.PI)}° · ${ok.length} ứng viên · trụ DTB: ${groove ? `rãnh ${groove.length} điểm tới ${r(groove.at(-1)[0])},${r(groove.at(-1)[2])} · ` : ''}${mount ? mount.join(', ') : bosses.map((b) => (b ? `${r(b.x)},${r(b.z)} cao ${r(b.top)}` : '-')).join(' | ')}`,
+    `${name}: lỗ x ${r(pick.x)} (giữa case ${r(cx)}), y ${r(pick.y - min.y)}, ${pick.w}×${pick.h}mm, vách trong z ${r(inner)} (sau ${r(min.z)}), sàn ${r(floor - min.y)} dốc ${r((slope * 180) / Math.PI)}° · ${ok.length} ứng viên · trụ DTB: ${cover ? 'TẠ CHE · ' : ''}${groove ? `rãnh ${groove.length} điểm tới ${r(groove.at(-1)[0])},${r(groove.at(-1)[2])} · ` : ''}${mount ? mount.join(', ') : bosses.map((b) => (b ? `${r(b.x)},${r(b.z)} cao ${r(b.top)}` : '-')).join(' | ')}`,
   )
 }
 fs.writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n')

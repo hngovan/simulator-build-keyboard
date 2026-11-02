@@ -13,6 +13,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.25',
+    date: '2026-11-02',
+    commits: [],
+    title: 'Tháo / lắp tạ che DTB, thanh lực nổi trên cùng, panel hàn gọn hơn',
+    items: [
+      'Case có tạ đè DTB (Duality, Exodus, Catto HHKB...): bước tháo ốc tạ + nhấc tạ trước khi lắp DTB, cắm JST xong mới lắp lại tạ + siết ốc canh lực; không bỏ qua được',
+      'Ốc tạ tháo có hoạt cảnh tua vít, ốc tháo ra nằm lộn xộn trong khay; hoàn tác lúc tháo ốc tạ không còn lỗi',
+      'Tạ nhấc ra nằm trước case, camera lùi ra cho dễ thấy; cắm JST xong bấm tạ là lắp lại luôn',
+      'Bỏ qua DTB / dây JST thì bàn phím không lên nguồn: test không phím nào ăn, giao đi bị trừ điểm nặng',
+      'Đầu cắm JST cắm lút vào jack, khúc cua dây JST vào rãnh không còn bị mạch che',
+      'Thanh lực vặn vít / thanh nhiệt nổi trên bảng chọn đầu vít, chữ hướng dẫn thay bằng icon chuột mô phỏng giữ / nhả',
+      'Bảng chọn đầu vít thu gọn vào cột phải được',
+      'Panel hàn: độ bền dụng cụ xuống dòng, "Trạm hàn", hướng dẫn + ghi chú thiếc trong khung alert, rê chuột nút thiếc / lube / O-ring xem mô tả',
+      'Tour hướng dẫn lần đầu ngồi máy tính, tooltip + nút quay lại đồng bộ (cùng đợt)',
+    ],
+  },
+  {
     version: '0.1.24',
     date: '2026-11-02',
     commits: ['4037c27'],

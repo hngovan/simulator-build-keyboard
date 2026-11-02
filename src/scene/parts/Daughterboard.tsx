@@ -7,6 +7,7 @@ import { useGame, useBuild, useCtx, useStep } from '@/store'
 import { DTB_MM, USB_PORT_MM, Y, torqueSpec } from '@/data/steps'
 import { screwLevel } from '@/data/parts'
 import { SkillBar } from '@/components/game/SkillBar'
+import { SKILL_PORTAL } from '@/components/game/skillPortal'
 import { skillBusy, startSkill, useSkill } from '../common/skill'
 import { playClick } from '@/sound'
 import { useHover } from '../common/useHover'
@@ -37,8 +38,22 @@ export const usbPort = (x: number): WallPort => ({
 
 /** đầu dây chưa cắm nằm trên sàn trước DTB (case không rãnh dây): lệch so với DTB (u) */
 const LOOSE = { dx: 0.63, dz: 1.6 }
-/** đầu cắm dây (SHR-04V-S, mm): rộng, cao, dài; cắm lút vào cổng `IN` */
-const PLUG = { w: 5, h: 2.4, l: 4.2, in: 2 }
+/** đầu dây chưa cắm dựng đứng ló lên khỏi sàn / khe rãnh (u): miệng đầu cắm cao hơn chỗ dây nằm, cho thấy là chờ cắm */
+const LOOSE_RISE = 0.5
+
+/** đầu cắm dựng đứng: miệng ở `at` quay lên, thân + dây chĩa xuống */
+function StandPlug({ at, mat }: { at: THREE.Vector3; mat?: ReactNode }) {
+  return (
+    <group position={at} rotation-x={-Math.PI / 2}>
+      <Plug at={ORIGIN} dir={-1} mat={mat} />
+    </group>
+  )
+}
+/**
+ * đầu cắm dây (SHR-04V-S, mm): rộng, cao, dài; cắm lút vào cổng `in` (gần hết thân, chừa 0,3mm mép: cắm hờ 2mm thì thân đầu cắm
+ * lòi ra ngoài jack, che chỗ dây ra)
+ */
+const PLUG = { w: 5, h: 2.4, l: 4.2, in: 3.9 }
 /** dây 4 sợi bước 1mm (VBUS / D− / D+ / GND), bán kính sợi (mm) */
 const WIRES = ['#d63a2f', '#f2f2f2', '#3aa457', '#1d1d1f']
 const WIRE_R = 0.42
@@ -196,14 +211,22 @@ function JstCable({ at }: { at: DtbSpot }) {
     const pts = (at.groove ?? []).map(([x, y, z]) =>
       new THREE.Vector3(x - at.x, y - at.y + WIRE_R * 2 * MM, z - at.z).applyEuler(toDtb),
     )
-    return pts.filter((p) => p.distanceTo(tailA) > 0.15)
+    // rãnh dò bắt đầu từ tâm DTB (Duality): mấy điểm đầu nằm dưới mạch / đầu cắm → dây quặt ngược vào gầm mạch, khúc cua bị che.
+    // Bỏ điểm đầu rãnh còn trong bề ngang mạch (+1mm) và chưa ra khỏi đuôi đầu cắm: dây ra khỏi đầu cắm cua thẳng tới điểm rãnh ngoài mép mạch
+    const under = (p: THREE.Vector3) =>
+      Math.abs(p.x) < (DTB_MM.w / 2 + 1) * MM && p.z < tailA.z + 1 * MM
+    let first = 0
+    while (first < pts.length && under(pts[first])) first++
+    return pts.slice(first).filter((p) => p.distanceTo(tailA) > 0.15)
   }, [at, tailA])
   // đầu chưa cắm nằm trên sàn case: cuối rãnh, không rãnh thì trước DTB (DTB kê trụ thì sàn thấp hơn mặt dưới mạch)
+  // đầu chưa cắm dựng đứng ló lên khỏi cuối rãnh (không rãnh: khỏi sàn trước DTB), miệng quay lên chờ cắm
   const loose = useMemo(
     () =>
-      via.length
-        ? via[via.length - 1].clone().setY(via[via.length - 1].y + (PLUG.h / 2) * MM)
-        : new THREE.Vector3(LOOSE.dx, at.floor - at.y + (PLUG.h / 2) * MM, mouth.z + LOOSE.dz),
+      (via.length
+        ? via[via.length - 1].clone()
+        : new THREE.Vector3(LOOSE.dx, at.floor - at.y, mouth.z + LOOSE.dz)
+      ).setY((via.length ? via[via.length - 1].y : at.floor - at.y) + LOOSE_RISE),
     [mouth, at, via],
   )
   // miệng cổng JST trên PCB (hệ board): cổng treo ngược dưới mặt PCB, miệng quay ra sau
@@ -219,9 +242,9 @@ function JstCable({ at }: { at: DtbSpot }) {
   const tmp = useMemo(() => new THREE.Quaternion(), [])
   useFrame(() => {
     const board = boardGroup.current
-    let end = loose
-    // hướng dây chạy ra khỏi đầu cắm phía PCB (hệ DTB): đầu cắm quay theo board
-    let back = new THREE.Vector3(0, 0, -1)
+    // chưa cắm: đầu cắm dựng đứng (đang cầm thì nhấc cao hơn), dây chạy xuống; đã cắm: theo jack trên board
+    let end = useJstPick.getState().picked && !plugged ? loose.clone().setY(loose.y + 0.12) : loose
+    let back = new THREE.Vector3(0, plugged ? 0 : -1, plugged ? -1 : 0)
     if (plugged && board && root.current) {
       end = root.current.worldToLocal(board.localToWorld(pcbLocal.clone()))
       board.getWorldQuaternion(q)
@@ -235,8 +258,8 @@ function JstCable({ at }: { at: DtbSpot }) {
     if (key === last.current) return
     last.current = key
     const tailB = end.clone().addScaledVector(back, (PLUG.l - PLUG.in) * MM)
-    // chưa cắm: dây nằm dọc rãnh tới đầu cắm cuối rãnh (bỏ điểm cuối trùng đầu cắm)
-    wireGeometries(tailA, tailB, back, plugged ? via : via.slice(0, -1)).forEach((g, i) => {
+    // chưa cắm: dây nằm dọc hết rãnh rồi dựng lên đầu cắm ở cuối rãnh
+    wireGeometries(tailA, tailB, back, via).forEach((g, i) => {
       const m = meshes.current[i]
       if (!m) return g.dispose()
       m.geometry.dispose()
@@ -276,15 +299,13 @@ function JstCable({ at }: { at: DtbSpot }) {
               playClick(picked ? 700 : 1000)
             }}
           >
-            {(hover) => (
-              <Plug at={picked ? held : loose} dir={-1} mat={ghostMat(hover || picked)} />
-            )}
+            {(hover) => <StandPlug at={picked ? held : loose} mat={ghostMat(hover || picked)} />}
           </Target>
-          <Plug at={picked ? held : loose} dir={-1} />
-          {!picked && <HintArrow at={[loose.x, loose.y + 0.05, loose.z]} size={0.8} />}
+          <StandPlug at={picked ? held : loose} />
+          {!picked && <HintArrow at={[loose.x, loose.y + 0.15, loose.z]} size={0.8} />}
         </>
       ) : (
-        <Plug at={loose} dir={-1} />
+        <StandPlug at={loose} />
       )}
     </group>
   )
@@ -425,6 +446,7 @@ export function Daughterboard({ at }: { at: DtbSpot }) {
             DTB_MM.holes[Number(skill.id.slice(4))][1] * MM,
           ]}
           zIndexRange={[6, 6]}
+          portal={SKILL_PORTAL}
         >
           <SkillBar check={skill.check} />
         </Html>

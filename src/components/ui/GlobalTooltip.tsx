@@ -76,7 +76,7 @@ export function GlobalTooltip() {
       role="tooltip"
       style={pos ?? { left: 0, top: 0 }}
       className={cn(
-        'pointer-events-none fixed z-[3000] max-w-[320px] animate-fade-in rounded-lg border border-white/10 bg-[#0e1018]/95 px-2.5 py-1.5 text-[13px] leading-snug font-extrabold text-white shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
+        'pointer-events-none fixed z-[5000] max-w-[320px] animate-fade-in rounded-lg border border-white/10 bg-[#0e1018]/95 px-2.5 py-1.5 text-[13px] leading-snug font-extrabold text-white shadow-[0_6px_16px_rgba(0,0,0,0.45)]',
         tip.start ? 'text-left' : 'text-center',
         // lần vẽ đầu chỉ để đo
         !pos && 'invisible',

@@ -355,7 +355,18 @@ function FilterMenu({
 }
 
 /** Dòng hội thoại ở cột trái: avatar, tên, trạng thái */
-function ThreadRow({ t, active, onPick }: { t: Thread; active: boolean; onPick: () => void }) {
+function ThreadRow({
+  t,
+  active,
+  onPick,
+  tour,
+}: {
+  t: Thread
+  active: boolean
+  onPick: () => void
+  /** nhãn cho tour hướng dẫn (`data-tour`) */
+  tour?: string
+}) {
   const day = useGame((s) => s.day)
   // trạng thái = vật gắn lên thẻ (không chữ): mới chưa xem = chấm đỏ, đang làm = ghim, đã nhận = kẹp giấy + hạn,
   // chờ gửi = tem bưu kiện, đã giao / huỷ = dấu mộc
@@ -368,6 +379,7 @@ function ThreadRow({ t, active, onPick }: { t: Thread; active: boolean; onPick: 
     <button
       type="button"
       onClick={onPick}
+      data-tour={tour}
       className={cn(
         'relative flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
         active ? 'bg-[#3a3418] ring-2 ring-yellow ring-inset' : 'bg-panel-2 hover:bg-line',
@@ -434,14 +446,18 @@ function Reply({
   icon,
   onClick,
   children,
+  tour,
 }: {
   tone?: ButtonTone
   icon: ReactNode
   onClick: () => void
   children: ReactNode
+  /** nhãn cho tour hướng dẫn (`data-tour`) */
+  tour?: string
 }) {
   return (
     <Button
+      data-tour={tour}
       tone={tone}
       className="flex items-center gap-2 max-md:flex-1 max-md:justify-center max-md:px-2 max-md:whitespace-nowrap [&_svg]:size-4"
       onClick={onClick}
@@ -605,6 +621,7 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
             {t.kind === 'offer' && (
               <>
                 <Reply
+                  tour="accept"
                   tone="green"
                   icon={<Check />}
                   onClick={() => act('accept', () => acceptOrder(order.id))}
@@ -711,6 +728,8 @@ export function Messenger() {
             <ThreadRow
               key={t.order.id}
               t={t}
+              // tour hướng dẫn: chỉ vào thẻ đơn mới đầu tiên
+              tour={t === shown.find((x) => x.kind === 'offer') ? 'offer' : undefined}
               active={t === current}
               onPick={() => {
                 useGame.getState().seeOffer(t.order.id)

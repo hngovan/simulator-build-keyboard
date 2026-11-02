@@ -236,6 +236,7 @@ export function Shopii() {
           <div className="flex shrink-0 flex-col gap-1.5">
             {/* giỏ hàng: tab có ô số món, có hàng thì viền cam */}
             <TabChip
+              tour="cart"
               active={view === 'cart'}
               icon={ShoppingCart}
               count={cartQty}

@@ -33,7 +33,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   stab: { title: 'Lắp stab', hint: 'Click vào vị trí các phím dài (≥ 2u) để lắp stab' },
   switchLube: {
     title: 'Lube switch (tuỳ chọn)',
-    hint: 'Click switch trên đồ mở để tách housing, stem và lò xo, rồi click switch đã mở để lube 1 mẻ',
+    hint: 'Click switch trên đồ mở để tách housing, stem và lò xo, click switch đã mở để lube 1 mẻ, lube lò xo, rồi click lưới switch để đóng lại',
   },
   stabScrew: {
     title: 'Vặn vít stab',
@@ -72,13 +72,21 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     title: 'Dán feet cao su',
     hint: 'Case đã lật úp: click từng hốc tròn dưới đáy để dán feet (mỗi hốc 1 cái, chọn feet đen / trắng ở bảng bên)',
   },
+  coverOff: {
+    title: 'Tháo tạ che DTB',
+    hint: 'Tấm tạ đè lên chỗ lắp daughterboard: click từng ốc trên tạ để tháo, rồi click tấm tạ để nhấc ra',
+  },
   dtb: {
     title: 'Lắp daughterboard',
     hint: 'Click hốc vách sau case để đặt daughterboard (cổng USB-C quay ra lỗ), nhấn giữ 2 lỗ vít M2 canh lực siết, rồi click đầu dây để cắm vào cổng JST có sẵn trên DTB',
   },
+  coverOn: {
+    title: 'Lắp lại tạ',
+    hint: 'Dây JST đã cắm vào PCB: click tấm tạ đặt lại vào case (dây nằm trong rãnh dưới tạ), rồi nhấn giữ từng lỗ ốc canh lực siết lại',
+  },
   jst: {
     title: 'Cắm dây JST vào PCB',
-    hint: 'Board dựng lên cho thấy mặt dưới: click đầu dây JST nằm trong case để cầm lên, rồi click jack JST trên PCB để cắm. Xong bấm sang bước kế để hạ board',
+    hint: 'Board dựng lên cho thấy mặt dưới: click đầu dây JST nằm trong case để cầm lên, rồi click jack JST trên PCB để cắm. Xong bấm sang bước kế để hạ board (case có tạ: click tấm tạ trước case để lắp lại luôn)',
   },
   caseIn: { title: 'Thả board vào case', hint: 'Click vào case để đặt board xuống' },
   trayScrew: {
@@ -174,7 +182,10 @@ export const isOptionalStep = (
 ) =>
   step === 'plate' && (steps?.includes('topCase') || steps?.includes('gasket'))
     ? false
-    : !!order?.dev || (OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam))
+    : // tháo / lắp tạ che DTB: không bỏ qua được kể cả đơn dev (tạ còn đè thì không lắp được DTB)
+      step === 'coverOff' || step === 'coverOn'
+      ? false
+      : !!order?.dev || (OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam))
 /** Tên bước theo đơn: foam khách yêu cầu thì ghi rõ thay cho "(tuỳ chọn)" */
 export const stepTitle = (step: StepId, order?: { foam?: true } | null) =>
   step === 'foam' && order?.foam ? 'Lót foam PCB (khách yêu cầu)' : STEP_INFO[step].title
@@ -234,7 +245,10 @@ export function remapStepIdx(old: StepId[], next: StepId[], idx: number) {
   let at = next.indexOf(old[idx])
   if (at < 0) at = Math.min(idx, next.length - 1)
   // mở case (tháo vít case mới đổi sang) coi như đã làm: không lùi về tận đầu, chỉ lùi về bước lắp ráp mới (gasket, vòng...)
-  const added = next.findIndex((s) => !old.includes(s) && s !== 'caseOpen')
+  // tháo / lắp tạ che DTB (thêm sau) cũng coi như đã làm
+  const added = next.findIndex(
+    (s) => !old.includes(s) && s !== 'caseOpen' && s !== 'coverOff' && s !== 'coverOn',
+  )
   return added >= 0 && added < at ? added : Math.max(0, at)
 }
 
@@ -309,9 +323,13 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     caseDef.pieces === 2 ? caseScrews : [],
   )
   const dtb = spot && { ...spot, jack: jackSpot(spot, keys) }
+  // tạ che chỗ DTB: tháo tạ → lắp DTB → lắp lại tạ
+  // tạ che chỗ DTB: tháo tạ → lắp DTB → cắm dây vào PCB → lắp lại tạ (dây nằm trong rãnh dưới tạ) → thả board vào case
+  if (dtb?.cover) steps.push('coverOff')
   if (dtb) steps.push('dtb')
   if (topMount) steps.push('topCase', 'topScrew')
   if (dtb) steps.push('jst')
+  if (dtb?.cover) steps.push('coverOn')
   steps.push('caseIn')
   if (mount === 'tray') steps.push('trayScrew')
   if (caseDef.pieces === 2) steps.push(...(topMount ? [] : (['caseClose'] as const)), 'caseScrew')
@@ -482,6 +500,10 @@ export const USB_PORT_MM = { w: 11.5, h: 5.5, r: 2 }
  * (`caseUsb.json`, `node scripts/probe-case-usb.mjs`): model có bệ / trụ bắt ốc DTB sẵn thì nằm đúng đó; không thì tâm cổng
  * USB-C ngang tâm lỗ, mép sau sát mặt trong vách, lỗ cao hơn sàn thì kê trụ đỡ (không nghiêng), không thì nằm trên sàn nghiêng
  */
+/** số ốc trên tấm tạ che DTB (`CaseDef.weightScrews`), 0 = tạ không ốc (chỉ nhấc ra) */
+export const coverScrews = (ctx: Pick<BuildContext, 'caseDef'>) =>
+  ctx.caseDef.weightScrews?.length ?? 0
+
 /** số đo lỗ USB / sàn / bệ DTB của 1 model case CAD (mm, hệ model; xem scripts/probe-case-usb.mjs) */
 interface CaseUsb {
   hole: number[]
@@ -490,6 +512,7 @@ interface CaseUsb {
   slope: number
   mount?: number[]
   groove?: number[][]
+  cover?: boolean
 }
 export function dtbSpot(
   model: string | undefined,
@@ -516,7 +539,15 @@ export function dtbSpot(
     // model có sẵn bệ / trụ bắt ốc DTB: nằm đúng chỗ đó (trên bệ, nghiêng theo sàn), không kê thêm trụ
     if (usb.mount) {
       const [mx, mz] = usb.mount
-      return { x: mx * MM_U - origin[0], z: mz * MM_U - origin[1], y: floor, tilt, floor, groove }
+      return {
+        x: mx * MM_U - origin[0],
+        z: mz * MM_U - origin[1],
+        y: floor,
+        tilt,
+        floor,
+        groove,
+        cover: usb.cover,
+      }
     }
     // không có bệ: tâm cổng USB-C ngang tâm lỗ, mép sau sát vách; lỗ cao hơn sàn thì kê trụ đỡ (không nghiêng)
     const raised = hy - DTB_MM.usb.y - usb.floor > 0.5
@@ -527,6 +558,7 @@ export function dtbSpot(
       tilt: raised ? 0 : tilt,
       floor,
       groove,
+      cover: usb.cover,
     }
   }
   const z = -(depth / 2 + CASE_MARGIN) + (DTB_MM.d / 2) * MM_U
@@ -538,20 +570,23 @@ export function dtbSpot(
 }
 
 /** jack JST trên PCB lệch so với DTB khi case không có rãnh dây (u): sang phải + tới trước */
-const JACK_OFFSET = { dx: 0.9, dz: 1.2 }
+const JACK_OFFSET = { dx: 0, dz: 0.4 }
 /**
- * vùng cấm quanh mỗi phím (hệ phím, u): socket hotswap (tâm lệch 0,05 / 0,1, rộng 0,5 + pad ±0,3) + cụm chân switch quanh tâm,
- * chừa thêm lề
+ * vùng cấm quanh mỗi phím (hệ phím, u). Cứng (`hard`, không được chạm): socket hotswap + pad (tâm lệch 0,05 / 0,1, rộng 0,5 + pad ±0,3)
+ * và lỗ chân switch quanh tâm. Mềm (`soft`, cố tránh): khung footprint in trên mạch (±0,354u, `PcbSurface`) + nhãn "SWxx" dưới khung —
+ * layout không khe hàng (60%) thì không chỗ nào tránh hết được khung, chọn chỗ chạm ít nhất (thường là góc giao 4 phím)
  */
-const KEY_KEEPOUT = { x0: -0.36, x1: 0.46, z0: -0.18, z1: 0.29 }
+const KEY_HARD = { x0: -0.33, x1: 0.43, z0: -0.22, z1: 0.26 }
+const KEY_SOFT = { x0: -0.38, x1: 0.38, z0: -0.38, z1: 0.47 }
 /** điểm mẫu thân jack + đầu cắm (hệ jack, u; miệng ở gốc quay −z): thân 6 × 4,2mm phía +z, đầu cắm + dây ló ra phía −z */
-const JACK_SAMPLES = [-0.18, 0, 0.18].flatMap((x) =>
-  [-0.22, -0.08, 0.06, 0.16, 0.26].map((z) => [x, z]),
+const JACK_SAMPLES = [-0.16, 0, 0.16].flatMap((x) =>
+  [-0.2, -0.08, 0.04, 0.14, 0.23].map((z) => [x, z]),
 )
 
 /**
- * Chỗ jack JST trên PCB không đè socket hotswap / chân switch / lỗ stab: thử từ chỗ muốn đặt (đầu rãnh dây, không có thì lệch
- * `JACK_OFFSET` so với DTB) ra các vòng xa dần, mỗi chỗ thử 4 hướng xoay (ưu tiên miệng quay về phía DTB), phải nằm trong PCB
+ * Chỗ jack JST trên PCB: thử từ chỗ muốn đặt (đầu rãnh dây, không có thì ngay trước DTB `JACK_OFFSET`) ra các vòng xa dần (≤ 2,5u),
+ * mỗi chỗ 4 hướng xoay (ưu tiên miệng quay về DTB). Không được chạm vùng cấm cứng (socket / chân switch / lỗ stab) và phải nằm
+ * trong PCB; trong các chỗ hợp lệ chọn chỗ chạm khung footprint (mềm) ít nhất, rồi gần chỗ muốn đặt nhất
  */
 function jackSpot(dtb: Omit<DtbSpot, 'jack'>, keys: Key[]): DtbSpot['jack'] {
   const end = dtb.groove?.[dtb.groove.length - 1]
@@ -563,49 +598,61 @@ function jackSpot(dtb: Omit<DtbSpot, 'jack'>, keys: Key[]): DtbSpot['jack'] {
   const z0 = Math.min(...keys.map((k) => k.cz - k.h / 2)) + 0.05
   const z1 = Math.max(...keys.map((k) => k.cz + k.h / 2)) - 0.05
   const holes = keys.filter((k) => k.stab).flatMap(stabHoles)
-  const blocked = (px: number, pz: number) =>
-    px < x0 ||
-    px > x1 ||
-    pz < z0 ||
-    pz > z1 ||
-    holes.some((h) => Math.hypot(px - h.x, pz - h.z) < h.r + 0.06) ||
-    keys.some((k) => {
+  /** điểm (px, pz) rơi vào vùng nào: 2 = cứng (hoặc ra ngoài PCB), 1 = khung footprint, 0 = trống */
+  const hit = (px: number, pz: number) => {
+    if (px < x0 || px > x1 || pz < z0 || pz > z1) return 2
+    if (holes.some((h) => Math.hypot(px - h.x, pz - h.z) < h.r + 0.06)) return 2
+    let soft = 0
+    for (const k of keys) {
       const dx = px - k.cx
       const dz = pz - k.cz
+      if (Math.abs(dx) > 0.6 || Math.abs(dz) > 0.6) continue
       const lx = dx * Math.cos(k.rot) - dz * Math.sin(k.rot)
       const lz = dx * Math.sin(k.rot) + dz * Math.cos(k.rot)
-      const o = KEY_KEEPOUT
-      return lx > o.x0 && lx < o.x1 && lz > o.z0 && lz < o.z1
-    })
-  const fits = (x: number, z: number, ry: number) =>
-    JACK_SAMPLES.every(
-      ([jx, jz]) =>
-        !blocked(
-          x + jx * Math.cos(ry) + jz * Math.sin(ry),
-          z - jx * Math.sin(ry) + jz * Math.cos(ry),
-        ),
-    )
+      const inside = (o: typeof KEY_HARD) => lx > o.x0 && lx < o.x1 && lz > o.z0 && lz < o.z1
+      if (inside(KEY_HARD)) return 2
+      if (inside(KEY_SOFT)) soft = 1
+    }
+    return soft
+  }
+  /** số điểm mẫu chạm khung footprint, -1 = chạm vùng cứng */
+  const cost = (x: number, z: number, ry: number) => {
+    let soft = 0
+    for (const [jx, jz] of JACK_SAMPLES) {
+      const h = hit(
+        x + jx * Math.cos(ry) + jz * Math.sin(ry),
+        z - jx * Math.sin(ry) + jz * Math.cos(ry),
+      )
+      if (h === 2) return -1
+      soft += h
+    }
+    return soft
+  }
+  // giữ trong object: TS không theo được phép gán trong vòng lặp lồng (coi `best` luôn null)
+  const pick: { best: (DtbSpot['jack'] & { score: number }) | null } = { best: null }
   for (let r = 0; r <= 2.5; r += 0.05) {
-    let best: (DtbSpot['jack'] & { score: number }) | null = null
     const n = r === 0 ? 1 : Math.max(8, Math.round((2 * Math.PI * r) / 0.05))
     for (let i = 0; i < n; i++) {
       const x = want.x + r * Math.cos((i / n) * 2 * Math.PI)
       const z = want.z + r * Math.sin((i / n) * 2 * Math.PI)
-      // miệng quay về phía DTB: hướng miệng (−sin ry, −cos ry) = hướng tới DTB
-      const face = Math.atan2(-(dtb.x - x), -(dtb.z - z))
-      ;[0, Math.PI / 2, -Math.PI / 2, Math.PI].forEach((turn, t) => {
+      // miệng quay về phía DTB: hướng miệng (−sin ry, −cos ry) = hướng tới DTB; jack nằm thẳng theo lưới PCB (bội số 90°)
+      const face =
+        Math.round(Math.atan2(-(dtb.x - x), -(dtb.z - z)) / (Math.PI / 2)) * (Math.PI / 2)
+      for (const [t, turn] of [0, Math.PI / 2, -Math.PI / 2, Math.PI].entries()) {
         const ry = face + turn
-        if (!fits(x, z, ry)) return
-        const score = t * 0.2 + Math.hypot(x - want.x, z - want.z)
-        if (!best || score < best.score) best = { x, z, ry, score }
-      })
+        const c = cost(x, z, ry)
+        if (c < 0) continue
+        // chạm khung footprint nặng hơn hẳn đi xa thêm 1u
+        const score = c * 1.2 + t * 0.15 + r
+        if (!pick.best || score < pick.best.score) pick.best = { x, z, ry, score }
+      }
     }
-    if (best) {
-      const { x, z, ry } = best
-      return { x, z, ry }
-    }
+    // đã có chỗ không chạm khung nào: đi xa hơn chỉ tệ hơn
+    if (pick.best && pick.best.score < r + 0.5) break
   }
-  return { ...want, ry: 0 }
+  if (!pick.best) return { ...want, ry: 0 }
+  const { x, z, ry } = pick.best
+  return { x, z, ry }
 }
 
 /** lỗ bắt vít case ở đáy / xuyên lớp mica (u, ~M2.5 + đầu vít) */
@@ -928,7 +975,8 @@ export function stepProgress(
       return [b.stabModDone || all ? 1 : 0, 1]
     }
     case 'switchLube':
-      return [b.lubeDone || b.lubed >= ctx.keys.length ? 1 : 0, 1]
+      // xong khi đã đóng hết switch lại (hoặc bỏ qua / xong sớm: lubeDone)
+      return [b.lubeDone || (b.swClosed ?? 0) >= ctx.keys.length ? 1 : 0, 1]
     case 'stab':
       return [count(b.stabs), ctx.stabKeys.length]
     case 'plate':
@@ -953,6 +1001,10 @@ export function stepProgress(
         (b.dtb?.placed ? 1 : 0) + count(b.dtb?.screws ?? {}) + (b.dtb?.plugged ? 1 : 0),
         2 + DTB_MM.holes.length,
       ]
+    case 'coverOff':
+      return [count(b.cover?.out ?? {}) + (b.cover?.off ? 1 : 0), coverScrews(ctx) + 1]
+    case 'coverOn':
+      return [(b.cover?.on ? 1 : 0) + count(b.cover?.tight ?? {}), coverScrews(ctx) + 1]
     case 'jst':
       return [b.jst ? 1 : 0, 1]
     case 'caseIn':
@@ -974,7 +1026,9 @@ export const NO_FLIP_STEPS: StepId[] = [
   'pack',
   'stabMod',
   'switchLube',
+  'coverOff',
   'dtb',
+  'coverOn',
   'jst',
   'caseIn',
   'caseClose',

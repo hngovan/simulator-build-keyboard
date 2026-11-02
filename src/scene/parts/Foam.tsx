@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 import polygonClipping, { type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping'
-import { TRAY_HOLE, Y, stabSpan } from '@/data/steps'
+import { CASE_MARGIN, TRAY_HOLE, Y, stabSpan } from '@/data/steps'
+import { blockerGaps } from '@/data/layouts'
 import type { Key, Point } from '@/types'
 import { boardOutline } from './boardOutline'
 
@@ -14,7 +15,9 @@ const COLOR = '#25262b'
 /**
  * Tấm foam Poron đen giữa PCB và plate, kiểu tấm cắt sẵn theo layout: mỗi phím 1 lỗ vuông gần bằng phím,
  * phím dài (Shift, Enter, Backspace...) 1 lỗ dài liền; spacebar để liền tấm, chỉ khoét lỗ switch giữa
- * + 2 khe stab, lỗ tròn cho vít tray mount lọt xuống PCB. Hình 2D trên mặt xz rồi đùn lên theo y (như plate)
+ * + 2 khe stab, lỗ tròn cho vít tray mount lọt xuống PCB; khe trống của layout (WKL chỗ phím Win, khe hàng...) cũng khoét: plate đa layout
+ * (Duality) có lỗ ở đó, foam liền thì nhìn qua lỗ thấy ô đen thay vì PCB; plate dựng bằng code liền chỗ đó nên vẫn che kín.
+ * Hình 2D trên mặt xz rồi đùn lên theo y (như plate)
  */
 function foamGeometry(
   keys: Key[],
@@ -50,6 +53,9 @@ function foamGeometry(
       rect(x, z, 0.22, (1 - WEB) / 2, k.rot)
     }
   }
+  // khe trống của layout (cùng chỗ khối chặn liền case `blockerGaps`), chừa viền như lỗ phím
+  for (const g of blockerGaps(keys, width, depth, CASE_MARGIN + 0.05))
+    if (g.w > WEB && g.d > WEB) rect(g.x, g.z, (g.w - WEB) / 2, (g.d - WEB) / 2, 0)
   // vít tray: lỗ tròn như lỗ plate (không thì foam che mất đầu ốc tì mặt PCB)
   for (const { x, z } of trayHoles)
     holes.push([

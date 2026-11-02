@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { type ThreeEvent } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import * as THREE from 'three'
@@ -9,7 +9,8 @@ import type { Key } from '@/types'
 import { useGame } from '@/store'
 import { isPackedBox } from '@/store/carrySlice'
 import { DIPLOMA_URL, createDiploma } from './models/diplomaModel'
-import { BIT_SWAP_MS, ElectricScrewdriver, ManualScrewdriver } from './models/HandTools'
+import { ElectricScrewdriver, ManualScrewdriver } from './models/HandTools'
+import { CurrentDriver } from './parts/Screw'
 import { Clickable } from './stations/StationKit'
 import { DisplayKeyboard } from './models/ShelfDisplay'
 import {
@@ -433,12 +434,6 @@ function ShelfToolBox(props: JSX.IntrinsicElements['group']) {
 function DeskTools(props: JSX.IntrinsicElements['group']) {
   // mặt tì vô hình ngang mặt bàn cho RestOn bắn tia xuống
   const floor = useRef<THREE.Group>(null)
-  // đang đổi đầu vít: tua vít được cầm lên (BitSwapPreview), xong mới đặt lại xuống bàn
-  const held = useRef<THREE.Group>(null)
-  useFrame(() => {
-    const t = performance.now() - useGame.getState().bitSwapAt
-    if (held.current) held.current.visible = !(t >= 0 && t < BIT_SWAP_MS)
-  })
   const owned = useGame((s) => s.tools.screw)
   const level = useGame((s) => screwLevel(s.tools, s.screwPick))
   const electric = level > 0
@@ -450,24 +445,26 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
   if (!screwStep) return null
   return (
     <group {...props}>
-      <group ref={held} scale={M}>
+      <group scale={M}>
         <group ref={floor}>
           <mesh visible={false} rotation-x={-Math.PI / 2}>
             <planeGeometry args={[0.6, 0.4]} />
           </mesh>
         </group>
+        {/* tua vít đang dùng có gắn đầu vít đang chọn (`CurrentDriver` → `BitDriver`): đổi đầu vít thì nằm yên tại chỗ,
+            đầu cũ tuột ra khỏi mũi, đầu mới xoay vào khớp (không nhấc lên / không ẩn) */}
         <RestOn key={electric ? 'e' : 'm'} surface={floor} at={[-0.06, 0]}>
           {electric ? (
             // nằm nghiêng một bên hông (mặt phẳng thân úp xuống), mũi chĩa sang trái
             <group rotation-y={Math.PI / 2} scale={3.6 / M}>
               <group rotation-x={-Math.PI / 2}>
-                <ElectricScrewdriver spinKey={0} />
+                <CurrentDriver spinKey={0} />
               </group>
             </group>
           ) : (
             // tua vít tay vẽ bằng code, nằm ngang trên bàn, mũi chĩa sang trái
             <group rotation-z={-Math.PI / 2} scale={3.6 / M}>
-              <ManualScrewdriver />
+              <CurrentDriver spinKey={0} />
             </group>
           )}
         </RestOn>

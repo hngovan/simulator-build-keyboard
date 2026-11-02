@@ -11,6 +11,7 @@ export function TabChip({
   onClick,
   className,
   children,
+  tour,
 }: {
   active: boolean
   /** không có thì chỉ chữ (menu mục hàng Shopii) */
@@ -22,6 +23,8 @@ export function TabChip({
   onClick: () => void
   className?: string
   children: ReactNode
+  /** nhãn cho tour hướng dẫn (`data-tour`) */
+  tour?: string
 }) {
   return (
     <button
@@ -29,6 +32,7 @@ export function TabChip({
       aria-pressed={active}
       onClick={onClick}
       title={title}
+      data-tour={tour}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 font-head text-sm font-extrabold transition-colors',
         active

@@ -344,8 +344,12 @@ export type StepId =
   | 'ring'
   /** dán 4 feet cao su vào hốc CNC dưới đáy case (trước khi lắp board vào case) */
   | 'feet'
+  /** case CAD có tấm tạ đè lên chỗ DTB: tháo ốc tạ, nhấc tạ ra (trước `dtb`) */
+  | 'coverOff'
   /** đặt daughterboard (DTB) vào hốc cổng USB vách sau case, bắt 2 vít M2, cắm dây JST vào DTB */
   | 'dtb'
+  /** lắp lại tấm tạ đã tháo ở `coverOff`, siết lại ốc tạ (canh lực) */
+  | 'coverOn'
   /** cắm đầu dây JST còn lại vào PCB (board đang nhấc trên case) trước khi thả board vào case */
   | 'jst'
   /** top mount: úp case trên lên plate rồi vặn vít plate vào case trên */
@@ -402,6 +406,8 @@ export interface BuildState {
   feet?: Record<number, string>
   /** daughterboard: đã đặt vào case, vít M2 đã bắt (số lỗ), đã cắm dây JST vào DTB; bản lưu cũ không có */
   dtb?: { placed?: true; screws?: Record<number, true>; plugged?: true }
+  /** tấm tạ che DTB: `out` = ốc tạ đã tháo, `off` = đã nhấc tạ ra, `on` = đã đặt lại, `tight` = ốc đã siết lại */
+  cover?: { out?: Record<number, true>; off?: true; on?: true; tight?: Record<number, true> }
   /** đã cắm đầu dây JST còn lại vào PCB */
   jst?: true
   inCase: boolean
@@ -422,6 +428,11 @@ export interface BuildState {
   stabModDone: boolean
   /** số switch đã tách vỏ bằng đồ mở (bản lưu cũ không có: coi như = lubed) */
   opened?: number
+  /**
+   * số switch đã đóng lại (lắp lò xo + stem + housing trên) sau khi lube, theo thứ tự lưới (con 0..swClosed-1);
+   * bắt đầu đóng thì khoá mở / lube thêm; bản lưu cũ không có = 0
+   */
+  swClosed?: number
   lubed: number
   /** thứ tự (trong lưới switch đã mở) các con đã lube, bấm con nào lube con đó (bản lưu cũ: coi như `lubed` con đầu) */
   lubedIds?: number[]
@@ -458,6 +469,8 @@ export interface DtbSpot {
   /** case CAD có rãnh đi dây JST: đường dây dọc rãnh từ miệng JST DTB tới đầu rãnh ([x, y đáy rãnh, z], u, toạ độ cảnh);
    * cổng JST trên PCB nằm ngay trên đầu rãnh */
   groove?: [number, number, number][]
+  /** tấm tạ của case CAD đè lên chỗ DTB: phải tháo tạ ra (`coverOff`) mới lắp DTB, xong lắp lại (`coverOn`) */
+  cover?: boolean
   /** jack JST mặt dưới PCB (hệ board, u): tâm miệng x, z + xoay quanh trục đứng `ry` (miệng quay theo (−sin ry, −cos ry)) */
   jack: { x: number; z: number; ry: number }
 }

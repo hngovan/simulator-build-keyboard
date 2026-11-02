@@ -432,6 +432,8 @@ export function BenchHud() {
 
   // dev: đơn build thử có bảng đổi case / màu / mount ngay trên bàn
   const devCase = import.meta.env.DEV && !!order.dev
+  // bảng chọn đầu vít: cố định đầu cột phải
+  const dockBits = step in SCREW_STEPS ? <BitPicker step={step as ScrewStep} /> : null
 
   return (
     <>
@@ -443,15 +445,15 @@ export function BenchHud() {
         </HudPanel>
         <StepList />
       </div>
-      {(side || devCase) && (
+      {(side || devCase || dockBits) && (
         // cột phải: chữ 14px đồng bộ với cột trái (chữ nhỏ 12 → 14px, tiêu đề lớn hơn 1 bậc)
         <div className="fixed top-16 right-3 z-[5] flex max-h-[calc(100vh-160px)] w-[310px] flex-col gap-2 text-sm max-md:hidden [&_.text-base]:text-lg [&_.text-xs]:text-sm">
+          {dockBits}
           {devCase && <DevCasePanel />}
           {side}
         </div>
       )}
       <Objective step={step} canFlip={canFlip} />
-      {step in SCREW_STEPS && <BitPicker step={step as ScrewStep} />}
       <TestDone />
     </>
   )

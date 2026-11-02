@@ -8,16 +8,81 @@ import { Clickable, HintArrow } from '../stations/StationKit'
 import { JobBox, ORDER_BOX, ORDER_BOX_H } from '../room/DoorParcels'
 import { M } from '../room/roomLayout'
 import { BoxCutter } from '../models/PackingTools'
+import { buildKeyboardModel } from '@/features/apps/messenger/orderThumb'
+import { KEYCAP_COLORS } from '@/data/parts'
 
 /** rạch băng keo bằng dao rọc giấy (ms), rồi bật 2 nắp (ms), xong tự sang bước sau */
 const CUT_MS = 1300
 const OPEN_MS = 1400
 const ease = (t: number) => t * t * (3 - 2 * t)
-const [, BOX_H, BOX_D] = ORDER_BOX
+const [BOX_W, BOX_H, BOX_D] = ORDER_BOX
+/** lòng thùng (m): trừ vách carton + chừa khe xốp chèn */
+const IN_W = BOX_W - 0.02
+const IN_D = BOX_D - 0.02
+/** tấm xốp lót đáy (m) */
+const FOAM_H = 0.012
+const FOAM = new THREE.MeshStandardMaterial({ color: '#e8e6df', roughness: 1 })
 /** dao chạy quá 2 đầu đường băng keo 1 chút (m) */
 const OVER = 0.015
 /** vết rạch: rãnh tối mảnh dọc giữa băng keo */
 const SLIT = new THREE.MeshBasicMaterial({ color: '#2a1d10' })
+
+/**
+ * Đồ trong thùng: case của đơn (đúng loại + màu trong kho đơn) nằm dọc thùng trên tấm xốp lót, mở nắp là thấy (thùng có chiều sâu).
+ * Model dựng như ảnh case Shopii (`buildKeyboardModel` caseOnly, đơn vị u → m); case dài hơn lòng thùng thì thu nhỏ cho vừa
+ */
+function BoxContents() {
+  const c = useGame((s) => s.inventory.case)
+  const layout = useGame((s) => s.order?.layout)
+  const variant = useGame((s) => s.order?.variant)
+  const [obj, setObj] = useState<THREE.Object3D | null>(null)
+  useEffect(() => {
+    if (!c || !layout) return
+    let live = true
+    buildKeyboardModel(
+      {
+        layout,
+        variant: variant ?? {},
+        caseId: c.id,
+        color: c.color,
+        keycapKit: 'full',
+        keycapColor: 'white',
+        accent: KEYCAP_COLORS.white.legend,
+      },
+      false,
+      true,
+    ).then((g) => {
+      if (!live) return
+      // đơn vị u → m, xoay dọc theo chiều sâu thùng, căn giữa, đáy case nằm trên tấm xốp
+      const holder = new THREE.Group()
+      g.scale.setScalar(1 / M)
+      g.rotation.y = Math.PI / 2
+      holder.add(g)
+      const box = new THREE.Box3().setFromObject(holder)
+      const size = box.getSize(new THREE.Vector3())
+      const k = Math.min(1, IN_W / size.x, IN_D / size.z)
+      g.scale.multiplyScalar(k)
+      const b = new THREE.Box3().setFromObject(holder)
+      const mid = b.getCenter(new THREE.Vector3())
+      g.position.set(-mid.x, FOAM_H - b.min.y, -mid.z)
+      g.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true
+      })
+      setObj(holder)
+    })
+    return () => {
+      live = false
+    }
+  }, [c, layout, variant])
+  return (
+    <group position-y={0.004}>
+      <mesh position-y={FOAM_H / 2} material={FOAM} receiveShadow>
+        <boxGeometry args={[IN_W, FOAM_H, IN_D]} />
+      </mesh>
+      {obj && <primitive object={obj} />}
+    </group>
+  )
+}
 
 /**
  * Bước mở hộp: đúng thùng carton đơn hàng đang đặt trên bàn (cỡ thật, băng keo xanh, tên khách, tem dễ vỡ — `JobBox`).
@@ -87,8 +152,9 @@ export function ShippingBox() {
           <JobBox id={id} flaps={{ left, right }} />
         </group>
       </Clickable>
-      {/* dao rọc giấy + vết rạch (ngoài Clickable: không viền khi rê chuột) */}
+      {/* dao rọc giấy + vết rạch + đồ trong thùng (ngoài Clickable: không viền khi rê chuột) */}
       <group position-y={Y.table} scale={M}>
+        <BoxContents />
         <group ref={knife} visible={false}>
           <BoxCutter />
         </group>

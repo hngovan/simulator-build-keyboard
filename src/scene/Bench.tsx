@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useRef } from 'react'
 import { onBench } from '@/store/carrySlice'
 import { usePack } from '@/features/bench/packStore'
-import { PackBox } from './parts/PackBox'
+import { PackBox, PackCarry } from './parts/PackBox'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { ContactShadows, Environment, OrbitControls } from '@react-three/drei'
@@ -48,13 +48,15 @@ function StepLoading() {
 /** Chọn thứ hiển thị trên bàn theo bước hiện tại */
 function Workbench() {
   const step = useStep()
-  // đóng gói: bước cuối, hoặc bấm nút cam "Đóng gói" ở bước bất kỳ (hoạt cảnh thùng úp lên bàn phím)
+  // đóng gói: bước cuối, hoặc bấm nút cam "Đóng gói" ở bước bất kỳ (hoạt cảnh bàn phím bay vào thùng)
   const packing = usePack((p) => p.at !== null)
   if (!step) return null
   if (step === 'pack' || packing)
     return (
       <>
-        <Assembly />
+        <PackCarry>
+          <Assembly />
+        </PackCarry>
         <PackBox />
       </>
     )
@@ -85,6 +87,9 @@ declare global {
   }
 }
 
+/** camera lúc tạ nằm ngoài case: lùi xa (× `back`), tâm nhìn dời ra trước `dz` × chiều sâu bàn phím */
+const WEIGHT_OUT_CAM = { back: 1.5, dz: 0.6 }
+
 /** Đặt camera theo độ rộng bàn phím; bấm "Góc nhìn" để đưa về mặc định */
 function CameraRig() {
   const ctx = useCtx()
@@ -95,13 +100,21 @@ function CameraRig() {
   const fit = useThree((s) => fitAspect(s.size.width / s.size.height))
   // bước mở hộp: thùng cỡ thật → lùi xa như bàn có thùng
   const unbox = useStep() === 'unbox'
+  // tạ che DTB đã nhấc ra nằm trước case (chưa lắp lại): lùi camera + dời tâm nhìn ra trước cho thấy cả case lẫn tạ
+  const weightOut = useGame((s) => {
+    const c = s.build?.cover
+    return !!s.ctx?.dtb?.cover && !!c?.off && !c.on
+  })
   useEffect(() => {
     // đang đi lại trong phòng: không kéo camera về bàn
     if (useGame.getState().walk) return
-    camera.position.set(...benchView({ width: ctx.width, unbox, box: true }, fit))
-    controls?.target.set(0, 0, 0)
+    const pos = benchView({ width: ctx.width, unbox, box: true }, fit)
+    const tz = weightOut ? ctx.depth * WEIGHT_OUT_CAM.dz : 0
+    const k = weightOut ? WEIGHT_OUT_CAM.back : 1
+    camera.position.set(pos[0] * k, pos[1] * k, pos[2] * k + tz)
+    controls?.target.set(0, 0, tz)
     controls?.update()
-  }, [ctx, camKey, controls, camera, fit, unbox])
+  }, [ctx, camKey, controls, camera, fit, unbox, weightOut])
 
   // dev: mở camera + controls trong console (cùng kiểu window.__game) để đặt góc nhìn khi debug
   useEffect(() => {

@@ -1097,3 +1097,45 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
 - (2026-11-02, "tại sao bấm wasd lại bị out ra bàn build, đáng lẽ chỉ bấm esc mới được out ra") Bỏ hiệu ứng ngồi bàn build bấm W / A / S / D
   là tự đứng dậy (`Controls` trong `scene/Bench.tsx`, `MOVE_KEYS`, bắt chước PC Building Simulator): giờ chỉ Esc (`useAppShortcuts`) / nút
   quay lại mới đứng dậy. Sửa câu thoại Keeb-chan "Đứng dậy (WASD)" → "(Esc)" + OVERVIEW.
+- (2026-11-02, "option chọn stab ở dev build đang bị ẩn phía sau" + "tương tự với các option khác") Danh sách đổ xuống `OptionSelect` và
+  popup lọc `OptionFilter` / `ListFilterPicker` (portal ra body) z-2000 thấp hơn dialog z-3500 (Build thử, Cài đặt, Tỉ lệ) / z-4000 (thua game)
+  → bị che. Nâng lên z-4500; tooltip (`GlobalTooltip`, `Tooltip`) z-3000 → z-5000 (cũng bị dialog che). Thứ tự lớp: khung xem 3D / chat
+  2000 < lịch, tổng kết ngày, banner 3000 < chuông 3100 < dialog 3500 < thua game 4000 < popup chọn 4500 < tooltip 5000.
+- (2026-11-02, "thêm tour gui hướng dẫn, kiểu làm mờ nền focus hướng dẫn vào nơi cần bấm để người chơi lần đầu hiểu") `features/guide/Tour.tsx`:
+  lần đầu ngồi máy tính (Keeb-chan đang bật, cảnh đã tải, chưa có `TOUR_ID` 'tour:pc' trong `guideSeen`) → 6 bước: icon Mezzenger → thẻ đơn mới
+  đầu tiên → Nhận đơn → icon Shopii → tab Giỏ hàng → nút quay lại. Lớp phủ portal body z-2500 (trên cửa sổ app, dưới popup chọn / tooltip):
+  4 khối `bg-black/65` quanh ô sáng (chặn bấm chỗ khác, ô sáng bấm xuyên xuống phần tử thật) + viền vàng `animate-pulse`, bong bóng Keeb-chan
+  (dưới ô sáng, thiếu chỗ thì trên) có "Bỏ qua hướng dẫn". Đích = `data-tour` (prop `tour` thêm cho `DesktopIcon`, `TabChip`, `BackButton`,
+  `ThreadRow`, `Reply`); khung đích dò mỗi khung hình (kéo cửa sổ thì ô sáng chạy theo); bấm đích (capture, không chặn click) → bước sau sau
+  250ms, bước cuối ghi đã xem ngay (đứng dậy gỡ tour trước khi hẹn giờ chạy). Chưa thấy đích (vd đóng Mezzenger) thì chỉ hiện bong bóng giữa đáy.
+  Cài đặt → Hướng dẫn: "Xem lại" (bỏ `TOUR_ID` khỏi guideSeen + đóng Cài đặt). Chưa có tour cho phòng 3D / bàn build (bàn build đã có hội
+  thoại theo bước `BenchDialog`). Playwright: đi hết 6 bước bằng cách bấm giữa ô sáng, cuối ghi `tour:pc`.
+
+## 2026-11-02: thanh lực nổi trên bảng chọn đầu vít, bảng thu gọn vào cột phải
+
+- Yêu cầu: thanh lực khi vặn vít phải nổi lên trên bảng chọn ốc; bảng chọn ốc thu gọn được, thu gọn thì vào menu bên phải.
+- Thanh lực (`SkillBar`) vẽ trong `<Html>` của drei, mặc định gắn vào khung Canvas (`fixed` = lớp xếp chồng riêng) nên
+  `zIndexRange` không vượt được HUD `z-[5]`. Thêm `SKILL_PORTAL` (body) cho mọi `<Html>` chứa SkillBar (Screw, Case ốc tạ,
+  Daughterboard, SolderPad) → so z thẳng với HUD, nổi trên bảng chọn đầu vít.
+- `BitPicker`: nút ▶ thu gọn → thẻ "Đầu vít" nhỏ ở đầu cột phải HUD (mặt ốc + 4 nút đầu vít nhỏ, ◀ mở lại ra giữa);
+  trạng thái `useBitDock` (`features/bench/bitDock.ts`, localStorage `sbk-ui-open:bitDock`). BenchHud đặt chỗ theo `docked`,
+  khung thoại Keeb-chan chỉ hạ xuống khi bảng còn nổi giữa. Phím 1–4 vẫn đổi đầu ở cả 2 dạng.
+- (2026-11-02, "ấn đổi đầu vít thì tua vít biến mất rồi hiện lại, hiệu ứng thay đầu vít đâu?" → "để tua vít nằm yên trên bàn, thay đầu vít
+  vào là được, không cần dựng lên" + "menu chọn đầu vít cố định qua bên phải luôn") Trước: đổi đầu vít thì ẩn tua vít trên bàn
+  (`DeskTools` Room.tsx) và hiện `BitSwapPreview` lơ lửng giữa board (Screw.tsx) — chỗ đó bị HUD che / ngoài khung nên chỉ thấy tua vít biến
+  mất. Giờ tua vít nằm trên bàn chính là `CurrentDriver` (`BitDriver`, có gắn đầu vít đang chọn): đổi đầu thì nằm yên tại chỗ, đầu cũ tuột ra khỏi
+  mũi, đầu mới xoay vào khớp; bỏ `BitSwapPreview` + ẩn tua vít. `BitPicker` chỉ còn thẻ đầu cột phải HUD (bỏ bảng nổi giữa trên + nút thu gọn,
+  xoá `bench/bitDock.ts`; `BenchDialog` không còn hạ khung thoại né bảng). Playwright: tua vít vẫn trên bàn suốt lúc đổi, đầu mới trượt vào mũi.
+- (2026-11-02, "khi test phím bị trùng key Space về giữa và Space thử phím, có cách xử lý không") Đã chặn sẵn: `useBenchKey` bỏ qua mọi
+  phím tắt ở bước test, `useKeyboardTest` `preventDefault` phím đang thử (nút đang focus không bị Space bấm). Playwright: bước test nhấn Space
+  (cả khi nút góc nhìn đang focus) → `camKey` không đổi, chỉ thử phím. Chỗ gây hiểu nhầm là tooltip "(Space)": `ResetCamButton` ở bước test
+  ghi "Góc nhìn mặc định (đang test phím: Space là phím thử)", về góc nhìn thì bấm nút.
+- Cùng ngày: bỏ chữ "Giữ chuột, nhả trong vùng xanh" dưới thanh lực, thay bằng icon chuột chạy theo kim (`SkillBar`, cập nhật trong
+  vòng rAF qua `data-at`): chưa tới = nút trái vàng + chuột lún (đang giữ), vùng xanh = nút xanh, chuột nảy lên + mũi tên ↑ nhấp nháy
+  (nhả), quá = đỏ. `SKILL_PORTAL` tách ra `components/game/skillPortal.ts` (react-refresh chỉ cho file component export component).
+- Cùng ngày: panel Hàn switch (`SolderPanel` ModPanels.tsx): dụng cụ ghi tên 1 dòng, xuống dòng "Độ bền: còn/tổng" (bút hàn, trạm hàn,
+  bùi nhùi, bút hút thiếc chung 1 hàm `tool`, bỏ dòng "x/1000 lượt còn lại" riêng); "Trạm hàn nhiệt" → "Trạm hàn" (`TOOLS.solder`);
+  dòng chữ "Mỗi phím: giữ chuột…" → `Alert` vàng "Hướng dẫn" (icon bóng đèn); dòng thiếc → "Mỗi chân switch cần 2 mối hàn: còn/tổng
+  mối hàn còn lại" (câu theo đúng chữ người dùng đưa); mô tả loại thiếc → `Alert` vàng "Ghi chú" (icon Info) dưới cùng mục Thiếc hàn.
+- Cùng ngày: nút chọn thiếc (`OptionChip` mục Thiếc hàn) rê chuột hiện mô tả loại thiếc (`title` = `SUPPLIES[id].desc`); cùng kiểu cho nút
+  chọn lube (LubePanel) và dây O-ring (RingPanel, bỏ câu đầu như dòng mô tả).

@@ -71,7 +71,7 @@ function Floating({
       role="listbox"
       style={pos ?? { left: 0, top: 0 }}
       className={cn(
-        'fixed z-[2000] overflow-y-auto rounded-xl bg-[#1b2130] p-1 shadow-[0_8px_20px_rgba(0,0,0,0.5)] ring-1 ring-white/10',
+        'fixed z-[4500] overflow-y-auto rounded-xl bg-[#1b2130] p-1 shadow-[0_8px_20px_rgba(0,0,0,0.5)] ring-1 ring-white/10',
         // lần vẽ đầu chỉ để đo chiều cao, chưa hiện
         !pos && 'invisible',
         className,

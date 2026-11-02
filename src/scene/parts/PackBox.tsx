@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGame, useCtx, useStep } from '@/store'
@@ -10,8 +10,9 @@ import { TapeGun } from '../models/PackingTools'
 import { M } from '../room/roomLayout'
 
 // Cất đơn dở (nút "Cầm thùng đơn lên"): cùng hoạt cảnh, băng keo xanh, xong thì cầm thùng lên (`pickBench`), không chấm điểm.
-// Đóng gói (bước cuối `pack`): thùng carton mở 2 nắp nằm sau bàn phím, bấm thì thùng nhấc lên bay tới úp bao lấy bàn phím,
-// 2 nắp gập lại, súng băng keo kéo dán dọc nắp (băng đỏ dài dần theo súng), xong mới `deliver` (bàn còn lại thùng đã đóng gói để cầm ra kệ giao hàng)
+// Đóng gói (bước cuối `pack`): thùng carton mở 2 nắp nằm sau bàn phím (đứng yên, có đáy), bấm thì bàn phím nhấc lên vòng qua miệng
+// thùng rồi hạ vào đáy thùng (`PackCarry`; trước là thùng bay úp chụp lên bàn phím — trông như nhét thùng vào case), 2 nắp gập lại,
+// súng băng keo kéo dán dọc nắp (băng đỏ dài dần theo súng), xong mới `deliver` (bàn còn lại thùng đã đóng gói để cầm ra kệ giao hàng)
 
 const CARD = new THREE.MeshStandardMaterial({ color: '#b98a55', roughness: 0.9 })
 const INSIDE = new THREE.MeshStandardMaterial({ color: '#9c7140', roughness: 0.95 })
@@ -38,6 +39,28 @@ const OPEN = 2.3
 
 const ease = (t: number) => t * t * (3 - 2 * t)
 
+/** chỗ thùng chờ (z, u): ngay sau bàn phím (góc nhìn mặc định còn thấy miệng thùng + mũi tên) */
+const boxZ = (depth: number) => -(depth + 1.2 + 0.4)
+
+/**
+ * Bàn phím (Assembly) bọc trong đây: lúc đóng gói nhấc lên theo vòng cung cao hơn miệng thùng, bay ra sau rồi hạ nằm lên đáy thùng
+ * (0 → 0.6 thời gian hoạt cảnh, 0.6 → 1 thùng gập nắp)
+ */
+export function PackCarry({ children }: { children: ReactNode }) {
+  const ctx = useCtx()
+  const ref = useRef<THREE.Group>(null)
+  const z = boxZ(ctx.depth)
+  useFrame(() => {
+    const g = ref.current
+    if (!g) return
+    const at = usePack.getState().at
+    const t = at === null ? 0 : Math.min(1, (performance.now() - at) / PACK_MS)
+    const m = ease(Math.min(1, t / 0.6))
+    g.position.set(0, Math.sin(m * Math.PI) * H * 1.3 + FLOOR_Y * m, z * m)
+  })
+  return <group ref={ref}>{children}</group>
+}
+
 export function PackBox() {
   const ctx = useCtx()
   const step = useStep()
@@ -46,10 +69,7 @@ export function PackBox() {
   const stash = usePack((p) => p.stash)
   const W = ctx.width + 1.2
   const D = ctx.depth + 1.2
-  // chỗ chờ: ngay sau bàn phím (góc nhìn mặc định còn thấy miệng thùng + mũi tên)
-  const startZ = -(D + 0.4)
-  const ref = useRef<THREE.Group>(null)
-  const floor = useRef<THREE.Mesh>(null)
+  const startZ = boxZ(ctx.depth)
   const left = useRef<THREE.Group>(null)
   const right = useRef<THREE.Group>(null)
   const tape = useRef<THREE.Group>(null)
@@ -76,14 +96,8 @@ export function PackBox() {
   }, [at])
 
   useFrame(() => {
-    const g = ref.current
-    if (!g) return
     const t = at === null ? 0 : Math.min(1, (performance.now() - at) / PACK_MS)
-    // 0 → 0.6: nhấc lên vòng qua bàn phím rồi úp xuống; 0.6 → 1: gập 2 nắp trái / phải (khe giữa dọc đường băng keo)
-    const m = ease(Math.min(1, t / 0.6))
-    g.position.set(0, Y.table + Math.sin(m * Math.PI) * H * 1.3, startZ * (1 - m))
-    // đáy ẩn lúc thùng bay úp xuống (không xuyên qua phím), đứng chờ / đã úp xong thì hiện
-    if (floor.current) floor.current.visible = m === 0 || m === 1
+    // 0 → 0.6: bàn phím bay vào thùng (`PackCarry`); 0.6 → 1: gập 2 nắp trái / phải (khe giữa dọc đường băng keo)
     const f = ease(Math.max(0, (t - 0.6) / 0.4))
     if (left.current) left.current.rotation.z = OPEN * (1 - f)
     if (right.current) right.current.rotation.z = -OPEN * (1 - f)
@@ -113,13 +127,13 @@ export function PackBox() {
   )
   return (
     <Clickable active={idle} onAct={requestPack}>
-      <group ref={ref} position={[0, Y.table, startZ]}>
-        {/* 4 vách + đáy (lòng thùng tối hơn, ngay trên mặt thảm); thùng úp xuống bao lấy bàn phím, đáy ẩn lúc bay */}
+      <group position={[0, Y.table, startZ]}>
+        {/* 4 vách + đáy (lòng thùng tối hơn, ngay trên mặt thảm); thùng đứng yên, bàn phím bay vào nằm trên đáy */}
         {wall(W, T, 0, -D / 2)}
         {wall(W, T, 0, D / 2)}
         {wall(T, D, -W / 2, 0)}
         {wall(T, D, W / 2, 0)}
-        <mesh ref={floor} position-y={FLOOR_Y} rotation-x={-Math.PI / 2} material={INSIDE}>
+        <mesh position-y={FLOOR_Y} rotation-x={-Math.PI / 2} material={INSIDE}>
           <planeGeometry args={[W - T, D - T]} />
         </mesh>
         {/* 2 nắp gập: bản lề ở mép trái / mép phải miệng thùng, khép lại thành khe giữa dọc trước – sau (băng keo dán lên khe) */}

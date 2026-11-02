@@ -197,6 +197,8 @@ vào `window.__r3f` để debug trong console.
   Daughterboard: bước `dtb` (sau `feet`: đặt DTB sát vách sau, 2 vít M2 canh lực, cắm dây vào cổng JST có sẵn trên DTB) + `jst` (trước `caseIn`,
   board dựng đứng `jstStand`: bấm đầu dây cầm lên `useJstPick` rồi bấm jack PCB = `plugJst`, không tự sang bước); mọi case (`dtbSpot`: case code
   khoét lỗ USB-C `WallPort`, mica khoét rãnh tấm, case CAD theo `caseUsb.json`), jack PCB né socket / chân switch (`jackSpot` → `DtbSpot.jack`);
+  case CAD có tạ đè chỗ DTB (`caseUsb.json` `cover`) thêm bước `coverOff` (tháo ốc tạ + nhấc tạ) trước `dtb` và `coverOn` (đặt tạ, siết ốc canh lực)
+  sau `dtb` (`CoverWeight` trong Case.tsx, `BuildState.cover`); dây JST đi hết rãnh dưới tạ (`DtbSpot.groove`);
   `scene/parts/Daughterboard.tsx`, save rev 8 `addDtbSteps`.
   Feet: bước `feet` (trước `topCase` / `caseIn`, case tự lật úp, chỉ hiện case) dán 1 feet vào mỗi hốc `ctx.feet`
   (`feetPockets` trong steps.ts: case CAD = hốc `caseFeet.json`, case dựng bằng code = 4 hốc CNC lõm `FOOT_R` / `FOOT_DEPTH`
@@ -223,7 +225,8 @@ vào `window.__r3f` để debug trong console.
   (`installRun`) và số switch mỗi mẻ lube; khung treo tường `createDiploma` (`scene/models/diplomaModel.ts`).
 - Lube switch: phải mở switch bằng đồ mở trước (`openSwitch`, đếm `build.opened`, mỗi click = bậc thợ), `lubeBatch(idx)`
   chỉ lube switch đã mở, bấm con nào lube mẻ bắt đầu từ con đó (`build.lubedIds`, `lubedIds()` trong mods.ts); mỗi switch mở
-  ra bỏ 1 lò xo vào hộp, mở hết mới lắc lube lò xo được. Vật bấm được ở bàn lube / mod stab viền vàng khi rê (`Clickable` +
+  ra bỏ 1 lò xo vào hộp, mở hết mới lắc lube lò xo được. Cuối cùng đóng switch lại (`closeSwitch`, `build.swClosed`, theo thứ tự lưới, mỗi lần
+  = bậc thợ + phép mở; bấm lưới khi đã lube hết con đã mở): bước chỉ xong khi đóng hết, bắt đầu đóng thì khoá mở / lube / lube lò xo. Vật bấm được ở bàn lube / mod stab viền vàng khi rê (`Clickable` +
   `useHoverOutline`), mũi tên vàng chỉ việc tiếp theo (`HintArrow`, StationKit). Sách phép (mục Shopii "Sách phép" = vật tư có `SupplyDef.spell`), bán riêng; mở / lube / lắp: thợ lõ có phép = 10 con, có chứng chỉ thì cộng 10 (`spellRun`): `spellOpen` (mở,
   bàn bày tới 10 đồ mở `openerSlots`) `spellLube` (+10 con mỗi mẻ lube) và `spellAssem`
   (+10 switch mỗi lần lắp, `installRun`), `spellKeycap` (+10 keycap mỗi lần lắp), `spellSolder` (1 lần hàn = 10 phím, cháy thì cháy cả 10, `solderKey`),
@@ -283,6 +286,8 @@ vào `window.__r3f` để debug trong console.
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
 - NPC hướng dẫn Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`): mẹo theo tình huống ở máy tính (`TIPS`), bàn build là hội thoại
   theo bước / bàn trống (`BenchDialog`, `benchTopics`, câu thoại `benchLines.ts`, chưa đọc thì hiện), `guideSeen` trong Profile; ẩn / hiện ở Cài đặt (`guideHidden`).
+  Tour lần đầu ngồi máy tính (`features/guide/Tour.tsx`, `TOUR_ID` trong `guideSeen`): làm tối nền, ô sáng viền vàng đúng phần tử `data-tour="..."`
+  (prop `tour` của `DesktopIcon` / `TabChip` / `BackButton` / thẻ đơn + nút Nhận đơn Mezzenger), bấm đúng chỗ thì sang bước; Cài đặt → Xem lại.
 - Chuông thông báo (`components/game/NotifyBell.tsx`, cuối `StatusChips`): `logNotify` ghi `Profile.inbox` + `unread` (`notify` / `addReviews` /
   bán đồ / fast bid / huỷ đơn trễ tự ghi), xoá từng cái hoặc xoá hết.
 - Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup): ngồi máy tính / bàn build thì đứng dậy ra phòng (`standUp`;

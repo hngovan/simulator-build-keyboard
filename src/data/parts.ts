@@ -1748,7 +1748,7 @@ export const TOOLS: Record<ToolKind, ToolDef[]> = {
       desc: 'Bắt buộc cho PCB hàn. Nóng chậm: giữ ~1.4 giây mỗi phím. Bền 300 lần hàn',
     },
     {
-      name: 'Trạm hàn nhiệt',
+      name: 'Trạm hàn',
       hold: 4,
       price: 600,
       life: 1000,

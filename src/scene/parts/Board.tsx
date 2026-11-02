@@ -258,7 +258,8 @@ export function Board() {
   const seat = b.inCase ? ctx.caseDef.seat : undefined
   // chờ cắm dây JST vào PCB: dựng board gần thẳng đứng cho thấy cổng JST mặt dưới
   // cắm xong vẫn dựng nguyên, người chơi bấm sang bước kế mới hạ xuống
-  const stand = step === 'jst' ? jstStand(ctx.depth) : null
+  // lắp lại tạ (sau khi cắm dây): vẫn dựng, nhấc thẳng lên thì che mất lòng case
+  const stand = step === 'jst' || step === 'coverOn' ? jstStand(ctx.depth) : null
   useFrame((_, dt) => {
     boardGroup.current = ref.current
     lerpTo(ref, 'y', stand?.y ?? (lifted ? 2.6 : (seat?.rise ?? 0)), dt, 6)

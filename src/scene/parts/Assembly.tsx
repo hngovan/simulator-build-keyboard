@@ -16,9 +16,11 @@ export function Assembly() {
   const viewFlip = useGame((s) => s.viewFlip)
   const ref = useRef<THREE.Group>(null)
   // mở case / dán feet / lắp daughterboard: chỉ có case trên bàn (board để riêng), dán feet thì case lật úp
-  const caseOnly = step === 'caseOpen' || step === 'feet' || step === 'dtb'
+  const caseOnly = step === 'caseOpen' || step === 'feet' || step === 'coverOff' || step === 'dtb'
   // cắm dây JST: board nhấc trên case (như lúc chờ thả vào case)
-  const showCase = caseOnly || step === 'jst' || stepIdx >= ctx.steps.indexOf('caseIn')
+  // lắp lại tạ (sau khi cắm JST): board vẫn nhấc trên case, dây nối DTB lên PCB
+  const showCase =
+    caseOnly || step === 'jst' || step === 'coverOn' || stepIdx >= ctx.steps.indexOf('caseIn')
   const topEarly = ctx.steps.includes('topCase') && stepIdx >= ctx.steps.indexOf('topCase')
   // Auto-flipped work steps must still let the player flip back to inspect the top.
   // case 2 mảnh vừa tháo hết vít đáy: lật ngửa lại cho thấy case trên nhấc ra (tách 2 mảnh)

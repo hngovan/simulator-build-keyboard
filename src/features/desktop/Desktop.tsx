@@ -71,6 +71,7 @@ export function Desktop() {
               app={APPS[id]}
               badge={id === 'messenger' && hasOffer}
               onOpen={() => openApp(id)}
+              tour={`app-${id === 'shopii' ? 'shop' : id}`}
             />
           ))}
         </div>
@@ -105,6 +106,7 @@ export function Desktop() {
 
       {/* rời máy tính, đi lại trong phòng (sang bàn build, lấy hàng ở cửa, kết thúc ngày ở lịch treo tường) */}
       <BackButton
+        tour="back"
         onClick={() => standUp('pc')}
         className={cn(
           'absolute top-3 left-3 z-[200]',

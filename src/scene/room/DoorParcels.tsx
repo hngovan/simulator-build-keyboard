@@ -35,15 +35,10 @@ import {
 
 const CARD = new THREE.MeshStandardMaterial({ color: '#b98a55', roughness: 0.9 })
 const LABEL = new THREE.MeshStandardMaterial({ color: '#f6f3ec', roughness: 0.8 })
-/** thùng mở được: 6 mặt carton, riêng mặt trên (+y, thứ tự mặt BoxGeometry: +x −x +y −y +z −z) là lòng thùng tối */
-const OPEN_MATS = [
-  CARD,
-  CARD,
-  new THREE.MeshStandardMaterial({ color: '#7a5631', roughness: 1 }),
-  CARD,
-  CARD,
-  CARD,
-]
+/** lòng thùng mở được: đáy trong tối hơn carton ngoài */
+const INSIDE = new THREE.MeshStandardMaterial({ color: '#8a6238', roughness: 1 })
+/** độ dày vách carton thùng mở được (m) */
+const WALL = 0.004
 const BRAND = new THREE.MeshStandardMaterial({ color: '#ee4d2d', roughness: 0.7 })
 const TAPES = {
   // kiện Shopii băng keo vàng nhạt, thùng đơn khách băng keo xanh, thùng đã đóng gói băng keo đỏ
@@ -168,9 +163,29 @@ export function CardBox({
     <group>
       {flaps ? (
         <>
-          {/* thân thùng: mặt trên (+y) là lòng thùng tối, 2 nắp gập phủ lên */}
-          <mesh position-y={h / 2} material={OPEN_MATS} castShadow receiveShadow>
-            <boxGeometry args={size} />
+          {/* thân thùng rỗng (4 vách + đáy, lòng thùng có chiều sâu để thấy đồ bên trong), 2 nắp gập phủ lên */}
+          {(
+            [
+              [w, WALL, 0, (d - WALL) / 2],
+              [w, WALL, 0, -(d - WALL) / 2],
+              [WALL, d - 2 * WALL, (w - WALL) / 2, 0],
+              [WALL, d - 2 * WALL, -(w - WALL) / 2, 0],
+            ] as const
+          ).map(([sx, sz, x, z], i) => (
+            <mesh key={i} position={[x, h / 2, z]} material={CARD} castShadow receiveShadow>
+              <boxGeometry args={[sx, h, sz]} />
+            </mesh>
+          ))}
+          <mesh position-y={WALL / 2} material={CARD} receiveShadow>
+            <boxGeometry args={[w, WALL, d]} />
+          </mesh>
+          <mesh
+            position-y={WALL + 0.0005}
+            rotation-x={-Math.PI / 2}
+            material={INSIDE}
+            receiveShadow
+          >
+            <planeGeometry args={[w - 2 * WALL, d - 2 * WALL]} />
           </mesh>
           {flap(-1, flaps.left)}
           {flap(1, flaps.right, topTag)}

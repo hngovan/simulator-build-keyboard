@@ -3,6 +3,7 @@ import {
   CASE_SCREW_STEPS,
   CRACK_CHANCE,
   DTB_MM,
+  coverScrews,
   SCREW_BITS,
   SCREW_STEPS,
   SPIN_MS,
@@ -50,7 +51,7 @@ import {
 } from '@/data/mods'
 import { FOAM_ID, GASKET_ID, SUPPLIES } from '@/data/supplies'
 import type { BuildContext, BuildState, ScrewBit, ScrewStep, StepId, ToolKind } from '@/types'
-import { deadKey, scoreDelivery } from './scoring'
+import { deadKey, noPower, scoreDelivery } from './scoring'
 import type { SkillResult } from '@/data/skillCheck'
 import type { GameState } from '.'
 import { emptyInventory } from './shopSlice'
@@ -119,6 +120,8 @@ export interface BuildSlice {
   openSwitch: () => boolean
   lubeBatch: (idx?: number) => number
   lubeSprings: () => boolean
+  /** đóng switch đã mở lại (lò xo + stem + housing trên), mỗi lần bậc thợ + phép mở con */
+  closeSwitch: () => boolean
   finishOptional: () => void
   installRun: (kind: 'switch' | 'keycap', id: string) => number
   /** hàn xong 1 phím (nhả mỏ hàn trong vùng đạt, hoặc giữ quá lâu: burnt) */
@@ -140,6 +143,11 @@ export interface BuildSlice {
    * daughterboard: đặt DTB vào hốc vách sau case / siết vít M2 lỗ thứ i (skill check canh lực như vít assem: thiếu = chưa vào,
    * quá = trượt ren, `STRIP_TRIES` lần thì tuôn ren, vít lỏng) / cắm dây JST vào DTB
    */
+  /** tạ che DTB: tháo ốc tạ thứ i / nhấc tạ ra (đủ thì tự sang bước) / đặt tạ lại / siết ốc tạ thứ i (skill check như vít assem) */
+  unscrewCover: (i: number) => void
+  liftCover: () => void
+  placeCover: () => void
+  screwCover: (i: number, result: SkillResult) => void
   placeDtb: () => void
   screwDtb: (i: number, result: SkillResult) => void
   plugDtb: () => void
@@ -180,6 +188,7 @@ export const newBuild = (): BuildState => ({
   },
   stabModDone: false,
   opened: 0,
+  swClosed: 0,
   lubed: 0,
   lubeType: null,
   springLube: null,
@@ -197,8 +206,8 @@ export interface HistoryEntry {
 const HISTORY_MAX = 300
 
 interface LubeAnim {
-  /** open = đang tách switch trên đồ mở */
-  kind: 'switch' | 'spring' | 'open'
+  /** open = đang tách switch trên đồ mở, close = đang đóng switch lại */
+  kind: 'switch' | 'spring' | 'open' | 'close'
   lube: string
   /** số switch trong mẻ (kind = switch) */
   batch: number
@@ -660,6 +669,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const opened = s.build.opened ?? s.build.lubed
       const left = s.ctx.keys.length - opened
       if (left <= 0) return false
+      if (s.build.swClosed)
+        return (s.toast('Đang đóng switch lại rồi, không mở thêm', 'bad'), false)
       commit(snapshot())
       const certN = TOOLS.cert[s.tools.cert ?? 0].n!
       // phép chỉ tốn lượt khi thật sự mở nhiều hơn bậc thợ
@@ -691,6 +702,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!fit) return (s.toast(`Không dùng ${type} cho switch được`, 'bad'), 0)
       if (s.build.lubeType && s.build.lubeType !== type)
         return (s.toast('Đã lube loại khác rồi, không trộn 2 loại mỡ', 'bad'), 0)
+      if (s.build.swClosed)
+        return (s.toast('Đã đóng switch lại rồi, không lube thêm được', 'bad'), 0)
       // chỉ lube được switch đã tách vỏ
       const left = (s.build.opened ?? s.build.lubed) - s.build.lubed
       if (left <= 0) return (s.toast('Mở switch bằng đồ mở trước rồi mới lube', 'bad'), 0)
@@ -733,6 +746,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     lubeSprings: () => {
       const s = at('switchLube')
       if (!s || s.build.springLube || s.lubeAnim) return false
+      if (s.build.swClosed)
+        return (s.toast('Lò xo đã lắp lại vào switch rồi, không lube được nữa', 'bad'), false)
       // lò xo lấy ra từ switch đã mở: mở hết mới đủ cả bộ trong hộp
       if ((s.build.opened ?? s.build.lubed) < s.ctx.keys.length)
         return (s.toast('Mở hết switch để lấy đủ lò xo vào hộp rồi mới lube', 'bad'), false)
@@ -752,6 +767,36 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         const cur = get()
         set({ lubeAnim: null })
         if (cur.build) cur.patchBuild({ springLube: type })
+      }, dur * 1000)
+      return true
+    },
+    // Đóng switch đã lube: lắp lò xo + stem vào housing dưới rồi úp housing trên, theo thứ tự lưới; mỗi lần = bậc thợ + phép mở
+    closeSwitch: () => {
+      const s = at('switchLube')
+      if (!s || s.lubeAnim) return false
+      const opened = s.build.opened ?? s.build.lubed
+      const closed = s.build.swClosed ?? 0
+      const left = opened - closed
+      if (left <= 0) return false
+      if (TOOLS.opener[s.tools.opener].none)
+        return (s.toast('Cần đồ mở switch — mua ở Shopii → Dụng cụ', 'bad'), false)
+      // lần đóng đầu: nhắc những gì sẽ không làm được nữa
+      if (!closed) {
+        const dry = opened - s.build.lubed
+        if (dry > 0) s.toast(`⚠️ Còn ${dry} switch chưa lube, đóng lại là để khô luôn`, 'bad')
+        if (!s.build.springLube) s.toast('⚠️ Lò xo chưa lube, đóng lại là lắp lò xo khô', 'bad')
+      }
+      commit(snapshot())
+      const certN = TOOLS.cert[s.tools.cert ?? 0].n!
+      const spell = left > certN ? spellBonus(s.supplies, SPELL_OPEN) : 0
+      if (spell) s.useSupply(SPELL_OPEN, 1)
+      const n = Math.min(left, spellRun(certN, spell))
+      const dur = 0.7
+      set({ lubeAnim: { kind: 'close', lube: '', batch: n, at: performance.now(), dur } })
+      setTimeout(() => {
+        const cur = get()
+        set({ lubeAnim: null })
+        if (cur.build) cur.patchBuild({ swClosed: (cur.build.swClosed ?? 0) + n })
       }, dur * 1000)
       return true
     },
@@ -965,6 +1010,69 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         ...(all ? { viewFlip: false, testIdleFrom: performance.now() } : {}),
       })
     },
+    unscrewCover: (i) => {
+      const s = at('coverOff')
+      const c = s?.build.cover ?? {}
+      if (!s || c.out?.[i] || i < 0 || i >= coverScrews(s.ctx)) return
+      commit(snapshot())
+      s.patchBuild({ cover: { ...c, out: { ...c.out, [i]: true } } })
+    },
+    liftCover: () => {
+      const s = at('coverOff')
+      const c = s?.build.cover ?? {}
+      if (!s || c.off) return
+      if (Object.keys(c.out ?? {}).length < coverScrews(s.ctx))
+        return s.toast('Tháo hết ốc trên tạ trước rồi mới nhấc ra được', 'bad')
+      commit(snapshot())
+      // nhấc ra là xong bước, sang lắp DTB luôn
+      const build = get().build!
+      set({
+        build: { ...build, cover: { ...c, off: true }, stepIdx: build.stepIdx + 1 },
+        testIdleFrom: performance.now(),
+      })
+    },
+    placeCover: () => {
+      const s = at('coverOn')
+      const c = s?.build.cover ?? {}
+      if (!s || c.on) return
+      commit(snapshot())
+      s.patchBuild({ cover: { ...c, on: true } })
+      // tạ không ốc: đặt vào là xong
+      if (!coverScrews(s.ctx)) {
+        const build = get().build!
+        set({ build: { ...build, stepIdx: build.stepIdx + 1 }, testIdleFrom: performance.now() })
+      }
+    },
+    screwCover: (i, result) => {
+      const s = at('coverOn')
+      const c = s?.build.cover ?? {}
+      if (!s || !c.on || c.tight?.[i] || i < 0 || i >= coverScrews(s.ctx)) return
+      const id = `cover-${i}`
+      if (result === 'low')
+        return s.toast('Chưa đủ lực, ốc tạ mới vào 1 phần: giữ chuột lâu hơn', 'bad')
+      commit(snapshot())
+      const tight = { ...c.tight, [i]: true as const }
+      const patch: Partial<BuildState> = { cover: { ...c, tight } }
+      if (result === 'high') {
+        const n = (s.build.slips?.[id] ?? 0) + 1
+        if (n < STRIP_TRIES) {
+          s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
+          return s.toast(
+            `⚠️ Trượt ren ốc tạ (quá tay) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
+            'bad',
+          )
+        }
+        patch.stripped = { ...s.build.stripped, [id]: true }
+        s.toast('🔩 Tuôn ren lỗ ốc tạ: ốc lỏng, tạ hơi lắc', 'bad')
+      } else if (result === 'perfect') patch.perfect = { ...s.build.perfect, [id]: true }
+      const build = get().build!
+      // siết đủ ốc là xong bước
+      const done = Object.keys(tight).length >= coverScrews(s.ctx)
+      set({
+        build: { ...build, ...patch, stepIdx: build.stepIdx + (done ? 1 : 0) },
+        ...(done ? { testIdleFrom: performance.now() } : {}),
+      })
+    },
     placeDtb: () => {
       const s = at('dtb')
       if (!s || s.build.dtb?.placed) return
@@ -1021,6 +1129,16 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     press: (id, down) => {
       const s = at('test')
       if (!s || !s.build.keycaps[id]) return false
+      // chưa lắp DTB / chưa cắm dây JST: không lên nguồn, phím nào cũng không ăn
+      if (noPower(s.build, s.ctx)) {
+        if (down)
+          s.toast(
+            '⚠️ Bàn phím không lên nguồn: chưa lắp daughterboard / chưa cắm dây JST vào PCB',
+            'bad',
+          )
+        set({ pressed: { ...s.pressed, [id]: false } })
+        return true
+      }
       // PCB hàn: phím chưa hàn / hàn cháy thì bấm không ăn, không tính đã test
       if (s.ctx.pcbType === 'solder' && deadKey(s.build, id)) {
         if (down) {

@@ -1240,3 +1240,123 @@
   đường tâm (CatmullRom centripetal) rồi 4 sợi lệch theo phương ngang vuông góc hướng dây (dây dẹt như JST thật), đoạn dựng đứng giữ phương cũ.
 - Đã thử Chrome ngầm (Repent75): `plugJst` giữ `stepIdx` ở `jst`, board vẫn dựng, "Bước tiếp theo" → `caseIn` hạ board; jack nằm khe giữa
   2 hàng socket, dây dẹt đi theo rãnh lên jack. Chưa chụp được ảnh lúc đang cầm đầu dây (jack sáng) — chưa thử bấm tay.
+
+## Mở hộp: thùng có chiều sâu + case bên trong (2026-11-02)
+
+- (người dùng: "khi mở hộp case lần đầu phía bên trong hộp không có case à => hơi thiếu chiều sâu") `CardBox` khi có `flaps` (thùng mở được)
+  trước là khối đặc mặt trên tô tối → mở nắp chỉ thấy mặt phẳng. Giờ thân rỗng: 4 vách carton `WALL` 4mm + đáy, lòng đáy tối `INSIDE`.
+  `ShippingBox` thêm `BoxContents`: tấm xốp lót đáy + case của đơn (đúng `inventory.case` id + màu, layout đơn) dựng bằng
+  `buildKeyboardModel(..., tilt false, caseOnly true)` (đơn vị u → m), xoay dọc chiều sâu thùng, thu nhỏ nếu dài hơn lòng thùng (TKL / full
+  dài hơn thùng 36cm). Đặt ngoài `Clickable` (không viền khi rê). Thùng ở kệ / đang cầm (không `flaps`) vẫn khối đặc như cũ.
+
+## Bàn lube: rê switch không thấy viền khi nhiều switch (2026-11-02)
+
+- (người dùng: "ở bước lube switch khi số lượng model switch quá nhiều, hover không thấy viền tương tác; đáng lẽ hover được tất cả switch
+  có thể tương tác chứ không phải theo thứ tự mũi tên; check bug và tối ưu render khi 120 sw đổ lại")
+  - Lỗi: `OpenedSwitches` là các InstancedMesh; three tính khối bao (`boundingSphere`) 1 lần lúc raycast đầu (mới mở vài con gần mũi tên),
+    mở thêm không tính lại → rê con nằm ngoài khối bao cũ không ăn (chỉ con gần mũi tên rê được). `place()` gọi `computeBoundingSphere` /
+    `computeBoundingBox` sau mỗi lần xếp.
+  - Tối ưu: 7 lớp model CAD × 104–120 con raycast mỗi lần rê → tắt raycast (`raycast={noHit}`), thêm 1 InstancedMesh bắt chuột ẩn
+    `HIT_GEO` (2 hộp: cao phủ housing dưới + stem nổi, thấp phủ housing trên nằm ngửa lùi 17mm; 1 hộp cao suốt chiều sâu thì góc xiên
+    che con hàng sau → viền lệch 1 hàng), material `visible: false`.
+  - Kiểm bằng playwright (bàn full 104 phím, mở hết): rê con giữa lưới / góc trên trái đều viền đúng con; rê trên lưới tốn ngang rê trên
+    panel (khung hình là phần tốn, raycast không còn đáng kể; Chrome ngầm chỉ ~10 fps nên không đo được fps thật).
+
+## Đóng gói: bàn phím vào thùng; jack JST né footprint, thẳng lưới (2026-11-02)
+
+- Người dùng: "bước đóng gói đáng lẽ phải cho case vào thùng giấy chứ sao lại cho thùng giấy vào case? đáy giấy vẫn chưa mở mà cho vào".
+  Trước: thùng carton bay úp chụp lên bàn phím (đáy ẩn lúc bay). Nay thùng đứng yên sau bàn phím (luôn có đáy), bàn phím (Assembly bọc
+  trong `PackCarry`, PackBox.tsx) nhấc lên vòng cung cao hơn miệng thùng rồi hạ nằm lên đáy thùng (0 → 0,6 thời gian `PACK_MS`), sau đó
+  gập nắp + súng băng keo như cũ. Chỗ thùng chung `boxZ(depth)`. Đã thử Chrome ngầm (đè `performance.now` đứng hình 0,5 / 1,3 / 2,2s):
+  bàn phím nhấc lên → nằm trong thùng nắp đang gập → thùng đóng kín.
+- Người dùng: "vị trí cổng jst trên pcb của case duality quá kỳ, đang bị chồng, và cổng bị lệch" (ảnh: jack trắng đè khung footprint SW41,
+  xoay xiên, giữa PCB). Lỗi: (1) vùng cấm cũ chỉ socket + cụm chân, nhỏ hơn khung footprint in trên mạch; (2) chỗ muốn đặt lệch 1,2u tới
+  trước DTB; (3) góc xoay = hướng tới DTB → góc lẻ; (4) 60% không chỗ nào vừa → rơi về chỗ muốn đặt (đè phím).
+  `jackSpot` nay: vùng cấm cứng `KEY_HARD` (socket hotswap + pad, lỗ chân switch) + lỗ stab + mép PCB không được chạm; vùng mềm `KEY_SOFT`
+  (khung footprint ±0,354u + nhãn SWxx) tính điểm, chọn chỗ chạm khung ít nhất rồi gần nhất (`JACK_OFFSET` ngay trước miệng JST DTB 0,4u);
+  góc xoay chỉ bội số 90° (miệng quay gần về DTB nhất). Kết quả: TKL / Duality / Repent75 / RF Bruh jack ở khe hàng F – hàng số (cách tâm
+  phím ≥ 0,55u); 60% / 65% ở góc giao 4 phím (≈ 0,45u, có thể chạm mép khung / nhãn — layout không khe hàng).
+- Chưa tái hiện được "2 vị trí block của pcb không nhìn xuyên qua được" (ảnh Duality, 2 ô đen ~1u ở hàng dưới): dựng đơn dev Duality
+  (tklf13 WKL, PCB hàn, stab clip-in, top mount) ở bước switch / stab có plate + stab đã gắn, bắn tia tại 2 khe WKL chỉ trúng PCB, không
+  thấy ô đen. Cần người dùng cho biết bước / thao tác lúc thấy.
+- (2026-11-02, "sao 2 block layout wkl của pcb duality vẫn bị màu đen, đáng lẽ phải màu xanh vì nhìn xuyên qua") Nguyên nhân: tấm foam
+  Poron lót PCB (`Foam.tsx`, màu #25262b) chỉ khoét lỗ ở phím; plate riêng Duality là plate đa layout có lỗ ở 2 chỗ phím Win (WKL không có
+  phím) → nhìn qua lỗ plate thấy foam liền = ô đen (đơn dev thử trước đó chưa lót foam nên không thấy). `foamGeometry` khoét thêm các khe
+  trống của layout (`blockerGaps`, cùng chỗ khối chặn liền case, chừa viền `WEB`); plate dựng bằng code liền chỗ đó nên vẫn che kín.
+  Đã thử Chrome ngầm (Duality WKL, plate + foam + switch): tia tại 2 khe xuyên qua foam, ảnh thấy PCB xanh.
+
+## Tạ che DTB: bước tháo / lắp lại tạ; dây JST đi hết rãnh dưới tạ (2026-11-02)
+
+- Người dùng (ảnh Duality, tạ đồng đè lên DTB, mũi tên rãnh dây chạy sang khe phải): "đối với các dtb có khay che buộc phải gỡ ra thì
+  mới lắp được → phải có bước tháo nắp che ra để assem dtb vào rồi gắn lại; dây jst đi luồn dưới theo rãnh nên sẽ dài hơn cho phù hợp".
+- `probe-case-usb.mjs`: dò thêm lưới bỏ node `weight` (`load(name, 'weight')`) → rãnh dây dưới tạ; `cover: true` khi tia xuống tại
+  tâm / 4 góc DTB trúng tạ cao hơn mặt khi bỏ tạ. 7 model có tạ che: Duality, Catto HHKB, Eclipse 60, Exodus60 (3 nắp), Exodus80.
+  Rãnh dài tới `GROOVE.max` 160mm (Duality hết rãnh ở khe phải x ≈ 118mm, 34 điểm); dài hơn = khe dọc vách chạy tới mép case, không phải
+  rãnh dây → chỉ lấy `cut` 60mm đầu như trước.
+- Bước mới (`StepId`): `coverOff` trước `dtb` (bấm từng ốc tạ `CaseDef.weightScrews` = `unscrewCover`, hết ốc bấm tạ = `liftCover`, tự
+  sang bước; tạ không ốc thì chỉ bấm nhấc), `coverOn` sau `dtb` (bấm tạ = `placeCover`, nhấn giữ từng lỗ ốc = skill check `torqueSpec`
+  như vít assem → `screwCover(i, result)`: thiếu lực = chưa vào, quá = trượt ren `slips` `cover-i`, `STRIP_TRIES` lần thì `stripped`;
+  đủ ốc tự sang bước). `BuildState.cover` {out, off, on, tight}, `DtbSpot.cover`, `coverScrews(ctx)`, `stepProgress`, `NO_FLIP_STEPS`,
+  `remapStepIdx` coi 2 bước thêm sau như đã làm (save cũ không lùi về), câu thoại Keeb-chan.
+- Cảnh: `CoverWeight` (Case.tsx, thay mesh tạ + `FixedScrews` trong `CaseModel`): tạ lerp ra sau case `COVER_AWAY` 175mm khi đã nhấc,
+  ốc hiện theo trạng thái, vòng xanh chỗ ốc (bấm tháo / nhấn giữ siết), mũi tên, `SkillBar`; tạ sáng xanh khi bấm được. `Assembly`: 2 bước
+  tạ chỉ hiện case.
+- Đã thử Chrome ngầm (đơn dev Duality): bước coverOff 0/7 → tháo 6 ốc + nhấc → `dtb` (tạ nằm sau case, DTB lộ ra) → coverOn đặt tạ + siết
+  6 ốc → `topCase`; dây đi dưới tạ ló ra khe phải. Chưa bấm tay (giữ chuột thanh lực).
+- (2026-11-02, tiếp, người dùng: "hiệu ứng mở vít đâu? bấm cái là ra?", "nhích khay đựng ốc", "cho dây jst lòi lên xíu để người dùng hiểu là
+  đang lòi ra để cắm", "tất cả vít sau khi tháo ra phải nằm trên khay ốc, lộn xộn cũng được", "tháo tạ không được có nút bỏ qua",
+  "phải cắm dây jst vào pcb thì mới lắp lại tạ", "cố tình bỏ qua lắp dtb thì đánh giá assem không dùng được"):
+  - Ốc tạ có hoạt cảnh như vít assem (`CoverScrew` trong Case.tsx): rê vòng ốc hiện tua vít đang dùng (`CurrentDriver` export từ Screw.tsx),
+    bấm = 1 nấc (tay `TOOLS.screw[].clicks` 3 nấc, điện 1), ốc quay + trồi lên theo ren `COVER_LIFT` 7mm chạy dần theo `SPIN_MS`, nấc
+    cuối xong thì vọt ra (`OUT_MS`) rồi mới `unscrewCover`; siết lại: lúc giữ thanh lực ốc nằm trên miệng lỗ, tua vít quay.
+  - Khay ốc (`ScrewTray`): thêm ốc tạ đã tháo chưa siết lại (`cover.out` − `cover.tight`); ốc thả lộn xộn trong lòng khay (chỗ / hướng
+    ngẫu nhiên cố định theo thứ tự, tì thành lòng chảo `bowlY`, nhiều ốc thì chồng cao dần) thay cho xếp hàng song song.
+  - Tạ nhấc ra nằm bên phải case (bề ngang tạ + `COVER_GAP`; để sau case thì đè khay ốc + bị board dựng che); bước `coverOn` chưa đặt thì
+    tạ hiện mờ xanh đúng chỗ trong case (bấm để đặt).
+  - Đầu dây JST chưa cắm dựng đứng ló lên `LOOSE_RISE` 0,5u khỏi cuối rãnh / sàn (`StandPlug`), dây chạy dọc rãnh rồi dựng lên.
+  - Thứ tự bước: `coverOff` → `dtb` → (`topCase` / `topScrew`) → `jst` → `coverOn` → `caseIn` (dây cắm vào PCB rồi mới đè tạ lên rãnh);
+    bước `coverOn` board vẫn dựng (`jstStand`) cho thấy lòng case. `coverOff` / `coverOn` không bỏ qua được kể cả đơn dev (`isOptionalStep`).
+  - Bỏ qua lắp DTB / cắm JST (đơn dev): `noPower` (scoring.ts) → bước test phím nào cũng không ăn (toast không lên nguồn), giao thì
+    khách báo không lên nguồn (−40 điểm, sao tối đa `DEFECT_STARS`, đánh giá ghi lỗi). Ốc DTB / ốc tạ tuôn ren tính vào lỗ ren case (đền case).
+
+## Ốc stab có sẵn trên khay từ đầu (2026-11-02)
+
+- (người dùng: "ở bước lắp stab thì phải có vít từ đầu chứ, trên bàn / khay không có vít stab thì làm sao lắp => 1 là render đủ vít từ đầu,
+  2 là đến bước đó mới có vít") Chọn cách 1, giống ốc tray mount / M2 top mount: `ScrewTray` thêm ốc stab screw-in chưa bắt (`stabScrew` trong
+  `ctx.steps`, `ctx.screws.stabScrew` chưa có trong `b.screws`) nằm trong khay (không có khay thì vương trên bàn) suốt từ đầu build, bắt con nào
+  bớt con đó (thay stab tuôn ren `replaceStab` xoá lượt vặn → ốc về lại khay). Thứ tự trong khay gom vào `kindOf` (case tháo → tray → top → stab →
+  ốc tạ). Playwright: đơn 60% stab Cherry screw-in, bước `stab` có 10 ốc stab trên khay. Khay ở góc sau trái thảm, góc nhìn mặc định bị khung
+  HUD trái che một phần.
+
+## Bàn lube: thêm bước đóng switch lại (2026-11-02)
+
+- (người dùng: "lube switch xong thì phải có bước đóng sw lại chứ? thiếu rồi") Bàn lube thêm phần 4 "Đóng switch": `closeSwitch()` (buildSlice,
+  cần đồ mở, mỗi lần = bậc thợ + phép mở như `openSwitch`), đếm `build.swClosed` (con 0..swClosed-1 theo lưới; tên `swClosed` vì `closed`
+  đã là cờ đóng case). Bấm lưới switch = đóng 1 mẻ khi đã lube hết con đã mở (hoặc hết mỡ / thiếu cọ), mũi tên chỉ con đóng tiếp; lần đầu
+  nhắc nếu còn con chưa lube / lò xo chưa lube. Bắt đầu đóng thì khoá mở thêm / lube / lube lò xo. Con đã đóng vẽ thành switch nguyên
+  (stem + housing trên về chỗ lắp, InstancedMesh riêng). `stepProgress('switchLube')` = `lubeDone` hoặc đóng hết; panel thêm mục 4 + nút
+  cuối khoá "Đóng hết switch lại (x/y)" khi đã mở mà chưa đóng hết (chưa mở con nào vẫn "Bỏ qua lube"). Save cũ không có `swClosed` = 0.
+  Playwright: 60% 61 con, đóng hết → tiến độ 1/1, ảnh lưới con đã đóng là switch nguyên.
+
+## 2026-11-02: cảnh báo React "key prop spread" ở `<Screw>`
+
+- Lúc tải bàn build, console báo props spread có `key` vào `<Screw>`: `ScrewSet` spread cả `sc` (ScrewPoint), vít stab có field `key` (id phím
+  của stab, `stabScrews` trong steps.ts). Sửa: truyền thẳng `id` / `x` thay vì `{...sc}` (y / z đã ghi riêng, `dir` đi nhánh khác).
+
+## 2026-11-02: hoàn tác ốc tạ, khúc cua dây JST, đầu cắm JST cắm lút
+
+- Hoàn tác lúc tháo ốc tạ bị lỗi: tiến độ tháo (`turns` / `outAt`, cục bộ trong `CoverWeight`) không nằm trong lịch sử → hoàn tác trả ốc
+  về tạ (`cover.out[i]` false) nhưng cảnh vẫn coi ốc đã bay ra, bấm không ăn. Sửa: so `cover.out` với lần render trước, ốc quay về thì
+  xoá tiến độ cục bộ; `history` giảm (hoàn tác lúc đang vặn dở / đang bay) thì xoá cả ốc dở; hẹn giờ tháo lưu `timers` để huỷ.
+  Kiểm bằng Chrome ngầm: tháo 2 ốc → undo → ốc 2 hiện lại (5 vòng) → tháo lại được.
+- Duality: rãnh dò (`caseUsb.json` groove) bắt đầu từ tâm DTB, mấy điểm đầu nằm dưới mạch / đầu cắm → dây quặt ngược vào gầm mạch, khúc
+  cua bị che. `JstCable` bỏ các điểm đầu rãnh còn trong bề ngang mạch (`DTB_MM.w / 2 + 1mm`) và chưa qua đuôi đầu cắm.
+- Đầu cắm JST cắm lút: `PLUG.in` 2 → 3,9mm (thân dài 4,2, chừa 0,3mm mép) cho cả đầu DTB lẫn jack PCB, mọi case; trước cắm hờ, thân
+  đầu cắm lòi ra ngoài jack che chỗ dây ra.
+- Cùng ngày: bước lắp lại tạ mất mũi tên: mũi tên ốc đòi `turns[next]` chưa có, mà `turns` còn giữ từ lúc tháo → chỉ xét khi đang tháo;
+  mũi tên nhấc / đặt tạ đặt trên giữa tấm tạ (`weightTop` theo bbox) thay vì tâm model case.
+- Tạ nhấc ra đặt TRƯỚC case (người dùng: bên phải khó thấy): dời theo z = mép trước vỏ (`front`, bbox node bottom / case) trừ mép sau tạ
+  cộng `COVER_GAP` 8mm; nằm ngoài thì vẽ đặc (không mờ). `CameraRig` (Bench.tsx): tạ đang ở ngoài (`cover.off && !on`) thì lùi camera
+  ×1.5 + dời tâm nhìn ra trước 0,6 × chiều sâu (`WEIGHT_OUT_CAM`), lắp lại xong về góc mặc định.
+- Bước `jst` cắm xong: bấm tạ nằm trước case = `nextStep` + `placeCover` (khỏi bấm "Bước tiếp theo"); hint bước jst ghi thêm.
+  Kiểm bằng Chrome ngầm: bấm tạ ở bước jst → sang coverOn, `cover.on`.

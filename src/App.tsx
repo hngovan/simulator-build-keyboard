@@ -22,6 +22,7 @@ import { PayBanner } from '@/components/game/PayBanner'
 import { onBench } from '@/store/carrySlice'
 import { useSceneLoading } from '@/scene/common/loadingStore'
 import { applyAudioSettings, startBgm, stopBgm } from '@/sound'
+import { TOUR_ID, Tour } from '@/features/guide/Tour'
 
 export default function App() {
   const screen = useGame((s) => s.screen)
@@ -34,6 +35,8 @@ export default function App() {
   // bấm lịch treo tường (đi lại hay ngồi bàn build đều mở được)
   const calendar = useRoom((r) => r.calendar)
   const guide = useGame((s) => !s.guideHidden)
+  // tour hướng dẫn lần đầu ngồi máy tính (xong / bỏ qua thì ghi guideSeen)
+  const tourSeen = useGame((s) => s.guideSeen.includes(TOUR_ID))
   const audio = useGame((s) => s.audio)
   // phòng 3D chưa tải xong lần đầu: chỉ hiện màn chờ, xong mới hiện NPC / thông báo
   const loading = useSceneLoading((s) => !s.settled) && (screen === 'pc' || screen === 'bench')
@@ -64,6 +67,7 @@ export default function App() {
         <>
           <Desktop />
           <BenchLoader />
+          {guide && !tourSeen && !loading && !zooming && <Tour />}
         </>
       )}
       {screen === 'bench' && (

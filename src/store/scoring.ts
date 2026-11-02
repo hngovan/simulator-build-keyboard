@@ -34,6 +34,13 @@ export const deadKey = (build: BuildState, id: string) => {
   return !j || (j !== true && j.burnt)
 }
 
+/**
+ * Case có daughterboard mà chưa lắp DTB / chưa cắm dây JST vào PCB (đơn dev bỏ qua bước): bàn phím không lên nguồn,
+ * test không phím nào ăn, giao đi khách báo không dùng được
+ */
+export const noPower = (build: Pick<BuildState, 'dtb' | 'jst'>, ctx: Pick<BuildContext, 'dtb'>) =>
+  !!ctx.dtb && !(build.dtb?.plugged && build.jst)
+
 interface ScoreInput {
   order: Order
   inventory: Inventory
@@ -178,11 +185,23 @@ export function scoreDelivery({
   // không thì giao khi chưa test hết phím có UNTESTED_FAIL khách gặp 1 nút lỗi trong số phím chưa test
   const label = (k: { label: string; id: string; w: number }) =>
     k.label || (k.w >= 4 ? 'Space' : k.id)
-  let defects = soldered ? ctx.keys.filter((k) => deadKey(build, k.id)).map(label) : []
+  // không lên nguồn (thiếu DTB / dây JST): cả bàn phím không dùng được
+  const dead = noPower(build, ctx)
+  let defects = dead
+    ? ['không lên nguồn (thiếu daughterboard / dây JST)']
+    : soldered
+      ? ctx.keys.filter((k) => deadKey(build, k.id)).map(label)
+      : []
   const untested = ctx.keys.filter((k) => !build.tested[k.id])
   if (!defects.length && untested.length && rng() < UNTESTED_FAIL)
     defects = [label(untested[Math.floor(rng() * untested.length)])]
-  if (defects.length)
+  if (dead)
+    checks.push({
+      label: 'Khách báo bàn phím cắm vào không lên nguồn: thiếu daughterboard / chưa cắm dây JST',
+      pts: 0,
+      got: -40,
+    })
+  else if (defects.length)
     checks.push({
       label: `Khách báo nút không nhận tín hiệu: ${defects.slice(0, 6).join(', ')}${defects.length > 6 ? ` (+${defects.length - 6})` : ''}`,
       pts: 0,

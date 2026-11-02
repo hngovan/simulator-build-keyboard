@@ -18,7 +18,8 @@ import { playClick, playDrill, playScrew } from '@/sound'
 import { useHover } from '../common/useHover'
 import { cancelSkill, skillBusy, startSkill, useSkill } from '../common/skill'
 import { SkillBar } from '@/components/game/SkillBar'
-import { BIT_SWAP_MS, BitDriver, SCREW_SPIN, SPIN_MS } from '../models/HandTools'
+import { SKILL_PORTAL } from '@/components/game/skillPortal'
+import { BitDriver, SCREW_SPIN, SPIN_MS } from '../models/HandTools'
 import { MM } from '../models/Switch'
 import { HintArrow } from '../stations/StationKit'
 import { HINT_COLOR } from '../common/hoverOutline'
@@ -502,7 +503,7 @@ function Screw({
           <HintArrow at={[0, 0.3, 0]} />
         )}
         {skill && (
-          <Html center position={[0, 0.3, 0]} zIndexRange={[6, 6]}>
+          <Html center position={[0, 0.3, 0]} zIndexRange={[6, 6]} portal={SKILL_PORTAL}>
             <SkillBar check={skill} />
           </Html>
         )}
@@ -576,7 +577,9 @@ export function ScrewSet({
     ) : (
       <Screw
         key={sc.id}
-        {...sc}
+        // không spread `sc`: vít stab có field `key` (id phím) → React cảnh báo key trong props spread
+        id={sc.id}
+        x={sc.x}
         // nhóm lật quay 180° quanh trục x nên đảo cả z: đảo dấu trước để vít về đúng chỗ stab
         z={flip ? -sc.z : sc.z}
         y={flip ? 0 : y}
@@ -594,15 +597,13 @@ export function ScrewSet({
       ) : (
         list
       )}
-      {/* bảng chọn đầu vít nằm ở HUD (giữa trên màn hình); thay đầu thì tua vít hiện lơ lửng trên giữa board để xem
-          (mép trước bàn thì sát đáy khung hình, bị bảng bước che) */}
-      {cur === step && <BitSwapPreview at={[0, (flip ? 0 : y) + 0.9, 1.2]} />}
+      {/* thay đầu vít: hiệu ứng chạy ngay trên tua vít nằm trên bàn (DeskTools trong Room.tsx) */}
     </>
   )
 }
 
 /** Tua vít đang dùng (tay / điện) gắn đầu vít đang chọn */
-function CurrentDriver({ spinKey, dir }: { spinKey: number; dir?: 1 | -1 }) {
+export function CurrentDriver({ spinKey, dir }: { spinKey: number; dir?: 1 | -1 }) {
   const electric = useGame((s) => screwLevel(s.tools, s.screwPick) > 0)
   const bit = useGame((s) => s.screwBit)
   const prevBit = useGame((s) => s.prevScrewBit)
@@ -616,20 +617,6 @@ function CurrentDriver({ spinKey, dir }: { spinKey: number; dir?: 1 | -1 }) {
       spinKey={spinKey}
       dir={dir}
     />
-  )
-}
-
-/** Vừa thay đầu vít: tua vít hiện ở mép trước bàn chạy hiệu ứng tháo / lắp đầu rồi ẩn đi */
-function BitSwapPreview({ at }: { at: [number, number, number] }) {
-  const ref = useRef<THREE.Group>(null)
-  useFrame(() => {
-    const t = (performance.now() - useGame.getState().bitSwapAt) / 1000
-    if (ref.current) ref.current.visible = t >= 0 && t < BIT_SWAP_MS / 1000
-  })
-  return (
-    <group ref={ref} position={at} rotation-z={-0.25} scale={1.5} visible={false}>
-      <CurrentDriver spinKey={0} />
-    </group>
   )
 }
 

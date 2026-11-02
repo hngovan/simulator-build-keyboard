@@ -156,7 +156,7 @@ tự thường gặp; `stabScrew` nằm trước `plate` với stab screw-in, c�
 | `stab`       | Click vị trí phím dài (≥ 2u) để lắp stab                                              | Layout có stab                   |
 | `stabScrew`  | Vặn 2 vít cho mỗi stab                                                                | Stab screw-in                    |
 | `plate`      | Click board để đặt plate lên                                                          | Luôn có                          |
-| `switchLube` | Mở từng switch rồi lube theo mẻ; có thể lube lò xo                                    | Tuỳ chọn                         |
+| `switchLube` | Mở từng switch, lube theo mẻ, lube lò xo, rồi đóng switch lại                         | Tuỳ chọn                         |
 | `switch`     | Click lỗ trên plate để cắm switch                                                     | Luôn có                          |
 | `solder`     | Bấm chân cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (vàng = hoàn hảo)       | PCB hàn (không phải hotswap)     |
 | `gasket`     | Click các vị trí quanh plate để dán gasket                                            | Mount gasket / OG                |
@@ -216,6 +216,9 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   Chơi mới đè bản lưu cũ cũng gửi lượt cũ (lý do `newgame`).
 
 ## 3. Cách chơi
+
+Lần đầu ngồi máy tính có **tour hướng dẫn** của Keeb-chan: màn tối đi, chỉ sáng chỗ cần bấm (mở Mezzenger → xem đơn → Nhận đơn →
+Shopii → Giỏ hàng → đứng dậy ra phòng). Bấm đúng chỗ sáng để đi tiếp, "Bỏ qua hướng dẫn" để tắt; xem lại ở Cài đặt → Hướng dẫn.
 
 ### Nhận đơn và hạn giao
 

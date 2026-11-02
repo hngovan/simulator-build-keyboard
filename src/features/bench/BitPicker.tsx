@@ -35,60 +35,68 @@ function BitIcon({ bit, className }: { bit: ScrewBit; className?: string }) {
   )
 }
 
-/**
- * Chọn đầu tua vít ở giữa trên màn hình khi tới bước vặn vít.
- * Hiện mặt ốc của bước này để so; chọn đầu khác thì tua vít chạy hiệu ứng thay đầu trên bàn
- */
-export function BitPicker({ step }: { step: ScrewStep }) {
+/** 4 nút đầu vít (to ở bảng giữa, nhỏ khi thu gọn vào cột phải) */
+function BitButtons({ small }: { small?: boolean }) {
   const bit = useGame((s) => s.screwBit)
   const swapAt = useGame((s) => s.bitSwapAt)
   const setScrewBit = useGame((s) => s.setScrewBit)
+  return (
+    <div className={cn('flex', small ? 'gap-1' : 'gap-1.5')}>
+      {BITS.map((b, i) => (
+        <button
+          key={b}
+          type="button"
+          onClick={() => setScrewBit(b)}
+          title={
+            b === bit
+              ? `Đang lắp đầu ${BIT_LABELS[b]}`
+              : `Lắp đầu vít ${BIT_LABELS[b]} (phím ${i + 1})`
+          }
+          className={cn(
+            'relative flex flex-col items-center gap-0.5 rounded-xl border-2 px-1.5 py-1 text-xs font-bold',
+            small ? 'flex-1' : 'w-[72px]',
+            b === bit
+              ? 'border-green bg-green/15 text-[#9fe6b6]'
+              : 'border-transparent bg-panel-2 hover:border-yellow',
+          )}
+        >
+          {/* số phím tắt ở góc trái trên */}
+          <span className="absolute top-0.5 left-1.5 text-[10px] font-extrabold text-muted">
+            {i + 1}
+          </span>
+          {/* key theo lần thay để icon nảy lên mỗi lần lắp đầu mới */}
+          <BitIcon
+            key={b === bit ? swapAt : 0}
+            bit={b}
+            className={cn(small ? 'size-6' : 'size-8', b === bit && swapAt > 0 && 'animate-pop')}
+          />
+          {!small && BIT_LABELS[b]}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Chọn đầu tua vít khi tới bước vặn vít: thẻ cố định đầu cột phải HUD (BenchHud), hiện mặt ốc của bước này để so;
+ * chọn đầu khác thì tua vít nằm trên bàn chạy hiệu ứng thay đầu. Phím 1–4 chọn nhanh
+ */
+export function BitPicker({ step }: { step: ScrewStep }) {
   const need = SCREW_BITS[step]
   useBenchKey('Digit1', PICK_BIT[0])
   useBenchKey('Digit2', PICK_BIT[1])
   useBenchKey('Digit3', PICK_BIT[2])
   useBenchKey('Digit4', PICK_BIT[3])
   return (
-    <div className="fixed top-16 left-1/2 z-[5] flex -translate-x-1/2 items-center gap-3 rounded-2xl border-2 border-line bg-[rgba(14,16,24,0.92)] px-3 py-2 shadow-[0_6px_0_#0006]">
-      <div className="flex flex-col items-center gap-0.5 text-[13px] font-bold text-muted">
-        Mặt ốc
-        <BitIcon bit={need} className="size-9" />
+    <div className="flex shrink-0 flex-col gap-2 rounded-2xl border-[3px] border-black/40 bg-panel/95 px-3 py-2.5 shadow-[0_8px_24px_#0006]">
+      <div className="flex items-center gap-2">
+        <span className="flex-1 font-head text-base font-extrabold">Đầu vít</span>
+        <span className="flex items-center gap-1 text-xs font-bold text-muted">
+          Mặt ốc
+          <BitIcon bit={need} className="size-6" />
+        </span>
       </div>
-      <div className="h-12 w-px bg-line" />
-      <div className="flex flex-col gap-1">
-        <div className="flex gap-1.5">
-          {BITS.map((b, i) => (
-            <button
-              key={b}
-              type="button"
-              onClick={() => setScrewBit(b)}
-              title={
-                b === bit
-                  ? `Đang lắp đầu ${BIT_LABELS[b]}`
-                  : `Lắp đầu vít ${BIT_LABELS[b]} (phím ${i + 1})`
-              }
-              className={cn(
-                'relative flex w-[72px] flex-col items-center gap-0.5 rounded-xl border-2 px-1.5 py-1 text-xs font-bold',
-                b === bit
-                  ? 'border-green bg-green/15 text-[#9fe6b6]'
-                  : 'border-transparent bg-panel-2 hover:border-yellow',
-              )}
-            >
-              {/* số phím tắt ở góc trái trên */}
-              <span className="absolute top-0.5 left-1.5 text-[10px] font-extrabold text-muted">
-                {i + 1}
-              </span>
-              {/* key theo lần thay để icon nảy lên mỗi lần lắp đầu mới */}
-              <BitIcon
-                key={b === bit ? swapAt : 0}
-                bit={b}
-                className={cn('size-8', b === bit && swapAt > 0 && 'animate-pop')}
-              />
-              {BIT_LABELS[b]}
-            </button>
-          ))}
-        </div>
-      </div>
+      <BitButtons small />
     </div>
   )
 }

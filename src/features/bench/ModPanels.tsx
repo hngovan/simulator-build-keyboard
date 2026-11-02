@@ -10,7 +10,6 @@ import {
   SOLDER_IDS,
   SUPPLIES,
   lubeUseFit,
-  solderSkill,
   spellBonus,
   spellRun,
   SPELL_LUBE,
@@ -33,6 +32,7 @@ import {
   StepDot,
   type StepDotState,
 } from '@/components/ui'
+import { Info, Lightbulb } from 'lucide-react'
 import { cn, fmt } from '@/lib/format'
 
 const fitTone = (fit: number) =>
@@ -69,6 +69,7 @@ function LubePicker({
             active={value === id}
             disabled={disabled}
             onClick={() => setLubePick(slot, id)}
+            title={SUPPLIES[id].desc}
           >
             {SUPPLIES[id].name} ({supplies[id] ?? 0})
           </OptionChip>
@@ -225,6 +226,9 @@ export function LubePanel() {
   const sw = swType ? SWITCHES[swType] : undefined
   const total = ctx.keys.length
   const opened = build.opened ?? build.lubed
+  const closed = build.swClosed ?? 0
+  // đã mở switch thì phải đóng hết lại mới đi tiếp (chưa mở con nào = bỏ qua lube)
+  const mustClose = opened > 0 && closed < opened
   if (!sw)
     return (
       <HudPanel
@@ -250,8 +254,18 @@ export function LubePanel() {
       id="switchLube"
       title="🧴 Lube switch"
       footer={
-        <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
-          {build.lubed ? 'Xong, đi lắp switch →' : 'Bỏ qua lube →'}
+        <Button
+          tone="green"
+          className="w-full"
+          onClick={finishOptional}
+          disabled={busy || mustClose}
+          title={mustClose ? 'Switch đang mở: đóng hết lại rồi mới đi lắp' : undefined}
+        >
+          {mustClose
+            ? `Đóng hết switch lại (${closed}/${opened})`
+            : opened
+              ? 'Xong, đi lắp switch →'
+              : 'Bỏ qua lube →'}
         </Button>
       }
     >
@@ -321,6 +335,22 @@ export function LubePanel() {
               : 'Click hộp lắc trên bàn: nhỏ dầu vào hộp lò xo rồi lắc đều'}
         </div>
       </HudSection>
+      <HudSection
+        id="switchLube.close"
+        title={
+          <span className="flex items-center gap-2">
+            <StepDot state={opened > 0 && closed >= opened ? 'done' : closed > 0 ? 'cur' : 'todo'}>
+              4
+            </StepDot>
+            Đóng switch {closed}/{opened || total}
+          </span>
+        }
+      >
+        <div className="text-xs">
+          {`Lube xong thì click lưới switch trên bàn: lắp lò xo + stem rồi úp housing trên lại, mỗi lần ${perOpen} con. Đóng rồi thì không lube thêm / lube lò xo được nữa`}
+        </div>
+        <ProgressBar value={opened ? closed / opened : 0} tone="green" className="mt-1" />
+      </HudSection>
     </HudPanel>
   )
 }
@@ -347,12 +377,11 @@ export function SolderPanel() {
   const joints = Object.values(build.solder)
   const burnt = joints.filter((j) => j !== true && j.burnt).length
   const total = ctx.keys.length
-  const wear = useGame((s) => s.wear.desolder ?? 0)
   const pump = TOOLS.desolder[tools.desolder ?? 0]
   const good = joints.length - burnt
-  const skill = solderSkill(tools.solder >= 2, pick)
   // dụng cụ có độ bền: hiện số lần dùng còn lại (hết thì hỏng, phải mua lại)
   const wearAll = useGame((s) => s.wear)
+  // tên 1 dòng, độ bền (còn / tổng) xuống dòng dưới
   const tool = (t: { name: string; none?: boolean; life?: number }, kind?: ToolKind) => {
     const left = t.life && kind ? t.life - (wearAll[kind] ?? 0) : null
     return (
@@ -360,9 +389,9 @@ export function SolderPanel() {
         {t.none ? '⚠️ ' : '✓ '}
         {t.name}
         {left !== null && !t.none && (
-          <span className={cn('ml-1', left <= 30 ? 'text-yellow' : 'text-muted')}>
-            · còn {left}/{t.life} lần
-          </span>
+          <div className={cn('pl-4', left <= 30 ? 'text-yellow' : 'text-muted')}>
+            Độ bền: {Math.max(0, left)}/{t.life}
+          </div>
         )}
       </div>
     )
@@ -427,28 +456,37 @@ export function SolderPanel() {
           </Button>
         )}
         {tool(cleaner, 'tipCleaner')}
-        {tool(pump)}
-        {!pump.none && <Muted>Bút hút thiếc: {Math.max(0, 1000 - wear)}/1000 lượt còn lại</Muted>}
+        {tool(pump, 'desolder')}
         {burnt > 0 && <Muted>Bấm mối cháy để hút thiếc, lau mũi hàn rồi hàn lại.</Muted>}
         {!iron.none && (
-          <Muted>
-            Mỗi phím: giữ chuột cho thanh nhiệt chạy, nhả trong vùng xanh (rộng{' '}
-            {Math.round(skill.width * 100)}% thanh); nhả ở đỏ là cháy chân
-          </Muted>
+          <Alert tone="yellow" icon={Lightbulb} title="Hướng dẫn">
+            <span className="text-xs">
+              Giữ chuột cho thanh nhiệt chạy, nhả trong vùng xanh, nhả vùng đỏ là bị cháy chân hàn
+            </span>
+          </Alert>
         )}
       </HudSection>
       <HudSection id="solder.wire" title="Thiếc hàn">
         <div className="flex flex-wrap gap-1">
           {SOLDER_IDS.map((id) => (
-            <OptionChip key={id} active={pick === id} onClick={() => setSolderPick(id)}>
+            <OptionChip
+              key={id}
+              active={pick === id}
+              onClick={() => setSolderPick(id)}
+              title={SUPPLIES[id].desc}
+            >
               {SUPPLIES[id].name} ({supplies[id] ?? 0})
             </OptionChip>
           ))}
         </div>
-        <Muted>{SUPPLIES[pick].desc}</Muted>
         <Muted>
-          Mỗi phím dùng {JOINTS_PER_KEY} mối hàn · cần {(total - good) * JOINTS_PER_KEY} mối nữa
+          Mỗi chân switch cần {JOINTS_PER_KEY} mối hàn: {(total - good) * JOINTS_PER_KEY}/
+          {total * JOINTS_PER_KEY} mối hàn còn lại
         </Muted>
+        {/* mô tả loại thiếc đang chọn: khung ghi chú dưới cùng */}
+        <Alert tone="yellow" icon={Info} title="Ghi chú">
+          <span className="text-xs">{SUPPLIES[pick].desc}</span>
+        </Alert>
       </HudSection>
     </HudPanel>
   )
@@ -535,6 +573,7 @@ export function RingPanel() {
               disabled={!!done}
               swatch={SUPPLIES[id].color}
               onClick={() => setOringPick(id)}
+              title={SUPPLIES[id].desc.replace(/^.*bàn phím. /, '')}
             >
               {SUPPLIES[id].name.replace('Dây O-ring ', '')} ({supplies[id] ?? 0})
             </OptionChip>

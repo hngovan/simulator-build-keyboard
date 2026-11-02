@@ -19,6 +19,7 @@ import { playSolder, playDesolder } from '@/sound'
 import { useHover } from '../common/useHover'
 import { cancelSkill, skillBusy, startSkill, useSkill } from '../common/skill'
 import { SkillBar } from '@/components/game/SkillBar'
+import { SKILL_PORTAL } from '@/components/game/skillPortal'
 import { needleAt } from '@/data/skillCheck'
 import { HintArrow } from '../stations/StationKit'
 import { HINT_COLOR } from '../common/hoverOutline'
@@ -290,7 +291,7 @@ export function SolderPad({ k }: { k: Key }) {
         </Html>
       )}
       {skill && (
-        <Html center position={[0, 0.3, 0]} zIndexRange={[6, 6]}>
+        <Html center position={[0, 0.3, 0]} zIndexRange={[6, 6]} portal={SKILL_PORTAL}>
           <SkillBar check={skill} />
         </Html>
       )}

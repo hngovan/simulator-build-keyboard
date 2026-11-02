@@ -103,6 +103,13 @@ const STEP_LINES: Record<StepId, string[]> = {
     'Case đã lật úp rồi. Dán feet cao su vào từng hốc tròn dưới đáy để phím không trượt trên bàn.',
     'Chọn feet đen hay trắng ở bảng bên phải, mỗi hốc dán 1 cái nha.',
   ],
+  coverOff: [
+    'Case này có tấm tạ đè lên chỗ lắp daughterboard. Click từng ốc trên tạ để tháo ra, xong click tấm tạ nhấc ra ngoài nha.',
+  ],
+  coverOn: [
+    'Cắm dây JST vào PCB xong rồi thì đặt tạ lại: click tấm tạ, dây JST nằm gọn trong rãnh dưới tạ.',
+    'Nhấn giữ từng lỗ ốc canh lực siết lại như vặn vít bình thường, quá tay là trượt ren đó!',
+  ],
   dtb: [
     'Case này dùng daughterboard: bảng mạch nhỏ mang cổng USB-C, nối với PCB bằng dây JST 4 pin.',
     'Click hốc ở vách sau để đặt DTB cho cổng USB-C khớp lỗ, nhấn giữ canh lực siết 2 vít M2 (quá tay là trượt ren), rồi cắm dây vào cổng JST có sẵn trên DTB.',
