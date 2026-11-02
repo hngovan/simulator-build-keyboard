@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.25',
     date: '2026-11-02',
-    commits: [],
+    commits: ['f9b2965'],
     title: 'Tháo / lắp tạ che DTB, thanh lực nổi trên cùng, panel hàn gọn hơn',
     items: [
       'Case có tạ đè DTB (Duality, Exodus, Catto HHKB...): bước tháo ốc tạ + nhấc tạ trước khi lắp DTB, cắm JST xong mới lắp lại tạ + siết ốc canh lực; không bỏ qua được',
