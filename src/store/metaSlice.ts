@@ -1,6 +1,7 @@
 import type { StateCreator } from 'zustand'
 import { fitBoxes, type BoxSpot } from '@/data/boxes'
-import { randomOffers } from '@/data/orders'
+import { randomOffers, tutorialOrder } from '@/data/orders'
+import { ALL_TOURS } from '@/data/tourIds'
 import { buildContext } from '@/data/steps'
 import type {
   AudioSettings,
@@ -76,7 +77,8 @@ export interface MetaSlice extends Profile {
   /** mở Hội Phím Cơ ở tab "Bài của tôi" để đăng bán (nút Đăng bán trong app Kho) */
   openSell: () => void
   toast: (text: string, kind?: Toast['kind']) => void
-  newGame: (name: string) => void
+  /** experienced = đã từng chơi: ghi sẵn mọi tour là đã xem (không hiện hướng dẫn) */
+  newGame: (name: string, experienced?: boolean) => void
   continueGame: () => void
   goPC: () => void
   goBench: () => void
@@ -176,7 +178,7 @@ function snapshot(s: GameState): SaveData {
     listings: s.listings,
     stolen: s.stolen,
     guideSeen: s.guideSeen,
-    guideHidden: s.guideHidden,
+    shopLv: s.shopLv,
     inbox: s.inbox,
     unread: s.unread,
     parcels: s.parcels,
@@ -294,7 +296,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   removeNotify: (id) => set((s) => ({ inbox: s.inbox.filter((n) => n.id !== id) })),
   clearNotify: () => set({ inbox: [], unread: 0 }),
   readNotify: () => set({ unread: 0 }),
-  newGame: (name) => {
+  newGame: (name, experienced = false) => {
     // chơi mới đè bản lưu cũ: ghi lượt cũ lên bảng xếp hạng
     const old = loadSave()
     if (old?.name) void submitRun(runEntry(old, 'newgame'))
@@ -308,6 +310,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       dayStart: { money: START.money, rep: START.rep },
       worked: [],
       name: name.trim() || 'Thợ phím',
+      // đã từng chơi: bỏ hết tour Keeb-chan
+      guideSeen: experienced ? [...ALL_TOURS] : [],
       lastSolderPurchase: null,
       // vào game là đứng trong phòng (kiểu PC Building Simulator), bấm màn hình máy tính mới vào desktop
       screen: 'bench',
@@ -315,7 +319,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       // mở máy tính là desktop trống, không tự mở Mezzenger
       windows: [],
       minimized: [],
-      offers: randomOffers(),
+      // ngày 1 chỉ có đơn hướng dẫn (tour Keeb-chan dắt mua đủ linh kiện)
+      offers: [tutorialOrder()],
       jobs: [],
       boxes: {},
       benchBox: null,
@@ -355,7 +360,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       lastSolderPurchase: null,
       ...rest,
       order: order && { ...order, dueDay: order.dueDay ?? profile.day + order.days },
-      offers: (offers ?? (offer ? [offer] : randomOffers())).map(fix),
+      offers: (offers ?? (offer ? [offer] : randomOffers(profile.rep, profile.shopLv))).map(fix),
       jobs: (jobs ?? []).map((j) => ({ ...j, order: fix(j.order) })),
       packed: session?.packed ?? [],
       // bản lưu cũ chưa có thùng: đơn đang build coi như trên bàn, đơn chờ / đơn chưa build / đơn đóng gói chưa gửi xếp kệ cuối hành lang

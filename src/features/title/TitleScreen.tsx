@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useGame } from '@/store'
-import { Button } from '@/components/ui'
+import { Button, OptionChip } from '@/components/ui'
 import { fmt } from '@/lib/format'
 import { GuideGirl } from '@/components/art/GuideGirl'
 import { Changelog } from './Changelog'
@@ -23,13 +23,15 @@ function FacebookIcon({ className }: { className?: string }) {
 /** Form nhập tên khi bắt đầu chơi mới */
 function NewGameForm({ onCancel, overwrite }: { onCancel?: () => void; overwrite: boolean }) {
   const [name, setName] = useState('')
+  // người chơi mới: có tour Keeb-chan; đã từng chơi: bỏ hết hướng dẫn
+  const [experienced, setExperienced] = useState(false)
   const newGame = useGame((s) => s.newGame)
   return (
     <form
       className="mx-auto flex w-[360px] max-w-full flex-col gap-3 rounded-2xl border-[3px] border-black/40 bg-panel/95 p-5 text-left"
       onSubmit={(e) => {
         e.preventDefault()
-        newGame(name)
+        newGame(name, experienced)
       }}
     >
       <label className="font-head text-lg font-extrabold">Tên thợ build của bạn</label>
@@ -41,6 +43,32 @@ function NewGameForm({ onCancel, overwrite }: { onCancel?: () => void; overwrite
         placeholder="VD: Tuấn Keeb"
         className="rounded-xl border-2 border-line bg-panel-2 px-3 py-2 text-base outline-none focus:border-yellow"
       />
+      <label className="font-head text-lg font-extrabold">Bạn là</label>
+      <div className="grid grid-cols-2 gap-2">
+        <OptionChip
+          type="button"
+          big
+          active={!experienced}
+          onClick={() => setExperienced(false)}
+          title="Keeb-chan dẫn từng bước: nhận đơn, mua linh kiện, lắp phím, giao hàng"
+        >
+          Người chơi mới
+        </OptionChip>
+        <OptionChip
+          type="button"
+          big
+          active={experienced}
+          onClick={() => setExperienced(true)}
+          title="Bỏ hết hướng dẫn, vào chơi luôn"
+        >
+          Đã từng chơi
+        </OptionChip>
+      </div>
+      <span className="text-xs text-muted">
+        {experienced
+          ? 'Không có hướng dẫn, tự nhận đơn và build từ đầu.'
+          : 'Keeb-chan sẽ hướng dẫn từng bước đơn đầu tiên.'}
+      </span>
       {overwrite && <span className="text-xs text-red">Chơi mới sẽ ghi đè bản lưu hiện tại.</span>}
       <div className="flex gap-2">
         {onCancel && (

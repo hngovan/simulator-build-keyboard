@@ -125,7 +125,7 @@ vào `window.__r3f` để debug trong console.
     App "Danh sách đơn" (`apps/inventory/OrderApp`, thẻ `components/game/OrderCard`): tab Đang làm / Chờ nhận / Đã giao;
     mở đơn = linh kiện cần có (thiếu → "Mua ở Shopii" `openShop`), kiểu lắp + plateless, chip yêu cầu khách, ngân sách.
     `EmptyBenchHud`: bàn chưa vào build — trống / thùng đơn còn thiếu đồ (khung liệt kê, không nút) / mọi thùng có dòng `ControlsHint`
-    (chuột phải nhả không kéo = `pickBench` cầm thùng, phím B = `buildOrder` / `unpackBox`, `useBoxKeys`). `title/`: màn hình tiêu đề.
+    (chuột phải nhả không kéo = `pickBench` cầm thùng, `useBoxPick`; chuột trái vào thùng = `buildOrder` / thùng đã đóng gói `unpackBox`, `EmptyBench`; không còn phím B). `title/`: màn hình tiêu đề.
 - Phòng đi lại (kiểu PC Building Simulator): `screen = 'bench'` + `walk` (metaSlice, không lưu; `standUp('pc' | 'bench')`).
   `scene/room/`: `roomLayout.ts` (toạ độ phòng / bàn / hành lang / vùng đi `WALK_AREAS` / khối cản `BLOCKS`), `WalkControls`
   (chỉ WASD đi, không mũi tên, không chạy, không bấm sàn đi tới; kéo nhìn, cuộn chuột giữa zoom FOV, bay camera `useRoom.fly`), `RoomSpot` (vật bấm được + chữ gợi ý HUD), `PcDesk` (bàn máy tính sát
@@ -141,12 +141,12 @@ vào `window.__r3f` để debug trong console.
 
 ## Luồng đơn hàng
 
-- Mỗi ngày có `offers` (5–7 đơn, luôn có ít nhất 1 TKL + 1 60%, `randomOffers`). Nhận đơn (`acceptOrder(id)`) đặt `dueDay = day + days`.
+- Mỗi ngày có `offers` (số đơn theo cấp xưởng `offerRange`: thợ tập sự 1–2, thợ phụ 2–3, thợ chính 3–5, có tiếng 4–6, có tâm 5–7; uy tín âm bớt 1–2; đơn đầu là TKL / 60%, `randomOffers`). Nhận đơn (`acceptOrder(id)`) đặt `dueDay = day + days`.
   Chưa có đơn đang làm thì đơn thành `order` (đơn đang làm); có rồi thì vào `jobs` (mỗi job cất riêng
   inventory / build / history...). `switchJob(id)` cất đơn đang làm vào `jobs` và nạp đơn kia.
 - Thùng hàng vật lý (`store/carrySlice.ts`, `data/boxes.ts`; Session `boxes` / `benchBox` / `held`): nhận đơn thì thùng đơn tới ô nhận hàng
   kệ cuối hành lang (`boxes[id] = door`, kệ 4 tầng × 3 ô `DOOR_RACK_SLOTS` 12, chung với kiện Shopii / chợ, quá thì đổ đống sàn `pileFloor`; đơn full khách không gửi đồ thì thùng trống cũng để sẵn ở đây); đi lại bấm thùng = `pickBox` (cầm 1 thùng), bấm bàn build = `placeBench`
-  (chuyển sang đơn đó `switchJob(id, true)`, thùng nằm trên bàn, phím B = `buildOrder` vào build) rồi ngồi xuống. Không còn bảng chọn đơn:
+  (chuyển sang đơn đó `switchJob(id, true)`, thùng nằm trên bàn, bấm chuột trái vào thùng = `buildOrder` vào build) rồi ngồi xuống. Không còn bảng chọn đơn:
   đổi đơn = nút "Cầm thùng đơn lên" (`pickBench`, giữ tiến độ) → cất lại kệ cuối hành lang (ô mờ đúng chỗ ô trống đầu tiên, `placeDoor`) → lấy thùng khác. Bàn chỉ hiện build khi
   thùng đơn đang làm nằm trên bàn (`onBench`; đơn dev luôn tính); `startBuild` / `switchJob` chặn khi thùng chưa / còn trên bàn. Ô mờ (`GhostSlot`)
   chỉ hiện khi đang cầm thùng hợp chỗ đó (khối xanh nhạt viền mảnh). Thùng của đơn mất (huỷ, sang ngày) tự dọn (subscribe trong `store/index.ts`).
@@ -174,7 +174,10 @@ vào `window.__r3f` để debug trong console.
   Độ khó hàn (`solderSkill`): bút hàn vùng xanh 20% thanh / 0,5 lượt/s, trạm 26% / 0,42, thiếc đểu (`slow`) hẹp vùng xanh
   và `burnChance` ẩn 15%. Hút thiếc cháy: bấm 1 lần là bút hút tự chạy. Bút / trạm đã mua đổi qua lại được (`solderOwned`).
   Thiếc đểu có `burnChance` (cháy dù nhả đúng vùng xanh). Bàn mod stab bày đúng số stab của layout (`stabUnits`).
-  Đầu vít đang lắp (`screwBit`) lưu trong Profile. Sai đầu vít không chặn: trượt ren, `STRIP_TRIES` 3 lần / vít mới tuôn ren (`build.slips` → `build.stripped`, hoàn tác không gỡ).
+  Vít / chân hàn / hốc feet ở mặt nào chỉ bấm được khi mặt đó quay lên (`useAssemblyFlipped` trong caseSplit.ts: Q lật lại xem mặt kia thì không
+  bấm xuyên case / board; `ScrewSet` `flip` = vít bắt từ đáy).
+  Đầu vít đang lắp (`screwBit`) lưu trong Profile; đầu cần theo bước `stepBit(step)` (`SCREW_BITS` + vít DTB / ốc tạ lục giác: bảng `BitPicker`, tua vít trên bàn,
+  sai đầu ở DTB / tạ cũng trượt ren `slipBit`). Sai đầu vít không chặn: trượt ren, `STRIP_TRIES` 3 lần / vít mới tuôn ren (`build.slips` → `build.stripped`, hoàn tác không gỡ).
   Bước vặn vào là skill check canh lực (`tightenScrew(id, result)`, `torqueSpec` theo `ToolDef.torque` {width, speed}:
   điện 24% / 0,55, tay 20% / 0,45), đỏ = trượt ren (3 lần thì tuôn); vít ăn vào case PC / mica / acrylic (`CASE_SCREW_STEPS`, `brittleCase`) `CRACK_CHANCE` nứt case (`build.cracked`).
   Vít stab tuôn ren = stab hỏng (vòng đỏ, không tự sang bước): có stab dư cùng cỡ thì bấm vít đỏ thay (`replaceStab`, vặn lại cả stab).
@@ -194,24 +197,31 @@ vào `window.__r3f` để debug trong console.
   Gasket mount: bước `gasket` dán dải Poron 20 × 4mm (vật tư `GASKET_ID`, mặt trên + mặt dưới tai / mép plate, `GASKET`; Blossom dải
   dài hết tai + xoay theo mép, `ctx.gaskets[].w / rot`; tiêu hao `gasketStrips` = số dải 20mm phủ hết × 2).
   Foam Poron PCB: bước tuỳ chọn `foam` trước `plate` (`placeFoam` trừ vật tư `FOAM_ID`, `build.foam`, âm thock hơn), cảnh `scene/parts/Foam.tsx`.
-  Daughterboard: bước `dtb` (sau `feet`: đặt DTB sát vách sau, 2 vít M2 canh lực, cắm dây vào cổng JST có sẵn trên DTB) + `jst` (trước `caseIn`,
+  Daughterboard: bước `dtb` (sau `feet`: sàn case có 2 bạc ren M2, vít bắt sẵn từ đầu → bấm tháo `unscrewDtb` (`dtb.out`), đặt DTB sát vách sau,
+  siết lại 2 vít canh lực, cắm dây vào cổng JST có sẵn trên DTB) + `jst` (trước `caseIn`,
   board dựng đứng `jstStand`: bấm đầu dây cầm lên `useJstPick` rồi bấm jack PCB = `plugJst`, không tự sang bước); mọi case (`dtbSpot`: case code
   khoét lỗ USB-C `WallPort`, mica khoét rãnh tấm, case CAD theo `caseUsb.json`), jack PCB né socket / chân switch (`jackSpot` → `DtbSpot.jack`);
   case CAD có tạ đè chỗ DTB (`caseUsb.json` `cover`) thêm bước `coverOff` (tháo ốc tạ + nhấc tạ) trước `dtb` và `coverOn` (đặt tạ, siết ốc canh lực)
   sau `dtb` (`CoverWeight` trong Case.tsx, `BuildState.cover`); dây JST đi hết rãnh dưới tạ (`DtbSpot.groove`);
+  case `CaseDef.jstUp` (Duality, dây lòi lên qua khe tạ): feet → (topCase → topScrew) → coverOff → dtb → coverOn → jst → caseIn
+  (`coverBeforeJst`; top mount thì `caseIn` = "Ghép case trên vào case dưới", `stepTitle` / `stepHint` theo `ctx.steps`), save rev 9 `reorderJstUp`;
   `scene/parts/Daughterboard.tsx`, save rev 8 `addDtbSteps`.
   Feet: bước `feet` (trước `topCase` / `caseIn`, case tự lật úp, chỉ hiện case) dán 1 feet vào mỗi hốc `ctx.feet`
   (`feetPockets` trong steps.ts: case CAD = hốc `caseFeet.json`, case dựng bằng code = 4 hốc CNC lõm `FOOT_R` / `FOOT_DEPTH`
   khoét trong `caseShellGeometry` / tấm mica đáy), `placeFoot(i)` trừ 1 vật tư `feetPick` (`FEET_IDS` nhiều màu, Shopii gộp 1 sản phẩm
   chọn màu, vỉ 4 cái), `build.feet` lưu loại; `FeetPanel` (ModPanels) chọn màu. Save rev 4: build cũ đã qua chỗ chèn bước thì dời stepIdx (`addFeetStep`).
   Đơn full có `pcbType` thì kho phải đúng loại PCB. Save có `rev` để nâng cấp bản cũ (`loadSave`).
+  Đơn kit có case không còn hợp layout (dữ liệu case đổi, vd Duality TKL → chỉ TKL F13) tự đổi sang layout cùng cỡ mà case hợp mỗi lần nạp save
+  (`fixKitLayout` persistence.ts: đổi layout / variant / PCB + plate kit + kho; build dở dời dữ liệu phím theo tên phím vì id = thứ tự phím; phím mới mà build đã qua bước lắp thì `fillAddedKeys` lắp nốt switch từ kho / hàn / keycap,
+  vì lịch sử hoàn tác đã xoá nên không quay lại bước được).
 - Đơn có thể đòi đích danh `switchType` / `caseId` / `stabType` / `plateMaterial` (món khách không gửi), `checkInventory` bắt đúng; thiếc / vật tư không bị đòi.
 - Keycap có chất liệu `material` (PBT / ABS / Mix, `KEYCAP_MATERIALS`; option Shopii `group` = chất liệu, `label` = màu, giỏ hàng 2 ô `OptionPick`), đơn có thể đòi `keycapMaterial` (`keycapCheck`); bộ `KEYCAP_KITS.base` ẩn (`hidden`).
 - Đơn có `switchKind` (Linear / Tactile / Clicky / Silent / SilentTactile, `SWITCH_KINDS`): kho phải hợp loại (`switchFits`: Silent Tactile hợp cả Tactile / Silent).
   ~35% đơn có thêm `switchType` = đòi đúng 1 con (vd Cherry MX Đen): kiểm bằng `switchOk(type, order)`, tên hiện bằng `switchWant(order)`.
   Đơn kit: khách gửi từng món ngẫu nhiên (`Kit.case? / pcb? / plate? / stab?`, ít nhất 1 món); chỉ có `mount` khi gửi case,
   món không gửi thì đơn có thể ghi `pcbType` / `caseColor`.
-- Nhiều đơn mỗi ngày: bước cuối `pack` (thùng carton sau bàn phím `PackBox`, `packStore` `requestPack`; nút cam cũng vậy, chưa đủ thì hỏi lại) → `deliver()` chấm điểm, đẩy vào `packed` (Session), thùng đã đóng gói nằm trên bàn (`benchBox`);
+- Nhiều đơn mỗi ngày: bước cuối `pack` (thùng carton sau bàn phím `PackBox`, cao tối thiểu 2,4u, cao theo đỉnh bàn phím đo được `usePack.top`
+  (`PackCarry` đo Box3 lúc chờ đóng gói: case CAD dày + keycap SA không lòi khỏi thùng), `packStore` `requestPack`; nút cam cũng vậy, chưa đủ thì hỏi lại) → `deliver()` chấm điểm, đẩy vào `packed` (Session), thùng đã đóng gói nằm trên bàn (`benchBox`);
   cầm thùng đặt lên kệ giao hàng trong phòng = `placeShip` → `shipOrder` (cộng tiền / uy tín ngay, `PackedOrder.shipped`; Mezzenger không còn nút gửi),
   "Kết thúc ngày" (`nextDay()`) gửi nốt đơn chưa gửi.
   Kết thúc ngày = bấm lịch treo tường trong phòng (`CalendarDialog`) → popup `EndDayDialog` (tổng kết so `dayStart` tiền / uy tín đầu ngày, lưu Session).
@@ -225,8 +235,9 @@ vào `window.__r3f` để debug trong console.
   (`installRun`) và số switch mỗi mẻ lube; khung treo tường `createDiploma` (`scene/models/diplomaModel.ts`).
 - Lube switch: phải mở switch bằng đồ mở trước (`openSwitch`, đếm `build.opened`, mỗi click = bậc thợ), `lubeBatch(idx)`
   chỉ lube switch đã mở, bấm con nào lube mẻ bắt đầu từ con đó (`build.lubedIds`, `lubedIds()` trong mods.ts); mỗi switch mở
-  ra bỏ 1 lò xo vào hộp, mở hết mới lắc lube lò xo được. Cuối cùng đóng switch lại (`closeSwitch`, `build.swClosed`, theo thứ tự lưới, mỗi lần
-  = bậc thợ + phép mở; bấm lưới khi đã lube hết con đã mở): bước chỉ xong khi đóng hết, bắt đầu đóng thì khoá mở / lube / lube lò xo. Vật bấm được ở bàn lube / mod stab viền vàng khi rê (`Clickable` +
+  ra bỏ 1 lò xo vào hộp, mở hết mới lắc lube lò xo được. Cuối cùng bấm lưới xen kẽ thả lò xo lại vào housing (`springBack`, `build.springsIn`) rồi đóng switch lại
+  (`closeSwitch`, `build.swClosed`, chỉ con đã có lò xo, theo thứ tự lưới, mỗi lần = bậc thợ + phép mở; bấm lưới khi đã lube hết con đã mở): bước chỉ xong khi đóng hết,
+  bắt đầu thả lò xo thì khoá mở / lube / lube lò xo. Mod stab làm từng con (`modStab(kind, unit)`, `build.stabModUnits`, đủ mọi con mới bật `stabMods[kind]`). Vật bấm được ở bàn lube / mod stab viền vàng khi rê (`Clickable` +
   `useHoverOutline`), mũi tên vàng chỉ việc tiếp theo (`HintArrow`, StationKit). Sách phép (mục Shopii "Sách phép" = vật tư có `SupplyDef.spell`), bán riêng; mở / lube / lắp: thợ lõ có phép = 10 con, có chứng chỉ thì cộng 10 (`spellRun`): `spellOpen` (mở,
   bàn bày tới 10 đồ mở `openerSlots`) `spellLube` (+10 con mỗi mẻ lube) và `spellAssem`
   (+10 switch mỗi lần lắp, `installRun`), `spellKeycap` (+10 keycap mỗi lần lắp), `spellSolder` (1 lần hàn = 10 phím, cháy thì cháy cả 10, `solderKey`),
@@ -241,7 +252,12 @@ vào `window.__r3f` để debug trong console.
 - Phím có `rot` (Alice: cột trong xoay ±12°, layout `fixed` toạ độ thật + `origin` / `outline`); `row` = hàng keycap đếm từ dưới lên (R1–R4 theo profile).
   PCB / plate theo đường viền `boardOutline` (layout xoay: đa giác lồi mỗi nửa). Chỗ trống hàng dưới
   (HHKB, WKL) có khối chặn liền case (`blockerGaps`).
-- Gờ trong lòng case (case dựng bằng code, `Ledge` / `TopBosses` trong Case.tsx): O-ring / OG có gờ đỡ vòng, gasket 2 mảnh có gờ đỡ + gờ đè,
+- Khe board – vách case dựng bằng code `CASE_MARGIN` = 0,03u (~0,6mm, case khít); 0,15 rồi 0,06 nhìn từ trên vẫn thấy hở. Plate = PCB (lùi 0,01u),
+  hở là do khe này; vòng OG dày theo khe (`ringFrame`). Đổi khe thì soát tai top mount / tab gasket / O-ring / DTB (đều tính theo hằng này).
+- Gờ trong lòng case (case dựng bằng code, `Ledge` / `TopBosses` trong Case.tsx): O-ring / OG có gờ đỡ vòng, gasket 2 mảnh = tab gasket
+  (plate có tai mỗi điểm gasket `gasketTabbed` / `GASKET_NOTCH`, hốc phay vách case trên `gasketNotches`, vấu case dưới `GasketPads` đỡ dải dưới;
+  tai chỉ dài ≈ bề ngang dải 4mm + khe (`GASKET_NOTCH.tab`), dải chỉ nằm trên phần tai trong hốc vách (`gaskets[].d`): tai dài thì lộ tai trần,
+  dải phủ cả đoạn ở khe thì lộ vệt đen → nhìn từ trên mép trước / sau trông hở hơn trái / phải dù khe 4 phía bằng nhau),
   top mount plate có tai + vấu case trên. Case CAD 2 mảnh (Blossom, Catto HHKB; gasket mount): `CaseModel part`, `CaseDef.screws` / `gaskets` (mm) theo model.
 - Duality Horns (case CAD 2 mảnh, chỉ `tklf13`, mount top / O-ring): 8 vít ghép bắt chéo (đầu vít quay vào trong, chéo xuống ra ngoài) (`CaseDef.angledScrews` [đầu vít mm + hướng],
   `ScrewPoint.y / dir`, `ScrewSet` xoay vít theo hướng), vít top mount theo 6 tai plate thật (`CaseDef.topScrews`), `ownBlocks` (nắp có sẵn khối chặn), ốc cố định trên tạ / badge (`CaseDef.weightScrews` / `badgeScrews`, `FixedScrews` trong `CaseModel`, thân rút ngắn không xuyên case), badge chữ thập = node `badge` đi cùng nắp;
@@ -284,15 +300,26 @@ vào `window.__r3f` để debug trong console.
 - Test phím: PCB hàn còn phím chưa hàn / cháy thì bấm không ăn (`deadKey`, `build.testFaults` → StepList sáng "!" bước hàn để quay lại sửa);
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
-- NPC hướng dẫn Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`): mẹo theo tình huống ở máy tính (`TIPS`), bàn build là hội thoại
-  theo bước / bàn trống (`BenchDialog`, `benchTopics`, câu thoại `benchLines.ts`, chưa đọc thì hiện), `guideSeen` trong Profile; ẩn / hiện ở Cài đặt (`guideHidden`).
+- Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`) **chỉ nằm trong tour** (không còn NPC đứng riêng / mẹo máy tính, không có tuỳ chọn
+  ẩn / hiện, không có "Xem lại"; tạo game hỏi "Người chơi mới" / "Đã từng chơi" → `newGame(name, experienced)` ghi sẵn `ALL_TOURS` (`data/tourIds.ts`);
+  Cài đặt → Trò chơi chỉ còn "Bảng tỉ lệ" `OddsDialog`). Lớp tour dùng chung `Spotlight.tsx` (+ `spotlightRect.ts` đo `data-tour`).
   Tour lần đầu ngồi máy tính (`features/guide/Tour.tsx`, `TOUR_ID` trong `guideSeen`): làm tối nền, ô sáng viền vàng đúng phần tử `data-tour="..."`
   (prop `tour` của `DesktopIcon` / `TabChip` / `BackButton` / thẻ đơn + nút Nhận đơn Mezzenger), bấm đúng chỗ thì sang bước; Cài đặt → Xem lại.
-- Chuông thông báo (`components/game/NotifyBell.tsx`, cuối `StatusChips`): `logNotify` ghi `Profile.inbox` + `unread` (`notify` / `addReviews` /
+- Chuông thông báo (`components/game/NotifyBell.tsx`, chỉ ở taskbar máy tính, portal vào `data-desktop-frame`; tiền / uy tín / cấp `StatusChips` ở góc trên ngoài viền): `logNotify` ghi `Profile.inbox` + `unread` (`notify` / `addReviews` /
   bán đồ / fast bid / huỷ đơn trễ tự ghi), xoá từng cái hoặc xoá hết.
-- Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup): ngồi máy tính / bàn build thì đứng dậy ra phòng (`standUp`;
-  máy tính đang mở Cài đặt trên cùng thì đóng Cài đặt trước); đang đi lại thì Esc không làm gì (chỉ dùng để thoát, không vào máy tính). Cài đặt trên cùng: Lưu tiến trình
-  (`saveRun` = gửi bảng xếp hạng lý do `'save'`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
+- Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup; popup nhỏ tự bắt Esc thì `preventDefault`): mở / đóng menu Cài đặt
+  ngoài game (`features/settings/GameSettings`, `lib/settingsMenu.ts`, mở thì WASD / phím tắt bàn build không ăn) ở máy tính / bàn build / đi lại; đứng dậy = `BackButton`.
+  Tab: Trò chơi (Lưu tiến trình `saveRun` = gửi bảng xếp hạng lý do `'save'`, Keeb-chan, về màn đăng nhập) / Âm thanh (`AudioSettings.musicOff` tắt riêng nhạc nền) /
+  Phím tắt (cố định, chỉ liệt kê `KEYBINDS`, chưa cho đổi) / Hiển thị / Dev. App Cài đặt trong máy tính chỉ đổi hình nền; đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
   (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Chơi mới đè save cũng gửi lượt cũ (nút phá sản ở Cài đặt đã bỏ).
+- Cấp xưởng (`data/unlocks.ts`: `SHOP_LEVELS`, `levelFor(done, rep)`, `Profile.shopLv` chỉ tăng, subscribe trong `store/index.ts` báo lên cấp):
+  cấp mở từng món (`caseLv` tự tính: nhựa 1 mảnh 1 / nhôm-gỗ-mica 2 / 2 mảnh 3 / CAD 4, không dưới cấp layout; `LAYOUT_LV`, `PCB_LV`, `PLATE_LV`, stab theo kiểu gắn,
+  switch cao cấp 4, vật tư / dụng cụ hàn + lube 2). Shopii `lockProduct` (bỏ option chưa mở, hết option thì `Product.locked` → thẻ "?"),
+  `randomOffers(rep, lv)` / `groupPosts(order, day, lv)` chỉ dùng món đã mở, plateless cần cấp 3. Chip "Cấp N" (`StatusChips` `LevelInfo`).
+- Người mới: ngày 1 chỉ `tutorialOrder()` (`Order.tutorial`). Tour máy tính (`features/guide/Tour.tsx`): bước `until` (chờ điều kiện, vùng tối không chặn bấm),
+  `skip`, `list` (✓ món đủ theo `checkInventory` kho + giỏ + kiện); `buyPart` = tab `shopcat-*` → ô option `opt-<product>` (`data-opt` trên thẻ) → nút `add-<product>`;
+  giỏ: `ship-express` → `place-order`; vùng tối luôn chặn bấm (popup option z-[4500] nổi trên). Bàn build: `BenchTour` (`BENCH_TOUR_ID`)
+  đơn hướng dẫn tối màn: thiếu đồ → sáng `bench-back`, đủ → chừa vùng 3D nhắc bấm vào thùng, vào build → giới thiệu `hud-order` / `hud-steps` / `bench-objective`,
+  đang làm bước lắp → không khung / không tối, xong / tuỳ chọn → chỉ viền `bench-next` (`test-done`, `bench-pack`, `Spotlight passive` không chặn bấm), đang test → lời dẫn gõ phím; test bắt buộc với đơn hướng dẫn. Không còn lời dẫn "lần đầu gặp bước" kiểu cũ. Lần đầu tới bước vặn vít (mọi đơn): `BitTour` (`tour:bit`) tối màn sáng `bit-picker` tới khi chọn đúng đầu; lần đầu bước test: `TestTour` (`tour:test`, `hud-sound` → `bench-objective`). Bước vặn vít vào bắt đủ vít tự sang bước nên tour không sáng nút. Sau đóng gói đơn hướng dẫn (`tour:ship`): cầm thùng → kệ giao hàng → `PayTour` thu tiền ở Mezzenger (`collect-pay`) → lịch kết thúc ngày. Đi lại: `roomGuideSteps.ts` (lời dẫn + đích) → `RoomGuide` (HUD + la bàn `useRoom.guideDir / guideDist`) + `scene/room/GuideMarker` (mũi tên 3D xuyên tường, qua cửa phòng trước).
 - Layout có `fits` (Planck: `['40']`): case cỡ khác không có model CAD cũng vừa (`caseFits`).

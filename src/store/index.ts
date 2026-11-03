@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { create } from 'zustand'
 import { buildSound } from '@/data/parts'
 import { lossReason } from '@/data/gameOver'
+import { levelDef, levelFor } from '@/data/unlocks'
 import { createMetaSlice, type MetaSlice } from './metaSlice'
 import { createShopSlice, type ShopSlice } from './shopSlice'
 import { createBuildSlice, type BuildSlice } from './buildSlice'
@@ -84,7 +85,7 @@ const SAVED_KEYS = [
   'listings',
   'stolen',
   'guideSeen',
-  'guideHidden',
+  'shopLv',
   'inbox',
   'unread',
   'parcels',
@@ -126,6 +127,16 @@ useGame.subscribe((s, prev) => {
   if (!o || s.result || o.id !== prev.order?.id || s.worked.includes(o.id)) return
   if ((s.build && s.build !== prev.build) || s.spent > prev.spent)
     useGame.setState({ worked: [...s.worked, o.id] })
+})
+
+// Lên cấp xưởng (giao đủ đơn + đủ uy tín): ghi cấp mới, thông báo món vừa mở khoá
+useGame.subscribe((s, prev) => {
+  if (s.screen === 'title' || (s.done === prev.done && s.rep === prev.rep)) return
+  const lv = levelFor(s.done, s.rep)
+  if (lv <= s.shopLv) return
+  useGame.setState({ shopLv: lv })
+  const d = levelDef(lv)
+  s.notify(`🔓 Lên cấp xưởng ${lv}: ${d.name}`, `Mở khoá: ${d.perks.join('; ')}.`)
 })
 
 // Thua game: uy tín quá thấp / hết tiền nhận đơn. Chờ một nhịp cho toast / đánh giá kịp hiện rồi xét lại

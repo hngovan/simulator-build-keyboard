@@ -26,6 +26,7 @@ import { HINT_COLOR } from '../common/hoverOutline'
 import { useSolderHint } from './solderHint'
 import { SolderingIron } from '../models/HandTools'
 import { DesolderPump } from '../models/DesolderPump'
+import { useAssemblyFlipped } from './caseSplit'
 
 // Vị trí 2 chân switch MX (mm, so với tâm)
 const PINS: [number, number][] = [
@@ -121,7 +122,9 @@ export function SolderPad({ k }: { k: Key }) {
   const removeDuration = 1.4
   const removeProgress = removing && holding ? Math.min(1, t / removeDuration) : 0
   const remaining = 1 - THREE.MathUtils.smoothstep(removeProgress, 0.65, 1)
-  const { hover, bind } = useHover(!done || removing)
+  // chân hàn ở mặt dưới PCB: chỉ hàn được khi cụm đang lật úp (Q lật lên mặt trên thì không hàn xuyên qua board)
+  const facing = useAssemblyFlipped()
+  const { hover, bind } = useHover(facing && (!done || removing))
   // phép hàn: rê vào ô khác mà ô này sẽ được hàn ké thì cũng sáng
   const lit = useSolderLit((s) => s.lit.has(k.id)) && !done
 
@@ -172,7 +175,7 @@ export function SolderPad({ k }: { k: Key }) {
         rotation-x={-Math.PI / 2}
         position-y={0.002}
         onPointerDown={(e) => {
-          if (skillBusy() || active.current) return
+          if (!facing || skillBusy() || active.current) return
           e.stopPropagation()
           if (removing) {
             if (!canDesolder()) return

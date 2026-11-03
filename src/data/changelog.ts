@@ -13,6 +13,25 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.26',
+    date: '2026-11-03',
+    commits: [],
+    title: 'Tour hướng dẫn người mới, cấp xưởng mở khoá linh kiện, mod stab từng con',
+    items: [
+      'Tạo game hỏi "Người chơi mới" / "Đã từng chơi": người mới có Keeb-chan dẫn từng bước, đã chơi thì bỏ hết hướng dẫn',
+      'Ngày 1 chỉ 1 đơn hướng dẫn 60% mua từ A → Z; tour tối màn chỉ đúng mục, đúng sản phẩm, đúng option cần mua ở Shopii (danh sách ✓ món đã mua), chọn Hoả tốc rồi đặt hàng',
+      'Dẫn đường trong phòng: lời dẫn + la bàn chỉ hướng + mũi tên 3D xuyên tường (máy tính, kệ cuối hành lang, bàn build, kệ giao hàng, lịch)',
+      'Tour bàn build: thiếu đồ / đủ đồ, giới thiệu HUD, sáng nút sang bước; lần đầu chọn đầu vít, lần đầu test (máy đo âm thanh); đóng gói → kệ giao hàng → thu tiền → lịch kết thúc ngày',
+      'Cấp xưởng 1–5 theo đơn đã giao + uy tín: mở dần layout, case, PCB hàn, lube, plate, stab, switch cao cấp...; món chưa mở hiện dấu "?" ở Shopii; số đơn mỗi ngày theo cấp (thợ tập sự 1–2 đơn)',
+      'Mod stab bấm từng con; lube switch phải thả lò xo vào từng mẻ rồi mới đóng switch',
+      'Bấm chuột trái vào thùng để build (bỏ phím B); chuột phải chỉ để cầm thùng',
+      'Popup đóng gói có nút "Quay lại" về bước còn thiếu, lùi bước được cả khi mất lịch sử; chỉ cảnh báo bước có tính điểm',
+      'Camera bước đóng gói lùi ra thấy cả thùng, thùng đóng gói có nhãn tên khách + tem dễ vỡ; mũi tên ở bước lắp stab / keycap',
+      'Keeb-chan chỉ còn trong tour (bỏ NPC đứng riêng + tuỳ chọn bật / tắt); chuông thông báo chỉ ở máy tính, nằm gọn trong màn hình; tiền / uy tín / cấp ra góc trên',
+      'Menu Cài đặt ngoài game (Esc), bảng đo hiệu năng (cùng đợt)',
+    ],
+  },
+  {
     version: '0.1.25',
     date: '2026-11-02',
     commits: ['f9b2965'],

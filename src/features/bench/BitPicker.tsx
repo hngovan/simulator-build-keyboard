@@ -1,7 +1,7 @@
 import { useGame } from '@/store'
-import { BIT_LABELS, SCREW_BITS } from '@/data/steps'
+import { BIT_LABELS } from '@/data/steps'
 import { cn } from '@/lib/format'
-import type { ScrewBit, ScrewStep } from '@/types'
+import type { ScrewBit } from '@/types'
 import { useBenchKey } from './useBenchKey'
 
 const BITS = Object.keys(BIT_LABELS) as ScrewBit[]
@@ -81,14 +81,17 @@ function BitButtons({ small }: { small?: boolean }) {
  * Chọn đầu tua vít khi tới bước vặn vít: thẻ cố định đầu cột phải HUD (BenchHud), hiện mặt ốc của bước này để so;
  * chọn đầu khác thì tua vít nằm trên bàn chạy hiệu ứng thay đầu. Phím 1–4 chọn nhanh
  */
-export function BitPicker({ step }: { step: ScrewStep }) {
-  const need = SCREW_BITS[step]
+export function BitPicker({ need }: { need: ScrewBit }) {
   useBenchKey('Digit1', PICK_BIT[0])
   useBenchKey('Digit2', PICK_BIT[1])
   useBenchKey('Digit3', PICK_BIT[2])
   useBenchKey('Digit4', PICK_BIT[3])
   return (
-    <div className="flex shrink-0 flex-col gap-2 rounded-2xl border-[3px] border-black/40 bg-panel/95 px-3 py-2.5 shadow-[0_8px_24px_#0006]">
+    <div
+      // tour lần đầu chọn đầu vít (`BitTour`) chỉ đúng bảng này
+      data-tour="bit-picker"
+      className="flex shrink-0 flex-col gap-2 rounded-2xl border-[3px] border-black/40 bg-panel/95 px-3 py-2.5 shadow-[0_8px_24px_#0006]"
+    >
       <div className="flex items-center gap-2">
         <span className="flex-1 font-head text-base font-extrabold">Đầu vít</span>
         <span className="flex items-center gap-1 text-xs font-bold text-muted">

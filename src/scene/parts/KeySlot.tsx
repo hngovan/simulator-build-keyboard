@@ -11,6 +11,7 @@ import { useHover } from '../common/useHover'
 import { SwitchMesh } from '../models/Switch'
 import { Keycap } from './Keycap'
 import { StabMesh } from './StabMesh'
+import { HintArrow } from '../stations/StationKit'
 
 /** 1 vị trí phím: lỗ plate, stab, switch, keycap; xử lý click theo bước hiện tại */
 /** stab plate-mount: housing gài vào plate nên cao hơn PCB mount ~1.5mm (không chạm PCB) */
@@ -48,10 +49,25 @@ export function KeySlot({ k }: { k: Key }) {
     (step === 'switch' && !hasSwitch) ||
     (step === 'keycap' && hasSwitch && !hasKeycap) ||
     (step === 'test' && hasKeycap)
+  // mũi tên chỉ ô làm tiếp: bước lắp stab = phím dài đầu tiên chưa có stab, bước lắp keycap = phím đầu tiên có switch chưa có keycap
+  const hintStab = useGame(
+    (s) =>
+      step === 'stab' &&
+      !!s.ctx &&
+      s.ctx.keys.find((x) => x.stab && !s.build?.stabs[x.id])?.id === k.id,
+  )
+  const hintKeycap = useGame(
+    (s) =>
+      step === 'keycap' &&
+      !!s.ctx &&
+      s.ctx.keys.find((x) => s.build?.switches[x.id] && !s.build?.keycaps[x.id])?.id === k.id,
+  )
   const { hover, bind } = useHover(canAct)
   const lit = useRunLit((s) => s.lit.has(k.id)) && canAct
 
   const onDown = (e: ThreeEvent<PointerEvent>) => {
+    // chỉ chuột trái (chuột phải = kéo khung nhìn)
+    if (e.button !== 0) return
     const s = useGame.getState()
     if (step === 'test') {
       e.stopPropagation()
@@ -100,6 +116,9 @@ export function KeySlot({ k }: { k: Key }) {
           depthWrite={false}
         />
       </mesh>
+      {hintStab && !hover && <HintArrow at={[0, 0.3, 0]} size={1.6} />}
+      {/* keycap: mũi tên nổi trên đỉnh switch */}
+      {hintKeycap && !hover && <HintArrow at={[0, 0.9, 0]} size={1.6} />}
       {hasStab && (
         // PCB mount: đế housing tì lên PCB · plate mount: ngàm gài vào plate, housing treo cách PCB 1 khoảng
         <Drop y={plateStab ? PLATE_STAB_Y : Y.pcbTop}>

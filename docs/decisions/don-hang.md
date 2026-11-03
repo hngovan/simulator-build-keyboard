@@ -1,5 +1,32 @@
 # Đơn hàng
 
+## 2026-11-03
+
+### Số đơn mỗi ngày theo cấp xưởng
+
+- Yêu cầu: thợ mới mỗi ngày chỉ 1–2 đơn, càng lên cấp càng nhiều. `ShopLevel.offers` (1–2 / 2–3 / 3–5 / 4–6 / 5–7), `offerRange(lv, rep)`:
+  uy tín âm bớt (tai tiếng −1, bị tẩy chay −2, tối thiểu 1). `RepTier` bỏ `offers` (uy tín chỉ còn hệ số tiền công). `randomOffers`: đơn đầu
+  bốc trong TKL / 60% (ít đơn hơn 2 thì không bắt đủ cả 2). Chip Uy tín ghi số đơn theo cấp, chip Cấp xưởng ghi số đơn từng cấp.
+- Bỏ chip tên thợ ở thanh trạng thái (máy tính / bàn build / đi lại), người dùng yêu cầu.
+- Chuông thông báo (`NotifyBell`) chỉ hiện ở máy tính (`screen === 'pc'`): bàn build / đi lại không còn khung thông báo.
+  Khung thông báo tràn ra ngoài viền màn hình máy tính (portal ra `body`, `fixed right-3` theo cửa sổ trình duyệt) → portal vào khung màn hình
+  desktop (`data-desktop-frame`, có `transform` + `overflow-hidden` nên `fixed` canh theo khung, phần thừa cắt trong viền).
+
+### Đơn hướng dẫn + cấp xưởng mở khoá
+
+- Yêu cầu: đầu game chỉ 1 đơn; các ngày đầu chỉ case 40 / 60 / 80 (TKL) / full cơ bản; đề xuất điều kiện mở khoá món ở chợ.
+  Người dùng chốt: điều kiện = **đơn đã giao + uy tín** (cả hai), đơn đầu **60% mua A→Z**, bảng 5 cấp như đề xuất.
+- `tutorialOrder()` (orders.ts, `Order.tutorial`): 60% layout chuẩn, full, PCB hotswap, Linear bất kỳ, keycap Cherry PBT trắng, không lube / foam /
+  đòi đích danh, hạn 4 ngày, budget = ước tính × 1.5. `newGame` chỉ có đơn này.
+- `data/unlocks.ts`: `SHOP_LEVELS` (1 tập sự / 2 phụ: 2 đơn / 3 chính: 5 đơn + uy tín 5 / 4 có tiếng: 10 + 10 / 5 có tâm: 20 + 30). Cấp lưu
+  `Profile.shopLv`, **chỉ tăng** (uy tín tụt không khoá lại đồ đã mở); bản lưu cũ tính từ `done` + `rep` lúc nạp. Lên cấp: subscribe `store/index.ts` → `notify`.
+- Cấp món: case tự tính (`caseLv`) để case mới thêm khỏi phải khai báo; lube switch + hàn cấp 2 (đồ mod stab giữ cấp 1 vì khách nào cũng đòi stab êm;
+  Krytox 205g2 cũng cấp 1 vì là mỡ housing stab hợp nhất).
+- Sinh đơn `randomOrder(layout, pay, lv)`: lọc layout / case / mount / PCB / plate / stab / switch / keycap theo cấp (`atLv` lọc hết thì giữ nguyên
+  để không rỗng), cấp 1 không đòi lube / foam / PCB hàn. Kiểm 2.400 đơn mỗi cấp 1–3: 0 đơn đòi món chưa mở.
+- Shopii: `lockProduct` bỏ option chưa mở (vd PCB chỉ còn Hotswap); cả sản phẩm chưa mở → thẻ dấu "?" (người dùng yêu cầu: ẩn tên / ảnh / giá,
+  chỉ ghi điều kiện), xếp cuối, không sale, không tìm ra theo tên. Hội Phím Cơ chỉ pass món đã mở.
+
 ## 2026-10-24
 
 ### Sinh đơn (`src/data/orders.ts`, `randomOffers`)
@@ -751,3 +778,22 @@ kiện chợ không; tên trên thùng bỏ "chị / anh".
 - (2026-10-31, "hiển thị msg chỉ tối đa 4 món trong khi đơn hàng nhận nhiều hơn 4 kiện") Nhận kiện (`pickupParcel`): mỗi món tự `toast` mà
   toast chỉ giữ 4 cái (`slice(-4)` metaSlice) → kiện ≥ 5 món mất thông báo món đầu. Giờ gom toast của cả kiện (tạm thay `toast` lúc nhận),
   mỗi loại (lỗi / thường / đã nhận) 1 toast nhiều dòng; toast nhiều dòng hiện lâu hơn (3,5s + 0,7s / dòng thêm).
+
+## 2026-11-03
+
+### Đơn kit Duality layout TKL thường → TKL F13
+
+- Người dùng: "đang layout f13 mà sao mount keycap lại f12? thêm phím f13 vào là được" (ảnh: hàng F lệch, lộ switch trống ở khe).
+- Nguyên nhân: đơn (Anh Khoa) sinh từ trước khi Duality thành chỉ `tklf13` (`strict`): `layout: 'tkl'`, kit case Duality + PCB / plate `tkl`.
+  Bộ sinh đơn hiện lọc `caseFits` nên đơn mới không bị; `checkInventory` báo case sai nhưng build đã bắt đầu.
+- `fixKitLayout` / `fixKitLayoutOrder` (persistence.ts, chạy mọi lần nạp như `fixMount`): kit case không hợp layout → layout cùng `ff` mà case
+  hợp (`kitLayoutFix`), variant giữ lựa chọn còn hợp (`fitVariant`), PCB / plate kit + kho đổi layout; build dở dời `switches` / `keycaps` /
+  `tested` / `solder` / `stabs` / `testFaults` / `perfect` (khoá số) sang id mới khớp tên phím + lần xuất hiện (2 phím Del), `lubedIds` là
+  thứ tự lưới nên giữ; lịch sử hoàn tác bỏ. Áp cho đơn đang làm, jobs, offers.
+- Kiểm (nạp save thật, tab chặn ghi): đơn thành `tklf13`, 86 phím, chỉ F13 thiếu switch + keycap, 6 phím đã test giữ đúng tên; cảnh hàng F
+  thẳng plate, ô F13 trống trước PrtSc.
+- Cùng ngày (người dùng: "mất đâu rồi?" ảnh ô F13 trống): đổi layout xoá lịch sử hoàn tác → `backToStep` không quay lại bước lắp switch /
+  keycap được, F13 không bao giờ test được. `fillAddedKeys` (persistence.ts, mọi lần nạp, bỏ qua đơn dev vì đơn dev bỏ bước được): build
+  đã qua `switch` mà còn phím trống thì lắp switch lấy từ kho (đủ thì lắp), qua `solder` thì hàn sẵn, qua `keycap` thì lắp keycap. Kiểm
+  `loadSave()` trên save thật (chỉ đọc): F13 có switch + keycap, kho switch 5 → 4, 13 phím đã test giữ nguyên. Chưa xem trong game: phiên
+  khác đang sửa App.tsx (import `features/bag/BagDialog` chưa có) làm app không chạy.

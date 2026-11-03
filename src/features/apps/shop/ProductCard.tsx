@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { ShoppingCart } from 'lucide-react'
+import { Lock, ShoppingCart } from 'lucide-react'
 import { Badge, Button, QtyInput, SoundBars, Tooltip } from '@/components/ui'
 import { optName } from '@/data/cart'
 import { stabStock } from '@/data/parts'
 import { cn, fmt } from '@/lib/format'
 import { toolOnWay } from '@/data/shipping'
+import { levelReq } from '@/data/unlocks'
 import type { Product, ProductOption, StabItem, SupplyItem, ToolItem } from '@/types'
 import { OptionFilter } from './OptionFilter'
 import { ProductImage } from './ProductImage'
@@ -72,7 +73,18 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
   const total = opt.price * (stackable ? qty : 1)
   // nút mua: thẻ = nút nhỏ, panel khung xem 3D = nút to full ngang có icon giỏ
   const action = (big?: boolean) =>
-    equipped || canEquip ? (
+    // chưa mở khoá ở cấp xưởng: nút khoá, tooltip ghi điều kiện lên cấp
+    product.locked ? (
+      <Button
+        size={big ? 'lg' : 'sm'}
+        disabled
+        title={`Chưa mở khoá · ${levelReq(product.locked)}`}
+        className={cn('inline-flex items-center justify-center gap-1.5', big && 'w-full')}
+      >
+        <Lock className="size-4" />
+        Cấp {product.locked}
+      </Button>
+    ) : equipped || canEquip ? (
       <Button
         size={big ? 'lg' : 'sm'}
         tone="orange"
@@ -102,8 +114,33 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
       </Button>
     )
   const kindName = (o: ProductOption) => (isPack(o) ? o.label.split(' · ')[0] : o.label)
+  // chưa mở khoá ở cấp xưởng: giấu hết (ảnh, tên, giá), chỉ dấu ? + điều kiện mở
+  if (product.locked)
+    return (
+      <div
+        data-tour={`product-${product.id}`}
+        title={`Chưa mở khoá · ${levelReq(product.locked)}`}
+        className="flex flex-col gap-1.5 rounded-xl bg-panel-2/60 p-2.5"
+      >
+        <div className="grid h-[110px] place-items-center rounded-lg bg-black/25 font-head text-6xl font-black text-muted/60">
+          ?
+        </div>
+        <div className="font-head text-base font-extrabold text-muted">???</div>
+        <div className="text-xs leading-snug text-muted">{levelReq(product.locked)}</div>
+        <div className="mt-auto flex items-center justify-between gap-2">
+          <span className="font-head text-xl font-extrabold text-muted">???</span>
+          {action()}
+        </div>
+      </div>
+    )
   return (
-    <div className="relative flex flex-col gap-1.5 rounded-xl bg-panel-2 p-2.5 hover:ring-2 hover:ring-yellow hover:ring-inset">
+    <div
+      // tour hướng dẫn chỉ đúng thẻ sản phẩm cần mua
+      data-tour={`product-${product.id}`}
+      // option đang chọn (tour hướng dẫn kiểm đã chọn đúng option chưa)
+      data-opt={optName(opt)}
+      className="relative flex flex-col gap-1.5 rounded-xl bg-panel-2 p-2.5 hover:ring-2 hover:ring-yellow hover:ring-inset"
+    >
       {/* món đang sale: ruy băng đỏ SALE chéo góc */}
       {product.sale && <SaleRibbon size={56} className="rounded-tr-xl" />}
       <ProductImage
@@ -170,14 +207,16 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
       {product.sound && <SoundBars {...product.sound} />}
       {/* chọn option kiểu nút lọc (popup chất liệu | màu nằm ngang); chỉ 1 option thì không cần */}
       {product.options.length > 1 && (
-        <OptionFilter
-          options={product.options}
-          groups={groups}
-          shown={shown}
-          sel={sel}
-          onGroup={pickGroup}
-          onPick={setSel}
-        />
+        <div data-tour={`opt-${product.id}`}>
+          <OptionFilter
+            options={product.options}
+            groups={groups}
+            shown={shown}
+            sel={sel}
+            onGroup={pickGroup}
+            onPick={setSel}
+          />
+        </div>
       )}
       {stackable && (
         <div className="flex items-center justify-between text-sm font-bold text-muted">
@@ -193,7 +232,7 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
             <s className="text-xs font-bold text-muted">{fmt(opt.was * (stackable ? qty : 1))}</s>
           )}
         </span>
-        {action()}
+        <span data-tour={`add-${product.id}`}>{action()}</span>
       </div>
     </div>
   )

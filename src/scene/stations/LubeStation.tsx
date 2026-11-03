@@ -128,6 +128,8 @@ const HIT_GEO = mergeGeometries([
 /** khối bắt chuột không vẽ (material.visible = false vẫn raycast được) */
 const HIT_MAT = new THREE.MeshBasicMaterial({ visible: false })
 const noHit = () => null
+/** lò xo thả lại vào housing dưới: đáy lò xo ngay trên sàn hốc housing (mm, cùng hệ `SEAT_Y`) */
+const SPRING_IN_Y = SEAT_Y - 1.5
 
 /** 4 nét cọ quét quanh switch đang lube: 2 bên thân stem rồi 2 thành hốc housing dưới */
 function passes(at: THREE.Vector3, size: number) {
@@ -153,7 +155,10 @@ function OpenedSwitches({
   active,
   batch,
   closed,
+  springsIn,
+  springLubed,
   closing,
+  closeFrom,
   closeN,
 }: {
   type: string
@@ -161,9 +166,14 @@ function OpenedSwitches({
   opened: number
   /** số con đã đóng lại (con 0..closed-1) */
   closed: number
-  /** đang ở phần đóng switch: bấm lưới = đóng 1 mẻ */
+  /** số con đã có lò xo lại trong housing dưới (con 0..springsIn-1) */
+  springsIn: number
+  /** lò xo đã lube (bóng dầu) */
+  springLubed: boolean
+  /** đang ở phần đóng switch (thả lò xo / đóng): bấm lưới = làm 1 mẻ từ con `closeFrom` */
   closing: boolean
-  /** số con mỗi lần đóng */
+  closeFrom: number
+  /** số con mỗi lần thả lò xo / đóng */
   closeN: number
   /** các con đã lube (thứ tự trong lưới) */
   lubed: number[]
@@ -184,6 +194,8 @@ function OpenedSwitches({
   const topRef = useRef<THREE.InstancedMesh>(null)
   const greaseRef = useRef<THREE.InstancedMesh>(null)
   const hitRef = useRef<THREE.InstancedMesh>(null)
+  // lò xo đã thả lại vào housing dưới (con chưa đóng)
+  const springRef = useRef<THREE.InstancedMesh>(null)
   // switch đã đóng lại: stem + thân stem + housing trên ở đúng chỗ lắp (housing dưới dùng chung bottomRef)
   const shutStemRef = useRef<THREE.InstancedMesh>(null)
   const shutBodyRef = useRef<THREE.InstancedMesh>(null)
@@ -223,6 +235,11 @@ function OpenedSwitches({
     place(shutBodyRef.current, shut, SEAT_Y)
     place(shutTopRef.current, shut, SEAT_Y)
     place(greaseRef.current, wet, SEAT_Y)
+    place(
+      springRef.current,
+      open.filter((i) => i < springsIn),
+      SPRING_IN_Y,
+    )
     // stem nổi phía trên housing dưới
     place(wetRef.current, wet, SEAT_Y + RAISE)
     place(dryRef.current, dry, SEAT_Y + RAISE)
@@ -232,11 +249,11 @@ function OpenedSwitches({
     place(topRef.current, open, -0.743, 17)
     // khối bắt chuột: gốc mặt bàn (y 0 = TABLE)
     place(hitRef.current, all, 0)
-  }, [opened, closed, lubed, grid, grease])
+  }, [opened, closed, springsIn, lubed, grid, grease])
   // viền cả mẻ sẽ bôi nếu bấm con đang rê (con đã lube bấm vào không làm gì); lúc đóng: viền mẻ đóng tiếp theo
   const lit =
     closing && hover !== null && hover < opened
-      ? Array.from({ length: Math.min(closeN, opened - closed) }, (_, k) => closed + k)
+      ? Array.from({ length: Math.min(closeN, opened - closeFrom) }, (_, k) => closeFrom + k)
       : active && hover !== null && hover < opened && !lubed.includes(hover)
         ? lubePicks(lubed, opened, hover, batch)
         : []
@@ -294,6 +311,12 @@ function OpenedSwitches({
       />
       <instancedMesh ref={shutBodyRef} args={[bodyGeo, m.stem, total]} raycast={noHit} />
       <instancedMesh ref={shutTopRef} args={[parts.top, m.top, total]} raycast={noHit} castShadow />
+      <instancedMesh
+        ref={springRef}
+        args={[SPRING_GEO, undefined, total]}
+        material={springLubed ? SPRING_WET : SPRING_DRY}
+        raycast={noHit}
+      />
       {/* chỉ khối này bắt chuột (rê / bấm con nào), các lớp model thật không raycast */}
       <instancedMesh ref={hitRef} args={[HIT_GEO, HIT_MAT, total]} />
       {grease && (
@@ -424,7 +447,7 @@ function OpenerSlot({
 }
 
 /** Tiến độ hoạt cảnh bàn lube (null nếu không chạy). Đọc thẳng store để dùng trong useFrame */
-function animProgress(kind: 'switch' | 'spring' | 'open' | 'close') {
+function animProgress(kind: 'switch' | 'spring' | 'open' | 'close' | 'springIn') {
   const a = useGame.getState().lubeAnim
   if (!a || a.kind !== kind) return null
   return Math.min(1, (performance.now() - a.at) / (a.dur * 1000))
@@ -666,6 +689,52 @@ function SpringShaker({
   )
 }
 
+/** Lò xo bay từ hộp vào housing dưới của 1 mẻ switch (`springBack`): lấy từ cuối hộp, thả lần lượt theo thứ tự lưới */
+function FlyingSprings({
+  from,
+  to,
+  n,
+  total,
+  lubed,
+}: {
+  /** số lò xo đang trong hộp lúc bắt đầu (lấy các con cuối) */
+  from: number
+  /** con đầu tiên trong lưới nhận lò xo */
+  to: number
+  n: number
+  total: number
+  lubed: boolean
+}) {
+  const ref = useRef<THREE.InstancedMesh>(null)
+  const grid = useMemo(() => switchGrid(total), [total])
+  useFrame(() => {
+    const m = ref.current
+    if (!m) return
+    const q = animProgress('springIn') ?? 1
+    const k = Math.min(n, FLY_MAX)
+    m.count = k
+    for (let j = 0; j < k; j++) {
+      const go = ease(seg(q, (j / k) * 0.4, 0.6 + (j / k) * 0.4))
+      const start = BOX_AT.clone().add(springSpot(Math.max(0, from - 1 - j), total))
+      const end = grid.at(to + j).clone()
+      end.y = TABLE + SPRING_IN_Y * U * grid.size
+      TMP.position.lerpVectors(start, end, go).add(v(0, Math.sin(go * Math.PI) * 1.4, 0))
+      TMP.rotation.set(0, 0, 0)
+      TMP.scale.setScalar(U * (IN_BOX + (grid.size - IN_BOX) * go))
+      TMP.updateMatrix()
+      m.setMatrixAt(j, TMP.matrix)
+    }
+    m.instanceMatrix.needsUpdate = true
+  })
+  return (
+    <instancedMesh
+      ref={ref}
+      args={[SPRING_GEO, lubed ? SPRING_WET : SPRING_DRY, FLY_MAX]}
+      frustumCulled={false}
+    />
+  )
+}
+
 // ---------------- Bàn lube switch ----------------
 export function LubeStation() {
   const ctx = useCtx()
@@ -673,9 +742,11 @@ export function LubeStation() {
   const type = useGame((s) => s.inventory.switch?.type)
   const pick = useGame((s) => s.lubePick)
   const anim = useGame((s) => s.lubeAnim)
-  const { lubeBatch, lubeSprings, openSwitch, closeSwitch } = useGame.getState()
+  const { lubeBatch, lubeSprings, openSwitch, closeSwitch, springBack } = useGame.getState()
   const opened = build.opened ?? build.lubed
   const closed = build.swClosed ?? 0
+  // con đã có lò xo trong housing dưới (bản lưu cũ chưa có: con đã đóng coi như có lò xo)
+  const springsIn = Math.max(build.springsIn ?? 0, closed)
   const opener = useGame((s) => TOOLS.opener[s.tools.opener])
   // số con mỗi mẻ lube / mỗi lần mở = bậc thợ + phép lube / phép mở switch (nếu còn lượt)
   const certN = useGame((s) =>
@@ -710,22 +781,25 @@ export function LubeStation() {
   // số con 1 mẻ lube thật (giống lubeBatch): còn giới hạn bởi số con chờ lube + mỡ còn lại
   const lubeN = Math.min(opener.n ?? 1, certN, opened - build.lubed, supplies[pick.switch] ?? 0)
   const left = opened - build.lubed
-  // đóng switch lại: khi đã lube hết con đã mở (hoặc hết mỡ / thiếu cọ không lube tiếp được), đã đóng con nào thì đóng tiếp
-  const canClose =
+  // lắp lại: bấm lưới xen kẽ thả lò xo vào 1 mẻ (khi đã lube hết con đã mở, hoặc hết mỡ / thiếu cọ không lube tiếp được)
+  // rồi đóng mẻ đó; chỉ đóng được con đã có lò xo
+  const canClose = !busy && !noOpener && closed < springsIn
+  const canSpring =
     !busy &&
-    !noOpener &&
-    closed < opened &&
-    (closed > 0 || build.lubed >= opened || noGrease || !!noBrush)
-  const closeAt = grid.at(Math.min(closed, total - 1))
+    closed === springsIn &&
+    springsIn < opened &&
+    (springsIn > 0 || build.lubed >= opened || noGrease || !!noBrush)
+  const closeFrom = canClose ? closed : springsIn
+  const closeAt = grid.at(Math.min(closeFrom, total - 1))
   const hint: [number, number, number] | null = busy
     ? null
     : opened < total && !noOpener && !closed
       ? [openerAt[0].x, TABLE + 30 * U, openerAt[0].z]
       : build.lubed < total && left > 0 && !noGrease && !noBrush && !closed
         ? [nextAt.x, nextAt.y + (SWITCH_CAD.stemTop + RAISE + 1) * U * grid.size, nextAt.z]
-        : opened >= total && !build.springLube && !noOil && !closed
+        : opened >= total && !build.springLube && !noOil && !springsIn
           ? [BOX_AT.x, TABLE + BOX.h + 0.2, BOX_AT.z]
-          : canClose
+          : canSpring || canClose
             ? [closeAt.x, closeAt.y + (SWITCH_CAD.stemTop + RAISE + 1) * U * grid.size, closeAt.z]
             : null
 
@@ -735,6 +809,7 @@ export function LubeStation() {
     if (anim.kind === 'switch') playBrush()
     if (anim.kind === 'open') setTimeout(() => playClick(2400), anim.dur * 300)
     if (anim.kind === 'close') setTimeout(() => playClick(2000), anim.dur * 600)
+    if (anim.kind === 'springIn') setTimeout(() => playClick(2600), anim.dur * 700)
     if (anim.kind === 'spring') {
       const ts = Array.from({ length: 10 }, (_, i) =>
         setTimeout(() => playClick(1800 + (i % 3) * 400), anim.dur * 1000 * (0.58 + i * 0.033)),
@@ -760,17 +835,22 @@ export function LubeStation() {
           <SwitchOpener type={type} left={total - opened} n={openN} />
         </Clickable>
       )}
-      {/* switch đã mở bày ở hàng trước, đủ số con đã mở: bấm vào để lube 1 mẻ; lube xong thì bấm để đóng lại 1 mẻ */}
+      {/* switch đã mở bày ở hàng trước, đủ số con đã mở: bấm vào để lube 1 mẻ; lube xong thì bấm xen kẽ thả lò xo / đóng lại 1 mẻ */}
       <Clickable
-        active={canLube || canClose}
+        active={canLube || canClose || canSpring}
         outline={false}
-        onAct={(e) => (canClose ? closeSwitch() : lubeBatch(switchHit(e)))}
+        onAct={(e) =>
+          canClose ? closeSwitch() : canSpring ? springBack() : lubeBatch(switchHit(e))
+        }
       >
         <OpenedSwitches
           closed={closed}
-          closing={canClose}
+          springsIn={springsIn}
+          springLubed={!!build.springLube}
+          closing={canClose || canSpring}
+          closeFrom={closeFrom}
           closeN={openN}
-          active={canLube && !closed}
+          active={canLube && !springsIn}
           type={type}
           total={total}
           opened={opened}
@@ -785,17 +865,28 @@ export function LubeStation() {
 
       {/* hộp lò xo: mở switch nào lò xo vào hộp con đó, mở hết thì click để lắc lube */}
       <Clickable
-        active={!busy && !build.springLube && opened >= total && !closed}
+        active={!busy && !build.springLube && opened >= total && !springsIn}
         onAct={() => lubeSprings()}
       >
         <SpringShaker
           lubed={!!build.springLube}
           oil={pick.spring}
           noOil={noOil}
-          count={opened}
+          // lò xo thả lại vào switch thì rời hộp (đang bay cũng đã rời)
+          count={opened - springsIn - (anim?.kind === 'springIn' ? anim.batch : 0)}
           total={total}
         />
       </Clickable>
+      {anim?.kind === 'springIn' && (
+        <FlyingSprings
+          key={anim.at}
+          from={opened - springsIn}
+          to={springsIn}
+          n={anim.batch}
+          total={total}
+          lubed={!!build.springLube}
+        />
+      )}
       {noOil && (
         <MissingSlot
           at={BOTTLE_AT}

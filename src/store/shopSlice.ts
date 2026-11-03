@@ -1,3 +1,4 @@
+import { levelFor } from '@/data/unlocks'
 import { isSaleDay } from '@/data/sale'
 import type { StateCreator } from 'zustand'
 import { groupPosts, randomOffers } from '@/data/orders'
@@ -203,7 +204,7 @@ export const CANCEL_REP = 3
 export const NO_WORK_FINE = 0.2
 
 /** Kho đồ ban đầu của 1 đơn: món khách gửi trong kit */
-export function freshSession(order: Order, day: number): JobSession {
+export function freshSession(order: Order, day: number, lv = 1): JobSession {
   const inventory = emptyInventory()
   const provided: JobSession['provided'] = {}
   if (order.kit)
@@ -218,7 +219,7 @@ export function freshSession(order: Order, day: number): JobSession {
     inventory,
     provided,
     spent: 0,
-    posts: groupPosts(order, day),
+    posts: groupPosts(order, day, lv),
     mount: order.mount ?? (order.kit?.case ? CASES[order.kit.case.id].mounts[0] : null),
     build: null,
     history: [],
@@ -561,11 +562,11 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const boxes = get().boxes
     set({ boxes: { ...boxes, [order.id]: { at: 'door', slot: freeSlot(boxes, 'door') } } })
     if (!s.order) {
-      const job = freshSession(order, s.day)
+      const job = freshSession(order, s.day, s.shopLv)
       set({ offers, order, ...job, ctx: null, result: null, pressed: {}, future: [] })
       get().fillActive()
     } else {
-      set({ offers, jobs: [...s.jobs, { order, session: freshSession(order, s.day) }] })
+      set({ offers, jobs: [...s.jobs, { order, session: freshSession(order, s.day, s.shopLv) }] })
     }
     s.toast(
       `Đã nhận đơn của ${order.customer}, hạn ngày ${order.dueDay}. ${order.kit ? 'Thùng đơn tới kệ cuối hành lang' : 'Khách không gửi đồ: thùng trống để sẵn ở kệ cuối hành lang'}, mang về bàn build`,
@@ -681,6 +682,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       (j) => !j.order.cancel && day - (j.order.dueDay ?? day) > CANCEL_AFTER,
     )
     const rep = s.rep + repGain - cancelled.length * CANCEL_REP
+    // cấp xưởng sau khi gửi nốt đơn hôm nay (đơn mới / chợ ngày mai theo cấp này)
+    const lv = Math.max(s.shopLv, levelFor(s.done + unsent.length, rep))
     // đơn đã nhận mà cả ngày không đụng tới (không mua đồ, không build): khách report nhận không làm,
     // shop đền NO_WORK_FINE tiền công của đơn
     const idleJobs = [...(s.order && !s.result ? [s.order] : []), ...s.jobs.map((j) => j.order)]
@@ -690,14 +693,14 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     money -= fines.reduce((a, f) => a + f.fine, 0)
     set({
       lastSolderPurchase: null,
-      offers: randomOffers(rep),
+      offers: randomOffers(rep, lv),
       // chợ Hội Phím Cơ qua ngày mới: bỏ bài cũ, đăng đợt hàng mới cho từng đơn đang làm / đang chờ
       jobs: s.jobs
         .filter((j) => !cancelled.includes(j) && !sold.includes(j))
-        .map((j) => ({ ...j, session: { ...j.session, posts: groupPosts(j.order, day) } })),
+        .map((j) => ({ ...j, session: { ...j.session, posts: groupPosts(j.order, day, lv) } })),
       // đơn đang làm dở (chưa đóng gói) vẫn giữ để làm tiếp ngày mai
       order: s.result ? null : s.order,
-      posts: s.order && !s.result ? groupPosts(s.order, day) : [],
+      posts: s.order && !s.result ? groupPosts(s.order, day, lv) : [],
       result: null,
       packed: [],
       payBanner: null,

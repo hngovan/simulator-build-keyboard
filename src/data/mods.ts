@@ -1,8 +1,21 @@
 import { STABS, SWITCHES } from './parts'
 import { SUPPLIES, lubeUseFit } from './supplies'
-import type { LubePref, StabMods } from '@/types'
+import type { BuildState, LubePref, StabMods } from '@/types'
 
 export type StabModKind = keyof StabMods
+
+type ModState = Pick<BuildState, 'stabMods' | 'stabModUnits'>
+/** stab thứ g đã làm loại mod này chưa (cờ cả loại đã bật = mọi con xong; bản lưu cũ chỉ có cờ) */
+export const unitModded = (b: ModState, kind: StabModKind, g: number) =>
+  !!b.stabMods[kind] || !!b.stabModUnits?.[kind]?.includes(g)
+/** số stab đã làm loại mod này (trên tổng n) */
+export const unitsModded = (b: ModState, kind: StabModKind, n: number) =>
+  b.stabMods[kind] ? n : (b.stabModUnits?.[kind]?.length ?? 0)
+/** stab đầu tiên chưa làm loại mod này (không còn thì null) */
+export const nextUnit = (b: ModState, kind: StabModKind, n: number) => {
+  for (let g = 0; g < n; g++) if (!unitModded(b, kind, g)) return g
+  return null
+}
 
 export interface StabModRule {
   kind: StabModKind
@@ -171,6 +184,8 @@ export interface StabAnim {
   kind: StabModKind
   /** lube đang bôi (nếu là bước lube) */
   lube?: string
+  /** stab đang làm (chỉ số trong `stabUnits`): mod làm từng con */
+  unit: number
   /** performance.now() lúc bắt đầu */
   at: number
   /** thời lượng (giây) */

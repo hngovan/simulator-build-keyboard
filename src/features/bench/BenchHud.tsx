@@ -6,9 +6,9 @@ import {
   TOP_FLIP_STEPS,
   isBuildStep,
   isOptionalStep,
+  stepHint,
   stepTitle,
-  SCREW_STEPS,
-  STEP_INFO,
+  stepBit,
   stepProgress,
 } from '@/data/steps'
 import { SCREW_FULL, SWITCHES, TOOLS, screwLevel } from '@/data/parts'
@@ -18,7 +18,7 @@ import { Alert, BackButton, Button, HudCard, HudPanel, IconButton, useOpen } fro
 import { cn } from '@/lib/format'
 import { OrderSpec } from '@/components/game/OrderSpec'
 import { StatusChips } from '@/components/game/StatusChips'
-import type { ScrewStep, StepId, ToolKind } from '@/types'
+import type { StepId, ToolKind } from '@/types'
 import { StepList } from './StepList'
 import { FeetPanel, FoamPanel, LubePanel, RingPanel, SolderPanel, StabModPanel } from './ModPanels'
 import { DevCasePanel } from './DevCasePanel'
@@ -62,8 +62,10 @@ interface DeliverIssues {
   missing: string[]
   /** yêu cầu của khách chưa đạt (lube, dây O-ring...) */
   requested: string[]
-  /** bước tuỳ chọn đã bỏ qua / làm dở (mod stab, lube, foam, test) */
+  /** bước tuỳ chọn đã bỏ qua / làm dở (mod stab, test) */
   skipped: string[]
+  /** bước sớm nhất còn thiếu / bị bỏ (chỉ số trong `ctx.steps`): nút "Quay lại" trong popup hỏi lại đưa về đây */
+  back: number | null
 }
 
 /** Những gì còn thiếu trước khi đóng gói: bước bắt buộc, yêu cầu của khách, bước tuỳ chọn bị bỏ qua */
@@ -77,28 +79,45 @@ function useDeliverIssues(): DeliverIssues {
   const requested: string[] = []
   const skipped: string[] = []
   const has = (st: StepId) => ctx.steps.includes(st)
+  // bước có vấn đề (để quay lại bước sớm nhất)
+  const at: StepId[] = []
   for (const st of ctx.steps.filter((x) => isBuildStep(x) && !isOptionalStep(x, order))) {
     const [d, t] = stepProgress(st, build, ctx, SCREW_FULL)
-    if (d < t) missing.push(`${stepTitle(st, order)}${t > 1 ? ` (${Math.min(d, t)}/${t})` : ''}`)
+    if (d < t) {
+      missing.push(`${stepTitle(st, order, ctx.steps)}${t > 1 ? ` (${Math.min(d, t)}/${t})` : ''}`)
+      at.push(st)
+    }
   }
   const n = ctx.keys.length
   const prelubed = !!(swType && SWITCHES[swType]?.prelubed)
-  if (order?.lubePref === 'want' && !prelubed && build.lubed < n)
+  if (order?.lubePref === 'want' && !prelubed && build.lubed < n) {
     requested.push(`Khách muốn lube switch: mới lube ${build.lubed}/${n} con`)
-  if (order?.lubePref === 'none' && build.lubed > 0)
+    at.push('switchLube')
+  }
+  if (order?.lubePref === 'none' && build.lubed > 0) {
     requested.push('Khách dặn KHÔNG lube switch nhưng đã lube')
-  if (order?.oring && has('ring') && build.ring !== order.oring)
+    at.push('switchLube')
+  }
+  if (order?.oring && has('ring') && build.ring !== order.oring) {
     requested.push(`Khách muốn dây O-ring ${SUPPLIES[order.oring].name.replace('Dây O-ring ', '')}`)
+    at.push('ring')
+  }
   if (has('stabMod') && stabType) {
     const todo = stabModRules(stabType).filter((r) => r.needed && !build.stabMods[r.kind])
-    if (todo.length) skipped.push(`Mod stab: còn ${todo.map((r) => r.label).join(', ')}`)
+    if (todo.length) {
+      skipped.push(`Mod stab: còn ${todo.map((r) => r.label).join(', ')}`)
+      at.push('stabMod')
+    }
   }
-  if (has('switchLube') && order?.lubePref === 'any' && !prelubed && build.lubed < n)
-    skipped.push(`Lube switch: ${build.lubed}/${n} con`)
-  if (has('foam') && isOptionalStep('foam', order) && !build.foam) skipped.push('Lót foam PCB')
+  // lube switch khách để tuỳ shop / foam khách không dặn: không lube / không lót vẫn đủ điểm, không nhắc (khách không yêu cầu)
   const tested = Object.keys(build.tested).length
-  if (has('test') && tested < n) skipped.push(`Test phím: ${tested}/${n} phím`)
-  return { missing, requested, skipped }
+  // test bắt buộc (đơn hướng dẫn) thì đã nằm ở mục chưa build xong, không liệt kê lại ở bước bỏ qua
+  if (has('test') && isOptionalStep('test', order, ctx.steps) && tested < n) {
+    skipped.push(`Test phím: ${tested}/${n} phím`)
+    at.push('test')
+  }
+  const idx = at.map((st) => ctx.steps.indexOf(st)).filter((i) => i >= 0)
+  return { missing, requested, skipped, back: idx.length ? Math.min(...idx) : null }
 }
 
 /** Hỏi lại trước khi đóng gói khi còn bước chưa xong / yêu cầu của khách chưa đạt / bước bị bỏ qua: liệt kê từng mục */
@@ -111,6 +130,11 @@ function ConfirmDeliver({
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const ctx = useCtx()
+  const order = useGame((s) => s.order)
+  // quay lại bước có vấn đề (như bấm lùi ở danh sách bước; không có lịch sử thì `backToStep` giữ nguyên đồ đã lắp, chỉ về bước đó)
+  const canBack = useGame((s) => issues.back !== null && issues.back < (s.build?.stepIdx ?? 0))
+  const backTitle = issues.back !== null ? stepTitle(ctx.steps[issues.back], order, ctx.steps) : ''
   const list = (items: string[]) => (
     <ul className="list-disc pl-5 text-sm">
       {items.map((t) => (
@@ -146,9 +170,22 @@ function ConfirmDeliver({
           <Button tone="red" onClick={onConfirm}>
             Vẫn giao
           </Button>
-          <Button tone="green" onClick={onCancel}>
-            🛠 Làm tiếp
-          </Button>
+          {canBack ? (
+            <Button
+              tone="green"
+              title="Về bước còn thiếu / bị bỏ để làm nốt (như bấm lùi ở danh sách bước)"
+              onClick={() => {
+                onCancel()
+                useGame.getState().backToStep(issues.back!)
+              }}
+            >
+              🛠 Quay lại: {backTitle}
+            </Button>
+          ) : (
+            <Button tone="green" onClick={onCancel}>
+              🛠 Làm tiếp
+            </Button>
+          )}
         </div>
       </HudCard>
     </div>
@@ -187,7 +224,7 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
     <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
       <div className="flex gap-2">
         {/* chỉ 1 nút quay lại (= Esc) đứng dậy ra phòng; về máy tính thì bấm máy tính trong phòng */}
-        <BackButton onClick={() => useGame.getState().standUp('bench')} />
+        <BackButton tour="bench-back" onClick={() => useGame.getState().standUp('bench')} />
         <IconButton
           tone="yellow"
           icon={<FlipVertical2 />}
@@ -234,12 +271,14 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const ctx = useCtx()
   const build = useBuild()
   const s = useGame()
-  const info = STEP_INFO[step]
   const [done, total] = stepProgress(step, build, ctx, SCREW_FULL)
   const finished = done >= total
   const optional = isOptionalStep(step, s.order, ctx.steps)
   // hàn dở vẫn đi tiếp được (nút đỏ cảnh báo), khớp nextStep
   const soft = step === 'solder' && done > 0 && !finished
+  // đơn hướng dẫn: nút sang bước nhấp nháy viền vàng khi cần bấm (xong bước / bước tuỳ chọn chưa làm gì thì "Bỏ qua"; test thì nên test)
+  const tutorialGlow =
+    !!s.order?.tutorial && (finished || (optional && done === 0 && step !== 'test'))
   const last = build.stepIdx >= ctx.steps.length - 1
   const busy = !!s.stabAnim || !!s.lubeAnim
   const packing = usePack((p) => p.at !== null)
@@ -258,7 +297,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
       ? '⚠️ Hết switch! Về máy tính mua thêm.'
       : step === 'topScrew'
         ? s.viewFlip
-          ? info.hint
+          ? stepHint(step, ctx.steps)
           : 'Bấm Q (hoặc bấm vào case) để lật cả cụm lên, ốc top mount vặn từ mặt dưới'
         : // chỉ nhắc khi người chơi tự lật ra mặt kia (bước tự lật như hàn / vặn vít đáy thì mặt đáy là mặt thao tác)
           canFlip && s.viewFlip
@@ -269,13 +308,14 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
             ? stabModHint(s.inventory.stab.type)
             : step === 'caseIn' && build.inCase && ctx.steps[build.stepIdx + 1] === 'caseClose'
               ? 'Board đã vào case: click vào case trên để đậy lại'
-              : info.hint
+              : stepHint(step, ctx.steps)
   // thu gọn: chỉ còn tiêu đề + tiến độ + nút bước sau (nhớ trạng thái như các panel HUD)
   const [open, toggle] = useOpen('objective')
   return (
     // điện thoại: thẻ trải hết bề ngang (không bị bóp làm tên bước xuống nhiều dòng)
     <div className="fixed bottom-3 left-1/2 z-[5] flex max-w-[calc(100%-24px)] -translate-x-1/2 flex-col items-center gap-1 max-md:w-[calc(100%-24px)]">
       <div
+        data-tour="bench-objective"
         className={cn(
           'flex items-center rounded-2xl border-[3px] border-yellow bg-[rgba(14,16,24,0.92)] shadow-[0_6px_0_#0006] max-md:w-full',
           open
@@ -291,7 +331,7 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
           className="flex items-center gap-2 font-head text-xl font-extrabold text-yellow transition-opacity hover:opacity-85 max-md:text-lg max-md:whitespace-nowrap"
         >
           <span>
-            {stepTitle(step, s.order)}{' '}
+            {stepTitle(step, s.order, ctx.steps)}{' '}
             {total > 1 && (
               <b>
                 {done}/{total}
@@ -327,41 +367,55 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
             ))}
           {/* bước đóng gói: nút như bấm thùng carton */}
           {step === 'pack' && (
-            <Button
-              tone="green"
-              size="sm"
-              className="inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm"
-              onClick={requestPack}
-              disabled={packing}
-            >
-              Cho phím vào thùng
-            </Button>
+            <span data-tour="bench-pack" className="contents">
+              <Button
+                tone="green"
+                size="sm"
+                className={cn(
+                  'inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm',
+                  s.order?.tutorial &&
+                    !packing &&
+                    'animate-pulse shadow-[0_0_24px_rgba(255,214,79,0.7)] ring-4 ring-yellow',
+                )}
+                onClick={requestPack}
+                disabled={packing}
+              >
+                Cho phím vào thùng
+              </Button>
+            </span>
           )}
           {/* mọi bước đều phải bấm mới sang bước sau; bước tuỳ chọn thì bỏ qua được */}
           {/* bước mở hộp: click thùng là tự sang bước sau, không cần nút */}
           {!last && step !== 'unbox' && (
-            <Button
-              tone={finished || ahead ? 'green' : soft ? 'red' : 'blue'}
-              size="sm"
-              className="inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm max-md:min-w-[140px]"
-              onClick={s.nextStep}
-              disabled={busy || (!finished && !optional && !ahead && !soft)}
-              title={
-                finished || optional || ahead
-                  ? undefined
-                  : soft
-                    ? 'Phím chưa hàn / hàn cháy sẽ không ăn khi test, khách nhận sẽ báo lỗi'
-                    : 'Làm xong bước này trước'
-              }
-            >
-              {finished || ahead
-                ? 'Bước tiếp theo'
-                : optional
-                  ? 'Bỏ qua'
-                  : soft
-                    ? `Bỏ dở, còn ${total - done} phím`
-                    : `Còn ${total - done} nữa`}
-            </Button>
+            <span data-tour="bench-next" className="contents">
+              <Button
+                tone={finished || ahead ? 'green' : soft ? 'red' : 'blue'}
+                size="sm"
+                className={cn(
+                  'inline-flex h-9 min-w-[180px] items-center justify-center px-4 text-sm max-md:min-w-[140px]',
+                  tutorialGlow &&
+                    !busy &&
+                    'animate-pulse shadow-[0_0_24px_rgba(255,214,79,0.7)] ring-4 ring-yellow',
+                )}
+                onClick={s.nextStep}
+                disabled={busy || (!finished && !optional && !ahead && !soft)}
+                title={
+                  finished || optional || ahead
+                    ? undefined
+                    : soft
+                      ? 'Phím chưa hàn / hàn cháy sẽ không ăn khi test, khách nhận sẽ báo lỗi'
+                      : 'Làm xong bước này trước'
+                }
+              >
+                {finished || ahead
+                  ? 'Bước tiếp theo'
+                  : optional
+                    ? 'Bỏ qua'
+                    : soft
+                      ? `Bỏ dở, còn ${total - done} phím`
+                      : `Còn ${total - done} nữa`}
+              </Button>
+            </span>
           )}
         </div>
       </div>
@@ -395,9 +449,11 @@ function TestDone() {
         </p>
         <div className="flex justify-end gap-2">
           <Button onClick={() => setClosed(order.id)}>Để sau</Button>
-          <Button tone="green" onClick={() => useGame.getState().nextStep()}>
-            OK, đóng gói
-          </Button>
+          <span data-tour="test-done">
+            <Button tone="green" onClick={() => useGame.getState().nextStep()}>
+              OK, đóng gói
+            </Button>
+          </span>
         </div>
       </HudCard>
     </div>
@@ -433,7 +489,8 @@ export function BenchHud() {
   // dev: đơn build thử có bảng đổi case / màu / mount ngay trên bàn
   const devCase = import.meta.env.DEV && !!order.dev
   // bảng chọn đầu vít: cố định đầu cột phải
-  const dockBits = step in SCREW_STEPS ? <BitPicker step={step as ScrewStep} /> : null
+  const need = stepBit(step)
+  const dockBits = need ? <BitPicker need={need} /> : null
 
   return (
     <>

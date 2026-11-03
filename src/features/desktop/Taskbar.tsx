@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useGame } from '@/store'
-import { StatusChips } from '@/components/game/StatusChips'
+import { NotifyBell } from '@/components/game/NotifyBell'
 import { cn } from '@/lib/format'
 import type { AppId } from '@/store'
 import { APPS, APP_IDS } from './apps'
@@ -103,7 +103,8 @@ export function Taskbar() {
         ))}
       </div>
       <div className="flex items-center gap-2.5 justify-self-end max-md:order-1 max-md:justify-center max-md:self-stretch">
-        <StatusChips tipSide="top" />
+        {/* trong máy chỉ còn chuông thông báo (chỉ xem ở máy tính); tiền / uy tín / cấp ở góc trên màn hình như lúc ở ngoài */}
+        <NotifyBell side="top" />
         <span className="max-md:hidden">
           <Clock />
         </span>

@@ -24,6 +24,9 @@ export const useRoom = create<{
   benchHover: boolean
   /** đang mở popup lịch treo tường */
   calendar: boolean
+  /** dẫn đường người mới (`GuideMarker`): hướng chỗ cần tới so với hướng nhìn (độ, + = phải), khoảng cách (m); null = không dẫn */
+  guideDir: number | null
+  guideDist: number | null
 }>(() => ({
   spot: 'bench',
   fly: null,
@@ -32,4 +35,6 @@ export const useRoom = create<{
   hoverNote: null,
   benchHover: false,
   calendar: false,
+  guideDir: null,
+  guideDist: null,
 }))

@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { useGame, useBuild, useCtx, type StabModKind } from '@/store'
 import { STABS, TOOLS } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
-import { stabModRules } from '@/data/mods'
+import { nextUnit, stabModRules, unitModded, unitsModded } from '@/data/mods'
 import { stabUnits, type StabSet } from '@/data/steps'
 import { playBrush, playClick } from '@/sound'
 import { MM } from '../models/Switch'
@@ -154,12 +154,17 @@ const standToWorld = (L: SetLayout, i: number, [x, y, z]: [number, number, numbe
 
 const ORDER: StabModKind[] = ['clip', 'bandaid', 'housing', 'assembled', 'wire', 'wired']
 
-/** Tiến độ hoạt cảnh của 1 loại mod (null nếu không chạy). Đọc thẳng store để dùng trong useFrame */
-function animProgress(kind: StabModKind) {
+/**
+ * Tiến độ hoạt cảnh của 1 loại mod (null nếu không chạy); `g` = chỉ tính khi đang làm đúng stab đó (mod làm từng con).
+ * Đọc thẳng store để dùng trong useFrame
+ */
+function animProgress(kind: StabModKind, g?: number) {
   const a = useGame.getState().stabAnim
-  if (!a || a.kind !== kind) return null
+  if (!a || a.kind !== kind || (g !== undefined && a.unit !== g)) return null
   return Math.min(1, (performance.now() - a.at) / (a.dur * 1000))
 }
+/** stab đang chạy hoạt cảnh (đọc trong useFrame) */
+const animUnit = () => useGame.getState().stabAnim?.unit ?? 0
 /** dụng cụ làm lần lượt n phần việc: phần thứ mấy đang làm + tiến độ trong phần đó */
 const slotOf = (p: number, n: number) => {
   const j = Math.min(n - 1, Math.floor(p * n))
@@ -188,6 +193,8 @@ const STEM_STROKES: Stroke[] = [1, -1].flatMap((sx) =>
 /** Các nét quét theo thứ tự cọ đi: danh sách điểm trên bàn mà mũi cọ chạy qua */
 interface Pass {
   key: string
+  /** stab của nét này (chỉ số trong layout) */
+  g: number
   points: THREE.Vector3[]
   /** nghiêng cán cọ quanh trục z: cán ngả ra phía ngoài mặt đang phết */
   tilt: number
@@ -205,6 +212,7 @@ function buildPasses(layout: SetLayout[]): Passes {
       ...L.hx.flatMap((hx, i) =>
         HOUSING_STROKES.map((s, j) => ({
           key: `${L.g}h${i}${j}`,
+          g: L.g,
           points: [toWorld(hx, s.a), toWorld(hx, s.b)],
           tilt: -0.6,
         })),
@@ -212,6 +220,7 @@ function buildPasses(layout: SetLayout[]): Passes {
       ...[0, 1].flatMap((i) =>
         STEM_STROKES.map((s, j) => ({
           key: `${L.g}s${i}${j}`,
+          g: L.g,
           points: [standToWorld(L, i, s.a), standToWorld(L, i, s.b)],
           tilt: s.n[0] > 0 ? -0.6 : 0.6,
           stem: true,
@@ -223,6 +232,7 @@ function buildPasses(layout: SetLayout[]): Passes {
   const wire = layout.flatMap((L) =>
     ([-1, 1] as const).map((side, j) => ({
       key: `${L.g}w${j}`,
+      g: L.g,
       points: wireGreaseCurve(side, L.spanMm)
         .getSpacedPoints(24)
         .map((p) => L.wireLie.clone().add(p.multiplyScalar(U))),
@@ -237,8 +247,6 @@ type Progress = Record<string, MutableRefObject<number>>
 interface StemProps {
   L: SetLayout
   i: number
-  /** tổng số slider trên bàn (kìm cắt lần lượt từng cái) */
-  total: number
   model: string
   feet: boolean
   lubed: boolean
@@ -249,29 +257,18 @@ interface StemProps {
 }
 
 /** Slider: dựng đứng trên bàn → (cắt chân, Holee, phết mỡ 2 mặt) → nhấc lên và thả vào housing */
-function MovingStem({
-  L,
-  i,
-  total,
-  model,
-  feet,
-  lubed,
-  holee,
-  assembled,
-  grease,
-  progress,
-}: StemProps) {
+function MovingStem({ L, i, model, feet, lubed, holee, assembled, grease, progress }: StemProps) {
   const ref = useRef<THREE.Group>(null)
   const feetRef = useRef<THREE.Group>(null)
-  const j = L.g * 2 + i
   useFrame((_, dt) => {
     const g = ref.current
     if (!g) return
-    const c = animProgress('clip')
-    const hasFeet = feet && !(c !== null && c > (j + 0.44) / total)
+    // kìm cắt lần lượt 2 slider của stab này
+    const c = animProgress('clip', L.g)
+    const hasFeet = feet && !(c !== null && c > (i + 0.44) / 2)
     const stand = (hasFeet ? L.standFeet : L.stand)[i]
     const seat = L.seat[i]
-    const p = animProgress('assembled')
+    const p = animProgress('assembled', L.g)
     if (p !== null)
       g.position
         .lerpVectors(stand, seat.clone().setY(seat.y + 1.3), ease(seg(p, 0, 0.55)))
@@ -325,7 +322,7 @@ function MovingWire({
   useFrame(() => {
     const g = ref.current
     if (!g) return
-    const p = animProgress('wired')
+    const p = animProgress('wired', L.g)
     if (p === null) {
       snapped.current = false
       g.position.copy(wired ? L.wireSeat : L.wireLie)
@@ -373,7 +370,8 @@ function AnimatedBrush({
   idle,
 }: {
   passes: Passes
-  stemRaise: number
+  /** độ nâng slider (còn chân) của từng stab */
+  stemRaise: (g: number) => number
   idle: THREE.Vector3
 }) {
   const ref = useRef<THREE.Group>(null)
@@ -390,11 +388,14 @@ function AnimatedBrush({
       g.rotation.set(0, 0, Math.PI / 2)
       return
     }
-    const list = passes[kind]
+    // chỉ các nét của stab đang làm
+    const unit = animUnit()
+    const list = passes[kind].filter((x) => x.g === unit)
+    if (!list.length) return
     const i = Math.min(list.length - 1, Math.floor(p * list.length))
     const pass = list[i]
     const tip = alongPass(pass.points, passPhase(p, i, list.length))
-    if (pass.stem) tip.y += stemRaise
+    if (pass.stem) tip.y += stemRaise(unit)
     // ấn cọ xuống nhẹ theo nhịp, mỡ đặc ấn sâu hơn
     g.position
       .copy(tip)
@@ -412,7 +413,6 @@ function AnimatedBrush({
 function AnimatedClipper({ layout, idle }: { layout: SetLayout[]; idle: THREE.Vector3 }) {
   const ref = useRef<THREE.Group>(null)
   const pieces = useRef<THREE.Group>(null)
-  const total = layout.length * 2
   useFrame(() => {
     const g = ref.current
     if (!g) return
@@ -424,9 +424,10 @@ function AnimatedClipper({ layout, idle }: { layout: SetLayout[]; idle: THREE.Ve
       if (pieces.current) pieces.current.visible = false
       return
     }
-    const [j, q] = slotOf(p, total)
+    // cắt lần lượt 2 slider của stab đang làm
+    const [j, q] = slotOf(p, 2)
     // tâm 2 chân (y = -0.75mm của slider còn chân); kìm chĩa mũi về -z
-    const foot = layout[j >> 1].standFeet[j & 1].clone().add(v(0, -0.75 * U, 0.65 * TOOL_K))
+    const foot = layout[animUnit()].standFeet[j].clone().add(v(0, -0.75 * U, 0.65 * TOOL_K))
     const go = ease(seg(q, 0, 0.4)) * (1 - ease(seg(q, 0.6, 1)))
     g.position.lerpVectors(idle, foot, ease(seg(q, 0, 0.4))).lerp(idle, ease(seg(q, 0.6, 1)))
     g.rotation.set(0, CLIPPER_ROT_IDLE + (CLIPPER_ROT_CUT - CLIPPER_ROT_IDLE) * go, 0)
@@ -467,21 +468,17 @@ function AnimatedClipper({ layout, idle }: { layout: SetLayout[]; idle: THREE.Ve
 // Holee mod: mỗi bộ dùng 1 miếng băng. Lúc cắt, băng được nhấc lên khỏi bàn (như cầm trên tay)
 // để kéo dựng đứng kẹp 2 lưỡi trên / dưới băng
 const LIFT = 0.35
-/** tiến độ Holee của băng thứ g (băng làm lần lượt) */
-const bandT = (g: number, n: number, applied: boolean) => {
-  const p = animProgress('bandaid')
-  return p === null ? (applied ? 1 : 0) : seg(p, g / n, (g + 1) / n)
-}
+/** tiến độ Holee của băng thứ g (mỗi stab 1 băng, làm từng con) */
+const bandT = (g: number, applied: boolean) => animProgress('bandaid', g) ?? (applied ? 1 : 0)
 
-/** Kéo: lần lượt cắt từng miếng băng */
-function AnimatedScissors({ layout, applied }: { layout: SetLayout[]; applied: boolean }) {
+/** Kéo: cắt miếng băng của stab đang làm */
+function AnimatedScissors({ layout }: { layout: SetLayout[] }) {
   const ref = useRef<THREE.Group>(null)
   useFrame(() => {
     const sc = ref.current
     if (!sc) return
-    const p = animProgress('bandaid')
-    const [g, t] = p === null ? [0, applied ? 1 : 0] : slotOf(p, layout.length)
-    const band = layout[g].band
+    const t = animProgress('bandaid') ?? 0
+    const band = layout[animUnit()].band
     // kéo dựng đứng (mặt mở của 2 lưỡi thẳng đứng), mũi chĩa về -z, cắt ngang bề rộng băng
     const cut1 = band.clone().add(v(-URGO.padLen / 2, LIFT, 0.4 * TOOL_K))
     const cut2 = band.clone().add(v(URGO.padLen / 2, LIFT, 0.4 * TOOL_K))
@@ -507,12 +504,10 @@ function AnimatedScissors({ layout, applied }: { layout: SetLayout[]; applied: b
  */
 function HoleeBandage({
   L,
-  sets,
   applied,
   stemRaise,
 }: {
   L: SetLayout
-  sets: number
   applied: boolean
   stemRaise: number
 }) {
@@ -534,7 +529,7 @@ function HoleeBandage({
   // giấy lót: 2 tấm phủ kín băng, mỗi tấm 1 nửa
   const paperW = URGO.endLen + URGO.padLen / 2 + 0.02
   useFrame(() => {
-    const t = bandT(L.g, sets, applied)
+    const t = bandT(L.g, applied)
     // giấy lót trượt ra 2 bên
     const peel = ease(seg(t, 0, 0.12))
     papers.current?.children.forEach((m, i) => {
@@ -582,9 +577,14 @@ function HoleeBandage({
 }
 
 // ---------------- Bàn mod stab ----------------
+/**
+ * Bàn mod stab: bày đúng số stab của layout; mod làm **từng con** (bấm bộ phận của stab nào thì mod stab đó, `modStab(kind, g)`),
+ * làm hết mọi con 1 loại mod mới sang loại kế (mũi tên vàng chỉ con đầu chưa làm của loại mod nên làm tiếp)
+ */
 export function StabModStation() {
   const ctx = useCtx()
-  const mods = useBuild().stabMods
+  const build = useBuild()
+  const mods = build.stabMods
   const model = useGame((s) => s.inventory.stab!.type)
   const anim = useGame((s) => s.stabAnim)
   const modStab = useGame((s) => s.modStab)
@@ -593,8 +593,6 @@ export function StabModStation() {
   const rule = (k: StabModKind) => rules.find((r) => r.kind === k)!
   const k0 = ctx.width / 12
   const busy = !!anim
-  // thao tác nên làm tiếp theo (mũi tên xanh)
-  const next = ORDER.find((kind) => rule(kind).needed && rule(kind).allowed && !mods[kind])
 
   const {
     layout,
@@ -603,6 +601,14 @@ export function StabModStation() {
     jars: JARS_AT,
     brush: BRUSH_IDLE,
   } = useMemo(() => layoutSets(stabUnits(ctx.stabKeys)), [ctx.stabKeys])
+  const n = layout.length
+  /** stab g đã làm loại mod này chưa */
+  const done = (kind: StabModKind, g: number) => unitModded(build, kind, g)
+  /** stab g đang chạy hoạt cảnh loại mod này */
+  const running = (kind: StabModKind, g: number) => anim?.kind === kind && anim.unit === g
+  // loại mod nên làm tiếp + con đầu chưa làm (mũi tên vàng)
+  const next = ORDER.find((kind) => rule(kind).needed && rule(kind).allowed && !mods[kind])
+  const nextG = next ? (nextUnit(build, next, n) ?? 0) : 0
   // bàn nới ra theo số stab thì thu tỉ lệ lại để cả bàn vẫn nằm gọn trong khung nhìn
   const k = k0 * Math.min(1, 17 / table.w, 12 / table.d)
   const passes = useMemo(() => buildPasses(layout), [layout])
@@ -619,7 +625,7 @@ export function StabModStation() {
     }
   }, [anim])
 
-  // tiến độ hiện mỡ cho từng nét: chạy theo cọ khi đang phết, đủ 100% khi đã xong
+  // tiến độ hiện mỡ cho từng nét: chạy theo cọ khi đang phết stab đó, đủ 100% khi đã xong
   const progress = useMemo<Progress>(() => {
     const map: Progress = {}
     for (const pass of [...passes.housing, ...passes.wire]) map[pass.key] = { current: 1 }
@@ -628,14 +634,18 @@ export function StabModStation() {
   useFrame(() => {
     for (const kind of ['housing', 'wire'] as const) {
       const p = animProgress(kind)
-      passes[kind].forEach((pass, i, all) => {
-        progress[pass.key].current = p === null ? 1 : seg(passPhase(p, i, all.length), 0, 0.55)
+      const unit = animUnit()
+      const own = passes[kind].filter((x) => x.g === unit)
+      passes[kind].forEach((pass) => {
+        const i = own.indexOf(pass)
+        progress[pass.key].current =
+          p === null || i < 0 ? 1 : seg(passPhase(p, i, own.length), 0, 0.55)
       })
     }
   })
 
-  const act = (kind: StabModKind) => () => {
-    if (!busy) modStab(kind)
+  const act = (kind: StabModKind, g: number) => () => {
+    if (!busy) modStab(kind, g)
   }
 
   // đồ còn thiếu: để trống ô nét đứt trên bàn, người chơi về máy tính mua rồi quay lại
@@ -643,46 +653,55 @@ export function StabModStation() {
   const urgoLeft = useGame((s) => s.supplies.urgo ?? 0)
   const supplies = useGame((s) => s.supplies)
   const lubePick = useGame((s) => s.lubePick)
-  // hũ mỡ cho housing / slider + wire: mỗi loại 1 hũ (nhãn = tên mỡ); thiếu thì để ô trống
+  /** mỡ của loại mod: con đầu chọn rồi thì các con sau dùng cùng loại */
+  const lubeFor = (kind: 'housing' | 'wire') =>
+    mods[kind] ?? build.stabModLube?.[kind] ?? lubePick[kind]
+  /** số con còn phải làm loại mod này (con đang chạy hoạt cảnh đã trừ vật tư) */
+  const left = (kind: StabModKind) =>
+    n - unitsModded(build, kind, n) - (anim?.kind === kind ? 1 : 0)
+  // hũ mỡ cho housing / slider + wire: mỗi loại 1 hũ (nhãn = tên mỡ); hết mỡ mà còn con chưa phết thì để ô trống
   const jars = (() => {
     const list: { lube: string; need: number }[] = []
     for (const kind of ['housing', 'wire'] as const) {
       if (!rule(kind).allowed) continue
-      const lube = lubePick[kind]
+      const lube = lubeFor(kind)
       let jar = list.find((j) => j.lube === lube)
       if (!jar) list.push((jar = { lube, need: 0 }))
-      if (!mods[kind] && anim?.kind !== kind) jar.need += ctx.stabKeys.length
+      if (!mods[kind]) jar.need += Math.max(0, left(kind))
     }
-    return list.map((j) => ({ ...j, missing: (supplies[j.lube] ?? 0) < j.need }))
+    return list.map((j) => ({ ...j, missing: j.need > 0 && (supplies[j.lube] ?? 0) < 1 }))
   })()
   const openShop = useGame((s) => s.openShop)
+  const anyClipped = unitsModded(build, 'clip', n) > 0
   const noClipper = m.feet && !mods.clip && TOOLS.clipper[tools.clipper].none
   const noBrush = TOOLS.brush[tools.brush].none
-  // 1 miếng Urgo dán được 2 stab
-  const urgoNeed = Math.ceil(ctx.stabKeys.length / 2)
-  const noUrgo = !mods.bandaid && anim?.kind !== 'bandaid' && urgoLeft < urgoNeed
+  // 1 miếng Urgo dán được 2 stab: con thứ 1, 3, 5... mới bóc miếng mới
+  const bandDone = unitsModded(build, 'bandaid', n) + (anim?.kind === 'bandaid' ? 1 : 0)
+  const urgoNeed = Math.ceil((n - bandDone) / 2)
+  const noUrgo = !mods.bandaid && bandDone < n && bandDone % 2 === 0 && urgoLeft < 1
   // Holee chỉ cần cho stab còn chân (Cherry); stab khít / đời mới vẫn cố dán từ panel thì mới bày ra
-  const showHolee = rule('bandaid').needed || mods.bandaid || anim?.kind === 'bandaid'
-  // slider còn chân thì đứng cao hơn: nét cọ + chỗ dán Holee nâng theo
-  const stemRaise = m.feet && !mods.clip ? FEET_RAISE : 0
+  const showHolee = rule('bandaid').needed || bandDone > 0
+  // slider còn chân thì đứng cao hơn: nét cọ + chỗ dán Holee nâng theo (từng stab)
+  const stemRaise = (g: number) => (m.feet && !done('clip', g) ? FEET_RAISE : 0)
   // bấm ô trống: về máy tính, mở Shopii đúng mục để mua (mua xong quay lại bàn là có đồ)
   const askBuy = (cat: 'tool' | 'supply') => () => openShop(cat)
-  const lubeOf = (kind: 'housing' | 'wire') =>
-    mods[kind] ?? (anim?.kind === kind ? anim.lube! : null)
-  const housingLube = lubeOf('housing')
+  /** mỡ đang hiện trên stab g (đã phết / đang phết) */
+  const lubeOn = (kind: 'housing' | 'wire', g: number) =>
+    done(kind, g) ? lubeFor(kind) : running(kind, g) ? anim!.lube! : null
+  const LN = layout[nextG] ?? L0
   const hint: Record<StabModKind, [number, number, number]> = {
-    clip: [L0.stand[0].x, STEM_TOP_Y + 0.3, L0.stand[0].z],
-    bandaid: [BAND.x, TABLE + 0.6, BAND.z],
-    housing: [L0.hx[0], TABLE + CAD.housingTop * U + 0.6, L0.hz],
-    assembled: [L0.stand[0].x, STEM_TOP_Y + 0.3, L0.hz],
-    wire: [L0.cx, TABLE + 0.6, L0.wireLie.z + 0.6],
+    clip: [LN.stand[0].x, STEM_TOP_Y + 0.3, LN.stand[0].z],
+    bandaid: [LN.band.x, TABLE + 0.6, LN.band.z],
+    housing: [LN.hx[0], TABLE + CAD.housingTop * U + 0.6, LN.hz],
+    assembled: [LN.stand[0].x, STEM_TOP_Y + 0.3, LN.hz],
+    wire: [LN.cx, TABLE + 0.6, LN.wireLie.z + 0.6],
     // lắp wire: chỉ vào thanh wire đang nằm trên bàn (bấm wire mới lắp), không chỉ chỗ ngàm giữa 2 housing
-    wired: [L0.cx, TABLE + 0.6, L0.wireLie.z + 0.6],
+    wired: [LN.cx, TABLE + 0.6, LN.wireLie.z + 0.6],
   }
 
   return (
     <StationTable k={k} w={table.w} d={table.d}>
-      {/* băng Urgo (mỗi bộ 1 miếng) + kéo (Holee mod); stab không cần Holee thì không bày ra */}
+      {/* băng Urgo (mỗi stab 1 miếng) + kéo (Holee mod); stab không cần Holee thì không bày ra */}
       {!showHolee ? null : noUrgo ? (
         <MissingSlot
           at={BAND.clone().add(v(0, 0, ((layout.length - 1) * BAND_STEP) / 2))}
@@ -690,89 +709,97 @@ export function StabModStation() {
             URGO.endLen * 2 + URGO.padLen + 0.15,
             URGO.width + (layout.length - 1) * BAND_STEP + 0.15,
           ]}
-          label={`Thiếu băng Urgo (còn ${urgoLeft}/${urgoNeed} miếng)`}
+          label={`Thiếu băng Urgo (cần ${urgoNeed} miếng)`}
           onAct={askBuy('supply')}
         />
       ) : (
-        <Clickable active={!busy && !mods.bandaid && !mods.assembled} onAct={act('bandaid')}>
-          {layout.map((L) => (
-            <HoleeBandage
-              key={L.g}
-              L={L}
-              sets={layout.length}
-              applied={mods.bandaid}
-              stemRaise={stemRaise}
-            />
-          ))}
-        </Clickable>
+        layout.map((L) => (
+          // mỗi băng 1 stab: bấm băng nào dán cho stab đó
+          <Clickable
+            key={L.g}
+            active={!busy && !done('bandaid', L.g) && !done('assembled', L.g)}
+            onAct={act('bandaid', L.g)}
+          >
+            <HoleeBandage L={L} applied={done('bandaid', L.g)} stemRaise={stemRaise(L.g)} />
+          </Clickable>
+        ))
       )}
-      {showHolee && <AnimatedScissors layout={layout} applied={mods.bandaid} />}
+      {showHolee && <AnimatedScissors layout={layout} />}
 
-      {layout.map((L) => (
-        <group key={L.g}>
-          {/* nhãn loại dây + số bộ cần làm */}
-          <Label
-            position={L.long ? [L.cx + 2.6, TABLE + 0.01, L.hz] : [L.cx, TABLE + 0.01, L.hz + 1.1]}
-            color="#ffcc2e"
-          >
-            {L.label}
-          </Label>
+      {layout.map((L) => {
+        const g = L.g
+        const housingLube = lubeOn('housing', g)
+        const lubedHousing = done('housing', g) || m.prelubed
+        return (
+          <group key={g}>
+            {/* nhãn loại dây */}
+            <Label
+              position={
+                L.long ? [L.cx + 2.6, TABLE + 0.01, L.hz] : [L.cx, TABLE + 0.01, L.hz + 1.1]
+              }
+              color="#ffcc2e"
+            >
+              {L.label}
+            </Label>
 
-          {/* 2 housing: click để phết mỡ (hoặc lắp slider nếu đã phết) */}
-          <Clickable
-            active={!busy && !mods.assembled}
-            onAct={act(mods.housing || m.prelubed ? 'assembled' : 'housing')}
-          >
-            {L.hx.map((x, i) => (
-              <group key={x} position={[x, TABLE, L.hz]} scale={U}>
-                <StabHousingCad model={model} lubed={!!mods.housing || m.prelubed} />
-                {housingLube &&
-                  HOUSING_STROKES.map((s, j) => (
-                    <GreaseStroke
-                      key={j}
-                      lube={housingLube}
-                      stroke={s}
-                      progress={progress[`${L.g}h${i}${j}`]}
-                    />
-                  ))}
-              </group>
-            ))}
-          </Clickable>
+            {/* 2 housing: click để phết mỡ (hoặc lắp slider nếu đã phết) cho stab này */}
+            <Clickable
+              active={!busy && !done('assembled', g)}
+              onAct={act(lubedHousing ? 'assembled' : 'housing', g)}
+            >
+              {L.hx.map((x, i) => (
+                <group key={x} position={[x, TABLE, L.hz]} scale={U}>
+                  <StabHousingCad model={model} lubed={lubedHousing} />
+                  {housingLube &&
+                    HOUSING_STROKES.map((s, j) => (
+                      <GreaseStroke
+                        key={j}
+                        lube={housingLube}
+                        stroke={s}
+                        progress={progress[`${g}h${i}${j}`]}
+                      />
+                    ))}
+                </group>
+              ))}
+            </Clickable>
 
-          {/* 2 slider: click để cắt chân (Cherry) hoặc lắp vào housing */}
-          <Clickable
-            active={!busy && !mods.assembled}
-            onAct={act(rule('clip').needed && !mods.clip ? 'clip' : 'assembled')}
-          >
-            {[0, 1].map((i) => (
-              <MovingStem
-                key={i}
+            {/* 2 slider: click để cắt chân (Cherry) hoặc lắp vào housing */}
+            <Clickable
+              active={!busy && !done('assembled', g)}
+              onAct={act(rule('clip').needed && !done('clip', g) ? 'clip' : 'assembled', g)}
+            >
+              {[0, 1].map((i) => (
+                <MovingStem
+                  key={i}
+                  L={L}
+                  i={i}
+                  model={model}
+                  feet={m.feet && !done('clip', g)}
+                  lubed={lubedHousing}
+                  holee={done('bandaid', g)}
+                  assembled={done('assembled', g)}
+                  grease={housingLube}
+                  progress={progress}
+                />
+              ))}
+            </Clickable>
+
+            {/* dây stab: click để phết mỡ, rồi tra vào slider + ngàm */}
+            <Clickable
+              active={!busy && !done('wired', g)}
+              onAct={act(done('wire', g) ? 'wired' : 'wire', g)}
+            >
+              <MovingWire
                 L={L}
-                i={i}
-                total={layout.length * 2}
-                model={model}
-                feet={m.feet && !mods.clip}
-                lubed={!!mods.housing || m.prelubed}
-                holee={mods.bandaid}
-                assembled={mods.assembled}
-                grease={housingLube}
+                wired={done('wired', g)}
+                lube={lubeOn('wire', g)}
                 progress={progress}
+                onSnap={() => playClick(1600)}
               />
-            ))}
-          </Clickable>
-
-          {/* dây stab: click để phết mỡ, rồi tra vào slider + ngàm */}
-          <Clickable active={!busy && !mods.wired} onAct={act(mods.wire ? 'wired' : 'wire')}>
-            <MovingWire
-              L={L}
-              wired={mods.wired}
-              lube={lubeOf('wire')}
-              progress={progress}
-              onSnap={L.g === 0 ? () => playClick(1600) : undefined}
-            />
-          </Clickable>
-        </group>
-      ))}
+            </Clickable>
+          </group>
+        )
+      })}
 
       {/* dụng cụ */}
       {noBrush ? (
@@ -799,7 +826,7 @@ export function StabModStation() {
       ) : (
         m.feet && <AnimatedClipper layout={layout} idle={CLIPPER_AT} />
       )}
-      {mods.clip && (
+      {anyClipped && (
         // chân stem đã cắt nằm trên bàn
         <group position={[L0.stand[1].x - 0.9, TABLE + 0.02, L0.stand[1].z + 0.75]}>
           {[0, 1, 2, 3].map((i) => (

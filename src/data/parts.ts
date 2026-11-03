@@ -1219,6 +1219,8 @@ export const CASES: Record<string, CaseDef> = {
     plateModel: 'duality-horns/plate',
     // nắp CAD đã có sẵn khối chặn chỗ trống (cạnh F13, cụm mũi tên...): không dựng thêm
     ownBlocks: true,
+    // dây JST lòi lên qua tạ: lắp lại tạ trước rồi mới cắm dây vào PCB
+    jstUp: true,
     // 8 vít ghép bắt chéo, đầu vít quay vào trong (đáy hốc đầu vít trên nắp), chéo xuống ra ngoài vào trụ đáy
     // (`screwHeads` convert-user-cases.mjs, dò bằng scripts/probe-screw-axis.mjs)
     angledScrews: [

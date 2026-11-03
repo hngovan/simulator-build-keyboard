@@ -82,7 +82,11 @@ export function applyAudioSettings(settings: AudioSettings) {
   if (!ctx || !effectsGain || !musicGain) return
   const t = ctx.currentTime
   effectsGain.gain.setTargetAtTime(settings.muted ? 0 : settings.effectsVolume, t, 0.02)
-  musicGain.gain.setTargetAtTime(settings.muted ? 0 : settings.musicVolume, t, 0.02)
+  musicGain.gain.setTargetAtTime(
+    settings.muted || settings.musicOff ? 0 : settings.musicVolume,
+    t,
+    0.02,
+  )
 }
 
 interface Burst {

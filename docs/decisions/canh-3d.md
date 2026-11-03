@@ -1360,3 +1360,127 @@
   ×1.5 + dời tâm nhìn ra trước 0,6 × chiều sâu (`WEIGHT_OUT_CAM`), lắp lại xong về góc mặc định.
 - Bước `jst` cắm xong: bấm tạ nằm trước case = `nextStep` + `placeCover` (khỏi bấm "Bước tiếp theo"); hint bước jst ghi thêm.
   Kiểm bằng Chrome ngầm: bấm tạ ở bước jst → sang coverOn, `cover.on`.
+
+## 2026-11-03
+
+### Tối ưu hiệu năng phòng (đo bằng HUD hiệu năng, xem ui.md cùng ngày)
+
+- Yêu cầu: phòng lag (máy i5-10400 + Intel UHD 630), áp dụng các mục đáng làm trong
+  R3F "Scaling performance" + đề xuất tối ưu. Đo trước: mỗi khung 6 lần `gl.render`, ~1,27M tam giác.
+- `BenchShadows` (Bench.tsx): ContactShadows của drei vẽ lại cả cảnh + 4 lượt blur mỗi khung (~640k tam giác).
+  Chỉ `frames={Infinity}` khi ngồi bàn build; đi lại / máy tính `frames={1}`, đổi `key` để vẽ lại khi tải xong cảnh,
+  `benchBox`, có / hết build, số thùng `packed`.
+- Vít (`scripts/convert-screws.mjs`): occt chia lưới `linearDeflection 0.02mm`, `angularDeflection 0.4` → ~5k tam giác / con
+  (trước 18–26k, mỗi đơn có hàng chục con); zoom sát vẫn thấy ren. GLB 690KB → 180KB.
+- `dpr={[1, MAX_DPR]}` (trần 1.5) + `AdaptiveDpr` (drei `PerformanceMonitor`, `factor` 1, `flipflops` 3) hạ dần tới 0.75 khi FPS
+  tụt; tắt lúc ngồi máy tính (frameloop demand → FPS thấp giả).
+- Sau: đi lại còn 1 lần render / khung, 189 draw call, ~360k tam giác.
+- Không làm (lý do): shadow map `autoUpdate = false` (khung bóng ±15u ≈ 57×38cm quanh bàn, đo bật / tắt không đổi);
+  movement regression (`performance.regress`) hạ dpr khi di chuyển: đi lại di chuyển liên tục → mờ suốt;
+  `frameloop="demand"` khi đi lại: chỉ đỡ lúc đứng yên, phải soát mọi hoạt cảnh `useFrame` (để sau);
+  instancing keycap trên kệ: draw call không phải chỗ nghẽn; kiến trúc Manager / LOD / startTransition: không cần.
+
+### Duality: case trên hiện sai ở bước DTB + thứ tự bước top mount
+
+- Người dùng: tới bước tháo tạ / lắp DTB lại thấy mảnh top dù đã tháo 2 mảnh; Duality top mount phải là "dán feet → úp case trên →
+  bắt vít plate vào case trên → lắp DTB → lắp lại tạ (jst ở case này lòi lên) → cắm dây JST vào PCB → lắp mảnh top và bot vào nhau
+  (không phải thả board vào case) → vặn vít đóng case → keycap → test → đóng gói".
+- Lỗi: `Case.tsx` `showTop` có `stepIdx >= at('caseClose')`; top mount không có `caseClose` → −1 → luôn vẽ nắp đè lên đáy ở mọi bước
+  có case (feet, tháo tạ, DTB). Sửa: chỉ xét khi `at('caseClose') >= 0`; thêm `Case bottomOnly` (Assembly: bước để riêng board mà case
+  trên đã bắt vào plate thì chỉ vẽ case dưới).
+- `CaseDef.jstUp` (Duality): `buildContext` xếp feet → (topCase → topScrew) → coverOff → dtb → coverOn → jst → caseIn; giữ coverOff ngay
+  trước dtb (tạ đè thì không lắp DTB được). `coverBeforeJst(steps)`: coverOn trước jst thì board để riêng lúc lắp tạ (Assembly caseOnly,
+  Board / Case không dựng `jstStand`), tạ vẽ đặc lúc cắm dây; đầu dây chờ cắm lòi lên ở cuối khe chữ L trên tạ, bấm cầm được.
+- Tên / hướng dẫn bước theo danh sách bước: `stepTitle(step, order, steps)` (top mount: `caseIn` = "Ghép case trên vào case dưới"),
+  `stepHint(step, steps)` (caseIn top mount, coverOn / jst khi tạ lắp trước); thoại Keeb-chan `TOP_LINES` / `COVER_FIRST_LINES`
+  (`benchTopics(step, hasOrder, { mica, top, coverFirst })`).
+- Save rev 9 `reorderJstUp`: build Duality làm dở tìm lại bước theo tên trong thứ tự mới; úp / bắt vít case trên giờ nằm trước mà chưa
+  xong thì quay về bước đó. Đã chạy thử bản lưu đang ở bước DTB (stepIdx 10 → 12), đi hết lắp tạ → cắm JST → ghép case.
+
+### Bàn build: thêm lại kéo trượt khung nhìn (2026-11-03)
+
+- Người dùng: "thêm lại option kéo xung quanh góc nhìn? nên để phím tắt". Bỏ ngày 29/10 để tâm xoay cố định; giờ thêm lại, Space vẫn về góc mặc định.
+- `Bench.tsx` `Controls`: `enablePan`, chuột phải = PAN (trước trùng chuột trái xoay), Shift + chuột trái = PAN (có sẵn OrbitControls),
+  2 ngón = `DOLLY_PAN`; `screenSpacePanning={false}` trượt theo mặt bàn (không chui xuống bàn, tâm vẫn kẹp `ROOM_BOUNDS` ở CameraRig).
+  `PanSpeed`: `panSpeed = 2.5 × max(1, 22 / khoảng cách)` như bản cũ (zoom sát không kéo chậm). Bàn trống: chuột phải nhả không kéo vẫn
+  cầm thùng (`useBoxKeys` lọc kéo > 6px). Mẹo màn tải (`loadTips.ts`) + OVERVIEW ghi phím. Kiểm: kéo phải / Shift + trái dời camera + tâm
+  cùng nhau, y không đổi; Space đặt lại tâm.
+
+### Lắp lại tạ: bấm tạ nằm ngoài, không bấm bóng mờ (2026-11-03)
+
+- Người dùng: lắp lại tạ thì phải bấm tạ đang nằm ngoài mới lắp vào; tới bước này camera lùi ra, mũi tên chỉ vào tạ, bấm mới lắp.
+- `CoverWeight` (Case.tsx): bỏ bóng mờ `ghost` trong case ở bước `coverOn`; tạ đặc nằm chỗ đã nhấc ra (`away` = đã nhấc, chưa đặt), camera
+  lùi theo `WEIGHT_OUT_CAM` như lúc tháo, `HintArrow` trên tạ (đi cùng tạ), rê sáng xanh; bấm = `placeCover` → tạ trượt vào case, camera về
+  gần, sang siết ốc. Câu hướng dẫn: "click tấm tạ nằm trước case để lắp vào" (steps.ts, benchLines).
+- Cùng ngày: cắm dây vào DTB (thao tác cuối bước `dtb`, tự sang `coverOn`) lúc đang zoom sát thì camera không lùi ra. `CameraRig` chỉ đặt
+  lại khi `weightOut` đổi, mà bước DTB → lắp lại tạ tạ vẫn nằm ngoài → thêm `coverOn` (đang ở bước lắp lại tạ) vào deps. Kiểm: zoom 4,9 →
+  cắm dây → 24,5 (góc lùi như lúc tháo tạ).
+
+### DTB: lỗ ren + vít bắt sẵn trong case (2026-11-03)
+
+- Người dùng: không thấy lỗ bắt ốc DTB trên case, không có ren sao bắt ốc; có ren thì phải có vít bắt ốc DTB trên case sẵn từ đầu.
+- `Daughterboard.tsx`: bạc ren đồng M2 (`Insert`, vòng đồng + lỗ đen, chìm ngang sàn / đầu trụ case CAD) ở 2 lỗ `DTB_MM.holes`, vẽ từ đầu (mọi bước
+  có case dưới) tới khi DTB đặt đè lên; 2 vít M2 bắt sẵn trong lỗ (đầu tựa sàn). Bước `dtb`: bấm từng vít tháo ra (`unscrewDtb(i)` →
+  `BuildState.dtb.out`; vít trồi lên rồi ẩn `FlyScrew`, vào khay ốc `ScrewTray` loại `dtb`) → tháo đủ mới hiện khối DTB mờ (`placeDtb` chặn + toast nếu
+  chưa tháo) → siết lại canh lực (bớt 1 vít trong khay, vẽ trên lỗ DTB như cũ) → cắm dây. `stepProgress` dtb = tháo + đặt + siết + cắm
+  (2 + 2 × số lỗ); bản lưu đã `placed` coi như đã tháo hết (không cần rev). Hướng dẫn bước + thoại Keeb-chan sửa theo.
+- Kiểm (case alu40 dựng bằng code, thử trong bộ nhớ rồi trả lại build của người dùng): bấm tháo 2 vít → lộ bạc ren → đặt DTB → siết → 5/6.
+- Cùng ngày: người dùng tưởng 2 vít tháo ra (đứng thẳng trên sàn trước DTB) là trụ ốc bị dời ra sau, "nếu ko cần thì bỏ đi" → bỏ vít nằm
+  cạnh, vít tháo bay vào khay ốc như ốc case / ốc tạ (`ScrewTray` đếm `dtbN` = đã tháo − đã siết, đã đặt DTB coi như tháo hết).
+
+### Gasket case dựng bằng code: tab gasket (2026-11-03)
+
+- Người dùng: dán gasket nhưng plate không có tai nhô ra để gắn, case cũng không có chỗ khoét rãnh để gắn gasket.
+- Trước: dải gasket nằm ở khe giữa mép plate và vách (không chạm plate), đỡ bằng gờ liền quanh lòng case dưới + gờ đè case trên.
+- Giờ (case 2 mảnh dựng bằng code, `gasketTabbed`: không model CAD, không mica): `plateGeometry` thêm tai `gasketTabs` rộng bằng dải (GASKET.w)
+  ở mỗi điểm gasket, từ mép plate ra tới gần đáy hốc vách; `ctx.gaskets` z = giữa hốc (`GASKET_NOTCH` d = bề ngang dải + 0,04, gap 0,03);
+  case trên phay hốc (`gasketNotches` → `caseShellGeometry` notches, mở từ mép ghép lên trần `notchTop = GASKET.t`); case dưới vấu
+  `GasketPads` trong hốc từ mép ghép tới mặt dưới dải dưới; bỏ 2 `Ledge` gasket. Tai + 2 dải kẹp giữa vấu và trần hốc.
+- Kiểm (tab thử chặn localStorage.setItem, đơn dev gasket60): plate có 8 tai, dải dán trên tai; board trong case thấy chồng vấu / dải /
+  tai / dải ở mép; case dưới có vấu ở vách. Case CAD (Blossom...) giữ tai CAD riêng.
+- Cùng ngày (người dùng: "thấy bị hở trên dưới ko? do phần tai của plate bị dài quá trong khi gasket dán có xíu", nhớ note CLAUDE.md):
+  tai dài 0,15 (khe board – vách) + 0,25 → nhìn từ trên thấy tai trần màu plate ở khe. Sửa: `GASKET_NOTCH.tab` = GASKET.d + 0,04 (~4,8mm),
+  hốc vách sâu `tab − CASE_MARGIN` (0,1u); dải gasket phủ hết tai (`ctx.gaskets[].d` = tab − 0,02, tâm giữa tai; `Gasket` vẽ theo `d`);
+  vấu `GasketPads` kéo từ sát mép PCB qua khe tới đáy hốc (đỡ hết dải dưới). Kiểm (alu40 dev, đủ keycap, nhìn từ trên): mép trước / sau kín.
+
+### Chọn đầu vít ở bước DTB / tạ (2026-11-03)
+
+- Người dùng: bước tháo / lắp vít DTB không có mục chọn đầu vít. `BitPicker` chỉ hiện cho `SCREW_STEPS`.
+- `stepBit(step)` (steps.ts): `SCREW_BITS` + `dtb` / `coverOff` / `coverOn` = lục giác (vít M2 đầu trụ, ốc nón tạ). BenchHud hiện `BitPicker`
+  (nhận `need`), DeskTools (Room.tsx) bày tua vít theo `stepBit`. Sai đầu: `unscrewDtb` / tháo ốc tạ (`CoverWeight.turnOut`, kiểm trước
+  hoạt cảnh) gọi `slipBit(id, what)` (trượt ren, 3 lần tuôn ren rồi mới tháo được); `screwDtb` / `screwCover` sai đầu đi chung nhánh trượt
+  ren như quá tay. Kiểm: đầu chữ thập → "Trượt ren vít DTB (sai đầu vít) 1/3", vít không ra; lục giác → tháo được.
+
+### Bóp khe board – vách case dựng bằng code (2026-11-03)
+
+- Người dùng: "sao case vẫn hở trên dưới? cần bóp case vào ko hay là do plate đang ngắn đi?". Plate không ngắn (= PCB lùi 0,01u, PCB = khung
+  layout); hở là khe `CASE_MARGIN` 0,15u (~2,9mm mỗi bên) + keycap lùi ~0,5mm → ~3,5mm. Case thật ~0,5–1mm.
+- `CASE_MARGIN` 0,15 → 0,06 (~1,1mm). Vòng OG trước cố định dày 0,12 cách mép 0,1 → lún vào vách; giờ dày `CASE_MARGIN − 0,005`, mặt ngoài
+  sát vách (`ringFrame`, cả O-ring dùng chung `off = CASE_MARGIN − t/2`). Còn lại tự theo hằng: tai top mount (lỗ vẫn giữa phần trong hốc),
+  tab gasket (hốc sâu 0,19), gờ O-ring (~1mm), DTB / lỗ USB, vít ghép, mica, khối chặn. Case CAD không đổi.
+- Chưa xem trong trình duyệt: phiên khác đang sửa file song song làm Vite reload + thao tác trên cùng cửa sổ Chrome → dừng thử để không đụng
+  bản lưu người dùng. Ảnh nướng sẵn Shopii (`public/thumbs`) của case code nhỏ đi 0,18u, chưa chạy lại `bun run bake:thumbs` (khác biệt khó thấy).
+- Cùng ngày: người dùng "case vẫn còn hở cho bóp vào xíu nữa" → `CASE_MARGIN` 0,06 → 0,03 (~0,6mm). `LEDGE_GAP` 0,03 → 0,01 (gờ đỡ vòng
+  O-ring / OG rộng = khe + `LEDGE_IN` − `LEDGE_GAP`, để 0,03 thì gờ chui hết vào vách). Kiểm (tab chặn ghi, không có phiên khác đang sửa file):
+  alu40 gasket đủ keycap nhìn từ trên + sát mép trước khít; tofu60redux OG plate áp sát vách, vòng không lòi / lún.
+
+### Vít mặt đáy không vặn xuyên được khi lật lại (2026-11-03)
+
+- Người dùng: đang assem case 2 mảnh, cố tình bấm Q lật lại nhưng vẫn vặn được ốc từ mặt sau → sai.
+- `ScrewSet` chỉ xét đúng bước + `active`, không xét mặt. Thêm `useAssemblyFlipped()` (caseSplit.ts, cùng công thức Assembly: NO_FLIP / vừa tách
+  2 mảnh → ngửa; bước tự lật thì Q đảo) dùng chung cho Assembly; `ScrewSet`: `facing = flip ? flipped : !flipped`, không facing thì không
+  bấm / không mũi tên. Cùng loại lỗi: chân hàn `SolderPad` (mặt dưới PCB) và hốc feet `RubberFeet` chỉ tương tác khi đang lật úp.
+- Kiểm (gasket60 vít đáy, bước caseScrew, tab chặn ghi): tự lật thấy đáy → rê lên vít ra bàn tay; Q lật lên mặt trên → rê đúng chỗ đó 0 vít.
+- Cùng ngày: người dùng "cạnh trên và dưới vẫn hở, độ hở phải bằng cạnh trái / phải". Đo trong cảnh (raycast từ tâm ra 4 phía): vách cách mép
+  board đúng 0,03u cả 4 phía, keycap lùi 0,04u đều; chân keycap ngang mép vách (y 0,36). Ảnh gần chiếu thẳng (fov 3°) cho thấy khe bằng
+  nhau; thứ làm mép trước / sau trông hở là dải gasket đen trên đoạn tai nằm ở khe (mép trái / phải không có gasket). Sửa: dải chỉ trên
+  phần tai trong hốc (`gaskets[].d` = tab − khe − 0,02 ≈ 4mm, tâm sau mặt vách), đoạn tai ở khe để trần màu plate. Kiểm lại ảnh chiếu thẳng:
+  hết vệt đen, khe trái = khe dưới.
+
+### Thùng đóng gói cao theo bàn phím (2026-11-03)
+
+- Người dùng: đóng gói Duality + keycap SA bị lòi ra khỏi thùng (cao hơn).
+- `PackBox` cao cố định `H` 2,4u. Giờ `MIN_H` 2,4 + `packHeight(top)` = max(2,4, đỉnh bàn phím + FLOOR_Y − Y.table + 0,25): `PackCarry` đo
+  `Box3.setFromObject` của bàn phím lúc nằm trên bàn (chờ đóng gói mỗi 20 khung vì model / keycap tải muộn; bấm cất dở ở bước khác mà chưa
+  đo thì đo khung đầu) → `usePack.top`, rời đóng gói thì reset. Vòng cung bay, nắp, băng keo, súng theo `H` mới.
+- Kiểm (Duality + SA, tab chặn ghi): thùng cao 2,79u (miệng 1,844), lúc bàn phím hạ xong đỉnh 1,676 → dư 0,17u dưới miệng.

@@ -1,22 +1,21 @@
-// Uy tín thợ: bậc uy tín quyết định số đơn mỗi ngày + hệ số tiền công; chứng chỉ thợ cộng thu nhập cơ bản mỗi đơn nhận
+// Uy tín thợ: bậc uy tín quyết định hệ số tiền công (số đơn mỗi ngày theo cấp xưởng, uy tín âm bớt: data/unlocks.ts `offerRange`);
+// chứng chỉ thợ cộng thu nhập cơ bản mỗi đơn nhận
 
 export interface RepTier {
   /** uy tín tối thiểu của bậc */
   min: number
   name: string
-  /** số đơn mới mỗi ngày [ít nhất, nhiều nhất] */
-  offers: [number, number]
   /** hệ số tiền công khách trả */
   pay: number
 }
 
 /** các bậc uy tín (tăng dần) */
 export const REP_TIERS: RepTier[] = [
-  { min: -Infinity, name: 'Bị tẩy chay', offers: [3, 4], pay: 0.8 },
-  { min: -5, name: 'Tai tiếng', offers: [4, 5], pay: 0.9 },
-  { min: 0, name: 'Mới vào nghề', offers: [5, 7], pay: 1 },
-  { min: 10, name: 'Có tiếng', offers: [6, 8], pay: 1.15 },
-  { min: 30, name: 'Thợ có tâm', offers: [7, 9], pay: 1.3 },
+  { min: -Infinity, name: 'Bị tẩy chay', pay: 0.8 },
+  { min: -5, name: 'Tai tiếng', pay: 0.9 },
+  { min: 0, name: 'Mới vào nghề', pay: 1 },
+  { min: 10, name: 'Có tiếng', pay: 1.15 },
+  { min: 30, name: 'Thợ có tâm', pay: 1.3 },
 ]
 
 /** bậc uy tín hiện tại + bậc kế tiếp (nếu còn) */

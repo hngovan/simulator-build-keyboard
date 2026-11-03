@@ -16,7 +16,7 @@ import {
   SPELL_OPEN,
   type LubeUse,
 } from '@/data/supplies'
-import { stabModRules } from '@/data/mods'
+import { stabModRules, unitsModded } from '@/data/mods'
 import { toolOnWay } from '@/data/shipping'
 import { stabSets } from '@/data/steps'
 import type { LubePick } from '@/store/shopSlice'
@@ -85,12 +85,10 @@ interface ModRowProps {
   state: StepDotState
   name: string
   req: ReactNode
-  /** nút làm bước này (ẩn khi đã xong / không làm được) */
-  onDo?: () => void
 }
 
-/** 1 mod: chấm trạng thái giống danh sách bước (✓ xong · số vàng = nên làm tiếp · – không cần) */
-function ModRow({ index, state, name, req, onDo }: ModRowProps) {
+/** 1 mod: chấm trạng thái giống danh sách bước (✓ xong · số vàng = nên làm tiếp · – không cần); làm = bấm bộ phận trên bàn mod */
+function ModRow({ index, state, name, req }: ModRowProps) {
   return (
     <div
       className={cn(
@@ -106,12 +104,6 @@ function ModRow({ index, state, name, req, onDo }: ModRowProps) {
         <span>{name}</span>
         {req && <span className="text-xs font-normal text-muted">{req}</span>}
       </span>
-      {/* chưa làm được (đang chạy hoạt cảnh / không cần / không cho phép) thì chỉ mờ đi, không ẩn */}
-      {state !== 'done' && (
-        <Button size="sm" tone="blue" onClick={onDo} disabled={!onDo} className="shrink-0">
-          Làm
-        </Button>
-      )}
     </div>
   )
 }
@@ -139,26 +131,16 @@ function ToolWarn({ kinds }: { kinds: ('brush' | 'clipper' | 'opener')[] }) {
 
 export function StabModPanel() {
   const ctx = useCtx()
-  const mods = useBuild().stabMods
+  const build = useBuild()
+  const mods = build.stabMods
   const model = useGame((s) => s.inventory.stab!.type)
-  const finishOptional = useGame((s) => s.finishOptional)
-  const modStab = useGame((s) => s.modStab)
-  const busy = useGame((s) => !!s.stabAnim)
   const n = ctx.stabKeys.length
   const m = STABS[model]
   const rules = stabModRules(model)
   // mod nên làm tiếp theo (cùng thứ tự mũi tên vàng trên bàn)
   const next = rules.find((r) => r.needed && r.allowed && !mods[r.kind])?.kind
   return (
-    <HudPanel
-      id="stabMod"
-      title={`🛠 Mod stab (${n} stab)`}
-      footer={
-        <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
-          {mods.wired ? 'Xong, đi lắp stab' : 'Bỏ qua mod'}
-        </Button>
-      }
-    >
+    <HudPanel id="stabMod" title={`🛠 Mod stab (${n} stab)`}>
       <Muted>
         {stabSets(ctx.stabKeys)
           .map((s) => `${s.label} ×${s.count}`)
@@ -175,26 +157,25 @@ export function StabModPanel() {
             <ModRow
               key={r.kind}
               index={i + 1}
-              name={r.label}
+              // mod làm từng con: hiện số con đã làm
+              name={`${r.label} (${unitsModded(build, r.kind, n)}/${n})`}
               state={mods[r.kind] ? 'done' : !r.needed ? 'skip' : r.kind === next ? 'cur' : 'todo'}
               req={r.reason ?? ''}
-              onDo={r.allowed && !busy ? () => modStab(r.kind) : undefined}
             />
           ))}
         {/* kìm cắt chỉ cần khi phải clip chân stem */}
         <ToolWarn kinds={m.feet ? ['brush', 'clipper'] : ['brush']} />
       </HudSection>
       <HudSection id="stabMod.housing" title="Housing + slider">
-        <LubePicker slot="housing" use="housing" disabled={!!mods.housing} />
+        {/* con đầu phết rồi thì các con sau dùng cùng loại mỡ */}
+        <LubePicker
+          slot="housing"
+          use="housing"
+          disabled={!!mods.housing || !!build.stabModLube?.housing}
+        />
       </HudSection>
       <HudSection id="stabMod.wire" title="Wire">
-        <LubePicker slot="wire" use="wire" disabled={!!mods.wire} />
-      </HudSection>
-      <HudSection id="stabMod.help" title="Hướng dẫn">
-        <Muted>
-          Click bộ phận trên bàn (theo mũi tên vàng) hoặc bấm "Làm". Mỗi lần lube / dán băng dùng{' '}
-          {n} lượt vật tư.
-        </Muted>
+        <LubePicker slot="wire" use="wire" disabled={!!mods.wire || !!build.stabModLube?.wire} />
       </HudSection>
     </HudPanel>
   )
@@ -227,6 +208,8 @@ export function LubePanel() {
   const total = ctx.keys.length
   const opened = build.opened ?? build.lubed
   const closed = build.swClosed ?? 0
+  // lò xo đã thả lại vào housing (bản lưu cũ: = số con đã đóng)
+  const springsIn = Math.max(build.springsIn ?? 0, closed)
   // đã mở switch thì phải đóng hết lại mới đi tiếp (chưa mở con nào = bỏ qua lube)
   const mustClose = opened > 0 && closed < opened
   if (!sw)
@@ -342,12 +325,12 @@ export function LubePanel() {
             <StepDot state={opened > 0 && closed >= opened ? 'done' : closed > 0 ? 'cur' : 'todo'}>
               4
             </StepDot>
-            Đóng switch {closed}/{opened || total}
+            Lắp lại: lò xo {springsIn} · đóng {closed}/{opened || total}
           </span>
         }
       >
         <div className="text-xs">
-          {`Lube xong thì click lưới switch trên bàn: lắp lò xo + stem rồi úp housing trên lại, mỗi lần ${perOpen} con. Đóng rồi thì không lube thêm / lube lò xo được nữa`}
+          {`Lube xong thì click lưới switch trên bàn, xen kẽ: lần 1 thả lò xo từ hộp vào housing, lần 2 lắp stem + úp housing trên đóng lại (mỗi lần ${perOpen} con). Đã thả lò xo thì không lube thêm / lube lò xo được nữa`}
         </div>
         <ProgressBar value={opened ? closed / opened : 0} tone="green" className="mt-1" />
       </HudSection>

@@ -55,6 +55,8 @@ export interface SoundProfile {
 /** Tuỳ chọn âm thanh của người chơi, lưu cùng tiến trình. */
 export interface AudioSettings {
   muted: boolean
+  /** tắt riêng nhạc nền (Cài đặt → Âm thanh), hiệu ứng vẫn kêu; không có = bật */
+  musicOff?: boolean
   musicVolume: number
   effectsVolume: number
 }
@@ -230,6 +232,8 @@ export interface Product {
   badge?: string
   /** % giảm giá hôm nay (ngày sale Shopii) */
   sale?: number
+  /** chưa mở khoá: cấp xưởng cần (`lockProduct` trong data/unlocks.ts), thẻ mờ + ổ khoá, không thêm giỏ được */
+  locked?: number
   options: ProductOption[]
 }
 export interface GroupPost {
@@ -283,6 +287,8 @@ export interface Order {
   id: string
   /** đơn chào đã mở xem ở Mezzenger (chưa xem thì chấm đỏ) */
   seen?: boolean
+  /** đơn hướng dẫn đầu game (`tutorialOrder`): 60% mua A→Z, tour Keeb-chan dắt mua đủ linh kiện */
+  tutorial?: true
   /** số ngày khách cho để làm, tính từ lúc nhận */
   days: number
   /** ngày phải giao (đặt khi nhận đơn) */
@@ -405,7 +411,11 @@ export interface BuildState {
   /** feet đã dán: số hốc → loại feet (id vật tư); bản lưu cũ không có */
   feet?: Record<number, string>
   /** daughterboard: đã đặt vào case, vít M2 đã bắt (số lỗ), đã cắm dây JST vào DTB; bản lưu cũ không có */
-  dtb?: { placed?: true; screws?: Record<number, true>; plugged?: true }
+  /**
+   * daughterboard: `out` = vít M2 bắt sẵn trong lỗ ren case đã tháo ra (đặt DTB rồi thì coi như đã tháo hết), `placed` = đã đặt mạch,
+   * `screws` = vít đã siết lại qua lỗ DTB, `plugged` = đã cắm dây vào cổng JST trên DTB
+   */
+  dtb?: { out?: Record<number, true>; placed?: true; screws?: Record<number, true>; plugged?: true }
   /** tấm tạ che DTB: `out` = ốc tạ đã tháo, `off` = đã nhấc tạ ra, `on` = đã đặt lại, `tight` = ốc đã siết lại */
   cover?: { out?: Record<number, true>; off?: true; on?: true; tight?: Record<number, true> }
   /** đã cắm đầu dây JST còn lại vào PCB */
@@ -425,6 +435,13 @@ export interface BuildState {
   /** phím bấm thử ở bước test mà không ăn (PCB hàn: chưa hàn / hàn cháy); bản lưu cũ không có */
   testFaults?: Record<string, true>
   stabMods: StabMods
+  /**
+   * mod stab làm từng con: stab nào (chỉ số trong `stabUnits(ctx.stabKeys)`) đã làm xong mỗi loại mod; đủ mọi con mới bật `stabMods[kind]`.
+   * Bản lưu cũ không có: loại đã bật cờ coi như xong hết
+   */
+  stabModUnits?: Partial<Record<keyof StabMods, number[]>>
+  /** mỡ đã dùng cho con đầu (housing / wire): các con sau dùng cùng loại cho đồng bộ */
+  stabModLube?: { housing?: string; wire?: string }
   stabModDone: boolean
   /** số switch đã tách vỏ bằng đồ mở (bản lưu cũ không có: coi như = lubed) */
   opened?: number
@@ -433,6 +450,11 @@ export interface BuildState {
    * bắt đầu đóng thì khoá mở / lube thêm; bản lưu cũ không có = 0
    */
   swClosed?: number
+  /**
+   * số lò xo đã thả lại vào housing dưới (lấy từ hộp, theo thứ tự lưới, con 0..springsIn-1); chỉ đóng được con đã có lò xo.
+   * Bản lưu cũ không có: coi như = swClosed
+   */
+  springsIn?: number
   lubed: number
   /** thứ tự (trong lưới switch đã mở) các con đã lube, bấm con nào lube con đó (bản lưu cũ: coi như `lubed` con đầu) */
   lubedIds?: number[]
@@ -492,7 +514,8 @@ export interface BuildContext {
   steps: StepId[]
   screws: Record<ScrewStep, ScrewPoint[]>
   /** điểm dán gasket: tâm, dài dọc mép `w` (u, không có = 1 dải 20mm), góc `rot` (rad, quanh trục y) */
-  gaskets: (Point & { w?: number; rot?: number })[]
+  /** điểm gasket: `w` dài dọc mép / tai, `d` bề ngang dải (mặc định GASKET.d; tab gasket = phủ hết tai), `rot` xoay theo mép */
+  gaskets: (Point & { w?: number; d?: number; rot?: number })[]
   /** hốc feet dưới đáy case (u, toạ độ cảnh): tâm x, z + bán kính r */
   feet: FootPocket[]
   /** daughterboard (u, toạ độ cảnh); null = case không lắp DTB */
@@ -546,6 +569,11 @@ export interface CaseDef {
   plateModel?: string
   /** model CAD đã có sẵn khối chặn chỗ trống layout (vd Duality Horns): không dựng thêm khối chặn bằng code */
   ownBlocks?: boolean
+  /**
+   * dây JST từ DTB luồn lên qua tạ (Duality): lắp lại tạ rồi mới cắm dây vào PCB; top mount thì úp + bắt vít case trên vào plate
+   * trước khi tháo tạ lắp DTB (`buildContext`)
+   */
+  jstUp?: true
   /** case CAD 2 mảnh: tâm lỗ vít ghép ở đáy [x, z] (mm, hệ model) thay vị trí vít tính theo cỡ case */
   screws?: [number, number][]
   /**

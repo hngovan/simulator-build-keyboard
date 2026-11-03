@@ -7,6 +7,7 @@ import { StatusChips } from '@/components/game/StatusChips'
 import { ControlsHint, KeyCap, MouseIcon } from '@/components/game/ControlsHint'
 import { useRoom } from '@/scene/room/roomStore'
 import { boxCustomer, isPackedBox } from '@/store/carrySlice'
+import { RoomGuide } from '@/features/guide/RoomGuide'
 
 /** cách điều khiển khi đi lại: 1 dòng chữ to giữa đáy màn hình */
 const HINT = (
@@ -67,6 +68,8 @@ export function RoomHud() {
           </span>
         </div>
       )}
+      {/* Keeb-chan dẫn người mới: bấm màn hình máy tính → nhận kiện → cầm thùng đơn → bàn build */}
+      <RoomGuide />
       {heldWho && !hover && !hoverNote && (
         <div className="pointer-events-none fixed bottom-16 left-1/2 z-[5] -translate-x-1/2 rounded-xl bg-[rgba(14,16,24,0.85)] px-4 py-2 font-head text-lg font-bold text-ink max-md:bottom-3">
           {heldPacked

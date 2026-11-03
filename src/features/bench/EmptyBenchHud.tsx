@@ -3,7 +3,7 @@ import { useGame } from '@/store'
 import { CATS, checkInventory } from '@/data/parts'
 import { BackButton } from '@/components/ui'
 import { StatusChips } from '@/components/game/StatusChips'
-import { ControlsHint, KeyCap, MouseIcon } from '@/components/game/ControlsHint'
+import { ControlsHint, MouseIcon } from '@/components/game/ControlsHint'
 import { boxCustomer, isPackedBox } from '@/store/carrySlice'
 import { ResetCamButton } from './CamModeButton'
 
@@ -33,26 +33,30 @@ function BenchStatus() {
       </div>,
     )
   const who = boxCustomer(s, box)
-  // thùng đã đóng gói / thùng đơn đủ đồ: dòng hướng dẫn như khi tương tác đồ vật (chuột phải cầm, B mở thùng; `useBoxKeys`)
+  // thùng đã đóng gói / thùng đơn đủ đồ: dòng hướng dẫn như khi tương tác đồ vật (chuột trái vào thùng = build, chuột phải cầm lên)
   if (isPackedBox(s, box))
     return (
       <ControlsHint>
-        Nhấn <MouseIcon btn="right" /> để cầm thùng lên đặt vào kệ giao hàng
         {s.packed.some((p) => p.order.id === box && p.session?.build) && (
           <>
-            , nhấn <KeyCap>B</KeyCap> để mở thùng build lại
+            Nhấn <MouseIcon btn="left" /> vào thùng để mở ra build lại,{' '}
           </>
         )}
+        nhấn <MouseIcon btn="right" /> để cầm thùng lên đặt vào kệ giao hàng
       </ControlsHint>
     )
   // thùng đơn trên bàn nhưng chưa vào build: còn thiếu linh kiện
   const missing =
     s.order?.id === box ? checkInventory(s.inventory, s.order).filter((c) => !c.ok) : []
-  // cùng 1 dòng hướng dẫn cho thùng đơn; thiếu đồ thì phím B xám (bấm không vào build)
+  // cùng 1 dòng hướng dẫn cho thùng đơn; thiếu đồ thì bấm thùng không vào build được (chỉ còn cầm lên)
   const hint = (
     <ControlsHint>
-      Nhấn <MouseIcon btn="right" /> để cầm thùng lên, nhấn{' '}
-      <KeyCap off={!!missing.length}>B</KeyCap> để build
+      {!missing.length && (
+        <>
+          Nhấn <MouseIcon btn="left" /> vào thùng để build,{' '}
+        </>
+      )}
+      nhấn <MouseIcon btn="right" /> để cầm thùng lên
     </ControlsHint>
   )
   if (!missing.length) return hint
@@ -76,10 +80,10 @@ function BenchStatus() {
 }
 
 /**
- * Thùng trên bàn (đang ngồi): bấm chuột phải lên cảnh 3D (nhả ra không kéo, kéo là xoay camera) = cầm thùng lên;
- * phím B = mở thùng (đủ đồ thì bắt đầu build, thùng đã đóng gói thì mở ra build lại). Bỏ qua khi đang gõ chữ / có popup
+ * Thùng trên bàn (đang ngồi): bấm chuột phải lên cảnh 3D (nhả ra không kéo, kéo là trượt khung nhìn) = cầm thùng lên.
+ * Build = chuột trái vào thùng (`EmptyBench`), không còn phím B
  */
-function useBoxKeys() {
+function useBoxPick() {
   useEffect(() => {
     let down: { x: number; y: number } | null = null
     const onDown = (e: PointerEvent) => {
@@ -95,27 +99,11 @@ function useBoxKeys() {
       const s = useGame.getState()
       if (s.screen === 'bench' && !s.walk && s.benchBox && !s.build) s.pickBench()
     }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.repeat || e.key.toLowerCase() !== 'b') return
-      if (
-        (e.target as HTMLElement | null)?.closest(
-          'input, textarea, select, [contenteditable="true"]',
-        )
-      )
-        return
-      if (document.querySelector('[role="dialog"]')) return
-      const s = useGame.getState()
-      if (s.screen !== 'bench' || s.walk || !s.benchBox || s.build) return
-      if (isPackedBox(s, s.benchBox)) return s.unpackBox()
-      s.buildOrder(s.benchBox)
-    }
     window.addEventListener('pointerdown', onDown)
     window.addEventListener('pointerup', onUp)
-    window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('keydown', onKey)
     }
   }, [])
 }
@@ -123,12 +111,12 @@ function useBoxKeys() {
 /** HUD bàn build chưa vào build: nút quay lại (Esc), góc nhìn + khung trạng thái thùng trên bàn */
 export function EmptyBenchHud() {
   const s = useGame()
-  useBoxKeys()
+  useBoxPick()
   return (
     <>
       <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
         <div className="flex gap-2">
-          <BackButton onClick={() => s.standUp('bench')} />
+          <BackButton tour="bench-back" onClick={() => s.standUp('bench')} />
           <ResetCamButton />
         </div>
         <StatusChips />

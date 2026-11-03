@@ -17,6 +17,7 @@ import {
   CASE_MARGIN,
   CASE_WALL,
   GASKET,
+  GASKET_NOTCH,
   LEDGE_GAP,
   TOP_FLIP_STEPS,
   TOP_HOLE,
@@ -28,6 +29,8 @@ import {
   caseScrewY,
   ringFrame,
   torqueSpec,
+  coverBeforeJst,
+  stepBit,
 } from '@/data/steps'
 import { TOOLS, screwLevel } from '@/data/parts'
 import { SkillBar } from '@/components/game/SkillBar'
@@ -41,7 +44,7 @@ import { useHover } from '../common/useHover'
 import { CaseMaterial, WEIGHT_METALS, woodBoxGeometry, woodUV } from '../materials'
 import { CurrentDriver, OUT_MS, ScrewSet } from './Screw'
 import { SCREW_SPIN, SPIN_MS } from '../models/HandTools'
-import { useCaseSplit } from './caseSplit'
+import { useAssemblyFlipped, useCaseSplit } from './caseSplit'
 import { HintArrow } from '../stations/StationKit'
 import {
   caseShellGeometry,
@@ -279,8 +282,16 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
   const feet = useBuild().feet ?? {}
   const placeFoot = useGame((s) => s.placeFoot)
   const [hover, setHover] = useState<number | null>(null)
-  const active = step === 'feet'
-  const next = active ? pockets.findIndex((_, i) => !feet[i]) : -1
+  // hốc ở mặt đáy: chỉ dán được khi case đang lật úp (Q lật lên mặt trên thì không bấm xuyên qua case)
+  const flipped = useAssemblyFlipped()
+  const active = step === 'feet' && flipped
+  // hốc dán tiếp: bắt đầu từ góc phải (bên trái có cột HUD, menu sổ ra che mũi tên), phải → trái
+  const next = active
+    ? pockets.reduce(
+        (best, p, i) => (feet[i] || (best >= 0 && pockets[best].x >= p.x) ? best : i),
+        -1,
+      )
+    : -1
   return pockets.map((p, i) => {
     const kind = feet[i]
     const lit = hover === i || next === i
@@ -376,6 +387,39 @@ const topNotches = (screws: { x: number; z: number }[]): WallNotch[] =>
     w: TOP_TAB + 2 * TOP_NOTCH.gap,
     d: TOP_NOTCH.d,
   }))
+
+/** tab gasket: hốc trong vách case trên đúng chỗ tai plate, từ mép ghép lên trần ngang mặt trên dải gasket trên */
+const gasketNotches = (gaskets: { x: number; z: number }[]): WallNotch[] =>
+  gaskets.map((g) => ({
+    x: g.x,
+    side: g.z > 0 ? 1 : -1,
+    w: GASKET.w + 2 * GASKET_NOTCH.gap,
+    d: GASKET_NOTCH.d,
+  }))
+
+/**
+ * Tab gasket: vấu case dưới nhô lên trong hốc vách case trên (đúng hốc), từ mép ghép tới mặt dưới dải gasket dưới → tai plate
+ * kẹp giữa 2 dải: vấu đỡ dưới, trần hốc đè trên
+ */
+function GasketPads({ mat }: { mat: ReactNode }) {
+  const ctx = useCtx()
+  const top = Y.plateBot - GASKET.t
+  const h = top - Y.split
+  const w = GASKET.w + 2 * GASKET_NOTCH.gap - 0.02
+  // từ sát mép PCB (không chạm) qua khe board – vách tới gần đáy hốc: đỡ hết dải gasket dưới (dải phủ cả tai)
+  const z0 = ctx.depth / 2 + 0.01
+  const z1 = ctx.depth / 2 + CASE_MARGIN + GASKET_NOTCH.d - 0.01
+  const d = z1 - z0
+  return ctx.gaskets.map((g, i) => {
+    const s = g.z > 0 ? 1 : -1
+    return (
+      <mesh key={i} position={[g.x, Y.split + h / 2, s * (z0 + d / 2)]} castShadow receiveShadow>
+        <boxGeometry args={[w, h, d]} />
+        {mat}
+      </mesh>
+    )
+  })
+}
 
 /** standoff tray mount: trụ đồng M2 (u), lỗ ren tối ở đỉnh */
 const STANDOFF_R = 0.1
@@ -655,10 +699,9 @@ function CoverWeight({
   const skill = useSkill((k) => (k.active?.id.startsWith('cover-') ? k.active : null))
   const ref = useRef<THREE.Group>(null)
   const cover = !!ctx.dtb?.cover
-  // tạ đang ở ngoài (đã nhấc, chưa đặt lại); bản lưu cũ không có dữ liệu thì coi như nằm trong case
-  // bước lắp lại tạ, chưa đặt: tạ mờ ngay đúng chỗ trong case (bấm để đặt), không nằm ngoài
-  const ghost = cover && step === 'coverOn' && !c.on
-  const away = cover && !!c.off && !c.on && !ghost
+  // tạ đang ở ngoài (đã nhấc, chưa đặt lại); bản lưu cũ không có dữ liệu thì coi như nằm trong case.
+  // Bước lắp lại tạ: tạ vẫn nằm ngoài chỗ đã nhấc ra (camera lùi cho thấy, mũi tên chỉ vào), bấm tạ thì trượt vào case
+  const away = cover && !!c.off && !c.on
   // dời ra trước: mép sau tạ cách mép trước case 1 khe
   const shift = useMemo(() => {
     geometry.computeBoundingBox()
@@ -745,6 +788,17 @@ function CoverWeight({
   })
   const turnOut = (i: number) => {
     if ((turns[i] ?? 0) >= clicks) return
+    // sai đầu vít (ốc nón tạ lục giác chìm): trượt ren, ốc không ra; tuôn ren (3 lần) thì vẫn tháo tiếp được
+    const g = useGame.getState()
+    if (
+      (turns[i] ?? 0) === 0 &&
+      g.screwBit !== stepBit('coverOff') &&
+      !build.stripped?.[`cover-${i}`] &&
+      !g.slipBit(`cover-${i}`, 'ốc tạ')
+    ) {
+      playClick(300)
+      return
+    }
     const n = (turns[i] ?? 0) + 1
     if (toolLv) playDrill()
     else playScrew()
@@ -776,11 +830,11 @@ function CoverWeight({
           <meshStandardMaterial
             {...WEIGHT_METALS[metal]}
             side={DoubleSide}
-            transparent={see || ghost}
-            opacity={ghost ? (hover ? 0.75 : 0.45) : see ? 0.25 : 1}
-            depthWrite={!see && !ghost}
-            emissive={hover || ghost ? '#3ddc84' : '#000000'}
-            emissiveIntensity={hover ? 0.45 : ghost ? 0.2 : 0}
+            transparent={see}
+            opacity={see ? 0.25 : 1}
+            depthWrite={!see}
+            emissive={hover ? '#3ddc84' : '#000000'}
+            emissiveIntensity={hover ? 0.45 : 0}
           />
         </mesh>
       </group>
@@ -925,8 +979,15 @@ function CaseModel({
 }
 
 /** Case 1 hoặc 2 mảnh, nhiều chất liệu; vít ở đáy hoặc trên (mica).
- * topOnly: chỉ vẽ case trên (top mount: úp + bắt vít plate trước khi thả vào case dưới) */
-export function Case({ topOnly = false }: { topOnly?: boolean }) {
+ * topOnly: chỉ vẽ case trên (top mount: úp + bắt vít plate trước khi thả vào case dưới);
+ * bottomOnly: chỉ vẽ case dưới (top mount, case trên đã bắt vào board đang để riêng) */
+export function Case({
+  topOnly = false,
+  bottomOnly = false,
+}: {
+  topOnly?: boolean
+  bottomOnly?: boolean
+}) {
   const ctx = useCtx()
   const color = useGame((s) => s.inventory.case!.color)
   const step = useStep()
@@ -978,11 +1039,13 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const topMount = at('topCase') >= 0
   // board đã thả vào case (bước caseIn xong, bước sau là đậy case): case trên hiện lơ lửng luôn, bấm là sang bước + đậy
   const closeNext = step === 'caseIn' && inCase && ctx.steps[stepIdx + 1] === 'caseClose'
+  // không có bước đậy case (top mount) thì `at('caseClose')` = −1: phải loại ra, không thì luôn vẽ case trên đè lên case dưới
   const showTop =
     two &&
+    !bottomOnly &&
     (step === 'caseOpen' ||
       closeNext ||
-      stepIdx >= at('caseClose') ||
+      (at('caseClose') >= 0 && stepIdx >= at('caseClose')) ||
       (topMount && stepIdx >= at('topCase')))
   const placing = ((step === 'caseClose' || step === 'topCase') && !closed) || closeNext
   // case trên chờ đậy / úp lơ lửng; top mount: case trên đã bắt vít vào plate nên nhấc lên cùng board khi thả vào case
@@ -1000,7 +1063,10 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
   const flipRef = useRef<THREE.Group>(null)
   const topMid = (Y.split + Y.caseTop) / 2
   // top mount: case trên đã bắt vít vào plate → bước cắm dây JST dựng lên cùng board
-  const stand = topMount && (step === 'jst' || step === 'coverOn') ? jstStand(ctx.depth) : null
+  // (case dây luồn qua tạ thì lắp tạ trước khi cắm dây: lúc đó board + case trên để riêng, không dựng)
+  const coverFirst = coverBeforeJst(ctx.steps)
+  const stand =
+    topMount && (step === 'jst' || (step === 'coverOn' && !coverFirst)) ? jstStand(ctx.depth) : null
   useFrame((_, dt) => {
     lerpTo(topRef, 'y', stand?.y ?? topY, dt, 6)
     lerpTo(topRef, 'z', stand?.z ?? 0, dt, 6)
@@ -1059,7 +1125,8 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
               part={two ? 'bottom' : 'all'}
               screws={caseDef.weightScrews}
               badgeScrews={caseDef.badgeScrews}
-              seeThroughWeight={!!ctx.dtb && (step === 'dtb' || step === 'jst')}
+              // dây luồn lên qua tạ: tạ đã lắp lại lúc cắm dây, vẽ đặc
+              seeThroughWeight={!!ctx.dtb && (step === 'dtb' || (step === 'jst' && !coverFirst))}
             >
               {/* STL in 3D hay có mặt lật chiều → vẽ 2 mặt cho khỏi trong suốt */}
               <CaseMaterial
@@ -1107,8 +1174,8 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
             <Ledge y0={ring.bottom - LEDGE_H} y1={ring.bottom} mat={bottomMat(bottom.hover)} />
           )}
           {gasket && (
-            // gasket: gờ case dưới nhô lên tới mặt dưới miếng gasket
-            <Ledge y0={Y.split} y1={Y.plateBot - GASKET.t} mat={bottomMat(bottom.hover)} />
+            // tab gasket: vấu case dưới trong hốc vách đỡ dải gasket dưới tai plate
+            <GasketPads mat={bottomMat(bottom.hover)} />
           )}
           {ctx.mount === 'tray' &&
             (model ? (
@@ -1244,14 +1311,17 @@ export function Case({ topOnly = false }: { topOnly?: boolean }) {
                     y1={Y.caseTop}
                     mat={mat(top.hover)}
                     wood={wood}
-                    notches={topMount ? topNotches(ctx.screws.topScrew) : undefined}
-                    notchTop={0}
+                    notches={
+                      topMount
+                        ? topNotches(ctx.screws.topScrew)
+                        : gasket
+                          ? gasketNotches(ctx.gaskets)
+                          : undefined
+                    }
+                    // top mount: trần hốc ngang mặt plate; tab gasket: ngang mặt trên dải gasket trên
+                    notchTop={topMount ? 0 : GASKET.t}
                     bores={topBores}
                   />
-                  {gasket && (
-                    // gasket: gờ case trên đè lên mặt trên miếng gasket (plate kẹp giữa 2 gờ)
-                    <Ledge y0={GASKET.t} y1={GASKET.t + LEDGE_H} mat={mat(top.hover)} />
-                  )}
                   <BoreEnds holes={topBores.map((b) => ({ ...b, y: b.y1 }))} />
                   <Blockers
                     keys={ctx.keys}

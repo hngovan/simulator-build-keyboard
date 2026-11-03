@@ -12,6 +12,18 @@ import { LAYOUTS, getLayout, randomVariant, variantText } from './layouts'
 import { repTier } from './reputation'
 import { ORING_IDS, SUPPLIES } from './supplies'
 import { makePost } from './market'
+import {
+  caseLv,
+  keycapKitsAt,
+  layoutLv,
+  offerRange,
+  lockProduct,
+  mountLv,
+  pcbLv,
+  plateLv,
+  stabLv,
+  switchLv,
+} from './unlocks'
 import { avatarSrc } from './avatars'
 import {
   CASES,
@@ -35,6 +47,11 @@ import {
 } from './parts'
 
 const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]
+/** lọc theo cấp xưởng, lọc hết thì giữ nguyên (không để đơn rỗng) */
+const atLv = <T>(arr: readonly T[], ok: (x: T) => boolean): T[] => {
+  const f = arr.filter(ok)
+  return f.length ? f : [...arr]
+}
 
 /** loại switch hợp với tiếng khách muốn */
 const WISH_SWITCH: Record<SoundWish, SwitchKind[]> = {
@@ -130,39 +147,50 @@ let orderSeq = 0
 /** layout luôn có ít nhất 1 đơn mỗi ngày (phổ biến nhất) */
 const DAILY_LAYOUTS: LayoutId[] = ['tkl', '60']
 
-/** Đợt đơn mỗi ngày: 5–7 đơn, luôn có ít nhất 1 TKL + 1 60%, còn lại ngẫu nhiên; xáo thứ tự */
 /** PCB khách gửi: loại tiêu chuẩn ngẫu nhiên */
-function kitPcb(layout: LayoutId) {
-  return { layout, type: pick(Object.keys(PCB_TYPES)) }
+function kitPcb(layout: LayoutId, lv: number) {
+  return { layout, type: pick(atLv(Object.keys(PCB_TYPES), (t) => pcbLv(t) <= lv)) }
 }
 
-/** Đợt đơn mới trong ngày: số đơn + hệ số tiền công theo bậc uy tín (`repTier`) */
-export function randomOffers(rep = 0): Order[] {
-  const { offers, pay } = repTier(rep).tier
-  const n = Math.max(
-    DAILY_LAYOUTS.length,
-    offers[0] + Math.floor(Math.random() * (offers[1] - offers[0] + 1)),
-  )
+/**
+ * Đợt đơn mới trong ngày: số đơn theo cấp xưởng (`offerRange`: thợ tập sự 1–2 đơn, càng lên cấp càng nhiều, uy tín âm bớt),
+ * hệ số tiền công theo bậc uy tín (`repTier`); lv = cấp xưởng (chỉ đòi món đã mở). Đơn đầu luôn là layout phổ biến (TKL / 60%)
+ */
+export function randomOffers(rep = 0, lv = 1): Order[] {
+  const { pay } = repTier(rep).tier
+  const [a, b] = offerRange(lv, rep)
+  const n = a + Math.floor(Math.random() * (b - a + 1))
+  // ít đơn hơn số layout phổ biến thì bốc ngẫu nhiên trong đó
+  const daily = [...DAILY_LAYOUTS].sort(() => Math.random() - 0.5).slice(0, n)
   const list = [
-    ...DAILY_LAYOUTS.map((l) => randomOrder(l, pay)),
-    ...Array.from({ length: n - DAILY_LAYOUTS.length }, () => randomOrder(undefined, pay)),
+    ...daily.map((l) => randomOrder(l, pay, lv)),
+    ...Array.from({ length: n - daily.length }, () => randomOrder(undefined, pay, lv)),
   ]
   return list.sort(() => Math.random() - 0.5)
 }
 
 /** layout: ép layout của đơn (đơn thiết kế mở chỉ chọn khi cùng layout); pay: hệ số tiền công theo uy tín */
-function randomOrder(layout_?: LayoutId, pay = 1): Order {
-  const designs = FEATURED.filter((f) => !layout_ || f.layout === layout_)
+function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
+  const designs = FEATURED.filter(
+    (f) => (!layout_ || f.layout === layout_) && caseLv(f.caseId) <= lv && layoutLv(f.layout) <= lv,
+  )
   const featured = designs.length && Math.random() < 0.3 ? pick(designs) : null
-  const layout = layout_ ?? featured?.layout ?? pick(Object.keys(LAYOUTS) as LayoutId[])
+  const caseOk = (id: string) => caseLv(id) <= lv
+  const layout =
+    layout_ ??
+    featured?.layout ??
+    pick(atLv(Object.keys(LAYOUTS) as LayoutId[], (l) => layoutLv(l) <= lv))
   const variant = randomVariant(layout)
   const { keys } = getLayout(layout, variant)
   const wish = pick(Object.keys(SOUND_WISH) as SoundWish[])
   const keycapColor = pick(Object.keys(KEYCAP_COLORS))
   // 1 bộ keycap (1 profile) cho cả bàn phím, chọn trong các bộ đủ phím cho layout
   const keycapKit = pick(
-    Object.keys(KEYCAP_KITS).filter(
-      (id) => !KEYCAP_KITS[id].hidden && KEYCAP_KITS[id].layouts.includes(layout),
+    atLv(
+      Object.keys(KEYCAP_KITS).filter(
+        (id) => !KEYCAP_KITS[id].hidden && KEYCAP_KITS[id].layouts.includes(layout),
+      ),
+      (id) => keycapKitsAt(lv).includes(id),
     ),
   )
   // chất liệu keycap: đa số khách đòi rõ, 20% để shop tự chọn
@@ -187,32 +215,44 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
     if (!send.case && !send.pcb && !send.plate && !send.stab)
       send = { ...send, [pick(['case', 'pcb', 'plate'] as const)]: true }
     const caseId =
-      featured?.caseId ?? pick(Object.keys(CASES).filter((id) => caseFits(CASES[id], layout)))
+      featured?.caseId ??
+      pick(
+        atLv(
+          Object.keys(CASES).filter((id) => caseFits(CASES[id], layout)),
+          caseOk,
+        ),
+      )
     const c = CASES[caseId]
-    // khách gửi case thì dặn luôn kiểu mount
-    if (send.case) mount = pick(c.mounts)
+    // khách gửi case thì dặn luôn kiểu mount (mount đã mở ở cấp xưởng)
+    if (send.case) mount = pick(atLv(c.mounts, (m) => mountLv(m) <= lv))
     kit = {
       packaging: pick(PACKAGING),
       ...(send.case ? { case: { id: caseId, color: pick(c.colors) } } : {}),
-      ...(send.pcb ? { pcb: kitPcb(layout) } : {}),
-      ...(send.plate ? { plate: { layout, material: pick(plateIds()) } } : {}),
+      ...(send.pcb ? { pcb: kitPcb(layout, lv) } : {}),
+      ...(send.plate
+        ? { plate: { layout, material: pick(atLv(plateIds(), (m) => plateLv(m) <= lv)) } }
+        : {}),
       // khách gửi stab thì gửi đủ số cho layout (full size có cả stab lẻ)
-      stab: send.stab ? { type: pick(Object.keys(STABS)), ...stabNeed(keys) } : null,
+      stab: send.stab
+        ? { type: pick(atLv(Object.keys(STABS), (t) => stabLv(t) <= lv)), ...stabNeed(keys) }
+        : null,
     }
   }
   if (!kit?.case && Math.random() < 0.6) {
     // chỉ chọn màu mà có case vừa layout bán
     caseColor = pick([
       ...new Set(
-        Object.values(CASES)
-          .filter((c) => caseFits(c, layout))
-          .flatMap((c) => c.colors),
+        atLv(
+          Object.keys(CASES).filter((id) => caseFits(CASES[id], layout)),
+          caseOk,
+        ).flatMap((id) => CASES[id].colors),
       ),
     ])
   }
   // khách thích tiếng gốc (hay gặp với switch Cherry) thì dặn không lube
   const r = Math.random()
-  const lubePref: LubePref = r < 0.4 ? 'want' : r < 0.6 ? 'none' : 'any'
+  // cấp 1 chưa mở lube switch: khách không đòi lube
+  const lubePref: LubePref = r < 0.4 && lv >= 2 ? 'want' : r < 0.6 ? 'none' : 'any'
   // loại switch phải hợp tiếng khách muốn (WISH_SWITCH): clack / thock chỉ linear / tactile, êm thì hay silent,
   // ồn thì hay clicky; không bao giờ đòi tiếng clack mà lại chọn switch silent
   const switchKind: SwitchKind =
@@ -224,7 +264,12 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
   // ~35% khách đòi đúng 1 con switch cụ thể (vd Cherry MX Đen), còn lại đúng loại là được
   const switchType =
     Math.random() < 0.35
-      ? pick(Object.keys(SWITCHES).filter((id) => SWITCHES[id].kind === switchKind))
+      ? pick(
+          atLv(
+            Object.keys(SWITCHES).filter((id) => SWITCHES[id].kind === switchKind),
+            (id) => switchLv(id) <= lv,
+          ),
+        )
       : undefined
   // đơn mua đủ: khách có thể đòi đúng loại PCB (kit thì PCB khách gửi sẵn)
   const pr = Math.random()
@@ -232,27 +277,31 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
     ? undefined
     : pr < 0.35
       ? 'hotswap'
-      : pr < 0.65
+      : pr < 0.65 && pcbLv('solder') <= lv
         ? 'solder'
         : undefined
   // món khách không gửi: ~30% mỗi món khách đòi đích danh (vd case Bakeneko, stab Durock, plate đồng)
   const caseId =
     !kit?.case && Math.random() < 0.3
       ? pick(
-          Object.keys(CASES).filter(
-            (id) =>
-              caseFits(CASES[id], layout) && (!caseColor || CASES[id].colors.includes(caseColor)),
+          atLv(
+            Object.keys(CASES).filter(
+              (id) =>
+                caseFits(CASES[id], layout) && (!caseColor || CASES[id].colors.includes(caseColor)),
+            ),
+            caseOk,
           ),
         )
       : undefined
   const stabType =
     keys.some((k) => k.stab) && !kit?.stab && Math.random() < 0.3
-      ? pick(Object.keys(STABS))
+      ? pick(atLv(Object.keys(STABS), (t) => stabLv(t) <= lv))
       : undefined
-  const plateMaterial = !kit?.plate && Math.random() < 0.3 ? pick(plateIds()) : undefined
+  const plateMaterial =
+    !kit?.plate && Math.random() < 0.3 ? pick(atLv(plateIds(), (m) => plateLv(m) <= lv)) : undefined
   const want = { caseId, stabType, plateMaterial }
   // ~25% khách muốn lót foam Poron PCB (tiền 1 tấm foam tính vào budget)
-  const foam = Math.random() < 0.25
+  const foam = lv >= 2 && Math.random() < 0.25
   // dây O-ring: đơn kit gửi case O-ring / OG mount → 60% khách dặn độ cứng dây; đơn mua đủ (không đòi đích danh case)
   // ~12% đòi luôn O-ring mount + đúng độ cứng dây (shop chọn case có O-ring mount)
   if (!kit && !caseId && Math.random() < 0.12) mount = 'oring'
@@ -360,6 +409,54 @@ function randomOrder(layout_?: LayoutId, pay = 1): Order {
   }
 }
 
+/**
+ * Đơn hướng dẫn đầu game (ngày 1 chỉ có đơn này): 60% layout chuẩn, mua A→Z (khách không gửi món nào), PCB hotswap
+ * (chưa phải hàn), switch Linear hãng nào cũng được, keycap Cherry PBT trắng, không lube / foam / đòi đích danh; hạn dài,
+ * ngân sách dư. Tour Keeb-chan (`Tour.tsx`) dắt mua đủ từng món cho đơn này
+ */
+export function tutorialOrder(): Order {
+  const layout: LayoutId = '60'
+  const keycapKit = 'full'
+  const { keys } = getLayout(layout, {})
+  const budget = round100(estimateCost(layout, null, keycapKit) * 1.5)
+  const labor = Math.round((250 + keys.length * 6 + 80) / 50) * 50
+  const customer = 'Anh Tuấn'
+  const days = 4
+  return {
+    id: `o${Date.now().toString(36)}tut`,
+    tutorial: true,
+    days,
+    customer,
+    avatar: avatarFor(customer),
+    layout,
+    variant: {},
+    wish: 'thock',
+    keycapColor: 'white',
+    keycapKit,
+    keycapMaterial: 'pbt',
+    type: 'full',
+    kit: null,
+    caseColor: null,
+    mount: null,
+    lubePref: 'any',
+    switchKind: 'Linear',
+    pcbType: 'hotswap',
+    budget,
+    labor,
+    lines: [
+      'Chào shop mới! Mình khách quen của chú Ba, build giúp mình 1 con 60% nhé.',
+      'Nghe nói shop mới mở, mình đặt con đơn giản thôi để ủng hộ: shop lo từ A tới Z luôn nha.',
+      `${SOUND_WISH.thock.msg}.`,
+      `Switch loại ${SWITCH_KINDS.Linear} là được, hãng nào cũng ok.`,
+      `Keycap profile CHERRY chất liệu ${KEYCAP_MATERIALS.pbt.name} màu trắng nha.`,
+      'Mạch hotswap giúp mình nha, để sau mình tự thay switch được.',
+      'Stab phải êm, không được lạch cạch đâu đó!',
+      `Budget linh kiện tầm ${budget.toLocaleString('vi-VN')}k, tiền công ${labor.toLocaleString('vi-VN')}k.`,
+      `Shop làm trong ${days} ngày giúp mình nhé, không gấp đâu.`,
+    ],
+  }
+}
+
 const SELLERS = [
   'Hùng Keeb',
   'Trang Mod Phím',
@@ -387,10 +484,12 @@ export function chatIntro(order: Order): string[] {
   return out
 }
 
-export function groupPosts(order: Order, day = 1): GroupPost[] {
-  const catalog = buildCatalog().filter(
-    (p) => !p.layouts || p.layouts.includes(order.layout) || Math.random() < 0.15,
-  )
+export function groupPosts(order: Order, day = 1, lv = 1): GroupPost[] {
+  // chỉ pass món đã mở ở cấp xưởng
+  const catalog = buildCatalog()
+    .map((p) => lockProduct(p, lv))
+    .filter((p) => !p.locked)
+    .filter((p) => !p.layouts || p.layouts.includes(order.layout) || Math.random() < 0.15)
   const posts: GroupPost[] = []
   for (let i = 0; i < 9; i++) {
     const p = pick(catalog)

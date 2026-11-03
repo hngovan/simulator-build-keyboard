@@ -103,9 +103,9 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
 1. **Title** (`features/title/TitleScreen.tsx`): chơi mới thì nhập tên thợ; nếu đã có bản lưu thì
    có nút tiếp tục kèm ngày và số tiền.
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar, hiện trong khung đúng mặt kính màn hình 3D (~90%, quanh đó thấy bàn / phòng). Chơi mới mở sẵn
-   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc Esc, hoặc bấm vùng phòng ngoài màn hình)
+   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc bấm vùng phòng ngoài màn hình; Esc mở menu Cài đặt)
    rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), kéo chuột nhìn, cuộn chuột giữa phóng to;
-   đang ngồi bàn build chỉ Esc / nút quay lại mới đứng dậy, bấm WASD không đứng dậy).
+   đang ngồi bàn build chỉ nút quay lại mới đứng dậy, bấm WASD không đứng dậy).
    Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
    hành lang: kệ cuối hành lang nhận hàng (thùng đơn khách + kiện Shopii / chợ, hết kệ thì đổ đống sàn), kệ giao hàng
    tường phải trong phòng để thùng đã đóng gói chờ gửi; bấm thùng để nhận / đặt vào để gửi. **Kết thúc ngày** chỉ còn ở
@@ -148,30 +148,32 @@ Danh sách thực tế do `buildContext()` sinh theo case / stab / PCB / mount. 
 tự thường gặp; `stabScrew` nằm trước `plate` với stab screw-in, còn stab plate-mount được lắp sau
 `plate`.
 
-| Bước         | Việc cần làm                                                                          | Khi nào                          |
-| ------------ | ------------------------------------------------------------------------------------- | -------------------------------- |
-| `unbox`      | Click thùng hàng để mở                                                                | Luôn có                          |
-| `caseOpen`   | Tháo vít, nhấc nắp case trên                                                          | Case 2 mảnh                      |
-| `stabMod`    | Clip chân stem, Holee mod, lube housing/slider/wire, lắp slider + wire                | Có phím cần stab; tuỳ chọn       |
-| `stab`       | Click vị trí phím dài (≥ 2u) để lắp stab                                              | Layout có stab                   |
-| `stabScrew`  | Vặn 2 vít cho mỗi stab                                                                | Stab screw-in                    |
-| `plate`      | Click board để đặt plate lên                                                          | Luôn có                          |
-| `switchLube` | Mở từng switch, lube theo mẻ, lube lò xo, rồi đóng switch lại                         | Tuỳ chọn                         |
-| `switch`     | Click lỗ trên plate để cắm switch                                                     | Luôn có                          |
-| `solder`     | Bấm chân cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (vàng = hoàn hảo)       | PCB hàn (không phải hotswap)     |
-| `gasket`     | Click các vị trí quanh plate để dán gasket                                            | Mount gasket / OG                |
-| `ring`       | Click board cuốn vòng O-ring (sau lắp switch / hàn, kẹp giữa PCB và plate)            | Mount O-ring / OG                |
-| `feet`       | Case tự lật úp, click 4 hốc dưới đáy để dán feet cao su (đen / trắng)                 | Luôn có, trước khi lắp case      |
-| `dtb`        | Đặt daughterboard ai03 vào hốc vách sau (cổng USB-C ra lỗ), bắt 2 vít M2, cắm dây JST | Case dựng bằng code (không mica) |
-| `jst`        | Board nhấc trên case: cắm đầu dây JST còn lại vào cổng mặt dưới PCB                   | Có `dtb`, ngay trước `caseIn`    |
-| `caseIn`     | Click case để thả board vào                                                           | Luôn có                          |
-| `topCase`    | Úp case trên xuống plate                                                              | Top mount (case 2 mảnh)          |
-| `topScrew`   | Board tự lật, vặn vít từ dưới giữ plate vào case trên                                 | Top mount (case 2 mảnh)          |
-| `trayScrew`  | Vặn vít giữ PCB vào standoff đáy case                                                 | Mount tray                       |
-| `caseClose`  | Click nắp case để đậy lại                                                             | Case 2 mảnh (trừ top mount)      |
-| `caseScrew`  | Vặn vít khoá 2 mảnh case                                                              | Case 2 mảnh                      |
-| `keycap`     | Click switch để cắm keycap                                                            | Luôn có                          |
-| `test`       | Gõ bàn phím thật hoặc click phím 3D; phím đã test có chấm xanh                        | Luôn có, tính điểm riêng         |
+| Bước         | Việc cần làm                                                                           | Khi nào                                                                           |
+| ------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `unbox`      | Click thùng hàng để mở                                                                 | Luôn có                                                                           |
+| `caseOpen`   | Tháo vít, nhấc nắp case trên                                                           | Case 2 mảnh                                                                       |
+| `stabMod`    | Clip chân stem, Holee mod, lube housing/slider/wire, lắp slider + wire                 | Có phím cần stab; tuỳ chọn                                                        |
+| `stab`       | Click vị trí phím dài (≥ 2u) để lắp stab                                               | Layout có stab                                                                    |
+| `stabScrew`  | Vặn 2 vít cho mỗi stab                                                                 | Stab screw-in                                                                     |
+| `plate`      | Click board để đặt plate lên                                                           | Luôn có                                                                           |
+| `switchLube` | Mở từng switch, lube theo mẻ, lube lò xo, rồi đóng switch lại                          | Tuỳ chọn                                                                          |
+| `switch`     | Click lỗ trên plate để cắm switch                                                      | Luôn có                                                                           |
+| `solder`     | Bấm chân cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (vàng = hoàn hảo)        | PCB hàn (không phải hotswap)                                                      |
+| `gasket`     | Click các vị trí quanh plate để dán gasket                                             | Mount gasket / OG                                                                 |
+| `ring`       | Click board cuốn vòng O-ring (sau lắp switch / hàn, kẹp giữa PCB và plate)             | Mount O-ring / OG                                                                 |
+| `feet`       | Case tự lật úp, click 4 hốc dưới đáy để dán feet cao su (đen / trắng)                  | Luôn có, trước khi lắp case                                                       |
+| `coverOff`   | Tháo ốc trên tạ rồi nhấc tạ che chỗ DTB ra                                             | Case CAD có tạ đè chỗ DTB                                                         |
+| `dtb`        | Đặt daughterboard ai03 vào hốc vách sau (cổng USB-C ra lỗ), bắt 2 vít M2, cắm dây JST  | Case dựng bằng code (không mica)                                                  |
+| `coverOn`    | Đặt tạ lại, siết ốc canh lực (dây JST trong rãnh dưới tạ)                              | Có `coverOff`: sau `jst`; case `jstUp` (Duality, dây lòi lên qua tạ): trước `jst` |
+| `jst`        | Board nhấc trên case: cắm đầu dây JST còn lại vào cổng mặt dưới PCB                    | Có `dtb`, trước `caseIn` (sau `coverOn` nếu case `jstUp`)                         |
+| `caseIn`     | Click case để thả board vào (top mount: ghép case trên đã bắt vào plate với case dưới) | Luôn có                                                                           |
+| `topCase`    | Úp case trên xuống plate                                                               | Top mount (case 2 mảnh)                                                           |
+| `topScrew`   | Board tự lật, vặn vít từ dưới giữ plate vào case trên                                  | Top mount (case 2 mảnh); case `jstUp`: ngay sau `feet`, trước `coverOff`          |
+| `trayScrew`  | Vặn vít giữ PCB vào standoff đáy case                                                  | Mount tray                                                                        |
+| `caseClose`  | Click nắp case để đậy lại                                                              | Case 2 mảnh (trừ top mount)                                                       |
+| `caseScrew`  | Vặn vít khoá 2 mảnh case                                                               | Case 2 mảnh                                                                       |
+| `keycap`     | Click switch để cắm keycap                                                             | Luôn có                                                                           |
+| `test`       | Gõ bàn phím thật hoặc click phím 3D; phím đã test có chấm xanh                         | Luôn có, tính điểm riêng                                                          |
 
 `OPTIONAL_STEPS` gồm `stabMod`, `switchLube`, `test`: không tính vào độ hoàn thiện khi chấm điểm,
 nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, còn test có 5 điểm riêng.
@@ -206,7 +208,7 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
   `round(labor × score / 100)` (tiền công). Lố budget thì shop chịu phần lố và còn bị trừ điểm ngân sách.
 - Uy tín thay đổi theo `stars - 3 - số ngày trễ`: 5★ 0 ngày trễ được +2, 3★ là 0, 1★ là -2. Mỗi
   ngày giao trễ trừ thêm 1 uy tín. Uy tín hiện chỉ được cộng/trừ và hiển thị, chưa dùng để khoá đơn.
-- **Kết thúc ngày**: ngày + 1, sinh đợt đơn mới 5–7 đơn, xoá danh sách đơn đã đóng gói. Đơn trong
+- **Kết thúc ngày**: ngày + 1, sinh đợt đơn mới (số đơn theo cấp xưởng: 1–2 lúc mới vào, tới 5–7 ở cấp cao nhất), xoá danh sách đơn đã đóng gói. Đơn trong
   danh sách chờ (`jobs`) trễ quá 3 ngày bị khách huỷ và trừ 3 uy tín mỗi đơn. Đơn đang làm dở (chưa
   đóng gói) được giữ sang ngày sau.
 - **Thua game** (`data/gameOver.ts`, `lossReason`, store tự xét sau mỗi lần đổi tiền / uy tín / đơn): uy tín ≤ −10 (bị phốt
@@ -217,12 +219,28 @@ nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, c�
 
 ## 3. Cách chơi
 
-Lần đầu ngồi máy tính có **tour hướng dẫn** của Keeb-chan: màn tối đi, chỉ sáng chỗ cần bấm (mở Mezzenger → xem đơn → Nhận đơn →
-Shopii → Giỏ hàng → đứng dậy ra phòng). Bấm đúng chỗ sáng để đi tiếp, "Bỏ qua hướng dẫn" để tắt; xem lại ở Cài đặt → Hướng dẫn.
+Vào game: Keeb-chan dẫn đường trong phòng (khung lời dẫn giữa trên + la bàn chỉ hướng / khoảng cách + mũi tên vàng 3D thấy xuyên tường
+trên chỗ cần tới; khác phía tường thì chỉ cửa phòng trước): bấm màn hình máy tính → (sau khi mua) ra kệ sắt cuối hành lang nhận kiện →
+cầm thùng đơn → bàn build → bấm chuột trái vào thùng (`features/guide/roomGuideSteps.ts`, `RoomGuide`, `scene/room/GuideMarker`).
+Ngày 1 chỉ có **1 đơn hướng dẫn** (`tutorialOrder`: 60% mua A→Z, PCB hotswap, switch Linear, keycap Cherry PBT trắng, hạn 4 ngày).
+Lần đầu ngồi máy tính có **tour** của Keeb-chan: màn tối, chỉ sáng đúng chỗ cần bấm (Mezzenger → đơn → Nhận đơn → Shopii, rồi từng món:
+tab mục hàng → ô chọn option đúng (FR4, 70 con, PBT · Trắng) → nút "Thêm vào giỏ" của đúng thẻ, kèm danh sách ✓ món đã mua → Giỏ hàng →
+"Hoả tốc" (đơn hạn dài thì giao chậm cho rẻ) → Đặt hàng → đứng dậy). "Bỏ qua hướng dẫn" để tắt; xem lại ở Cài đặt → Hướng dẫn.
+Tới bàn build (đơn hướng dẫn) tour cũng tối màn: thiếu đồ thì sáng nút đứng dậy, đủ thì nhắc bấm chuột trái vào thùng, rồi giới thiệu khung đơn / bước / việc cần làm,
+lúc đang lắp thì không khung / không tối (mũi tên vàng chỉ vật cần bấm + khung việc cần làm), đóng gói xong thì dẫn cầm thùng ra kệ giao hàng → thu tiền ở Mezzenger → bấm lịch kết thúc ngày; xong bước chỉ sáng nút "Bước tiếp theo" / "Bỏ qua". Tạo game hỏi "Người chơi mới" / "Đã từng chơi" (đã từng chơi = không hướng dẫn). Keeb-chan chỉ xuất hiện trong tour
+(không còn tuỳ chọn ẩn / hiện, không còn lời dẫn "lần đầu gặp bước"); mọi đơn: lần đầu tới bước vặn vít / bước test có tour 1 lần. "Bảng tỉ lệ" ở Cài đặt → Trò chơi.
+
+### Cấp xưởng (mở khoá)
+
+Giao đủ đơn + đủ uy tín thì lên cấp (`data/unlocks.ts`, `Profile.shopLv` chỉ tăng, chip "Cấp N" trên thanh trạng thái xem điều kiện):
+1 Thợ tập sự (40 / 60 / TKL / Full, case nhựa, PCB hotswap, plate FR4 / nhôm, stab clip-in, switch phổ thông) → 2 Thợ phụ (2 đơn: hàn, lube switch,
+case nhôm 1 mảnh / gỗ / mica, foam) → 3 Thợ chính (5 đơn + uy tín 5: case 2 mảnh gasket / top, HHKB / 65 / 75, stab screw-in, plateless, chứng chỉ)
+→ 4 Có tiếng (10 đơn + uy tín 10: case CAD, FRL / True HHKB / Planck, switch cao cấp) → 5 Thợ có tâm (20 đơn + uy tín 30: Alice, TKL F13, sách phép).
+Món chưa mở hiện ở Shopii thành thẻ "?" (ẩn tên / ảnh / giá, nút khoá ghi cấp cần); đơn mới + bài Hội Phím Cơ chỉ đòi / bán món đã mở.
 
 ### Nhận đơn và hạn giao
 
-- Mỗi ngày Mezzenger có 5–7 đơn mới, luôn có ít nhất một đơn TKL và một đơn 60%. Đọc kỹ layout,
+- Mỗi ngày Mezzenger có đơn mới theo cấp xưởng (thợ tập sự 1–2 đơn, càng lên cấp càng nhiều, tới 5–7), đơn đầu là TKL hoặc 60%. Đọc kỹ layout,
   loại switch, bộ keycap, màu keycap, điều ước âm thanh, mount, ngân sách, tiền công và số ngày.
 - Bấm **Nhận đơn**; hạn giao được tính `dueDay = ngày hiện tại + số ngày khách cho`. Chưa có đơn
   đang làm thì đơn thành đơn hiện tại; đã có thì vào danh sách chờ.
@@ -253,8 +271,8 @@ Shopii → Giỏ hàng → đứng dậy ra phòng). Bấm đúng chỗ sáng đ
 - Mount quyết định các bước phụ: `gasket` (gasket / OG), `ring` (O-ring: sau lắp switch / hàn, case 1 mảnh; OG: sau gasket), `trayScrew`
   (tray), `topCase` + `topScrew` (top mount: plate bắt vít vào case trên rồi cả cụm thả vào case dưới, không có `caseClose`).
   Mount cũng ảnh hưởng âm thanh và điểm khớp tiếng.
-- Khi kho đã đủ và tương thích, bấm **Ra bàn build** ở Mezzenger hoặc đứng dậy sang bàn build để vào cảnh 3D. Làm theo
-  HUD: click đúng bộ phận, giữ chuột kéo để xoay camera quanh tâm vật đang làm (Space về góc mặc định, Q lật xem đáy), cuộn để zoom.
+- Khi kho đã đủ và tương thích, đứng dậy (nút quay lại) rồi đi tới bàn build để vào cảnh 3D. Làm theo
+  HUD: click đúng bộ phận, giữ chuột trái kéo để xoay camera quanh tâm vật đang làm, giữ chuột phải (hoặc Shift + chuột trái, 2 ngón) kéo để trượt khung nhìn theo mặt bàn (Space về góc mặc định, Q lật xem đáy), cuộn để zoom.
 
 ### Hàn, lube, mod stab, vít, keycap
 

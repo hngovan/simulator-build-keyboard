@@ -5,6 +5,7 @@ import { useGame } from '@/store'
 import { pcEye, screenCenter } from '../models/computerLayout'
 import { BLOCKS, BODY_R, EYE_Y, M, SPOTS, WALK_AREAS } from './roomLayout'
 import { useRoom } from './roomStore'
+import { menuOpen } from '@/lib/settingsMenu'
 
 /** tốc độ đi (m/s); phòng hẹp nên không có chạy */
 const SPEED = 2.2
@@ -165,7 +166,7 @@ export function WalkControls() {
         'input, textarea, select, [contenteditable="true"]',
       )
     const down = (e: KeyboardEvent) => {
-      if (typing(e) || e.ctrlKey || e.metaKey) return
+      if (typing(e) || e.ctrlKey || e.metaKey || menuOpen()) return
       if (!KEYS[e.code]) return
       s.keys.add(e.code)
     }
@@ -245,8 +246,9 @@ export function WalkControls() {
       }
       return
     }
-    // popup lịch đang mở: đứng yên
+    // popup lịch / menu Cài đặt đang mở: đứng yên
     if (useRoom.getState().calendar) return
+    if (menuOpen()) return s.keys.clear()
     const move = new THREE.Vector2()
     for (const k of s.keys) if (KEYS[k]) move.add(new THREE.Vector2(...KEYS[k]))
     const pos = cam.position

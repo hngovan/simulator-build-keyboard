@@ -1,3 +1,4 @@
+import { levelFor } from '@/data/unlocks'
 import type {
   ScrewBit,
   ToolKind,
@@ -15,11 +16,13 @@ import type {
   Spare,
   StepId,
   CartLine,
+  LayoutId,
 } from '@/types'
 import type { BoxSpot } from '@/data/boxes'
 import type { HistoryEntry } from './buildSlice'
-import { DTB_MM, buildContext, remapStepIdx } from '@/data/steps'
-import { CASES, SCREW_FULL } from '@/data/parts'
+import { DTB_MM, buildContext, coverBeforeJst, remapStepIdx, stepProgress } from '@/data/steps'
+import { CASES, SCREW_FULL, caseFits } from '@/data/parts'
+import { LAYOUTS, getLayout } from '@/data/layouts'
 import type { Listing, Stolen } from '@/data/selling'
 
 const SAVE_KEY = 'sbk-save-v3'
@@ -68,8 +71,8 @@ export interface Profile {
   stolen: Stolen[]
   /** NPC hướng dẫn: mẹo đã bấm "Hiểu rồi" */
   guideSeen: string[]
-  /** ẩn NPC Keeb-chan (máy tính + bàn build), bật / tắt ở Cài đặt */
-  guideHidden: boolean
+  /** cấp xưởng cao nhất đã đạt (data/unlocks.ts, chỉ tăng): mở khoá món Shopii / loại đơn */
+  shopLv: number
   /** thông báo đã nhận (mới nhất trước, giữ tối đa INBOX_KEEP), xem lại / xoá ở chuông góc phải */
   inbox: NotifyItem[]
   /** số thông báo chưa xem (mở chuông thì về 0) */
@@ -162,7 +165,9 @@ export interface SaveData extends Profile {
 // 6: thêm bước tuỳ chọn lót foam PCB trước bước plate → dời stepIdx theo tên bước (addFoamStep)
 // 7: tiến độ vít tính theo tua vít tay (SCREW_FULL); bản cũ dùng tua vít điện (1 click = xong) → vít ≥ 1 thành đầy (fillScrews)
 // 8: thêm bước lắp daughterboard (`dtb`) + cắm dây JST (`jst`) → dời stepIdx theo tên bước, đã qua thì coi như đã lắp (addDtbSteps)
-const SAVE_REV = 8
+// 9: case dây JST luồn qua tạ (`CaseDef.jstUp`, Duality): đổi thứ tự bước (case trên bắt vào plate trước, lắp tạ trước khi cắm
+//    dây) → tìm lại bước đang làm theo tên (reorderJstUp)
+const SAVE_REV = 9
 
 /** danh sách bước của bản lưu trước rev 8 (chưa có bước daughterboard) */
 const noDtb = (steps: StepId[]) => steps.filter((s) => s !== 'dtb' && s !== 'jst')
@@ -249,6 +254,173 @@ function addDtbSteps<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' 
   return { ...sess, build: { ...b, stepIdx, dtb, jst }, history: [] }
 }
 
+/**
+ * Build làm dở của case `jstUp` từ bản cũ: thứ tự cũ feet → coverOff → dtb → (topCase → topScrew) → jst → coverOn; tìm lại bước
+ * đang làm theo tên trong thứ tự mới (bước đã làm mà giờ nằm sau vẫn giữ tiến độ, tới nơi bấm qua)
+ */
+function reorderJstUp<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
+  const ctx = buildContext(order, sess.inventory, sess.mount)
+  const steps = ctx.steps
+  if (!coverBeforeJst(steps)) return sess
+  const moved: StepId[] = ['topCase', 'topScrew', 'coverOff', 'dtb', 'coverOn', 'jst']
+  const rest = steps.filter((s) => !moved.includes(s))
+  const at = rest.indexOf('feet') + 1
+  const top: StepId[] = steps.includes('topCase') ? ['topCase', 'topScrew'] : []
+  const old = [
+    ...rest.slice(0, at),
+    'coverOff',
+    'dtb',
+    ...top,
+    'jst',
+    'coverOn',
+    ...rest.slice(at),
+  ] as StepId[]
+  let stepIdx = steps.indexOf(old[b.stepIdx])
+  // úp / bắt vít case trên giờ nằm trước mà chưa làm xong (thứ tự cũ làm sau DTB) → quay về làm bước đó trước
+  const todo = top.findIndex((st) => {
+    const i = steps.indexOf(st)
+    const [d, t] = stepProgress(st, b, ctx, SCREW_FULL)
+    return i < stepIdx && d < t
+  })
+  if (todo >= 0) stepIdx = steps.indexOf(top[todo])
+  if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
+  return { ...sess, build: { ...b, stepIdx }, history: [] }
+}
+
+/**
+ * Layout mới cùng cỡ mà case khách gửi lắp được, khi case không còn hợp layout của đơn (dữ liệu case đổi: Duality Horns từ case TKL
+ * thành chỉ TKL F13 `strict`) → null = đơn vẫn hợp / không có layout thay
+ */
+function kitLayoutFix(order: Order): LayoutId | null {
+  const c = order.kit?.case && CASES[order.kit.case.id]
+  if (!c || caseFits(c, order.layout)) return null
+  const ff = LAYOUTS[order.layout]?.ff
+  return (
+    (Object.keys(LAYOUTS) as LayoutId[]).find((l) => LAYOUTS[l].ff === ff && caseFits(c, l)) ?? null
+  )
+}
+
+/** variant đơn giữ lựa chọn cũ nếu layout mới có, không thì lấy lựa chọn đầu (vd TKL F13 chỉ hàng dưới WKL) */
+function fitVariant(layout: LayoutId, old: Order['variant']): Order['variant'] {
+  const opts = LAYOUTS[layout].variants as Record<string, string[]>
+  const prev = (old ?? {}) as Record<string, string | undefined>
+  return Object.fromEntries(
+    Object.entries(opts).map(([k, list]) => [
+      k,
+      prev[k] && list.includes(prev[k]) ? prev[k] : list[0],
+    ]),
+  ) as Order['variant']
+}
+
+/** đổi đơn sang layout mới: layout, variant, PCB / plate khách gửi theo layout */
+function relayoutOrder(order: Order, layout: LayoutId): Order {
+  const kit = order.kit && {
+    ...order.kit,
+    ...(order.kit.pcb ? { pcb: { ...order.kit.pcb, layout } } : {}),
+    ...(order.kit.plate ? { plate: { ...order.kit.plate, layout } } : {}),
+  }
+  return { ...order, layout, variant: fitVariant(layout, order.variant), ...(kit ? { kit } : {}) }
+}
+
+/** đơn kit case không còn hợp layout (kitLayoutFix): đổi đơn + PCB / plate trong kho sang layout mới */
+function fixKitLayoutOrder(order: Order): Order {
+  const l = kitLayoutFix(order)
+  return l ? relayoutOrder(order, l) : order
+}
+
+/**
+ * Như trên cho đơn đã nhận: PCB / plate trong kho theo layout cũ đổi theo; build làm dở dời dữ liệu từng phím (switch, keycap, đã test,
+ * mối hàn, stab, lỗi test, hoàn hảo) sang id phím mới khớp theo tên phím (id = thứ tự phím: TKL F13 chèn F13 sau F12 nên id sau đó + 1);
+ * phím mới (F13) để trống, lắp thêm switch / keycap. Lịch sử hoàn tác bỏ (id cũ)
+ */
+function fixKitLayout<S extends Pick<JobSession, 'inventory' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): { order: Order | null | undefined; sess: S } {
+  const l = order && kitLayoutFix(order)
+  if (!order || !l) return { order, sess }
+  const next = relayoutOrder(order, l)
+  const inv = sess.inventory
+  const relay = <T extends { layout: LayoutId } | null | undefined>(it: T) =>
+    it && it.layout === order.layout ? { ...it, layout: l } : it
+  const inventory = { ...inv, pcb: relay(inv.pcb), plate: relay(inv.plate) }
+  const b = sess.build
+  if (!b) return { order: next, sess: { ...sess, inventory } }
+  // id cũ → id mới theo tên phím (+ lần xuất hiện: 2 phím Del khi backspace tách)
+  const seen: Record<string, number> = {}
+  const tag = (label: string) => `${label}#${(seen[label] = (seen[label] ?? 0) + 1)}`
+  const newIds: Record<string, string> = {}
+  for (const k of getLayout(l, next.variant).keys) newIds[tag(k.label)] = k.id
+  for (const key of Object.keys(seen)) delete seen[key]
+  const idMap: Record<string, string> = {}
+  for (const k of getLayout(order.layout, order.variant).keys) {
+    const id = newIds[tag(k.label)]
+    if (id) idMap[k.id] = id
+  }
+  const remap = <V>(rec: Record<string, V> | undefined) =>
+    rec &&
+    Object.fromEntries(
+      Object.entries(rec).flatMap(([id, v]) =>
+        // khoá không phải id phím (vd id vít trong `perfect`) giữ nguyên
+        /^\d+$/.test(id) ? (idMap[id] ? [[idMap[id], v]] : []) : [[id, v]],
+      ),
+    )
+  const build = {
+    ...b,
+    switches: remap(b.switches)!,
+    keycaps: remap(b.keycaps)!,
+    tested: remap(b.tested)!,
+    solder: remap(b.solder)!,
+    stabs: remap(b.stabs)!,
+    testFaults: remap(b.testFaults),
+    perfect: remap(b.perfect),
+  }
+  return { order: next, sess: { ...sess, inventory, build, history: [] } }
+}
+
+/**
+ * Build đã qua bước lắp switch / hàn / lắp keycap mà còn phím trống: đơn thật không qua được các bước đó khi chưa đủ (đơn dev bỏ qua được nên
+ * bỏ qua), chỉ xảy ra khi layout đơn bị đổi lúc nạp (`fixKitLayout` thêm phím, vd F13; lịch sử hoàn tác đã xoá nên không quay lại bước cũ
+ * được) → lắp nốt: switch lấy từ kho (đủ thì lắp, thiếu thì để trống), hàn sẵn nếu đã qua bước hàn, keycap nếu đã qua bước keycap.
+ * Chạy mọi lần nạp
+ */
+function fillAddedKeys<S extends Pick<JobSession, 'inventory' | 'mount' | 'build'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || order.dev || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb)
+    return sess
+  const ctx = buildContext(order, sess.inventory, sess.mount)
+  const past = (st: StepId) => {
+    const i = ctx.steps.indexOf(st)
+    return i >= 0 && b.stepIdx > i
+  }
+  if (!past('switch')) return sess
+  const inv = sess.inventory.switch
+  const missing = ctx.keys.filter((k) => !b.switches[k.id]).slice(0, inv?.count ?? 0)
+  const switches = { ...b.switches }
+  for (const k of missing) switches[k.id] = true
+  const solder = { ...b.solder }
+  if (past('solder')) for (const k of missing) solder[k.id] ??= true
+  const keycaps = { ...b.keycaps }
+  if (past('keycap')) for (const k of ctx.keys) if (switches[k.id]) keycaps[k.id] = true
+  const changed = missing.length || Object.keys(keycaps).length !== Object.keys(b.keycaps).length
+  if (!changed) return sess
+  return {
+    ...sess,
+    inventory: inv
+      ? { ...sess.inventory, switch: { ...inv, count: inv.count - missing.length } }
+      : sess.inventory,
+    build: { ...b, switches, solder, keycaps },
+  }
+}
+
 /** đơn kit khách gửi case mà khách dặn mount case không còn làm được (dữ liệu case đổi, vd Blossom → chỉ gasket) */
 function fixOrderMount(order: Order): Order {
   const c = order.kit?.case && CASES[order.kit.case.id]
@@ -332,7 +504,7 @@ export const START: Profile = {
   listings: [],
   stolen: [],
   guideSeen: [],
-  guideHidden: false,
+  shopLv: 1,
   inbox: [],
   unread: 0,
   parcels: [],
@@ -391,7 +563,27 @@ export function loadSave(): SaveData | null {
         ),
       }
     }
+    if ((save.rev ?? 0) < 9 && session) {
+      session = {
+        ...reorderJstUp(session.order, { ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: reorderJstUp(j.order, j.session) })),
+        packed: session.packed?.map((p) =>
+          p.session ? { ...p, session: reorderJstUp(p.order, p.session) } : p,
+        ),
+      }
+    }
     if (session) {
+      // đơn kit có case không còn hợp layout (vd Duality TKL → TKL F13): đổi layout + dời dữ liệu phím của build dở
+      const fix = fixKitLayout(session.order, { ...session, history: session.history ?? [] })
+      session = {
+        ...fix.sess,
+        order: fix.order ?? null,
+        offers: session.offers?.map(fixKitLayoutOrder),
+        jobs: session.jobs?.map((j) => {
+          const f = fixKitLayout(j.order, j.session)
+          return { order: f.order!, session: f.sess }
+        }),
+      }
       const order = session.order && fixOrderMount(session.order)
       session = {
         ...fixMount(order, { ...session, order, history: session.history ?? [] }),
@@ -400,6 +592,11 @@ export function loadSave(): SaveData | null {
           const o = fixOrderMount(j.order)
           return { order: o, session: fixMount(o, j.session) }
         }),
+      }
+      // phím mới thêm do đổi layout (vd F13) mà build đã qua bước lắp: lắp nốt
+      session = {
+        ...fillAddedKeys(session.order, session),
+        jobs: session.jobs?.map((j) => ({ ...j, session: fillAddedKeys(j.order, j.session) })),
       }
     }
     return {
@@ -416,6 +613,8 @@ export function loadSave(): SaveData | null {
       supplies,
       audio: { ...START.audio, ...save.audio },
       spare: { ...START.spare, ...save.spare },
+      // bản lưu trước khi có cấp xưởng: tính theo số đơn đã giao + uy tín
+      shopLv: Math.max(save.shopLv ?? 1, levelFor(save.done ?? 0, save.rep ?? 0)),
     }
   } catch {
     return null

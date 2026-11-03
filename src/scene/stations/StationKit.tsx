@@ -174,7 +174,8 @@ export function Clickable({
       ref={ref}
       {...bind}
       onPointerDown={(e: ThreeEvent<PointerEvent>) => {
-        if (!active) return
+        // chỉ chuột trái mới thao tác (chuột phải = cầm thùng lên / kéo khung nhìn)
+        if (!active || e.button !== 0) return
         e.stopPropagation()
         onAct(e)
       }}

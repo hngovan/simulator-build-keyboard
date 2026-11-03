@@ -210,6 +210,8 @@ export function CartList() {
                 <button
                   key={k}
                   type="button"
+                  // tour hướng dẫn: chỉ nút tốc độ giao, `aria-pressed` cho biết đang chọn
+                  data-tour={`ship-${k}`}
                   aria-pressed={on}
                   title={SHIP_SPEEDS[k].desc}
                   onClick={() => setSpeed(k)}
@@ -254,9 +256,11 @@ export function CartList() {
                 Tổng tiền {fmt(base + fee)}
               </span>
             </div>
-            <Button tone="orange" onClick={() => order(speed)}>
-              Đặt hàng
-            </Button>
+            <span data-tour="place-order">
+              <Button tone="orange" onClick={() => order(speed)}>
+                Đặt hàng
+              </Button>
+            </span>
           </div>
         </div>
       )}

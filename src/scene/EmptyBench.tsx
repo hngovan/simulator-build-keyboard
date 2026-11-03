@@ -51,12 +51,18 @@ export function EmptyBench() {
   // đang cầm thùng đơn trỏ vào bàn thì sáng viền (bấm bàn để đặt)
   const carrying = useGame((s) => s.walk && !!s.held)
   const benchHover = useRoom((r) => r.benchHover)
+  // chuột trái vào thùng = build: thùng đơn đủ đồ thì mở thùng vào build; thùng đã đóng gói (còn dữ liệu build) thì mở ra build lại,
+  // không thì cầm lên đi giao (chuột phải luôn là cầm lên, `useBoxPick` trong EmptyBenchHud)
+  const reopen = useGame(
+    (s) => packed && s.packed.some((p) => p.order.id === s.benchBox && !!p.session?.build),
+  )
   const act = () => {
     const g = useGame.getState()
     if (!g.benchBox) return
-    // thùng đã đóng gói: cầm lên đi giao; thùng đơn: thử mở thùng vào build (thiếu đồ thì HUD liệt kê)
-    if (packed) g.pickBench()
-    else g.buildOrder(g.benchBox)
+    if (packed) {
+      if (reopen) g.unpackBox()
+      else g.pickBench()
+    } else g.buildOrder(g.benchBox)
   }
   return (
     <>

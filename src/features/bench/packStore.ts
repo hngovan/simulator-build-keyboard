@@ -5,14 +5,20 @@ import { create } from 'zustand'
  * `stash` = cất đơn dở vào thùng (nút "Cầm thùng đơn lên": xong thì cầm thùng đi, không chấm điểm) thay vì giao (`deliver`),
  * `ask` = đang hỏi lại vì build chưa xong / còn yêu cầu khách chưa đạt, `clean` = build đủ (HUD cập nhật)
  */
-export const usePack = create<{ at: number | null; stash: boolean; ask: boolean; clean: boolean }>(
-  () => ({
-    at: null,
-    stash: false,
-    ask: false,
-    clean: false,
-  }),
-)
+export const usePack = create<{
+  at: number | null
+  stash: boolean
+  ask: boolean
+  clean: boolean
+  /** đỉnh cao nhất của bàn phím lúc nằm trên bàn (u, toạ độ cảnh; `PackCarry` đo) → thùng cao theo, không lòi keycap cao / case dày */
+  top: number | null
+}>(() => ({
+  at: null,
+  stash: false,
+  ask: false,
+  clean: false,
+  top: null,
+}))
 
 /** bấm thùng / nút đóng gói: build đủ thì đóng luôn, chưa đủ thì hỏi lại */
 export function requestPack() {

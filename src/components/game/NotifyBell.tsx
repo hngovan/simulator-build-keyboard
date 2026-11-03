@@ -27,7 +27,7 @@ export function NotifyBell({ side }: { side: Side }) {
       const t = e.target as Node
       if (!ref.current?.contains(t) && !panel.current?.contains(t)) setOpen(false)
     }
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), setOpen(false))
     document.addEventListener('pointerdown', away)
     window.addEventListener('keydown', esc)
     return () => {
@@ -64,7 +64,7 @@ export function NotifyBell({ side }: { side: Side }) {
           </span>
         )}
       </button>
-      {/* portal ra body: nằm trên mọi cửa sổ / Keeb-chan (taskbar ở trong stacking context của desktop) */}
+      {/* portal vào khung màn hình máy tính (nằm trong viền màn hình, trên mọi cửa sổ); không có khung thì ra body */}
       {open &&
         createPortal(
           <div
@@ -122,7 +122,7 @@ export function NotifyBell({ side }: { side: Side }) {
               )}
             </div>
           </div>,
-          document.body,
+          document.querySelector('[data-desktop-frame]') ?? document.body,
         )}
     </div>
   )

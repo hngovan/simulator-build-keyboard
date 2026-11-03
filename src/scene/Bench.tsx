@@ -4,7 +4,8 @@ import { usePack } from '@/features/bench/packStore'
 import { PackBox, PackCarry } from './parts/PackBox'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { ContactShadows, Environment, OrbitControls } from '@react-three/drei'
+import { PerfProbe } from '@/scene/common/PerfProbe'
+import { ContactShadows, Environment, OrbitControls, PerformanceMonitor } from '@react-three/drei'
 import { ENV_HDR } from '@/scene/common/envMap'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { useGame, useCtx, useStep } from '@/store'
@@ -89,6 +90,8 @@ declare global {
 
 /** camera lúc tạ nằm ngoài case: lùi xa (× `back`), tâm nhìn dời ra trước `dz` × chiều sâu bàn phím */
 const WEIGHT_OUT_CAM = { back: 1.5, dz: 0.6 }
+/** camera bước đóng gói: thùng carton nằm sau bàn phím (tâm z = −(depth + 1.6), cao ≥ 2.4u) → lùi xa, tâm nhìn dời về giữa bàn phím và thùng */
+const PACK_CAM = { back: 1.45, gap: 1.6 }
 
 /** Đặt camera theo độ rộng bàn phím; bấm "Góc nhìn" để đưa về mặc định */
 function CameraRig() {
@@ -98,8 +101,14 @@ function CameraRig() {
   const scene = useThree((s) => s.scene)
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
   const fit = useThree((s) => fitAspect(s.size.width / s.size.height))
+  const step = useStep()
   // bước mở hộp: thùng cỡ thật → lùi xa như bàn có thùng
-  const unbox = useStep() === 'unbox'
+  const unbox = step === 'unbox'
+  // vào bước lắp lại tạ (vd vừa cắm dây vào DTB lúc đang zoom sát): tạ vẫn nằm ngoài như bước DTB nên `weightOut` không đổi
+  // → thêm vào deps để camera lùi ra lại cho thấy tạ
+  const coverOn = step === 'coverOn'
+  // bước đóng gói: cho thấy cả bàn phím lẫn thùng carton phía sau
+  const pack = step === 'pack'
   // tạ che DTB đã nhấc ra nằm trước case (chưa lắp lại): lùi camera + dời tâm nhìn ra trước cho thấy cả case lẫn tạ
   const weightOut = useGame((s) => {
     const c = s.build?.cover
@@ -109,12 +118,16 @@ function CameraRig() {
     // đang đi lại trong phòng: không kéo camera về bàn
     if (useGame.getState().walk) return
     const pos = benchView({ width: ctx.width, unbox, box: true }, fit)
-    const tz = weightOut ? ctx.depth * WEIGHT_OUT_CAM.dz : 0
-    const k = weightOut ? WEIGHT_OUT_CAM.back : 1
+    const tz = pack
+      ? -(ctx.depth + PACK_CAM.gap) / 2
+      : weightOut
+        ? ctx.depth * WEIGHT_OUT_CAM.dz
+        : 0
+    const k = pack ? PACK_CAM.back : weightOut ? WEIGHT_OUT_CAM.back : 1
     camera.position.set(pos[0] * k, pos[1] * k, pos[2] * k + tz)
     controls?.target.set(0, 0, tz)
     controls?.update()
-  }, [ctx, camKey, controls, camera, fit, unbox, weightOut])
+  }, [ctx, camKey, controls, camera, fit, unbox, weightOut, coverOn, pack])
 
   // dev: mở camera + controls trong console (cùng kiểu window.__game) để đặt góc nhìn khi debug
   useEffect(() => {
@@ -209,9 +222,23 @@ function PcView() {
   return null
 }
 
+/** tốc độ kéo trượt: OrbitControls dời theo khoảng cách camera → zoom sát thì kéo rất chậm, nhân thêm khi gần hơn `PAN_REF` */
+const PAN_SPEED = 2.5
+const PAN_REF = 22
+
+function PanSpeed() {
+  useFrame(({ camera, controls }) => {
+    const c = controls as OrbitControlsImpl | null
+    if (!c?.enablePan) return
+    c.panSpeed = PAN_SPEED * Math.max(1, PAN_REF / camera.position.distanceTo(c.target))
+  })
+  return null
+}
+
 /**
  * Camera neo quanh tâm vật đang làm (CameraRig đặt tâm theo bước, Space về góc mặc định, lật xem đáy bằng Q):
- * chuột trái / phải / 1 ngón kéo xoay quanh tâm, cuộn / 2 ngón zoom vào tâm; không kéo trượt khung nhìn, không xuống dưới mặt bàn
+ * chuột trái / 1 ngón kéo xoay quanh tâm; chuột phải / Shift + chuột trái / 2 ngón kéo trượt khung nhìn theo mặt bàn
+ * (không theo màn hình → không chui xuống bàn, tâm kẹp trong phòng ở CameraRig); cuộn / chuột giữa / 2 ngón zoom
  */
 function Controls() {
   const walk = useGame((s) => s.walk)
@@ -224,27 +251,77 @@ function Controls() {
   // đi lại trong phòng: góc nhìn người (WASD + kéo chuột nhìn)
   if (walk) return <WalkControls />
   return (
-    <OrbitControls
-      makeDefault
-      enabled={!locked}
-      enablePan={false}
-      // không xoay xuống dưới mặt bàn
-      maxPolarAngle={1.45}
-      // lại gần sát keycap (1u = 19mm) nhưng vẫn dừng trên mặt bàn / bàn phím
-      minDistance={1.8}
-      // zoom ra xa được gấp đôi (thấy cả kệ, phòng)
-      maxDistance={160}
-      rotateSpeed={0.8}
-      zoomSpeed={1.3}
-      mouseButtons={{
-        LEFT: THREE.MOUSE.ROTATE,
-        MIDDLE: THREE.MOUSE.DOLLY,
-        RIGHT: THREE.MOUSE.ROTATE,
-      }}
-      touches={{
-        ONE: THREE.TOUCH.ROTATE,
-        TWO: THREE.TOUCH.DOLLY_ROTATE,
-      }}
+    <>
+      <PanSpeed />
+      <OrbitControls
+        makeDefault
+        enabled={!locked}
+        enablePan
+        // trượt theo mặt phẳng ngang (mặt bàn), Shift + chuột trái cũng trượt (có sẵn trong OrbitControls)
+        screenSpacePanning={false}
+        // không xoay xuống dưới mặt bàn
+        maxPolarAngle={1.45}
+        // lại gần sát keycap (1u = 19mm) nhưng vẫn dừng trên mặt bàn / bàn phím
+        minDistance={1.8}
+        // zoom ra xa được gấp đôi (thấy cả kệ, phòng)
+        maxDistance={160}
+        rotateSpeed={0.8}
+        zoomSpeed={1.3}
+        mouseButtons={{
+          LEFT: THREE.MOUSE.ROTATE,
+          MIDDLE: THREE.MOUSE.DOLLY,
+          RIGHT: THREE.MOUSE.PAN,
+        }}
+        touches={{
+          ONE: THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN,
+        }}
+      />
+    </>
+  )
+}
+
+/**
+ * Bóng tiếp xúc dưới đồ trên bàn: drei vẽ lại cả cảnh từ dưới lên + 4 lượt blur mỗi khung (đo ~640k tam giác / khung,
+ * ngang cảnh chính). Chỉ vẽ liên tục khi ngồi bàn build (đồ đang được lắp / di chuyển); đi lại / ngồi máy tính
+ * thì vẽ 1 lần, dựng lại (đổi `key`) khi đồ trên bàn đổi: tải xong cảnh, đặt / cầm thùng, có / hết build
+ */
+function BenchShadows() {
+  const live = useGame((s) => s.screen === 'bench' && !s.walk)
+  const settled = useSceneLoading((s) => s.settled)
+  const bench = useGame((s) => `${s.benchBox}|${!!s.build}|${s.packed.length}`)
+  return (
+    <ContactShadows
+      key={live ? 'live' : `${settled}|${bench}`}
+      frames={live ? Infinity : 1}
+      position-y={Y.table + 0.02}
+      opacity={0.5}
+      scale={40}
+      blur={2}
+    />
+  )
+}
+
+/** trần độ phân giải (màn HiDPI / Windows scale 150%: dpr 2 = vẽ gấp 4 lần số điểm ảnh) */
+const MAX_DPR = Math.min(typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1, 1.5)
+const MIN_DPR = 0.75
+
+/**
+ * Tự hạ / nâng độ phân giải theo FPS thật (drei PerformanceMonitor): tụt dưới ngưỡng thì giảm dần tới MIN_DPR, dư thì nâng
+ * lại tới MAX_DPR; lật qua lật lại 3 lần thì chốt mức hiện tại. Tắt khi ngồi máy tính (frameloop demand → FPS thấp giả)
+ */
+function AdaptiveDpr() {
+  const setDpr = useThree((s) => s.setDpr)
+  const pc = useGame((s) => s.screen === 'pc')
+  useEffect(() => () => setDpr(MAX_DPR), [setDpr])
+  if (pc) return null
+  return (
+    <PerformanceMonitor
+      factor={1}
+      flipflops={3}
+      onChange={({ factor }) =>
+        setDpr(Math.round((MIN_DPR + (MAX_DPR - MIN_DPR) * factor) * 20) / 20)
+      }
     />
   )
 }
@@ -283,7 +360,12 @@ export function Bench() {
   const pc = useGame((s) => s.screen === 'pc')
   return (
     // con trỏ mũi tên mặc định (theo body), rê vào vật bấm được thì `useHover` đổi sang bàn tay
-    <Canvas shadows camera={{ position: [0, 14, 11], fov: 42 }} className="!fixed inset-0">
+    <Canvas
+      shadows
+      dpr={[1, MAX_DPR]}
+      camera={{ position: [0, 14, 11], fov: 42 }}
+      className="!fixed inset-0"
+    >
       <color attach="background" args={['#20232c']} />
       <ambientLight intensity={0.4} />
       <directionalLight
@@ -303,10 +385,12 @@ export function Bench() {
         <Scene />
         <SceneReady />
       </Suspense>
-      <ContactShadows position-y={Y.table + 0.02} opacity={0.5} scale={40} blur={2} />
+      <BenchShadows />
       {/* kéo (chuột phải / Shift + chuột trái) trượt theo mặt bàn thay vì theo màn hình */}
       <Controls />
       <PcZoom />
+      <PerfProbe />
+      <AdaptiveDpr />
       {pc && <PcView />}
     </Canvas>
   )

@@ -9,7 +9,6 @@ import {
   EyeOff,
   ListFilter,
   Handshake,
-  Keyboard,
   MapPin,
   Truck,
   X,
@@ -489,7 +488,7 @@ const REPLY_DELAY = 800
 /** Khung chat của 1 hội thoại */
 /** `onReply`: giữ hội thoại này đang mở sau khi đơn đổi trạng thái (không nhảy sang hội thoại khác) */
 function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBack: () => void }) {
-  const { acceptOrder, declineOrder, goBench, collectPay } = useGame.getState()
+  const { acceptOrder, declineOrder, collectPay } = useGame.getState()
   const order = t.order
   const { caseId } = orderLook(order)
   // tin vừa gửi trong phiên (không lưu): nhận / từ chối / gửi hàng; xin địa chỉ, xem điểm
@@ -639,11 +638,6 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
                 </Reply>
               </>
             )}
-            {t.kind === 'accepted' && (
-              <Reply tone="blue" icon={<Keyboard />} onClick={goBench}>
-                Ra bàn build
-              </Reply>
-            )}
             {packed && !shipped && !pickup && !askedAddr && (
               <Reply icon={<MapPin />} onClick={() => setAskedAddr(true)}>
                 Xin địa chỉ giao hàng
@@ -658,7 +652,12 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
               </span>
             )}
             {shipped && packed?.paid === false && (
-              <Reply tone="green" icon={<Coins />} onClick={() => collectPay(order.id)}>
+              <Reply
+                tour="collect-pay"
+                tone="green"
+                icon={<Coins />}
+                onClick={() => collectPay(order.id)}
+              >
                 Thu tiền (+{payout(packed!.result)}k)
               </Reply>
             )}

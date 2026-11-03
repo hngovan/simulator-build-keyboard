@@ -17,7 +17,6 @@ export function StepList() {
   const clicks = SCREW_FULL
   const busy = useGame((s) => !!s.stabAnim || !!s.lubeAnim)
   // bước nào lùi về được: đã có thao tác được ghi lại từ lúc bắt đầu bước đó
-  const firstRecorded = useGame((s) => (s.history.length ? s.history[0].build.stepIdx : Infinity))
   // xa nhất đã làm tới (khi đang đứng ở bước cũ)
   const furthest = useGame((s) => (s.future.length > 1 ? s.future.at(-1)!.build.stepIdx : -1))
   const { backToStep, forwardToStep } = useGame.getState()
@@ -37,7 +36,8 @@ export function StepList() {
               : i <= furthest
                 ? 'ahead'
                 : 'todo'
-        const canBack = state === 'done' && i >= firstRecorded && !busy
+        // bước đã làm nào cũng lùi được (không còn lịch sử từ bước đó thì giữ nguyên đồ đã lắp, chỉ về bước đó)
+        const canBack = state === 'done' && !busy
         const canAhead = state === 'ahead' && !busy
         const go = canBack ? () => backToStep(i) : canAhead ? () => forwardToStep(i) : undefined
         const alert = fault && st === 'solder' && state === 'done'
@@ -67,7 +67,7 @@ export function StepList() {
             <StepDot state={state} alert={alert}>
               {i + 1}
             </StepDot>
-            <span>{stepTitle(st, order)}</span>
+            <span>{stepTitle(st, order, ctx.steps)}</span>
             {canAhead && <span className="ml-auto text-xs">↷</span>}
             {t > 1 && state !== 'todo' && state !== 'ahead' && (
               <span className="ml-auto text-xs">

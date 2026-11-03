@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useGame, useStep } from '@/store'
+import { useCtx, useGame, useStep } from '@/store'
+import { NO_FLIP_STEPS, autoFlip } from '@/data/steps'
 import { SCREW_FULL, screwLevel } from '@/data/parts'
 import { SPIN_MS } from '../models/HandTools'
 import { OUT_MS } from './Screw'
@@ -29,4 +30,17 @@ export function useCaseSplit() {
     return () => clearTimeout(t)
   }, [done, electric])
   return done && split
+}
+
+/**
+ * Cụm bàn phím (Assembly) đang lật úp (thấy mặt đáy): bước tự lật (hàn, vít đáy…) thì Q lật ngược lại xem mặt trên; case 2 mảnh vừa
+ * tách thì ngửa lại. Dùng chung cho Assembly (xoay) và vít (chỉ vặn được khi mặt có vít quay lên, `ScrewSet`)
+ */
+export function useAssemblyFlipped() {
+  const ctx = useCtx()
+  const step = useStep()
+  const viewFlip = useGame((s) => s.viewFlip)
+  const split = useCaseSplit()
+  if (!step || NO_FLIP_STEPS.includes(step) || split) return false
+  return autoFlip(step, ctx) ? !viewFlip : viewFlip
 }

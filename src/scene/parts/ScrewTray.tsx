@@ -80,8 +80,11 @@ export function ScrewTray() {
   const coverOut = Object.keys(b.cover?.out ?? {}).length
   const coverBack = Object.keys(b.cover?.tight ?? {}).length
   const coverN = Math.max(0, coverOut - coverBack)
-  const total = n + trayLeft + topLeft + stabLeft + coverN
-  // thứ tự ốc trong khay: case tháo ra → tray → top → stab → ốc tạ
+  // vít M2 bắt sẵn trong lỗ ren DTB đã tháo (đặt DTB rồi coi như tháo hết) mà chưa siết lại qua lỗ DTB
+  const dtbOut = b.dtb?.placed ? (ctx.dtb ? 2 : 0) : Object.keys(b.dtb?.out ?? {}).length
+  const dtbN = Math.max(0, dtbOut - Object.keys(b.dtb?.screws ?? {}).length)
+  const total = n + trayLeft + topLeft + stabLeft + coverN + dtbN
+  // thứ tự ốc trong khay: case tháo ra → tray → top → stab → ốc tạ → vít DTB
   const kindOf = (i: number) =>
     i < n
       ? 'case'
@@ -91,7 +94,9 @@ export function ScrewTray() {
           ? 'top'
           : i < n + trayLeft + topLeft + stabLeft
             ? 'stab'
-            : 'cover'
+            : i < n + trayLeft + topLeft + stabLeft + coverN
+              ? 'cover'
+              : 'dtb'
   const spots = useMemo(
     () =>
       Array.from({ length: total }, (_, i) => {
@@ -114,6 +119,7 @@ export function ScrewTray() {
           top: topLen,
           stab: stabLen,
           cover: 0.3,
+          dtb: topLen,
         }[kindOf(i)]
         // đầu / mũi ốc xa tâm nhất (thân dọc trục x sau khi xoay rot)
         const reach = Math.hypot(x, z) + l / 2
@@ -121,7 +127,7 @@ export function ScrewTray() {
         return { x, y: bowlY(Math.min(reach, 1.12)) + stack, z, rot }
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- kindOf dẫn xuất từ n / trayLeft / topLeft / stabLeft
-    [n, trayLeft, topLeft, stabLeft, total, hasTray, len, trayLen, topLen, stabLen],
+    [n, trayLeft, topLeft, stabLeft, coverN, total, hasTray, len, trayLen, topLen, stabLen],
   )
   if (!hasTray && !total) return null
   return (
@@ -149,6 +155,9 @@ export function ScrewTray() {
             <LooseScrew step="topScrew" />
           ) : kindOf(i) === 'stab' ? (
             <LooseScrew step="stabScrew" />
+          ) : kindOf(i) === 'dtb' ? (
+            // vít M2 đầu trụ bắt DTB (cùng kiểu ốc top mount)
+            <LooseScrew step="topScrew" />
           ) : (
             // ốc tạ (ốc nón đầu bằng, cùng kiểu ốc tháo case)
             <LooseScrew step="caseOpen" />

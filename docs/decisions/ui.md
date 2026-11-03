@@ -1,5 +1,189 @@
 # Giao diện
 
+## 2026-11-03
+
+### Hỏi người chơi mới / đã từng chơi lúc tạo game; bỏ "Xem lại tour" ở Cài đặt
+
+- Yêu cầu: lần đầu chơi hỏi người mới hay đã chơi rồi; đã chơi thì không hướng dẫn; bỏ tuỳ chọn hướng dẫn trong Cài đặt.
+- `NewGameForm` (TitleScreen): 2 `OptionChip` "Người chơi mới" (mặc định) / "Đã từng chơi" → `newGame(name, experienced)`: đã từng chơi thì
+  `guideSeen = ALL_TOURS` (`src/data/tourIds.ts`, gom mã mọi tour: pc / bench / bit / test / ship). Dẫn đường trong phòng đơn hướng dẫn cũng tắt khi
+  `tour:bench` đã xem. Cài đặt → Trò chơi: bỏ dòng "Xem lại", mục còn "Bảng tỉ lệ".
+
+### Máy tính: chip tiền / uy tín / cấp ra ngoài viền, taskbar chỉ còn chuông
+
+- Yêu cầu: trong máy tính không hiện tiền / uy tín / cấp thợ ở taskbar, chỉ hiện ở góc trên như lúc ở ngoài (bàn build / đi lại).
+- `Taskbar`: chỉ `NotifyBell` (chuông chỉ ở máy tính) + đồng hồ. `Desktop`: `StatusChips` góc trên phải ngoài khung màn hình (điện thoại khung phủ kín,
+  nút quay lại sang phải → chip sang trái). `StatusChips` bỏ chuông. Người dùng ghi "góc trái" nhưng ở ngoài chip nằm góc phải → làm theo "như lúc ở ngoài".
+
+### Hướng dẫn đơn đầu: cầm thùng → kệ giao hàng → thu tiền → lịch kết thúc ngày
+
+- Yêu cầu: sau đóng gói chưa có hướng dẫn đặt lên kệ hàng, thu tiền, bấm lịch kết thúc ngày.
+- `roomGuideSteps` (đi lại, `tour:ship` chưa xem): thùng đơn hướng dẫn đã đóng gói còn trên bàn → chỉ bàn (chuột phải cầm lên); đang cầm → chỉ kệ giao
+  hàng (`GuideTarget 'ship'`, `GuideMarker` trên `SHIP_SHELF`); đã gửi chưa thu (`PackedOrder.paid === false`) → chỉ máy tính; thu rồi → chỉ lịch.
+- `BenchTour`: ngồi ở bàn, thùng vừa đóng gói trên bàn → bong bóng không chặn "Nhấn chuột phải vào thùng để cầm lên, rồi đứng dậy...".
+- `PayTour` (máy tính): đã gửi chưa thu → tối màn sáng icon Mezzenger (mở sẵn đúng hội thoại `setMessengerPick`) → nút "Thu tiền"
+  (`Reply tour="collect-pay"`). "Bỏ qua hướng dẫn" = `tour:ship`; Cài đặt → Xem lại xoá cả `tour:ship`.
+
+### Camera bước đóng gói + chuột phải không còn thao tác vật
+
+- Bước đóng gói thùng carton sau bàn phím bị khuất → `CameraRig` (Bench.tsx) `PACK_CAM`: lùi ×1.45, tâm nhìn dời về giữa bàn phím và thùng.
+- Lỗi: bấm chuột phải vào thùng đã đóng gói cũng mở thùng ra build (`Clickable` nhận mọi nút chuột, chuột phải lại là cầm thùng `useBoxPick`).
+  `Clickable` (StationKit) + `KeySlot` chỉ nhận chuột trái (`e.button === 0`).
+- Thùng lúc đóng gói (`PackBox`) trơn, khác thùng đã đóng gói: thêm nhãn giao hàng tên khách (bỏ danh xưng) + tem DỄ VỠ mặt trước, tem trên nắp phải.
+  Vật liệu / hàm dùng chung tách sang `scene/room/boxLabels.ts` (`LABEL`, `fragileSticker`, `shortName`; trước nằm trong DoorParcels).
+
+### Lùi bước khi không còn lịch sử thao tác
+
+- Phản hồi: bỏ qua test rồi tới đóng gói thì không lùi về bước trước được (nút hoàn tác mờ = lịch sử rỗng). Nguyên nhân: `deliver` cất session
+  đơn vào thùng với `history: []` → mở thùng ra (`unpackBox`) mất hết lịch sử; StepList chỉ cho lùi bước có lịch sử (`firstRecorded`).
+- `deliver`: lưu `compactHistory(s.history)` vào `PackedOrder.session` (điểm bắt đầu mỗi bước + 60 thao tác gần nhất, như lúc lưu game).
+- `backToStep`: không có lịch sử từ bước đó thì lùi "mềm": giữ nguyên đồ đã lắp, chỉ đặt `stepIdx` (commit snapshot để hoàn tác được); các bước
+  sau đã xong sẵn, "Bước tiếp theo" đi tiếp. StepList: mọi bước đã xong đều bấm lùi được; nút "Quay lại" popup đóng gói luôn hiện khi bước có vấn đề ở trước.
+
+### Bỏ lời dẫn "lần đầu gặp bước" kiểu cũ
+
+- Phản hồi (ảnh popup "Chào mừng tới bàn build… 1/5" hiện đè lúc đóng gói): bỏ. `StepHelp` (bong bóng lời dẫn lần đầu gặp mỗi bước cho đơn
+  khác / sau khi bỏ qua tour) xoá; `benchLines.ts` chỉ còn câu dẫn `TUT_*` của tour đơn hướng dẫn (STEP_LINES / MICA / TOP / COVER_FIRST / INTRO
+  / EMPTY / PICK xoá). Ngoài tour (đơn hướng dẫn, `BitTour`, `TestTour`, tour máy tính, dẫn đường trong phòng) Keeb-chan không còn xuất hiện.
+- Popup đóng gói: test bắt buộc (đơn hướng dẫn) chỉ ghi ở "chưa build xong", không lặp ở "bước đã bỏ qua".
+
+### Đơn hướng dẫn: test bắt buộc; nút sang bước không chặn bấm
+
+- Phản hồi: bước test không nhắc gõ phím mà nút ghi "Bỏ qua"; xong test thì không lùi lại được, bước cuối không đóng gói được.
+- `isOptionalStep`: đơn hướng dẫn (`order.tutorial`) test phím **bắt buộc** (nút ghi "Còn N nữa", test hết mới sang bước).
+- `BenchTour` đang test: lời dẫn giữa trên màn, không tối / không chặn ("Gõ từng phím bằng bàn phím thật hoặc click phím 3D...").
+- `Spotlight passive`: chỉ viền ô sáng + bong bóng, không vùng tối chặn bấm. Dùng cho xong bước / bỏ qua / đóng gói (trước chặn hết trừ 1 nút
+  → danh sách bước không bấm lùi được, cảnh 3D (thùng carton) không bấm được).
+
+### Panel mod stab bỏ nút đáy; mũi tên bước lắp stab
+
+- Yêu cầu: bỏ nút "Bỏ qua mod" / "Xong, đi lắp stab" ở panel phải mod stab (sang bước bằng nút "Bước tiếp theo" / "Bỏ qua" giữa đáy).
+  Bước lắp stab chưa có mũi tên → `KeySlot`: mũi tên vàng trên phím dài đầu tiên chưa có stab (`hintStab`), rê vào thì ẩn.
+  Bước lắp keycap cũng vậy (`hintKeycap`: phím đầu tiên có switch mà chưa có keycap, mũi tên nổi trên đỉnh switch).
+
+### Mod stab làm từng con + lube switch phải thả lò xo trước khi đóng
+
+- Yêu cầu: mod stab phải bấm từng stab một (trước 1 lần bấm mod xong cả bộ); bước lắp switch lại mà lò xo còn nằm trên bàn → phải
+  bấm cho lò xo vào từng cái rồi mới đóng được.
+- Mod stab: `BuildState.stabModUnits[kind]` = các stab (chỉ số `stabUnits`) đã làm, đủ mọi con mới bật `stabMods[kind]` (chấm điểm / tiến độ
+  bước giữ nguyên); `stabModLube` khoá mỡ theo con đầu. `modStab(kind, unit)`: điều kiện trước / sau xét theo từng con (`unitModded`), 1 lượt
+  mỡ / con, Urgo cứ 2 con 1 miếng, `StabAnim.unit`. `StabModStation`: mỗi stab ô bấm riêng (băng, housing, slider, wire), hoạt cảnh kìm /
+  kéo / cọ / slider / wire chỉ chạy trên con đang làm, mũi tên chỉ con đầu chưa làm của loại mod kế. Panel ghi "(2/5)" từng dòng.
+  Bản lưu cũ chỉ có cờ: loại đã bật cờ coi như xong hết (`unitModded`).
+- Lube switch: `BuildState.springsIn` + action `springBack` (lubeAnim `springIn`): sau khi lube, bấm lưới switch xen kẽ thả lò xo từ hộp vào
+  housing dưới 1 mẻ (`FlyingSprings`, lò xo đứng trong housing `SPRING_IN_Y`) rồi đóng mẻ đó; `closeSwitch` chỉ đóng con đã có lò xo.
+  Đã thả lò xo thì khoá mở / lube / lắc lò xo; cảnh báo "còn switch chưa lube / lò xo khô" chuyển sang lần thả đầu. Bản lưu cũ: `springsIn` = `swClosed`.
+- Chưa kiểm tra trực quan được (extension Chrome mất kết nối lúc làm).
+
+### Panel mod stab: bỏ nút "Làm" + mục Hướng dẫn
+
+- Yêu cầu: bỏ nút "Làm" ở từng dòng mod stab và mục "Hướng dẫn" ở panel phải. `ModRow` (ModPanels.tsx) chỉ còn chấm trạng thái + tên + lý do;
+  mod = bấm bộ phận trên bàn mod theo mũi tên vàng (`StabModStation`). Nút "Bỏ qua mod" / "Xong, đi lắp stab" ở đáy panel giữ.
+
+### Tour không bảo bỏ qua mod stab; cảnh báo đóng gói chỉ món tính điểm
+
+- Phản hồi: tour bảo bỏ qua mod stab, tới đóng gói lại bị cảnh báo "bước đã bỏ qua" (mod stab, foam). Nguyên tắc: khách không yêu cầu
+  thì không cảnh báo; có tính điểm thì tour phải dắt làm.
+- `useDeliverIssues` (BenchHud): bỏ cảnh báo lube switch khi khách để tuỳ shop (không lube vẫn đủ điểm, `switchLubeEval` q = 1) và foam khách
+  không dặn (không tính điểm). Giữ mod stab (10 điểm "Stab êm", khách nào có stab cũng dặn) + test phím.
+- Tour Shopii: sau feet mua đồ mod stab Cherry clip-in: Urgo, Krytox 205g2 (mỡ housing), XHT-BDZ (mỡ wire), kìm cắt, cọ lube
+  (`STAB_SUPPLIES` / `STAB_TOOLS`, ✓ "Đồ mod stab" trong danh sách). 205g2 mở từ cấp 1 (trước cấp 2 cùng lube switch → cấp 1 không mod stab đúng được).
+- `BenchTour`: mod stab không còn chế độ "Bỏ qua" (làm theo mũi tên vàng bàn mod); popup hỏi lại trước khi đóng gói (`usePack.ask`) hiện thì ẩn
+  tour (trước lớp tối đè lên popup, không bấm được).
+- Popup hỏi lại trước khi đóng gói (`ConfirmDeliver`): "Làm tiếp" chỉ đóng popup, không về được bước bị bỏ (danh sách bước lại đang bị tour chặn).
+  Giờ `DeliverIssues.back` = bước sớm nhất có vấn đề (bước bắt buộc chưa xong, lube / O-ring khách dặn, mod stab, test) → nút
+  "Quay lại: <bước>" gọi `backToStep` (như bấm lùi ở danh sách bước; không có lịch sử từ bước đó thì vẫn là "Làm tiếp" đóng popup).
+  Lưu ý: lùi về bước sớm (vd mod stab) rồi làm thao tác mới thì các bước sau phải làm lại (quy tắc `future` của hoàn tác).
+
+### Tour bước test âm thanh + bước vặn vít tự sang bước
+
+- Yêu cầu: bước bắt vít tray mount xong tự sang lắp keycap rồi, không cần sáng nút "Bỏ qua" / sang bước; phần test âm thanh nên có hướng dẫn.
+- `tutorialMode`: bước vặn vít vào (`SCREW_STEPS` = 'tighten') đã đủ vít → coi như đang làm (không vẽ), vì `afterScrew` tự `nextStep` sau `SPIN_MS`;
+  trừ stabScrew có vít tuôn ren (game đứng lại chờ thay stab).
+- `TestTour` (`tour:test`, mọi đơn, 1 lần, ưu tiên sau `BitTour`): tối màn sáng `hud-sound` (máy đo: % khớp, thanh cam độ ồn / xanh cao độ,
+  vạch trắng âm khách muốn, linh kiện nào quyết định âm) → `bench-objective` (gõ phím thật / click phím 3D, chấm xanh, test hết mới sang bước).
+  Xong thì ghi luôn `step:test` (lời dẫn cũ trùng ý). Cài đặt → "Xem lại" xoá cả `tour:pc / bench / bit / test`.
+
+### Tour chọn đầu vít lần đầu + mũi tên feet từ góc phải
+
+- Yêu cầu: bước vặn vít đầu tiên cần chọn đầu vít thì hướng dẫn 1 lần, khung tối là được; mũi tên dán feet bắt đầu từ góc phải (bên trái menu sổ ra che).
+- `BenchTour` `BitTour` (`tour:bit`, mọi đơn, ưu tiên hơn tour khác): bước có `stepBit` (đơn hướng dẫn: bước DTB, lục giác) → tối màn, sáng
+  bảng `BitPicker` (`data-tour="bit-picker"`), ghi đầu cần + phím tắt; chọn đúng thì tự xong, đúng sẵn thì nút "Hiểu rồi".
+- `RubberFeet` (Case.tsx): hốc kế tiếp = hốc chưa dán có x lớn nhất (case lật quanh trục x nên x dương vẫn là bên phải màn), phải → trái.
+
+### Tour bàn build: đang làm bước lắp thì không khung, không tối
+
+- Phản hồi: khung hướng dẫn che góc vùng làm việc 3D; bước cơ bản (lắp switch, dán feet...) không cần khung, rồi "các bước sau cũng vậy".
+- `BenchTour`: đang làm bước lắp (sau phần giới thiệu HUD) thì **mọi bước** không vẽ gì: khung việc cần làm + mũi tên vàng trong cảnh đủ rõ.
+  Tour chỉ hiện ở: thiếu đồ (nút đứng dậy), đủ đồ (bấm vào thùng), giới thiệu HUD (3 bước "Tiếp"), xong bước / bước tuỳ chọn (sáng nút
+  "Bước tiếp theo" / "Bỏ qua", popup test xong), đóng gói. Câu "làm theo mũi tên vàng" nằm ở bước giới thiệu cuối.
+- Đã thử bản trung gian (bước khó tối HUD + khung góc trái `dockLeft`) rồi bỏ theo phản hồi; `dockLeft`, `TUT_LINES.feet / test` xoá.
+
+### Bong bóng tour lật như tooltip
+
+- Lỗi: bong bóng Keeb-chan đặt dưới ô sáng theo chiều cao ước lượng 190px, lời dẫn dài (bước chọn Hoả tốc) tràn khỏi đáy màn.
+- `Spotlight.tsx` `place()`: đo chiều cao thật (ResizeObserver trên khung ngoài, HudCard không nhận ref) → dưới ô sáng nếu đủ chỗ, không thì lật
+  lên trên, cả 2 thiếu thì sang cạnh (phải / trái), cuối cùng góc phải dưới; luôn kẹp trong màn hình. `side` vẫn ưu tiên sang cạnh.
+
+### Bỏ phím B, chuột trái vào thùng để build
+
+- Yêu cầu: không cần phím B nữa, gộp vào tương tác chuột trái lên thùng cho dễ.
+- `EmptyBench`: chuột trái vào thùng đơn đủ đồ = `buildOrder` (đã có), thùng đã đóng gói còn dữ liệu build = `unpackBox` (trước là phím B; chuột trái
+  trước là cầm lên), không còn build thì cầm lên. Chuột phải vẫn cầm lên (`useBoxPick`, đổi tên từ `useBoxKeys`, bỏ phần phím B).
+- Dòng hướng dẫn đáy, câu Keeb-chan, tour, bảng phím tắt Cài đặt đổi theo; tour bước "đủ đồ" chừa vùng 3D (trước tối cả màn chờ phím B).
+
+### Keeb-chan chỉ còn trong tour, tour bàn build tối màn
+
+- Yêu cầu: Keeb-chan không còn là tuỳ chọn bật / tắt trong Cài đặt, bỏ hết, chỉ nằm trong tour; vào bàn build cũng tối màn như lúc mua đồ.
+- Bỏ `GuideNpc` (mẹo máy tính `tips.ts`), `BenchDialog`, `Profile.guideHidden` (bản lưu cũ còn field thì bỏ qua). "Bảng tỉ lệ" (trước mở từ
+  Keeb-chan) thành nút trong Cài đặt → Trò chơi; "Xem lại" chạy lại cả tour máy tính + bàn build.
+- `Spotlight.tsx` (lớp tối + ô sáng + bong bóng, tách từ Tour) dùng chung; `spotlightRect.ts` đo `[data-tour]` (bọc `display: contents` thì đo con).
+- `BenchTour.tsx`: đơn hướng dẫn (chưa xong `tour:bench`, đóng gói xong đơn thì ghi): thiếu đồ → sáng nút đứng dậy; đủ → tối cả màn nhắc B;
+  vào build → 3 bước giới thiệu (khung đơn, danh sách bước, khung việc cần làm, nút "Tiếp"); bước lắp 3D → tối cột HUD + khung dưới, chừa vùng 3D
+  (mũi tên vàng có sẵn trong cảnh chỉ vật cần bấm); xong bước / bước tuỳ chọn → chỉ sáng nút "Bước tiếp theo" / "Bỏ qua" (popup test xong
+  sáng nút OK, bước cuối sáng "Cho phím vào thùng"). Đơn khác: lần đầu gặp bước / bàn trống thì bong bóng giữa trên (không tối), "Tiếp" / "Hiểu rồi".
+- Lỗi gặp khi làm: selector Zustand trả object mới mỗi lần → render lặp vô hạn (trắng màn); chọn từng giá trị đơn (`useStepOpts`).
+
+### Bỏ nút "Ra bàn build" trong Mezzenger
+
+- Yêu cầu: bỏ nút "Ra bàn build" ở hội thoại đơn đã nhận. Đã bỏ (`Messenger.tsx`, cả import `Keyboard` / `goBench`);
+  ra bàn build = đứng dậy (nút quay lại) rồi đi tới bàn trong phòng, có Keeb-chan dẫn đường với đơn hướng dẫn.
+
+### Tour người mới chi tiết + dẫn đường trong phòng
+
+- Yêu cầu: tour quá ít; phải chỉ từ lúc vào game (bấm màn hình máy tính), lúc mua chỉ rõ **từng mục + đúng sản phẩm + đúng option**
+  (switch phải chọn 70 con, không để mặc định 10), giao hàng chọn **Hoả tốc** cho đơn đầu (giải thích đơn hạn dài thì giao chậm cho rẻ),
+  có chỉ hướng hành lang.
+- Tour.tsx: bước `until` (chờ điều kiện store / DOM, dò thêm 250ms), `skip` (món đã đủ thì bỏ cụm), `list` (danh sách ✓ món theo
+  `checkInventory` của kho + giỏ + kiện). Mỗi món: tab `shopcat-*` → `opt-<product>` (chờ `data-opt` đúng) → `add-<product>`. Bước chờ: vùng tối
+  `pointer-events-none` vì popup chọn option nằm ngoài ô sáng. Thẻ được cuộn vào giữa khung; bong bóng đặt cạnh ô sáng để không che thẻ.
+- Phòng: `roomGuideSteps.ts` (lời dẫn + đích pc / door / bench / calendar), `RoomGuide` (khung giữa trên + la bàn xoay theo hướng nhìn,
+  "quay sang trái · 3m"), `GuideMarker` (mũi tên vàng 3D `depthTest: false`; người chơi và đích khác phía tường thì chỉ cửa phòng trước).
+  Tên file `roomGuideSteps.ts` vì Windows coi `roomGuide.ts` trùng `RoomGuide.tsx`.
+- Sửa sau phản hồi: vùng tối **luôn chặn bấm** ngoài ô sáng (trước để xuyên ở bước chờ → bấm ra ngoài đóng Shopii / mở app khác là lạc tour);
+  popup chọn option portal z-[4500] nổi trên lớp tối nên vẫn bấm được. Bước bấm tab bỏ qua khi `shopCat` đã đúng mục (mở Shopii lần đầu là Case sẵn).
+- Bàn build (đơn hướng dẫn): `BenchDialog` mở sẵn khung thoại (đơn khác vẫn thu nhỏ avatar), câu dẫn thêm `TUT_LINES` / `TUT_INTRO`
+  (benchLines.ts: bước tuỳ chọn bấm "Bỏ qua", feet, test, đóng gói) + bàn trống thiếu đồ `TUT_MISSING` / đủ đồ `TUT_READY` (nhấn B).
+  Nút "Bước tiếp theo" / "Bỏ qua" / "Cho phím vào thùng" viền vàng nhấp nháy khi cần bấm (`tutorialGlow` trong BenchHud `Objective`).
+  Mũi tên 3D chỉ vật cần bấm đã có sẵn ở hầu hết bước (HintArrow), không thêm.
+
+### Túi đồ ngoài game (phím I) — đã thử rồi bỏ
+
+- Thử popup túi đồ (phím I) gom mọi chỗ đổi đồ (tua vít, đầu vít, mỏ hàn, thiếc, lube, feet, O-ring) và bỏ nút đổi trên bàn build.
+  Người dùng thấy không hợp, **bỏ, trả lại như cũ**: đổi đồ vẫn ở bàn build (nút ⇄ tua vít, tua vít dự phòng trên bàn, `BitPicker`, chip trong ModPanels).
+
+### Menu Cài đặt ngoài game (Esc)
+
+- Yêu cầu: cài đặt ra ngoài màn hình chính, Esc mở; tab key binding, tắt / bật nhạc, lưu tiến trình; Cài đặt trong máy tính chỉ đổi hình nền.
+- Làm: `features/settings/GameSettings.tsx` (popup z-[3200], tab `TabChip` Trò chơi / Âm thanh / Phím tắt / Hiển thị / Dev), trạng thái
+  `lib/settingsMenu.ts` (`openSettings` / `closeSettings` / `settingsOpen`); khối `Section` / `Row` tách ra `features/settings/SettingsParts.tsx`.
+  `SettingsApp` (trong máy) chỉ còn hình nền. Âm thanh thêm `AudioSettings.musicOff` (tắt riêng nhạc nền, `sound.ts` gain nhạc = 0).
+- Esc **không còn đứng dậy**: mở / đóng menu (trừ lúc test phím, popup role=dialog, popup xác nhận z-[3500]). Đứng dậy chỉ bằng `BackButton`
+  (tooltip "Quay lại"). Popup nhỏ bắt Esc (chuông, StatusChips, OptionSelect, InboxChat) gọi `preventDefault`, `useAppShortcuts` chờ `setTimeout`
+  rồi mới mở menu → Esc chỉ đóng popup.
+- Menu mở: `WalkControls`, `useBenchKey`, phím B (`useBoxKeys`) bỏ qua phím.
+- Phím tắt **cố định**, tab chỉ liệt kê (người dùng chốt chưa cho đổi phím; đã thử bản đổi phím rồi bỏ). Không thêm gợi ý "Esc cài đặt" vào HUD.
+
 ## 2026-10-24
 
 ### Component dùng chung (`src/components/ui/`)
@@ -1139,3 +1323,26 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
   mối hàn còn lại" (câu theo đúng chữ người dùng đưa); mô tả loại thiếc → `Alert` vàng "Ghi chú" (icon Info) dưới cùng mục Thiếc hàn.
 - Cùng ngày: nút chọn thiếc (`OptionChip` mục Thiếc hàn) rê chuột hiện mô tả loại thiếc (`title` = `SUPPLIES[id].desc`); cùng kiểu cho nút
   chọn lube (LubePanel) và dây O-ring (RingPanel, bỏ câu đầu như dòng mô tả).
+
+## 2026-11-03
+
+### Thông số hiệu năng (Cài đặt → Hiển thị)
+
+- Yêu cầu: phòng 3D lag, muốn bật hiện FPS / %CPU / %GPU / %RAM ở góc phải.
+- Trình duyệt không đọc được CPU / GPU cả máy → chỉ đo tab game (`src/lib/perfStats.ts`):
+  FPS + khung chậm nhất (rAF), CPU = 1 − thời gian rảnh luồng chính (`requestIdleCallback`), GPU = thời gian vẽ / giây bằng
+  `EXT_disjoint_timer_query_webgl2` (vá `gl.render` trong `scene/common/PerfProbe.tsx`, chỉ khi bật), RAM = heap JS
+  (`performance.memory`, Chrome / Edge), draw call · tam giác trung bình mỗi lần render, tên GPU (`WEBGL_debug_renderer_info`;
+  SwiftShader / llvmpipe → cảnh báo đỏ "đang vẽ bằng CPU"). Không đo được thì hiện "—".
+- Khung `components/game/PerfHud.tsx` (fixed `top-16 right-3`, dưới StatusChips, không bắt chuột), mount ở App.tsx mọi màn.
+- Lưu theo máy (`localStorage` `sbk-ui-perf`, store `usePerfHud`), không vào save lượt chơi.
+- CPU ban đầu đo bằng `requestIdleCallback` → sai (vẽ liên tục thì không có khoảng rảnh, báo 96% trong khi JS Self-Profiling
+  cho thấy luồng chính rảnh 44%). Đổi sang bọc `window.requestAnimationFrame` cộng thời gian mỗi callback ("CPU (vòng vẽ)").
+  Draw call / tam giác cũng đổi thành tổng mỗi khung (R3F `info.autoReset` → reset mỗi lần `render`, trước chia trung bình sai).
+- Đo phòng (i5-10400 + Intel UHD 630, 1920×911, dpr 1; Chrome tự động hoá bị bóp fps nên chỉ tin profile / số đếm, không tin fps):
+  3611 object, 2224 mesh (1986 đổ bóng), 6 lần `gl.render` / khung (cảnh chính 197 draw call + ContactShadows vẽ lại cả cảnh
+  79 draw call + 4 lượt blur), shadow map 2048 cập nhật mỗi khung, 15 mesh transmission; ~278 draw call + 1,3M tam giác / khung.
+  Cả cảnh 5M tam giác: keycap trưng bày (~7k tam giác / keycap, xda 1M, dsa 0,5M...), vít countersunk-m3x10 26k / con, socket-cap 18k.
+  Store không đổi mỗi khung. Profile: render ~48%, ContactShadows 20%, projectObject 9%, raycast con trỏ 6%.
+- Cùng ngày: khung thông số đè bảng chọn đầu vít (cột phải bàn build) → đổi thành dải ngang gọn góc trái dưới (`left-3 bottom-3`, ngồi máy
+  tính thì trên taskbar `--taskbar-h`); góc phải dưới là avatar Keeb-chan. Tên GPU chuyển vào Cài đặt → Hiển thị (dòng GPU, đỏ nếu SwiftShader).

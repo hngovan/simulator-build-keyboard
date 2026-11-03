@@ -10,13 +10,21 @@ import { Document, NodeIO } from '@gltf-transform/core'
 const INPUT = 'assets/screws'
 const OUTPUT = 'public/models/screws'
 const NAMES = ['countersunk-m3x10', 'socket-cap-m2x6', 'button-head-m3x8']
+// lưới thưa vừa đủ (sai lệch 0,02mm): mặc định ra 18–26k tam giác / con, cảnh có hàng chục con → nặng GPU;
+// thế này ~5k / con, zoom sát vẫn thấy ren
+const TESS = {
+  linearUnit: 'millimeter',
+  linearDeflectionType: 'absolute_value',
+  linearDeflection: 0.02,
+  angularDeflection: 0.4,
+}
 const occt = await occtimportjs()
 const io = new NodeIO()
 fs.mkdirSync(OUTPUT, { recursive: true })
 
 for (const name of NAMES) {
   const source = path.join(INPUT, `${name}.step`)
-  const result = occt.ReadStepFile(new Uint8Array(fs.readFileSync(source)), null)
+  const result = occt.ReadStepFile(new Uint8Array(fs.readFileSync(source)), TESS)
   if (!result.success || !result.meshes.length) throw new Error(`Không đọc được ${source}`)
   let top = -Infinity
   for (const mesh of result.meshes) {
@@ -68,5 +76,6 @@ for (const name of NAMES) {
   }
   const target = path.join(OUTPUT, `${name}.glb`)
   await io.write(target, doc)
-  console.log(`${target}: ${(fs.statSync(target).size / 1024).toFixed(0)} KB`)
+  const tris = result.meshes.reduce((n, m) => n + m.index.array.length / 3, 0)
+  console.log(`${target}: ${(fs.statSync(target).size / 1024).toFixed(0)} KB, ${tris} tam giác`)
 }

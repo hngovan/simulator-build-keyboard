@@ -23,6 +23,8 @@ import { BitDriver, SCREW_SPIN, SPIN_MS } from '../models/HandTools'
 import { MM } from '../models/Switch'
 import { HintArrow } from '../stations/StationKit'
 import { HINT_COLOR } from '../common/hoverOutline'
+// vòng import với caseSplit (lấy OUT_MS) chỉ dùng trong hàm, không chạy lúc nạp module
+import { useAssemblyFlipped } from './caseSplit'
 
 interface ScrewProps extends ScrewPoint {
   y?: number
@@ -544,6 +546,10 @@ export function ScrewSet({
   const cur = useStep()
   const bit = useGame((s) => s.screwBit)
   const requiredBit = SCREW_BITS[step]
+  // chỉ vặn được khi mặt có vít quay về phía người chơi: vít bắt từ đáy (`flip`) khi cụm đang lật úp, vít mặt trên khi không lật
+  // (Q lật lại xem mặt kia thì vít bên dưới không bấm xuyên qua case được)
+  const flipped = useAssemblyFlipped()
+  const facing = flip ? flipped : !flipped
   // vít case: mica xuyên mọi tấm tới gần tấm đáy; bắt từ đáy xuyên thành case dưới ăn lên lỗ ren case trên
   const longShaft =
     step === 'caseScrew' || step === 'caseOpen'
@@ -560,12 +566,12 @@ export function ScrewSet({
   )
   const common = (sc: (typeof ctx.screws)[ScrewStep][number]) => ({
     mode: SCREW_STEPS[step],
-    interactive: cur === step && active,
+    interactive: cur === step && active && facing,
     bit,
     requiredBit,
     style: SCREW_STYLES[step],
     shaft: longShaft,
-    hint: active && sc.id === next,
+    hint: active && facing && sc.id === next,
     short: SCREW_SHORT[step] ?? 1,
   })
   const list = ctx.screws[step].map((sc) =>

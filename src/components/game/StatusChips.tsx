@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Star, UserRound, Wallet } from 'lucide-react'
+import { Hammer, Star, Wallet } from 'lucide-react'
 import { useGame } from '@/store'
 import { TOOLS } from '@/data/parts'
 import { CERT_BONUS, REP_RULES, REP_TIERS, certBonus, repTier } from '@/data/reputation'
 import { cn, fmt, fmtMoney } from '@/lib/format'
-import { Button, Chip, Tooltip } from '@/components/ui'
-import { NotifyBell } from './NotifyBell'
+import { MAX_LV, SHOP_LEVELS, levelDef, offerRange, repOfferPenalty } from '@/data/unlocks'
+import { Button, Chip } from '@/components/ui'
 
 type Side = 'top' | 'bottom'
 
@@ -45,7 +45,7 @@ function InfoChip({
       setHover(false)
     }
     const away = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && close()
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), close())
     document.addEventListener('pointerdown', away)
     window.addEventListener('keydown', esc)
     return () => {
@@ -90,8 +90,10 @@ const Row = ({ k, v }: { k: string; v: ReactNode }) => (
 )
 
 /** Bảng uy tín: bậc hiện tại, ảnh hưởng tới số đơn / tiền công, cách uy tín lên xuống */
-function RepInfo({ rep }: { rep: number }) {
+function RepInfo({ rep, lv }: { rep: number; lv: number }) {
   const { tier, next } = repTier(rep)
+  // số đơn mỗi ngày theo cấp xưởng, uy tín âm thì bớt
+  const [oa, ob] = offerRange(lv, rep)
   const { openApp, goPC } = useGame.getState()
   return (
     <div className="flex flex-col gap-2">
@@ -105,7 +107,14 @@ function RepInfo({ rep }: { rep: number }) {
         </div>
       )}
       <div className="rounded-lg bg-panel-2 px-2.5 py-1.5">
-        <Row k="Đơn mới mỗi ngày" v={`${tier.offers[0]}–${tier.offers[1]} đơn`} />
+        <Row
+          k="Đơn mới mỗi ngày (theo cấp xưởng)"
+          v={
+            <span className={repOfferPenalty(rep) ? 'text-red' : ''}>
+              {oa}–{ob} đơn{repOfferPenalty(rep) ? ` (−${repOfferPenalty(rep)} vì uy tín)` : ''}
+            </span>
+          }
+        />
         <Row
           k="Tiền công khách trả"
           v={
@@ -130,7 +139,7 @@ function RepInfo({ rep }: { rep: number }) {
               {t.name} {Number.isFinite(t.min) ? `(≥ ${t.min})` : '(< −5)'}
             </span>
             <span>
-              {t.offers[0]}–{t.offers[1]} đơn · ×{t.pay}
+              {repOfferPenalty(t.min) ? `−${repOfferPenalty(t.min)} đơn · ` : ''}×{t.pay}
             </span>
           </div>
         ))}
@@ -155,6 +164,66 @@ function RepInfo({ rep }: { rep: number }) {
       >
         Xem đánh giá khách
       </Button>
+    </div>
+  )
+}
+
+/** Bảng cấp xưởng: cấp hiện tại, điều kiện cấp kế, món mở ở từng cấp */
+function LevelInfo({ lv, done, rep }: { lv: number; done: number; rep: number }) {
+  const cur = levelDef(lv)
+  const next = lv < MAX_LV ? levelDef(lv + 1) : null
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="font-head text-base font-extrabold">
+        <span className="text-yellow">Cấp {lv}</span> · {cur.name}
+      </div>
+      {next && (
+        <div className="rounded-lg bg-panel-2 px-2.5 py-1.5">
+          <Row
+            k={`Lên cấp ${next.lv}: đơn đã giao`}
+            v={
+              <span className={done >= next.done ? 'text-green' : ''}>
+                {done} / {next.done}
+              </span>
+            }
+          />
+          {Number.isFinite(next.rep) && (
+            <Row
+              k="Uy tín"
+              v={
+                <span className={rep >= next.rep ? 'text-green' : ''}>
+                  {rep} / {next.rep}
+                </span>
+              }
+            />
+          )}
+        </div>
+      )}
+      {/* các cấp: cấp đã mở sáng, cấp đang đứng tô vàng */}
+      <div className="flex flex-col gap-1 text-xs">
+        {SHOP_LEVELS.map((l) => (
+          <div
+            key={l.lv}
+            className={cn(
+              'rounded-md px-2 py-1',
+              l.lv === lv ? 'bg-yellow/15 text-yellow' : l.lv < lv ? 'text-ink' : 'text-muted',
+            )}
+          >
+            <b>
+              {l.lv}. {l.name}
+            </b>
+            {l.lv > 1 && (
+              <span className="text-muted">
+                {' '}
+                · giao {l.done} đơn{Number.isFinite(l.rep) ? ` + uy tín ≥ ${l.rep}` : ''}
+              </span>
+            )}
+            <div className="leading-snug opacity-90">
+              {l.offers[0]}–{l.offers[1]} đơn / ngày · {l.perks.join(' · ')}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -201,21 +270,11 @@ function MoneyInfo({ money, cert }: { money: number; cert: number }) {
 export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
   const money = useGame((s) => s.money)
   const rep = useGame((s) => s.rep)
-  const name = useGame((s) => s.name)
   const cert = useGame((s) => s.tools.cert ?? 0)
+  const lv = useGame((s) => s.shopLv)
+  const done = useGame((s) => s.done)
   return (
     <div className="flex gap-1.5 [&_svg]:size-4 [&_svg]:shrink-0">
-      {/* mobile: bỏ chip tên cho đủ chỗ */}
-      {name && (
-        <span className="max-md:hidden">
-          <Tooltip content="Tên thợ build" side={tipSide}>
-            <Chip tone="name">
-              <UserRound />
-              {name}
-            </Chip>
-          </Tooltip>
-        </span>
-      )}
       <InfoChip
         tip="Ví tiền"
         side={tipSide}
@@ -238,10 +297,21 @@ export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
           </Chip>
         }
       >
-        <RepInfo rep={rep} />
+        <RepInfo rep={rep} lv={lv} />
+      </InfoChip>
+      <InfoChip
+        tip="Cấp xưởng"
+        side={tipSide}
+        chip={
+          <Chip tone="name">
+            <Hammer className="text-orange" />
+            Cấp {lv}
+          </Chip>
+        }
+      >
+        <LevelInfo lv={lv} done={done} rep={rep} />
       </InfoChip>
       {/* không còn chip ngày: ngày xem ở lịch treo tường trong phòng */}
-      <NotifyBell side={tipSide} />
     </div>
   )
 }

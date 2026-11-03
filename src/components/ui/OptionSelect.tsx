@@ -77,7 +77,7 @@ export function OptionSelect({
       const t = e.target as Node
       if (!box.current?.contains(t) && !list.current?.contains(t)) setOpen(false)
     }
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), setOpen(false))
     window.addEventListener('pointerdown', close)
     window.addEventListener('keydown', esc)
     return () => {

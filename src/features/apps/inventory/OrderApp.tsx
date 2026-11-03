@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { ShoppingCart, Volume2 } from 'lucide-react'
+import { Volume2 } from 'lucide-react'
 import { useGame } from '@/store'
 import { variantText } from '@/data/layouts'
 import { SUPPLIES } from '@/data/supplies'
@@ -12,6 +12,7 @@ import {
   KEYCAP_MATERIALS,
   MOUNTS,
   PCB_TYPES,
+  PLATELESS,
   PLATELESS_MOUNTS,
   PLATES,
   SOUND_WISH,
@@ -36,6 +37,7 @@ import { CustomerAvatar } from '@/components/game/CustomerAvatar'
 import { contextFor } from '@/data/steps'
 import type { BuildState, Inventory, Order, PartCategory } from '@/types'
 import { getLayout } from '@/data/layouts'
+import { plateLv } from '@/data/unlocks'
 
 /**
  * Chọn loại switch dùng cho đơn đang làm (khách không đòi đích danh 1 loại): các loại đang có (đơn + kho chung) hợp loại
@@ -134,6 +136,8 @@ function OrderDetail({ c }: { c: OrderEntry }) {
   const ready = !missing.length
   const caseDef = inventory.case && CASES[inventory.case.id]
   const plateless = isPlateless(inventory.plate)
+  // plateless mở ở cấp xưởng 3 (bản đang bật sẵn thì vẫn cho tắt)
+  const platelessOpen = s.shopLv >= plateLv(PLATELESS)
   const profile =
     inventory.switch && inventory.plate
       ? buildSound(inventory, mount, build, ctx?.keys.length)
@@ -231,7 +235,8 @@ function OrderDetail({ c }: { c: OrderEntry }) {
               }))}
               onChange={(i) => s.setMount(mounts[i])}
             />
-            {(plateless || (!provided.plate && !order.plateMaterial && !order.foam)) && (
+            {(plateless ||
+              (platelessOpen && !provided.plate && !order.plateMaterial && !order.foam)) && (
               <label
                 className="flex items-center gap-2 text-xs font-bold text-muted"
                 title="Bỏ plate, switch hàn thẳng PCB: cần PCB hàn + Tray mount, không dùng stab plate-mount"
@@ -291,24 +296,10 @@ function OrderDetail({ c }: { c: OrderEntry }) {
 
       {active && (
         <div className="flex gap-2">
-          {missing.length > 0 && !build && (
-            <Button
-              tone="orange"
-              className="inline-flex flex-1 items-center justify-center gap-2"
-              onClick={() => s.openShop(missing[0].cat)}
-            >
-              <ShoppingCart className="size-4" />
-              Mua đồ còn thiếu ({missing.length})
-            </Button>
-          )}
-          {ready || build ? (
+          {(ready || build) && (
             <Button tone="green" className="flex-1" onClick={s.startBuild}>
               {build ? 'Làm tiếp ở bàn build' : 'Ra bàn build'}
             </Button>
-          ) : (
-            <div className="grid flex-1 place-items-center rounded-[10px] border-2 border-dashed border-line px-3 text-sm font-bold text-muted">
-              Ra bàn build · cần đủ {checks.length}/{checks.length}
-            </div>
           )}
         </div>
       )}

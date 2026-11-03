@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useGame } from '@/store'
 import { BackButton, Window } from '@/components/ui'
+import { StatusChips } from '@/components/game/StatusChips'
 import { cn } from '@/lib/format'
 import { BEZEL, pcFrame } from '@/scene/models/computerLayout'
 import { APPS, APP_IDS } from './apps'
@@ -58,6 +59,8 @@ export function Desktop() {
     >
       {/* transform: khung là gốc toạ độ cho phần tử fixed bên trong (popup, cửa sổ phóng to) */}
       <div
+        // khung màn hình máy tính: popup nổi của taskbar (chuông thông báo) portal vào đây cho nằm trong viền màn hình
+        data-desktop-frame
         className="relative [transform:translateZ(0)] overflow-hidden"
         style={{ width: frame.w, height: frame.h }}
       >
@@ -104,6 +107,16 @@ export function Desktop() {
         <Taskbar />
       </div>
 
+      {/* tiền / uy tín / cấp xưởng: góc trên ngoài viền màn hình máy tính, đúng chỗ như ở bàn build / đi lại */}
+      <div
+        className={cn(
+          'pointer-events-none absolute top-3 right-3 z-[200] [&>*]:pointer-events-auto',
+          // điện thoại: nút quay lại sang góc phải → chip sang góc trái
+          frame.full && 'right-auto left-3',
+        )}
+      >
+        <StatusChips />
+      </div>
       {/* rời máy tính, đi lại trong phòng (sang bàn build, lấy hàng ở cửa, kết thúc ngày ở lịch treo tường) */}
       <BackButton
         tour="back"

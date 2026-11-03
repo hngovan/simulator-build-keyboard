@@ -3,7 +3,7 @@ import { type ThreeEvent } from '@react-three/fiber'
 import { useGLTF, useTexture } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import * as THREE from 'three'
-import { SCREW_STEPS, Y } from '@/data/steps'
+import { Y, stepBit } from '@/data/steps'
 import { KEYCAP_COLORS, TOOLS, screwLevel } from '@/data/parts'
 import type { Key } from '@/types'
 import { useGame } from '@/store'
@@ -54,6 +54,7 @@ import { WallPoster } from './room/WallPoster'
 import { DoorParcels, HeldBox, SHELF_SCALE_Y, ShipShelf } from './room/DoorParcels'
 import { sitAtBench } from './room/sitAtBench'
 import { useRoom } from './room/roomStore'
+import { GuideMarker } from './room/GuideMarker'
 import { useHoverOutline } from './common/hoverOutline'
 import { CuttingMat } from './common/CuttingMat'
 import { grainBoxGeometry } from './materials'
@@ -440,7 +441,7 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
   // tua vít chỉ bày ở bước vặn / tháo vít; kìm cắt chỉ dùng ở bàn mod stab (có kìm riêng) nên không bày trên bàn
   const screwStep = useGame((s) => {
     const step = s.build && s.ctx?.steps[s.build.stepIdx]
-    return !!step && step in SCREW_STEPS
+    return !!stepBit(step)
   })
   if (!screwStep) return null
   return (
@@ -689,7 +690,7 @@ function BenchSeat() {
             const g = useGame.getState()
             const m = benchMode(g)
             if (m === 'empty' || m === 'heldPacked' || m === 'busy') return
-            // cầm thùng đơn tới bàn trống: đặt lên (chuyển sang đơn đó, bấm B mới vào build) rồi ngồi xuống
+            // cầm thùng đơn tới bàn trống: đặt lên (chuyển sang đơn đó, bấm thùng mới vào build) rồi ngồi xuống
             if (m === 'place' && !g.placeBench()) return
             show(false)
             sitAtBench()
@@ -984,6 +985,8 @@ export function Room() {
       </group>
       {/* thùng đang cầm trên tay (đi lại) */}
       <HeldBox />
+      {/* dẫn đường người mới: mũi tên vàng trên chỗ cần tới (thấy xuyên tường) */}
+      <GuideMarker />
       {/* bàn gỗ làm việc dựa tường phải, có tấm lót cắt */}
       <Model
         url={MODELS.workTable}

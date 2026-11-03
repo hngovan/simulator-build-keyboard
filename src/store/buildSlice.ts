@@ -5,13 +5,14 @@ import {
   DTB_MM,
   coverScrews,
   SCREW_BITS,
+  stepBit,
   SCREW_STEPS,
   SPIN_MS,
   stabSize,
   STRIP_TRIES,
   brittleCase,
   gasketStrips,
-  STEP_INFO,
+  stepTitle,
   isOptionalStep,
   stabUnits,
   stepProgress,
@@ -46,6 +47,9 @@ import {
   lubedIds,
   stabAnimDuration,
   stabModRules,
+  nextUnit,
+  unitModded,
+  unitsModded,
   type StabAnim,
   type StabModKind,
 } from '@/data/mods'
@@ -115,12 +119,14 @@ export interface BuildSlice {
   placePlate: () => void
   /** lót foam Poron lên PCB (bước tuỳ chọn `foam`), trừ 1 tấm */
   placeFoam: () => void
-  modStab: (kind: StabModKind) => boolean
+  modStab: (kind: StabModKind, unit?: number) => boolean
   /** tách switch bằng đồ mở: mỗi lần bậc thợ + phép mở con */
   openSwitch: () => boolean
   lubeBatch: (idx?: number) => number
   lubeSprings: () => boolean
-  /** đóng switch đã mở lại (lò xo + stem + housing trên), mỗi lần bậc thợ + phép mở con */
+  /** thả lò xo từ hộp lại vào housing dưới của switch đã mở (theo thứ tự lưới), mỗi lần bậc thợ + phép mở con */
+  springBack: () => boolean
+  /** đóng switch đã có lò xo lại (stem + housing trên), mỗi lần bậc thợ + phép mở con */
   closeSwitch: () => boolean
   finishOptional: () => void
   installRun: (kind: 'switch' | 'keycap', id: string) => number
@@ -148,6 +154,13 @@ export interface BuildSlice {
   liftCover: () => void
   placeCover: () => void
   screwCover: (i: number, result: SkillResult) => void
+  /**
+   * sai đầu vít khi tháo vít DTB / ốc tạ: trượt ren (`slips`), tới `STRIP_TRIES` lần thì tuôn ren (`stripped`) → true = đã tuôn,
+   * vít vẫn tháo ra được
+   */
+  slipBit: (id: string, what: string) => boolean
+  /** tháo vít M2 bắt sẵn trong lỗ ren case (trước khi đặt DTB) */
+  unscrewDtb: (i: number) => void
   placeDtb: () => void
   screwDtb: (i: number, result: SkillResult) => void
   plugDtb: () => void
@@ -206,8 +219,8 @@ export interface HistoryEntry {
 const HISTORY_MAX = 300
 
 interface LubeAnim {
-  /** open = đang tách switch trên đồ mở, close = đang đóng switch lại */
-  kind: 'switch' | 'spring' | 'open' | 'close'
+  /** open = đang tách switch trên đồ mở, close = đang đóng switch lại, springIn = đang thả lò xo từ hộp vào housing */
+  kind: 'switch' | 'spring' | 'open' | 'close' | 'springIn'
   lube: string
   /** số switch trong mẻ (kind = switch) */
   batch: number
@@ -384,19 +397,27 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const future = pushFuture(s, [e])
       restore(e)
       set({ history: s.history.slice(0, -1), future })
-      s.toast(`↶ Hoàn tác: ${STEP_INFO[e.step].title}`)
+      s.toast(`↶ Hoàn tác: ${stepTitle(e.step, s.order, s.ctx?.steps)}`)
     },
     backToStep: (stepIdx) => {
       const s = get()
-      if (s.stabAnim || s.lubeAnim) return
+      if (s.stabAnim || s.lubeAnim || !s.build || !s.ctx) return
       // lần đầu bước đó bắt đầu = trạng thái trước thao tác đầu tiên trong bước
       const j = s.history.findIndex((e) => e.build.stepIdx >= stepIdx)
-      if (j < 0) return
+      if (j < 0) {
+        // không còn lịch sử từ bước đó (bản lưu cũ / thùng đóng gói cũ): giữ nguyên đồ đã lắp, chỉ về bước đó;
+        // các bước sau đã xong sẵn, bấm "Bước tiếp theo" là đi tiếp
+        if (stepIdx >= s.build.stepIdx) return
+        commit(snapshot())
+        set({ build: { ...s.build, stepIdx }, viewFlip: false })
+        s.toast(`↶ Quay lại bước: ${stepTitle(s.ctx.steps[stepIdx], s.order, s.ctx.steps)}`)
+        return
+      }
       const e = s.history[j]
       const future = pushFuture(s, s.history.slice(j))
       restore(e)
       set({ history: s.history.slice(0, j), future })
-      s.toast(`↶ Quay lại bước: ${STEP_INFO[e.step].title}`)
+      s.toast(`↶ Quay lại bước: ${stepTitle(e.step, s.order, s.ctx?.steps)}`)
     },
     forwardToStep: (stepIdx) => {
       const s = get()
@@ -420,7 +441,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         history: [...s.history, ...s.future.slice(0, f)].slice(-HISTORY_MAX),
         future: f === s.future.length - 1 ? [] : s.future.slice(f),
       })
-      s.toast(`↷ Tới bước: ${STEP_INFO[s.ctx!.steps[get().build!.stepIdx]].title}`)
+      s.toast(`↷ Tới bước: ${stepTitle(s.ctx!.steps[get().build!.stepIdx], s.order, s.ctx!.steps)}`)
     },
 
     step: () => {
@@ -596,67 +617,82 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     },
     // Mod stab theo mẫu stab (áp dụng cho toàn bộ stab của layout). Kiểm tra + trừ vật tư ngay,
     // chạy hoạt cảnh trên bàn mod rồi mới ghi kết quả khi hoạt cảnh xong
-    modStab: (kind) => {
+    // mod stab làm từng con (`unit` = chỉ số trong `stabUnits`, bỏ trống = con đầu chưa làm); đủ mọi con mới bật cờ `stabMods[kind]`
+    modStab: (kind, unit) => {
       const s = at('stabMod')
       if (!s || !s.inventory.stab || s.stabAnim) return false
       const snap = snapshot()
-      const n = s.ctx.stabKeys.length
-      const mods = s.build.stabMods
+      const b = s.build
+      const n = stabUnits(s.ctx.stabKeys).length
+      const mods = b.stabMods
       if (mods[kind]) return false
+      const g = unit ?? nextUnit(b, kind, n)
+      if (g === null || g < 0 || g >= n || unitModded(b, kind, g)) return false
+      const done = (k: StabModKind) => unitModded(b, k, g)
       const rules = stabModRules(s.inventory.stab.type)
       const rule = rules.find((r) => r.kind === kind)!
       const needed = (k: StabModKind) => rules.find((r) => r.kind === k)!.needed
       const fail = (msg: string) => (s.toast(msg, 'bad'), false)
       if (!rule.allowed) return fail(rule.reason ?? 'Không làm được mod này')
 
-      let value: boolean | string = true
       let lube: string | undefined
       switch (kind) {
         case 'clip':
-          if (mods.assembled) return fail('Slider đã lắp vào housing, phải tháo ra mới clip được')
+          if (done('assembled'))
+            return fail('Slider đã lắp vào housing, phải tháo ra mới clip được')
           if (TOOLS.clipper[s.tools.clipper].none)
             return fail('Cần kìm cắt — mua ở Shopii → Dụng cụ')
           break
         case 'bandaid':
-          if (mods.assembled)
+          if (done('assembled'))
             return fail('Phải Holee mod (dán băng vào lỗ wire trên slider) trước khi lắp slider')
-          // 1 miếng Urgo cắt đôi dán được 2 stab
-          if (!s.useSupply('urgo', Math.ceil(n / 2))) return false
+          // 1 miếng Urgo cắt đôi dán được 2 stab: con thứ 1, 3, 5... mới bóc miếng mới
+          if (unitsModded(b, 'bandaid', n) % 2 === 0 && !s.useSupply('urgo', 1)) return false
           // chỉ cảnh báo khi dán thừa (stab khít không cần Holee); stab cần dán thì `reason` chỉ là câu giải thích, không báo
-          if (!rule.needed && rule.reason) s.toast(`⚠️ ${rule.reason}`, 'bad')
+          if (!rule.needed && rule.reason && !unitsModded(b, 'bandaid', n))
+            s.toast(`⚠️ ${rule.reason}`, 'bad')
           break
         case 'assembled':
-          if (needed('clip') && !mods.clip) return fail('Clip chân stem trước khi lắp slider')
-          if (needed('housing') && !mods.housing) return fail('Lube housing + slider trước khi lắp')
+          if (needed('clip') && !done('clip')) return fail('Clip chân stem trước khi lắp slider')
+          if (needed('housing') && !done('housing'))
+            return fail('Lube housing + slider trước khi lắp')
           break
         case 'wired':
-          if (!mods.assembled) return fail('Lắp slider vào housing trước rồi mới lắp wire')
-          if (!mods.wire) s.toast('⚠️ Wire chưa lube! Lắp vào rồi sẽ không lube được nữa', 'bad')
+          if (!done('assembled')) return fail('Lắp slider vào housing trước rồi mới lắp wire')
+          if (!done('wire')) s.toast('⚠️ Wire chưa lube! Lắp vào rồi sẽ không lube được nữa', 'bad')
           break
         case 'housing':
         case 'wire': {
-          if (kind === 'housing' && mods.assembled)
+          if (kind === 'housing' && done('assembled'))
             return fail('Đã lắp slider rồi, không lube housing được nữa')
-          if (kind === 'wire' && mods.wired)
+          if (kind === 'wire' && done('wired'))
             return fail('Wire đã lắp vào ngàm, không lube được nữa')
           if (TOOLS.brush[s.tools.brush].none) return fail('Cần cọ lube — mua ở Shopii → Dụng cụ')
-          lube = s.lubePick[kind]
+          // con đầu chọn mỡ, các con sau dùng cùng loại cho đồng bộ
+          lube = b.stabModLube?.[kind] ?? s.lubePick[kind]
           const [fit, note] = lubeUseFit(lube, kind)
           if (!fit) return fail(`Không dùng ${SUPPLIES[lube].name} cho phần này được`)
-          if (!s.useSupply(lube, n)) return false
-          if (fit < 0.7) s.toast(`⚠️ ${note}`, 'bad')
-          value = lube
+          if (!s.useSupply(lube, 1)) return false
+          if (fit < 0.7 && !unitsModded(b, kind, n)) s.toast(`⚠️ ${note}`, 'bad')
           s.wearTool('brush')
         }
       }
-      const dur = stabAnimDuration(kind, lube, stabUnits(s.ctx.stabKeys).length)
+      const dur = stabAnimDuration(kind, lube, 1)
       commit(snap)
-      set({ stabAnim: { kind, lube, at: performance.now(), dur } })
+      set({ stabAnim: { kind, lube, unit: g, at: performance.now(), dur } })
       setTimeout(() => {
         const cur = get()
         if (!cur.build) return set({ stabAnim: null })
         set({ stabAnim: null })
-        cur.patchBuild({ stabMods: { ...cur.build.stabMods, [kind]: value } })
+        const cb = cur.build
+        const list = [...new Set([...(cb.stabModUnits?.[kind] ?? []), g])]
+        const all = list.length >= n
+        cur.patchBuild({
+          stabModUnits: { ...cb.stabModUnits, [kind]: list },
+          ...(lube ? { stabModLube: { ...cb.stabModLube, [kind]: lube } } : {}),
+          // đủ mọi con: bật cờ cả loại (chấm điểm / tiến độ bước đọc cờ này)
+          ...(all ? { stabMods: { ...cb.stabMods, [kind]: lube ?? true } } : {}),
+        })
       }, dur * 1000)
       return true
     },
@@ -669,7 +705,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const opened = s.build.opened ?? s.build.lubed
       const left = s.ctx.keys.length - opened
       if (left <= 0) return false
-      if (s.build.swClosed)
+      if (s.build.swClosed || s.build.springsIn)
         return (s.toast('Đang đóng switch lại rồi, không mở thêm', 'bad'), false)
       commit(snapshot())
       const certN = TOOLS.cert[s.tools.cert ?? 0].n!
@@ -702,7 +738,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!fit) return (s.toast(`Không dùng ${type} cho switch được`, 'bad'), 0)
       if (s.build.lubeType && s.build.lubeType !== type)
         return (s.toast('Đã lube loại khác rồi, không trộn 2 loại mỡ', 'bad'), 0)
-      if (s.build.swClosed)
+      if (s.build.swClosed || s.build.springsIn)
         return (s.toast('Đã đóng switch lại rồi, không lube thêm được', 'bad'), 0)
       // chỉ lube được switch đã tách vỏ
       const left = (s.build.opened ?? s.build.lubed) - s.build.lubed
@@ -746,7 +782,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     lubeSprings: () => {
       const s = at('switchLube')
       if (!s || s.build.springLube || s.lubeAnim) return false
-      if (s.build.swClosed)
+      if (s.build.swClosed || s.build.springsIn)
         return (s.toast('Lò xo đã lắp lại vào switch rồi, không lube được nữa', 'bad'), false)
       // lò xo lấy ra từ switch đã mở: mở hết mới đủ cả bộ trong hộp
       if ((s.build.opened ?? s.build.lubed) < s.ctx.keys.length)
@@ -770,22 +806,48 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       }, dur * 1000)
       return true
     },
-    // Đóng switch đã lube: lắp lò xo + stem vào housing dưới rồi úp housing trên, theo thứ tự lưới; mỗi lần = bậc thợ + phép mở
-    closeSwitch: () => {
+    // Thả lò xo lại vào housing dưới: lấy từ hộp, theo thứ tự lưới; mỗi lần = bậc thợ + phép mở
+    springBack: () => {
       const s = at('switchLube')
       if (!s || s.lubeAnim) return false
       const opened = s.build.opened ?? s.build.lubed
       const closed = s.build.swClosed ?? 0
-      const left = opened - closed
+      const inNow = Math.max(s.build.springsIn ?? 0, closed)
+      const left = opened - inNow
       if (left <= 0) return false
+      // lần đầu: nhắc những gì sẽ không làm được nữa
+      if (!inNow) {
+        const dry = opened - s.build.lubed
+        if (dry > 0) s.toast(`⚠️ Còn ${dry} switch chưa lube, lắp lò xo vào là để khô luôn`, 'bad')
+        if (!s.build.springLube) s.toast('⚠️ Lò xo chưa lube, lắp vào là lò xo khô', 'bad')
+      }
+      commit(snapshot())
+      const certN = TOOLS.cert[s.tools.cert ?? 0].n!
+      const spell = left > certN ? spellBonus(s.supplies, SPELL_OPEN) : 0
+      if (spell) s.useSupply(SPELL_OPEN, 1)
+      const n = Math.min(left, spellRun(certN, spell))
+      const dur = 0.8
+      set({ lubeAnim: { kind: 'springIn', lube: '', batch: n, at: performance.now(), dur } })
+      setTimeout(() => {
+        const cur = get()
+        set({ lubeAnim: null })
+        if (cur.build)
+          cur.patchBuild({
+            springsIn: Math.max(cur.build.springsIn ?? 0, cur.build.swClosed ?? 0) + n,
+          })
+      }, dur * 1000)
+      return true
+    },
+    // Đóng switch đã có lò xo: lắp stem vào housing dưới rồi úp housing trên, theo thứ tự lưới; mỗi lần = bậc thợ + phép mở
+    closeSwitch: () => {
+      const s = at('switchLube')
+      if (!s || s.lubeAnim) return false
+      const closed = s.build.swClosed ?? 0
+      const inNow = Math.max(s.build.springsIn ?? 0, closed)
+      const left = inNow - closed
+      if (left <= 0) return (s.toast('Thả lò xo vào switch trước rồi mới đóng lại', 'bad'), false)
       if (TOOLS.opener[s.tools.opener].none)
         return (s.toast('Cần đồ mở switch — mua ở Shopii → Dụng cụ', 'bad'), false)
-      // lần đóng đầu: nhắc những gì sẽ không làm được nữa
-      if (!closed) {
-        const dry = opened - s.build.lubed
-        if (dry > 0) s.toast(`⚠️ Còn ${dry} switch chưa lube, đóng lại là để khô luôn`, 'bad')
-        if (!s.build.springLube) s.toast('⚠️ Lò xo chưa lube, đóng lại là lắp lò xo khô', 'bad')
-      }
       commit(snapshot())
       const certN = TOOLS.cert[s.tools.cert ?? 0].n!
       const spell = left > certN ? spellBonus(s.supplies, SPELL_OPEN) : 0
@@ -1053,12 +1115,13 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       commit(snapshot())
       const tight = { ...c.tight, [i]: true as const }
       const patch: Partial<BuildState> = { cover: { ...c, tight } }
-      if (result === 'high') {
+      const badBit = s.screwBit !== stepBit('coverOn')
+      if (result === 'high' || badBit) {
         const n = (s.build.slips?.[id] ?? 0) + 1
         if (n < STRIP_TRIES) {
           s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
           return s.toast(
-            `⚠️ Trượt ren ốc tạ (quá tay) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
+            `⚠️ Trượt ren ốc tạ (${badBit ? 'sai đầu vít' : 'quá tay'}) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
             'bad',
           )
         }
@@ -1073,9 +1136,42 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         ...(done ? { testIdleFrom: performance.now() } : {}),
       })
     },
+    slipBit: (id, what) => {
+      const s = get()
+      if (!s.build) return false
+      const n = (s.build.slips?.[id] ?? 0) + 1
+      if (n < STRIP_TRIES) {
+        s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
+        s.toast(
+          `⚠️ Trượt ren ${what} (sai đầu vít) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
+          'bad',
+        )
+        return false
+      }
+      s.patchBuild({
+        slips: { ...s.build.slips, [id]: n },
+        stripped: { ...s.build.stripped, [id]: true },
+      })
+      s.toast(`🔩 Tuôn ren ${what} (sai đầu vít)`, 'bad')
+      return true
+    },
+    unscrewDtb: (i) => {
+      const s = at('dtb')
+      const d = s?.build.dtb ?? {}
+      if (!s || d.placed || d.out?.[i] || i < 0 || i >= DTB_MM.holes.length) return
+      commit(snapshot())
+      // sai đầu vít: trượt ren, chưa ra; tới STRIP_TRIES lần thì tuôn ren (vít vẫn ra được nhưng ghi hỏng)
+      if (s.screwBit !== stepBit('dtb') && !get().slipBit(`dtb-${i}`, 'vít DTB')) return
+      get().patchBuild({ dtb: { ...d, out: { ...d.out, [i]: true } } })
+    },
     placeDtb: () => {
       const s = at('dtb')
       if (!s || s.build.dtb?.placed) return
+      if (Object.keys(s.build.dtb?.out ?? {}).length < DTB_MM.holes.length)
+        return s.toast(
+          'Tháo 2 vít M2 đang bắt sẵn trong lỗ ren case ra trước rồi mới đặt DTB',
+          'bad',
+        )
       commit(snapshot())
       s.patchBuild({ dtb: { ...s.build.dtb, placed: true } })
     },
@@ -1088,12 +1184,13 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         return s.toast('Chưa đủ lực, vít DTB mới vào 1 phần: giữ chuột lâu hơn', 'bad')
       commit(snapshot())
       const done = { dtb: { ...d, screws: { ...d.screws, [i]: true as const } } }
-      if (result === 'high') {
+      const badBit = s.screwBit !== stepBit('dtb')
+      if (result === 'high' || badBit) {
         const n = (s.build.slips?.[id] ?? 0) + 1
         if (n < STRIP_TRIES) {
           s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
           return s.toast(
-            `⚠️ Trượt ren vít DTB (quá tay) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
+            `⚠️ Trượt ren vít DTB (${badBit ? 'sai đầu vít' : 'quá tay'}) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
             'bad',
           )
         }
@@ -1222,7 +1319,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
               posts: s.posts,
               mount: s.mount,
               build: s.build,
-              history: [],
+              // giữ lịch sử (rút gọn như lúc lưu): mở thùng ra build lại vẫn lùi bước được
+              history: compactHistory(s.history),
               supplyUsed: {},
             },
           },

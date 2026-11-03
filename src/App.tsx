@@ -3,11 +3,12 @@ import { useGame } from '@/store'
 import { useKeyboardTest } from '@/hooks/useKeyboardTest'
 import { useAppShortcuts } from '@/hooks/useAppShortcuts'
 import { Toasts } from '@/components/game/Toasts'
+import { PerfHud } from '@/components/game/PerfHud'
 import { GlobalTooltip } from '@/components/ui/GlobalTooltip'
 import { ReviewPops } from '@/features/apps/reviews/ReviewPops'
 import { GameOverDialog } from '@/features/gameover/GameOverDialog'
-import { GuideNpc } from '@/features/guide/GuideNpc'
-import { BenchDialog } from '@/features/guide/BenchDialog'
+import { BenchTour } from '@/features/guide/BenchTour'
+import { PayTour } from '@/features/guide/PayTour'
 import { TitleScreen } from '@/features/title/TitleScreen'
 import { Desktop } from '@/features/desktop/Desktop'
 import { BenchHud } from '@/features/bench/BenchHud'
@@ -23,6 +24,7 @@ import { onBench } from '@/store/carrySlice'
 import { useSceneLoading } from '@/scene/common/loadingStore'
 import { applyAudioSettings, startBgm, stopBgm } from '@/sound'
 import { TOUR_ID, Tour } from '@/features/guide/Tour'
+import { GameSettings } from '@/features/settings/GameSettings'
 
 export default function App() {
   const screen = useGame((s) => s.screen)
@@ -34,7 +36,6 @@ export default function App() {
   const walk = useGame((s) => s.walk)
   // bấm lịch treo tường (đi lại hay ngồi bàn build đều mở được)
   const calendar = useRoom((r) => r.calendar)
-  const guide = useGame((s) => !s.guideHidden)
   // tour hướng dẫn lần đầu ngồi máy tính (xong / bỏ qua thì ghi guideSeen)
   const tourSeen = useGame((s) => s.guideSeen.includes(TOUR_ID))
   const audio = useGame((s) => s.audio)
@@ -67,7 +68,9 @@ export default function App() {
         <>
           <Desktop />
           <BenchLoader />
-          {guide && !tourSeen && !loading && !zooming && <Tour />}
+          {!tourSeen && !loading && !zooming && <Tour />}
+          {/* đơn hướng dẫn đã gửi: chỉ chỗ thu tiền */}
+          {tourSeen && !loading && !zooming && <PayTour />}
         </>
       )}
       {screen === 'bench' && (
@@ -75,7 +78,8 @@ export default function App() {
           {/* HUD đi lại (số thùng ở hành lang, trạng thái) chỉ hiện khi đã tải xong: lúc còn tải màn chờ chỉ phủ mờ */}
           {!zooming &&
             (walk ? !loading && <RoomHud /> : hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
-          {!zooming && !walk && guide && !loading && <BenchDialog />}
+          {/* Keeb-chan chỉ nằm trong tour: tour bàn build (đơn hướng dẫn) / lời dẫn lần đầu gặp bước */}
+          {!zooming && !walk && !loading && <BenchTour />}
           <ShelfViewer />
           {calendar && <CalendarDialog />}
           <BenchLoader />
@@ -83,13 +87,15 @@ export default function App() {
       )}
       <Toasts />
       <GlobalTooltip />
+      <PerfHud />
       {!loading && (
         <>
           <ReviewPops />
           <PayBanner />
-          {!zooming && guide && <GuideNpc />}
         </>
       )}
+      {/* menu Cài đặt ngoài game (Esc) */}
+      {screen !== 'title' && <GameSettings />}
       <GameOverDialog />
     </>
   )

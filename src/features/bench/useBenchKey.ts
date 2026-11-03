@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { useGame } from '@/store'
+import { menuOpen } from '@/lib/settingsMenu'
 
 /**
  * Phím tắt bàn build (Space về góc nhìn mặc định, M danh sách đơn): bỏ qua khi đang gõ ô nhập
- * hoặc ở bước test (mọi phím là phím đang test)
+ * hoặc ở bước test (mọi phím là phím đang test) hoặc menu Cài đặt đang mở
  */
 export function useBenchKey(code: string, run: () => void) {
   useEffect(() => {
@@ -20,7 +21,8 @@ export function useBenchKey(code: string, run: () => void) {
         !e.altKey &&
         !e.repeat &&
         !typing &&
-        !testing
+        !testing &&
+        !menuOpen()
       ) {
         // Space: không để trình duyệt bấm nút đang focus / cuộn trang
         e.preventDefault()

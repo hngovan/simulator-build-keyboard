@@ -1,6 +1,7 @@
 import type {
   BuildContext,
   BuildState,
+  CaseDef,
   DtbSpot,
   FootPocket,
   Inventory,
@@ -33,7 +34,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   stab: { title: 'Lắp stab', hint: 'Click vào vị trí các phím dài (≥ 2u) để lắp stab' },
   switchLube: {
     title: 'Lube switch (tuỳ chọn)',
-    hint: 'Click switch trên đồ mở để tách housing, stem và lò xo, click switch đã mở để lube 1 mẻ, lube lò xo, rồi click lưới switch để đóng lại',
+    hint: 'Click switch trên đồ mở để tách housing, stem và lò xo, click switch đã mở để lube 1 mẻ, lube lò xo, rồi click lưới switch: thả lò xo vào từng mẻ rồi đóng lại',
   },
   stabScrew: {
     title: 'Vặn vít stab',
@@ -78,11 +79,11 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
   },
   dtb: {
     title: 'Lắp daughterboard',
-    hint: 'Click hốc vách sau case để đặt daughterboard (cổng USB-C quay ra lỗ), nhấn giữ 2 lỗ vít M2 canh lực siết, rồi click đầu dây để cắm vào cổng JST có sẵn trên DTB',
+    hint: 'Click 2 vít M2 bắt sẵn trong lỗ ren sàn case để tháo ra, click hốc vách sau đặt daughterboard (cổng USB-C quay ra lỗ), nhấn giữ 2 lỗ vít canh lực siết lại, rồi click đầu dây cắm vào cổng JST trên DTB',
   },
   coverOn: {
     title: 'Lắp lại tạ',
-    hint: 'Dây JST đã cắm vào PCB: click tấm tạ đặt lại vào case (dây nằm trong rãnh dưới tạ), rồi nhấn giữ từng lỗ ốc canh lực siết lại',
+    hint: 'Dây JST đã cắm vào PCB: click tấm tạ nằm trước case để lắp vào (dây nằm trong rãnh dưới tạ), rồi nhấn giữ từng lỗ ốc canh lực siết lại',
   },
   jst: {
     title: 'Cắm dây JST vào PCB',
@@ -131,6 +132,18 @@ export const SCREW_BITS: Record<ScrewStep, ScrewBit> = {
   trayScrew: 'torx',
   caseScrew: 'hex',
 }
+/**
+ * Đầu vít cần ở bước có vặn vít (gồm bước không thuộc `SCREW_STEPS`: vít M2 đầu trụ DTB + ốc nón tạ che DTB đều lục giác chìm);
+ * undefined = bước không vặn vít. HUD hiện bảng chọn đầu vít, tua vít bày trên bàn theo đây
+ */
+const EXTRA_BITS: Partial<Record<StepId, ScrewBit>> = {
+  dtb: 'hex',
+  coverOff: 'hex',
+  coverOn: 'hex',
+}
+export const stepBit = (step: StepId | null | undefined): ScrewBit | undefined =>
+  step ? (SCREW_BITS[step as ScrewStep] ?? EXTRA_BITS[step]) : undefined
+
 /** bước vặn vít ăn vào vỏ case (case nhựa giòn thì tuôn ren có thể nứt luôn case) */
 export const CASE_SCREW_STEPS: ScrewStep[] = ['caseOpen', 'topScrew', 'trayScrew', 'caseScrew']
 /** chất liệu case giòn: PC, mica, acrylic */
@@ -177,27 +190,69 @@ export const isBuildStep = (step: StepId) => step !== 'pack'
  */
 export const isOptionalStep = (
   step: StepId,
-  order?: { foam?: true; dev?: true } | null,
+  order?: { foam?: true; dev?: true; tutorial?: true } | null,
   steps?: StepId[],
 ) =>
   step === 'plate' && (steps?.includes('topCase') || steps?.includes('gasket'))
     ? false
-    : // tháo / lắp tạ che DTB: không bỏ qua được kể cả đơn dev (tạ còn đè thì không lắp được DTB)
-      step === 'coverOff' || step === 'coverOn'
+    : // đơn hướng dẫn: test phím bắt buộc (dạy test hết phím trước khi giao, không cho bỏ qua)
+      step === 'test' && order?.tutorial
       ? false
-      : !!order?.dev || (OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam))
-/** Tên bước theo đơn: foam khách yêu cầu thì ghi rõ thay cho "(tuỳ chọn)" */
-export const stepTitle = (step: StepId, order?: { foam?: true } | null) =>
-  step === 'foam' && order?.foam ? 'Lót foam PCB (khách yêu cầu)' : STEP_INFO[step].title
+      : // tháo / lắp tạ che DTB: không bỏ qua được kể cả đơn dev (tạ còn đè thì không lắp được DTB)
+        step === 'coverOff' || step === 'coverOn'
+        ? false
+        : !!order?.dev || (OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam))
+/** lắp lại tạ trước khi cắm dây JST vào PCB (case `jstUp`: dây luồn lên qua tạ) */
+export const coverBeforeJst = (steps: StepId[]) => {
+  const on = steps.indexOf('coverOn')
+  return on >= 0 && on < steps.indexOf('jst')
+}
+
+/**
+ * Tên bước theo đơn: foam khách yêu cầu thì ghi rõ thay cho "(tuỳ chọn)"; top mount (`steps` có `topCase`) thì `caseIn` là ghép
+ * case trên (đã bắt vào plate) với case dưới
+ */
+export const stepTitle = (step: StepId, order?: { foam?: true } | null, steps?: StepId[]) =>
+  step === 'foam' && order?.foam
+    ? 'Lót foam PCB (khách yêu cầu)'
+    : step === 'caseIn' && steps?.includes('topCase')
+      ? 'Ghép case trên vào case dưới'
+      : STEP_INFO[step].title
+
+/** Hướng dẫn bước theo danh sách bước (top mount, tạ lắp trước khi cắm JST) */
+export const stepHint = (step: StepId, steps: StepId[]) =>
+  step === 'caseIn' && steps.includes('topCase')
+    ? 'Case trên đã bắt vào plate: click case dưới để hạ cả cụm xuống, ghép 2 mảnh case lại'
+    : step === 'coverOn' && coverBeforeJst(steps)
+      ? 'DTB đã cắm dây: click tấm tạ nằm trước case để lắp vào (đầu dây JST luồn lên qua tạ), rồi nhấn giữ từng lỗ ốc canh lực siết lại'
+      : step === 'jst' && coverBeforeJst(steps)
+        ? 'Board dựng lên cho thấy mặt dưới: click đầu dây JST lòi lên qua tạ để cầm lên, rồi click jack JST trên PCB để cắm. Xong bấm sang bước kế để hạ board'
+        : STEP_INFO[step].hint
 export const CASE_WALL = 0.45
-export const CASE_MARGIN = 0.15
+/**
+ * khe từ mép board (PCB / plate) tới mặt trong vách case dựng bằng code (u): 0,03 ≈ 0,6mm như case thật loại khít.
+ * Trước 0,15 (~2,9mm) rồi 0,06 (~1,1mm) + keycap lùi 0,5mm → nhìn từ trên vẫn thấy hở quanh bàn phím
+ */
+export const CASE_MARGIN = 0.03
 /** khe từ mép board tới mép trong gờ đỡ trong lòng case (gờ không chạm PCB / plate) */
-export const LEDGE_GAP = 0.03
+// khe board – vách chỉ 0,03 → chừa 0,01 cho gờ còn lộ ra đỡ vòng O-ring / OG
+export const LEDGE_GAP = 0.01
 /**
  * Dải gasket Poron 20 × 4mm dày 2mm (u): dán 1 miếng mặt trên + 1 miếng mặt dưới tai / mép plate, `w` dọc mép, `d` vuông góc mép
  * (case dựng bằng code: từ trong mép plate ra sát mặt vách case)
  */
 export const GASKET = { w: 20 / 19.05, d: 4 / 19.05, t: 2 / 19.05 }
+/**
+ * Tab gasket (case 2 mảnh dựng bằng code): plate có tai nhô ra mỗi điểm gasket, dài `tab` (≈ bề ngang dải 4mm + khe: tai dài hơn dải
+ * thì phần tai trần lộ ở khe board – vách, nhìn từ trên thấy hở), chui qua khe board – vách vào hốc phay trong vách case trên sâu `d`
+ * (= tai − khe `CASE_MARGIN`), rộng hơn dải `gap` mỗi bên; dải gasket chỉ trên phần tai trong hốc (`gaskets[].d`, không lộ ở khe),
+ * case dưới có vấu đỡ dải dưới
+ */
+const GASKET_TAB = GASKET.d + 0.04
+export const GASKET_NOTCH = { tab: GASKET_TAB, d: GASKET_TAB - CASE_MARGIN, gap: 0.03 }
+export const gasketTabbed = (c: Pick<CaseDef, 'model' | 'material' | 'pieces'>) =>
+  !c.model && c.material !== 'mica' && c.pieces === 2
+
 /** số dải 20mm cho 1 điểm gasket: mỗi mặt (trên + dưới) nối đủ dải phủ hết chiều dài tai */
 export const gasketStrips = (g: { w?: number }) =>
   2 * Math.ceil((g.w ?? GASKET.w) / GASKET.w - 0.05)
@@ -229,11 +284,12 @@ export const Y = {
  * (nằm trên gờ trong lòng case); OG ôm ngoài mép cả PCB + plate. `bottom` = mặt dưới vòng (gờ đỡ đặt tới đây)
  */
 export function ringFrame(between: boolean) {
-  const t = between ? CASE_MARGIN + 0.04 : 0.12
+  // OG: dải ôm mép nằm gọn trong khe board – vách (chạm vách, không lún vào)
+  const t = between ? CASE_MARGIN + 0.04 : CASE_MARGIN - 0.005
   const h = between ? Y.plateBot - Y.pcbTop - 0.01 : 0.3
   const y = between ? (Y.pcbTop + Y.plateBot) / 2 : -0.17
-  // tâm dây cách mép board
-  const off = between ? CASE_MARGIN - t / 2 : 0.1
+  // tâm dây cách mép board (mặt ngoài dây sát mặt vách)
+  const off = CASE_MARGIN - t / 2
   return { t, h, y, off, bottom: y - h / 2 }
 }
 
@@ -323,13 +379,19 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     caseDef.pieces === 2 ? caseScrews : [],
   )
   const dtb = spot && { ...spot, jack: jackSpot(spot, keys) }
-  // tạ che chỗ DTB: tháo tạ → lắp DTB → lắp lại tạ
-  // tạ che chỗ DTB: tháo tạ → lắp DTB → cắm dây vào PCB → lắp lại tạ (dây nằm trong rãnh dưới tạ) → thả board vào case
-  if (dtb?.cover) steps.push('coverOff')
-  if (dtb) steps.push('dtb')
-  if (topMount) steps.push('topCase', 'topScrew')
-  if (dtb) steps.push('jst')
-  if (dtb?.cover) steps.push('coverOn')
+  if (dtb?.cover && caseDef.jstUp) {
+    // dây JST luồn lên qua tạ (Duality): case trên bắt vào plate trước → tháo tạ → lắp DTB → lắp lại tạ → cắm dây vào PCB
+    // → ghép case trên với case dưới
+    if (topMount) steps.push('topCase', 'topScrew')
+    steps.push('coverOff', 'dtb', 'coverOn', 'jst')
+  } else {
+    // tạ che chỗ DTB: tháo tạ → lắp DTB → cắm dây vào PCB → lắp lại tạ (dây nằm trong rãnh dưới tạ) → thả board vào case
+    if (dtb?.cover) steps.push('coverOff')
+    if (dtb) steps.push('dtb')
+    if (topMount) steps.push('topCase', 'topScrew')
+    if (dtb) steps.push('jst')
+    if (dtb?.cover) steps.push('coverOn')
+  }
   steps.push('caseIn')
   if (mount === 'tray') steps.push('trayScrew')
   if (caseDef.pieces === 2) steps.push(...(topMount ? [] : (['caseClose'] as const)), 'caseScrew')
@@ -391,8 +453,14 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     stabScrew: name('stab', stabScrews),
   }
 
-  // gasket từ trong mép plate ra sát mặt vách case (không lấn vào vách)
-  const gz = depth / 2 + CASE_MARGIN - GASKET.d / 2
+  // tab gasket (case code 2 mảnh): dải chỉ nằm trên phần tai chui vào hốc vách (từ mặt vách tới đầu tai, = bề ngang dải 4mm); đoạn tai
+  // ở khe board – vách để trần cùng màu plate (dải đen lộ ở khe thì nhìn từ trên như mép trước / sau hở, mép trái / phải không có gasket);
+  // còn lại từ trong mép plate ra sát mặt vách case
+  const tabbed = gasketTabbed(caseDef)
+  const gd = tabbed ? GASKET_NOTCH.tab - CASE_MARGIN - 0.02 : undefined
+  const gz = tabbed
+    ? depth / 2 + CASE_MARGIN + 0.005 + gd! / 2
+    : depth / 2 + CASE_MARGIN - GASKET.d / 2
   // plate CAD có tai gasket (Blossom): gasket nằm đúng trên tai
   const gaskets = caseDef.gaskets
     ? caseDef.gaskets.map(([x, z, len, angle]) => ({
@@ -403,8 +471,8 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
         rot: -angle,
       }))
     : [-0.375, -0.125, 0.125, 0.375].flatMap((f) => [
-        { x: f * width, z: -gz },
-        { x: f * width, z: gz },
+        { x: f * width, z: -gz, d: gd },
+        { x: f * width, z: gz, d: gd },
       ])
 
   const feet = feetPockets(caseModelOf(caseDef, order.layout, order.variant), width, depth, origin)
@@ -997,9 +1065,13 @@ export function stepProgress(
     case 'feet':
       return [count(b.feet ?? {}), ctx.feet.length]
     case 'dtb':
+      // tháo 2 vít bắt sẵn trong lỗ ren case → đặt DTB → siết lại 2 vít → cắm dây
       return [
-        (b.dtb?.placed ? 1 : 0) + count(b.dtb?.screws ?? {}) + (b.dtb?.plugged ? 1 : 0),
-        2 + DTB_MM.holes.length,
+        (b.dtb?.placed ? DTB_MM.holes.length : count(b.dtb?.out ?? {})) +
+          (b.dtb?.placed ? 1 : 0) +
+          count(b.dtb?.screws ?? {}) +
+          (b.dtb?.plugged ? 1 : 0),
+        2 + 2 * DTB_MM.holes.length,
       ]
     case 'coverOff':
       return [count(b.cover?.out ?? {}) + (b.cover?.off ? 1 : 0), coverScrews(ctx) + 1]

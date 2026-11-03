@@ -101,7 +101,8 @@ export function InboxChat({ post, onClose }: { post: GroupPost; onClose: () => v
     body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' })
   }, [deal.log.length])
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !offering && onClose()
+    const onKey = (e: KeyboardEvent) =>
+      e.key === 'Escape' && !offering && (e.preventDefault(), onClose())
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose, offering])

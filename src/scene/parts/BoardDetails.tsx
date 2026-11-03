@@ -37,6 +37,7 @@ function Gasket({
   x,
   z,
   w,
+  d,
   rot,
   placed,
   active,
@@ -46,6 +47,8 @@ function Gasket({
   z: number
   /** dài dọc mép / tai (u) */
   w: number
+  /** bề ngang dải (u) */
+  d: number
   rot: number
   placed: boolean
   active: boolean
@@ -67,7 +70,7 @@ function Gasket({
     >
       {[GASKET.t / 2, Y.plateBot - GASKET.t / 2].map((y) => (
         <mesh key={y} position-y={y} castShadow>
-          <boxGeometry args={[w, GASKET.t, GASKET.d]} />
+          <boxGeometry args={[w, GASKET.t, d]} />
           {placed ? (
             <meshStandardMaterial color={SUPPLIES[GASKET_ID].color} roughness={0.95} />
           ) : (
@@ -98,6 +101,7 @@ export function Gaskets() {
           x={g.x}
           z={g.z}
           w={g.w ?? GASKET.w}
+          d={g.d ?? GASKET.d}
           rot={g.rot ?? 0}
           placed={!!placed[i]}
           active={step === 'gasket'}

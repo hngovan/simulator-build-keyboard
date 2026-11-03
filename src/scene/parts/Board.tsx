@@ -7,6 +7,8 @@ import { PLATES } from '@/data/parts'
 import {
   CASE_MARGIN,
   CASE_WALL,
+  GASKET,
+  GASKET_NOTCH,
   TOP_HOLE,
   TOP_NOTCH,
   TOP_TAB,
@@ -14,6 +16,8 @@ import {
   Y,
   caseScrewHoles,
   keyCutouts,
+  coverBeforeJst,
+  gasketTabbed,
 } from '@/data/steps'
 import type { Key, Point, StepId } from '@/types'
 import { playClick } from '@/sound'
@@ -65,6 +69,8 @@ function plateGeometry(
   trayHoles: Point[] = [],
   /** top mount: tai plate lòi ra khe board – vách ở chỗ vít, nằm dưới vấu case trên */
   tabs: Point[] = [],
+  /** tab gasket: tai rộng bằng dải gasket, thò vào hốc vách case (không lỗ vít) */
+  gasketTabs: Point[] = [],
 ) {
   // viền plate theo layout (Alice: 2 nửa xoay), nhỏ hơn PCB 0.01u mỗi cạnh
   const { shapes, shapeOf } = sandwich
@@ -128,7 +134,20 @@ function plateGeometry(
     tab.holes.push(hole)
     return tab
   })
-  return new THREE.ExtrudeGeometry([...shapes, ...tabShapes], {
+  // tai tab gasket: từ sát mép plate ra tới gần đáy hốc vách case (chừa khe 0.01u), rộng bằng dải gasket
+  const gasketShapes = gasketTabs.map(({ x, z }) => {
+    const s = Math.sign(z)
+    const z0 = s * (depth / 2 - 0.01)
+    const z1 = s * (depth / 2 - 0.01 + GASKET_NOTCH.tab)
+    const hw = GASKET.w / 2
+    return new THREE.Shape([
+      new THREE.Vector2(x - hw, -z0),
+      new THREE.Vector2(x + hw, -z0),
+      new THREE.Vector2(x + hw, -z1),
+      new THREE.Vector2(x - hw, -z1),
+    ])
+  })
+  return new THREE.ExtrudeGeometry([...shapes, ...tabShapes, ...gasketShapes], {
     depth: -Y.plateBot,
     bevelEnabled: false,
   }).rotateX(-Math.PI / 2)
@@ -259,7 +278,11 @@ export function Board() {
   // chờ cắm dây JST vào PCB: dựng board gần thẳng đứng cho thấy cổng JST mặt dưới
   // cắm xong vẫn dựng nguyên, người chơi bấm sang bước kế mới hạ xuống
   // lắp lại tạ (sau khi cắm dây): vẫn dựng, nhấc thẳng lên thì che mất lòng case
-  const stand = step === 'jst' || step === 'coverOn' ? jstStand(ctx.depth) : null
+  // case dây luồn lên qua tạ: tạ lắp trước khi cắm dây, lúc đó board để riêng (không dựng)
+  const stand =
+    step === 'jst' || (step === 'coverOn' && !coverBeforeJst(ctx.steps))
+      ? jstStand(ctx.depth)
+      : null
   useFrame((_, dt) => {
     boardGroup.current = ref.current
     lerpTo(ref, 'y', stand?.y ?? (lifted ? 2.6 : (seat?.rise ?? 0)), dt, 6)
@@ -320,6 +343,7 @@ export function Board() {
             : undefined,
         trayHoles,
         ctx.mount === 'top' ? ctx.screws.topScrew : NO_HOLES,
+        ctx.mount === 'gasket' && gasketTabbed(ctx.caseDef) ? ctx.gaskets : NO_HOLES,
       ),
     [ctx, standard60CAD, sandwich, topFull, trayHoles],
   )

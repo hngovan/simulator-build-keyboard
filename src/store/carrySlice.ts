@@ -22,7 +22,7 @@ export interface CarrySlice {
   pickBench: () => void
   /** cất thùng đơn đang cầm lại kệ cuối hành lang (ô trống đầu tiên, hết kệ thì xếp sàn) */
   placeDoor: () => void
-  /** đặt thùng đơn đang cầm lên bàn build: chuyển sang đơn đó (bấm B mới vào build); trả về false nếu không đặt được */
+  /** đặt thùng đơn đang cầm lên bàn build: chuyển sang đơn đó (bấm thùng mới vào build); trả về false nếu không đặt được */
   placeBench: () => boolean
   /** đặt thùng đã đóng gói vào kệ giao hàng (trong phòng) = gửi cho khách */
   placeShip: (slot: number) => void

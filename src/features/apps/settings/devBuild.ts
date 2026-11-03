@@ -88,7 +88,7 @@ export function startDevBuild(o: DevBuildOpts) {
     lines: ['Đơn build thử khi dev'],
   }
   topUp()
-  const session = freshSession(order, s.day)
+  const session = freshSession(order, s.day, 5)
   const inventory = {
     ...session.inventory,
     switch: { type: switchType, count: keys.length },

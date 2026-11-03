@@ -59,6 +59,8 @@ export function HudPanel({
   const [open, toggle] = useOpen(id)
   return (
     <div
+      // tour hướng dẫn bàn build chỉ đúng khung
+      data-tour={`hud-${id}`}
       className={cn(
         'flex min-h-0 flex-col overflow-hidden rounded-2xl border-[3px] border-black/40 bg-panel/95 shadow-[0_8px_24px_#0006]',
         className,

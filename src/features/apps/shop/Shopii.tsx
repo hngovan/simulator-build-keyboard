@@ -16,6 +16,7 @@ import { SHOP_CATS, buildCatalog } from '@/data/parts'
 import { SALE_EVERY, isSaleDay, nextSaleDay, saleMap, withSale } from '@/data/sale'
 import { SHIP_SPEEDS } from '@/data/shipping'
 import { cartLine, optName } from '@/data/cart'
+import { lockProduct } from '@/data/unlocks'
 import type { ShopCategory, ToolItem } from '@/types'
 import { ListFilterPicker } from './OptionFilter'
 import { CartList } from './CartList'
@@ -136,6 +137,7 @@ export function Shopii() {
   const undoPurchase = useGame((s) => s.undoSolderPurchase)
   const tools = useGame((s) => s.tools)
   const solderOwned = useGame((s) => s.solderOwned)
+  const shopLv = useGame((s) => s.shopLv)
   const { buyTool, addCart } = useGame.getState()
   const cart = useGame((s) => s.cart)
   // số món đã thêm (cộng số lượng từng dòng) cho badge giỏ hàng
@@ -190,8 +192,11 @@ export function Shopii() {
                 (p.tool.kind === 'solder' && solderOwned[p.tool.level] !== undefined))
             ),
         )
-        .map((p) => withSale(p, saleUsed.has(p.id) ? 0 : (sales.get(p.id) ?? 0))),
-    [catalog, tools, solderOwned, sales, saleUsed],
+        .map((p) => lockProduct(p, shopLv))
+        .map((p) => withSale(p, saleUsed.has(p.id) || p.locked ? 0 : (sales.get(p.id) ?? 0)))
+        // món chưa mở khoá xếp cuối, cấp thấp trước
+        .sort((a, b) => (a.locked ?? 0) - (b.locked ?? 0)),
+    [catalog, tools, solderOwned, sales, saleUsed, shopLv],
   )
   // mục có món đang sale: gắn ruy băng SALE
   const saleCats = new Set(stock.filter((p) => p.sale).map((p) => p.cat))
@@ -199,14 +204,20 @@ export function Shopii() {
   const searching = q.length > 0 && !shipView
   // mục đang chọn → tìm theo tên / mô tả trong mục → bộ lọc trong mục (bộ lọc dựng theo cả mục, số món theo kết quả tìm)
   const all = stock.filter((p) => p.cat === cat)
-  const found = searching ? all.filter((p) => fold(`${p.name} ${p.desc}`).includes(q)) : all
+  // món chưa mở khoá (dấu ?) không tìm ra theo tên
+  const found = searching
+    ? all.filter((p) => !p.locked && fold(`${p.name} ${p.desc}`).includes(q))
+    : all
   const filters = shopFilters(cat, all)
   const active = filters.find((f) => f.id === (filter.cat === cat ? filter.id : 'all'))
   const list = active ? found.filter(active.match) : found
 
   return (
     // khung cao cố định (co theo `--win-max-h` của Window): banner đứng yên trên cùng, cột trái + lưới sản phẩm tự cuộn riêng
-    <div className="flex h-[min(680px,74vh,calc(var(--win-max-h,100vh)-84px))] flex-col gap-3 group-data-fill/win:h-full max-md:h-auto">
+    <div
+      data-tour="shop"
+      className="flex h-[min(680px,74vh,calc(var(--win-max-h,100vh)-84px))] flex-col gap-3 group-data-fill/win:h-full max-md:h-auto"
+    >
       {/* hàng trên cùng: banner sale (ngày sale) / banner thường (ngày khác) */}
       <div className="flex shrink-0 items-stretch gap-3">
         {isSaleDay(day) ? (
@@ -222,6 +233,7 @@ export function Shopii() {
             {(Object.entries(SHOP_CATS) as [ShopCategory, string][]).map(([id, name]) => (
               <TabChip
                 key={id}
+                tour={`shopcat-${id}`}
                 // đang tìm vẫn sáng mục (tìm trong mục đang chọn)
                 active={!shipView && cat === id}
                 title={saleCats.has(id) ? 'Mục này đang có món sale' : undefined}
