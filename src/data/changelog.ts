@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.26',
     date: '2026-11-03',
-    commits: [],
+    commits: ['6571bb2'],
     title: 'Tour hướng dẫn người mới, cấp xưởng mở khoá linh kiện, mod stab từng con',
     items: [
       'Tạo game hỏi "Người chơi mới" / "Đã từng chơi": người mới có Keeb-chan dẫn từng bước, đã chơi thì bỏ hết hướng dẫn',
