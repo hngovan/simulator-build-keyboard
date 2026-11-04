@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.27',
     date: '2026-11-04',
-    commits: [],
+    commits: ['a6dc294'],
     title: 'Phép mod stab làm cả mẻ, chỉ dùng chuột trái, cài đặt gọn trong máy tính',
     items: [
       'Phép mod stab (thay phép lube stab): mọi bước mod (cắt chân, dán băng, phết mỡ, lắp slider, lắp wire) 1 lần làm 5 stab, lắp slider / wire cả mẻ cùng di chuyển vào',
