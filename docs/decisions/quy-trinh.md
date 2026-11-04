@@ -82,3 +82,10 @@
   sửa `scripts/convert-dtb.mjs`, CLAUDE.md, `docs/decisions/canh-3d.md`; ghi vào bảng nhóm `assets/README.md`.
 - `light_switch.glb` để ở `assets/supplies/`; bỏ `assets/community/README.md` (nội dung đã gộp vào `assets/README.md`).
 - Đồ nguồn mới: theo nhóm trong `assets/README.md`, không tạo lại `assets/community/`.
+
+## Push lỗi HTTP 408: lỡ commit model gốc 123MB (2026-11-04)
+
+- Lỗi: `git push` báo `RPC failed; HTTP 408` / `remote end hung up`. Commit "refactor: streamline interactions..." kèm
+  `assets/user-desk/*.glb` (Realforce quét 123MB > giới hạn 100MB GitHub; thư mục mới, `.gitignore` chỉ chặn `assets/desk/*.glb`).
+- Sửa: thêm `assets/user-desk/` vào `.gitignore`, `git rm --cached` rồi `commit --amend` (commit chưa lên remote; file trên đĩa giữ nguyên).
+- Lần sau: trước khi commit soát `git status` có thư mục `assets/` mới chứa model gốc không.

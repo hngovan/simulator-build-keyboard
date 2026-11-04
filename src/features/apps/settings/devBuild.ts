@@ -11,8 +11,11 @@ import {
   TOOLS,
   caseFits,
   stabNeed,
+  stabStock,
+  type StabCount,
 } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
+import { topUpSpells } from './devMoney'
 import { avatarSrc } from '@/data/avatars'
 import type { LayoutId, Order, SoundWish, ToolKind } from '@/types'
 
@@ -32,18 +35,33 @@ export interface DevBuildOpts {
 export const devLayouts = (caseId: string) =>
   (Object.keys(LAYOUTS) as LayoutId[]).filter((l) => caseFits(CASES[caseId], l))
 
-/** dụng cụ chưa có thì cấp bậc 1, vật tư (trừ sách phép) bơm lên 999: build thử không bị chặn vì thiếu đồ */
+/**
+ * Build thử = full đồ, không cần mua: mọi dụng cụ (trừ chứng chỉ) lên bậc cao nhất (bút / trạm hàn có cả 2 để đổi qua lại),
+ * vật tư bơm lên 999 (sách phép theo công tắc `useDevSpells`). Dụng cụ không hao mòn khi đang build thử (`wearTool` bỏ qua `order.dev`)
+ */
 function topUp() {
   const s = useGame.getState()
   const tools = { ...s.tools }
   for (const kind of Object.keys(TOOLS) as ToolKind[])
-    if (kind !== 'cert' && !tools[kind] && TOOLS[kind][0]?.none && TOOLS[kind].length > 1)
-      tools[kind] = 1
+    if (kind !== 'cert' && TOOLS[kind].length > 1) tools[kind] = TOOLS[kind].length - 1
+  const solderOwned = { ...s.solderOwned }
+  TOOLS.solder.forEach((t, lv) => !t.none && solderOwned[lv] === undefined && (solderOwned[lv] = 0))
   const supplies = { ...s.supplies }
   for (const id of Object.keys(SUPPLIES))
     if (!SUPPLIES[id].spell) supplies[id] = Math.max(supplies[id] ?? 0, 999)
-  useGame.setState({ tools, supplies })
+  useGame.setState({ tools, solderOwned, supplies })
+  // sách phép: theo công tắc dev "Phép vô hạn" (mặc định bật, tắt = làm bình thường từng con)
+  topUpSpells()
 }
+
+const double = (c: StabCount): StabCount => ({
+  short: c.short * 2,
+  long: c.long * 2,
+  long7: c.long7 * 2,
+})
+
+/** switch dư mỗi đơn build thử (thử thay / lube chết) */
+const SPARE_SWITCHES = 20
 
 /** Cất đơn đang làm (đơn build thử cũ thì bỏ) rồi vào bàn build với đơn thử đủ linh kiện */
 export function startDevBuild(o: DevBuildOpts) {
@@ -91,7 +109,12 @@ export function startDevBuild(o: DevBuildOpts) {
   const session = freshSession(order, s.day, 5)
   const inventory = {
     ...session.inventory,
-    switch: { type: switchType, count: keys.length },
+    switch: { type: switchType, count: keys.length + SPARE_SWITCHES },
+    // stab gấp đôi số cần: tuôn ren thì có stab dư để thay (`replaceStab`)
+    stab: session.inventory.stab && {
+      ...session.inventory.stab,
+      ...double(stabStock(session.inventory.stab)),
+    },
     keycap: { kit: keycapKit, color: keycapColor },
   }
   useGame.setState({

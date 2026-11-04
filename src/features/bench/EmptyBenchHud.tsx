@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useGame } from '@/store'
 import { CATS, checkInventory } from '@/data/parts'
 import { BackButton } from '@/components/ui'
@@ -33,30 +32,20 @@ function BenchStatus() {
       </div>,
     )
   const who = boxCustomer(s, box)
-  // thùng đã đóng gói / thùng đơn đủ đồ: dòng hướng dẫn như khi tương tác đồ vật (chuột trái vào thùng = build, chuột phải cầm lên)
+  // dòng hướng dẫn như khi tương tác đồ vật, chỉ chuột trái: thùng đã đóng gói (không mở lại được) = cầm lên
   if (isPackedBox(s, box))
     return (
       <ControlsHint>
-        {s.packed.some((p) => p.order.id === box && p.session?.build) && (
-          <>
-            Nhấn <MouseIcon btn="left" /> vào thùng để mở ra build lại,{' '}
-          </>
-        )}
-        nhấn <MouseIcon btn="right" /> để cầm thùng lên đặt vào kệ giao hàng
+        Nhấn <MouseIcon btn="left" /> vào thùng để cầm lên đặt vào kệ giao hàng
       </ControlsHint>
     )
   // thùng đơn trên bàn nhưng chưa vào build: còn thiếu linh kiện
   const missing =
     s.order?.id === box ? checkInventory(s.inventory, s.order).filter((c) => !c.ok) : []
-  // cùng 1 dòng hướng dẫn cho thùng đơn; thiếu đồ thì bấm thùng không vào build được (chỉ còn cầm lên)
+  // thùng đơn đủ đồ: bấm = build (đổi đơn thì vào build bấm "Cầm thùng đơn lên"); thiếu đồ: bấm = cầm lên
   const hint = (
     <ControlsHint>
-      {!missing.length && (
-        <>
-          Nhấn <MouseIcon btn="left" /> vào thùng để build,{' '}
-        </>
-      )}
-      nhấn <MouseIcon btn="right" /> để cầm thùng lên
+      Nhấn <MouseIcon btn="left" /> vào thùng để {missing.length ? 'cầm thùng lên' : 'build'}
     </ControlsHint>
   )
   if (!missing.length) return hint
@@ -79,39 +68,9 @@ function BenchStatus() {
   )
 }
 
-/**
- * Thùng trên bàn (đang ngồi): bấm chuột phải lên cảnh 3D (nhả ra không kéo, kéo là trượt khung nhìn) = cầm thùng lên.
- * Build = chuột trái vào thùng (`EmptyBench`), không còn phím B
- */
-function useBoxPick() {
-  useEffect(() => {
-    let down: { x: number; y: number } | null = null
-    const onDown = (e: PointerEvent) => {
-      down =
-        e.button === 2 && (e.target as Element)?.tagName === 'CANVAS'
-          ? { x: e.clientX, y: e.clientY }
-          : null
-    }
-    const onUp = (e: PointerEvent) => {
-      const d = down
-      down = null
-      if (e.button !== 2 || !d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) return
-      const s = useGame.getState()
-      if (s.screen === 'bench' && !s.walk && s.benchBox && !s.build) s.pickBench()
-    }
-    window.addEventListener('pointerdown', onDown)
-    window.addEventListener('pointerup', onUp)
-    return () => {
-      window.removeEventListener('pointerdown', onDown)
-      window.removeEventListener('pointerup', onUp)
-    }
-  }, [])
-}
-
 /** HUD bàn build chưa vào build: nút quay lại (Esc), góc nhìn + khung trạng thái thùng trên bàn */
 export function EmptyBenchHud() {
   const s = useGame()
-  useBoxPick()
   return (
     <>
       <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">

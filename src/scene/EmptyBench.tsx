@@ -38,7 +38,7 @@ export function EmptyBench() {
   const box = useGame((s) => s.benchBox)
   const packed = useGame((s) => !!s.benchBox && isPackedBox(s, s.benchBox))
   const walk = useGame((s) => s.walk)
-  // thùng đơn thiếu đồ: không viền khi rê, không mũi tên (bấm cũng không vào build được; HUD liệt kê món thiếu)
+  // thùng đơn thiếu đồ: không mũi tên (bấm = cầm lên, không vào build được; HUD liệt kê món thiếu)
   const ready = useGame(
     (s) =>
       !!s.benchBox &&
@@ -51,25 +51,20 @@ export function EmptyBench() {
   // đang cầm thùng đơn trỏ vào bàn thì sáng viền (bấm bàn để đặt)
   const carrying = useGame((s) => s.walk && !!s.held)
   const benchHover = useRoom((r) => r.benchHover)
-  // chuột trái vào thùng = build: thùng đơn đủ đồ thì mở thùng vào build; thùng đã đóng gói (còn dữ liệu build) thì mở ra build lại,
-  // không thì cầm lên đi giao (chuột phải luôn là cầm lên, `useBoxPick` trong EmptyBenchHud)
-  const reopen = useGame(
-    (s) => packed && s.packed.some((p) => p.order.id === s.benchBox && !!p.session?.build),
-  )
+  // chuột trái vào thùng (không dùng chuột phải): thùng đơn đủ đồ thì mở thùng vào build; thùng đã đóng gói (không mở lại được)
+  // / thùng đơn còn thiếu đồ thì cầm lên
   const act = () => {
     const g = useGame.getState()
     if (!g.benchBox) return
-    if (packed) {
-      if (reopen) g.unpackBox()
-      else g.pickBench()
-    } else g.buildOrder(g.benchBox)
+    if (ready && !packed) g.buildOrder(g.benchBox)
+    else g.pickBench()
   }
   return (
     <>
       <CuttingMat w={31.5} d={23.5} position-y={Y.table + 0.005} />
       {box && (
         // thùng giữa bàn (đúng cỡ thật như trên kệ); đang ngồi mới bấm được
-        <Clickable active={!walk && ready} onAct={act}>
+        <Clickable active={!walk} onAct={act}>
           <group position-y={Y.table} scale={M * BOX_SCALE}>
             <JobBox id={box} />
           </group>

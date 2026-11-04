@@ -1,8 +1,6 @@
 import type { StateCreator } from 'zustand'
 import { SHIP_SLOTS, freeSlot, slotTaken, type BoxSpot } from '@/data/boxes'
 import type { GameState } from '.'
-import { stashActive } from './shopSlice'
-import { buildContext } from '@/data/steps'
 
 /**
  * Cầm / đặt thùng hàng trong phòng (đi lại, góc nhìn người): nhận đơn thì thùng đơn tới kệ ngoài cửa, cầm về đặt lên bàn build
@@ -26,8 +24,6 @@ export interface CarrySlice {
   placeBench: () => boolean
   /** đặt thùng đã đóng gói vào kệ giao hàng (trong phòng) = gửi cho khách */
   placeShip: (slot: number) => void
-  /** thùng đã đóng gói (chưa gửi) trên bàn: mở ra, trả đơn về đang build nguyên trạng để sửa / làm tiếp, đóng gói lại thì chấm lại */
-  unpackBox: () => void
 }
 
 /** thùng đã đóng gói (có trong `packed`) hay thùng đơn */
@@ -65,7 +61,7 @@ export const createCarrySlice: StateCreator<GameState, [], [], CarrySlice> = (se
     if (!s.benchBox || s.stabAnim || s.lubeAnim) return
     if (s.held) return s.toast('Tay đang cầm thùng khác rồi', 'bad')
     set({ held: s.benchBox, benchBox: null })
-    // đang ngồi thì đứng dậy; đang đi lại (chuột phải vào bàn) thì cầm luôn
+    // đang ngồi thì đứng dậy; đang đi lại (bấm bàn có thùng đã đóng gói) thì cầm luôn
     if (!s.walk) s.standUp('bench')
   },
   placeDoor: () => {
@@ -94,32 +90,10 @@ export const createCarrySlice: StateCreator<GameState, [], [], CarrySlice> = (se
       s.switchJob(id, true)
       if (get().order?.id !== id) return false
     }
-    // chỉ đặt thùng lên bàn, không tự vào build: EmptyBenchHud hiện dòng hướng dẫn (chuột phải cầm lên, B build),
+    // chỉ đặt thùng lên bàn, không tự vào build: EmptyBenchHud hiện dòng hướng dẫn (chuột trái: đủ đồ = build, thiếu = cầm lên),
     // thiếu đồ thì liệt kê món thiếu
     set({ benchBox: id, held: null })
     return true
-  },
-  unpackBox: () => {
-    const s = get()
-    const p = s.packed.find((x) => x.order.id === s.benchBox && !x.shipped)
-    if (!p) return
-    if (!p.session?.build || !p.session.mount)
-      return s.toast('Thùng này đóng từ bản lưu cũ, không mở lại được', 'bad')
-    // đơn khác đang là đơn làm (chọn ở app Danh sách đơn) thì cất vào danh sách chờ
-    const jobs = stashActive(s)
-    const { session, order } = p
-    set({
-      jobs,
-      packed: s.packed.filter((x) => x !== p),
-      order,
-      ...session,
-      ctx: buildContext(order, session.inventory, session.mount!),
-      result: null,
-      future: [],
-      pressed: {},
-      viewFlip: false,
-    })
-    s.toast(`📦 Đã mở thùng đơn ${order.customer}: sửa xong thì đóng gói lại nhé`)
   },
   placeShip: (slot) => {
     const s = get()

@@ -267,12 +267,15 @@ export function Board() {
   const b = useBuild()
   const plateMat = useGame((s) => s.inventory.plate!.material)
   const kcKit = useGame((s) => s.inventory.keycap?.kit)
-  const { placePlate, placeFoam, wrapRing, dropInCase } = useGame.getState()
+  const { placePlate, placeFoam, wrapRing } = useGame.getState()
   const ref = useRef<THREE.Group>(null)
   // nhấc board lên trên case: chờ thả vào case, chờ cắm dây JST (dây từ daughterboard trong case lên cổng mặt dưới PCB)
   const lifted = (step === 'caseIn' && !b.inCase) || step === 'jst'
-  const boardClick = step === 'plate' || step === 'foam' || step === 'ring' || step === 'caseIn'
+  // gá O-ring: chỉ bấm vào vòng silicon chờ gá quanh mép (bấm mặt PCB không gá), xem `onRing`;
+  // thả board vào case: chỉ bấm case dưới (Case.tsx), bấm board đang nhấc không thả
+  const boardClick = step === 'plate' || step === 'foam'
   const { hover, bind } = useHover(boardClick)
+  const ringHover = useHover(step === 'ring' && !b.ring)
   // case CAD có plate nghiêng (Alice): thả vào case thì board nâng + nghiêng theo mặt case
   const seat = b.inCase ? ctx.caseDef.seat : undefined
   // chờ cắm dây JST vào PCB: dựng board gần thẳng đứng cho thấy cổng JST mặt dưới
@@ -293,12 +296,18 @@ export function Board() {
   })
 
   const onBoard = (e: ThreeEvent<PointerEvent>) => {
+    // board đang nhấc trên case chờ thả: chặn tia bấm xuyên qua board xuống case bên dưới
+    if (step === 'caseIn' && !b.inCase) return e.stopPropagation()
     if (!boardClick) return
     e.stopPropagation()
     if (step === 'plate') placePlate()
     if (step === 'foam') placeFoam()
-    if (step === 'ring') wrapRing()
-    if (step === 'caseIn') dropInCase()
+    playClick(900)
+  }
+  const onRing = (e: ThreeEvent<PointerEvent>) => {
+    if (step !== 'ring' || b.ring) return
+    e.stopPropagation()
+    wrapRing()
     playClick(900)
   }
 
@@ -439,7 +448,7 @@ export function Board() {
       )}
       <Gaskets />
       {(b.ring || step === 'ring') && (
-        <group onPointerDown={onBoard}>
+        <group onPointerDown={onRing} {...ringHover.bind}>
           <SiliconeRing
             ghost={!b.ring}
             between={ctx.mount === 'oring'}

@@ -103,7 +103,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
 1. **Title** (`features/title/TitleScreen.tsx`): chơi mới thì nhập tên thợ; nếu đã có bản lưu thì
    có nút tiếp tục kèm ngày và số tiền.
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar, hiện trong khung đúng mặt kính màn hình 3D (~90%, quanh đó thấy bàn / phòng). Chơi mới mở sẵn
-   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc bấm vùng phòng ngoài màn hình; Esc mở menu Cài đặt)
+   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc bấm vùng phòng ngoài màn hình; Esc cũng vậy)
    rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), kéo chuột nhìn, cuộn chuột giữa phóng to;
    đang ngồi bàn build chỉ nút quay lại mới đứng dậy, bấm WASD không đứng dậy).
    Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
@@ -228,7 +228,7 @@ tab mục hàng → ô chọn option đúng (FR4, 70 con, PBT · Trắng) → n�
 "Hoả tốc" (đơn hạn dài thì giao chậm cho rẻ) → Đặt hàng → đứng dậy). "Bỏ qua hướng dẫn" để tắt; xem lại ở Cài đặt → Hướng dẫn.
 Tới bàn build (đơn hướng dẫn) tour cũng tối màn: thiếu đồ thì sáng nút đứng dậy, đủ thì nhắc bấm chuột trái vào thùng, rồi giới thiệu khung đơn / bước / việc cần làm,
 lúc đang lắp thì không khung / không tối (mũi tên vàng chỉ vật cần bấm + khung việc cần làm), đóng gói xong thì dẫn cầm thùng ra kệ giao hàng → thu tiền ở Mezzenger → bấm lịch kết thúc ngày; xong bước chỉ sáng nút "Bước tiếp theo" / "Bỏ qua". Tạo game hỏi "Người chơi mới" / "Đã từng chơi" (đã từng chơi = không hướng dẫn). Keeb-chan chỉ xuất hiện trong tour
-(không còn tuỳ chọn ẩn / hiện, không còn lời dẫn "lần đầu gặp bước"); mọi đơn: lần đầu tới bước vặn vít / bước test có tour 1 lần. "Bảng tỉ lệ" ở Cài đặt → Trò chơi.
+(không còn tuỳ chọn ẩn / hiện, không còn lời dẫn "lần đầu gặp bước"); mọi đơn: lần đầu tới bước vặn vít / bước test có tour 1 lần.
 
 ### Cấp xưởng (mở khoá)
 
@@ -272,7 +272,7 @@ Món chưa mở hiện ở Shopii thành thẻ "?" (ẩn tên / ảnh / giá, n�
   (tray), `topCase` + `topScrew` (top mount: plate bắt vít vào case trên rồi cả cụm thả vào case dưới, không có `caseClose`).
   Mount cũng ảnh hưởng âm thanh và điểm khớp tiếng.
 - Khi kho đã đủ và tương thích, đứng dậy (nút quay lại) rồi đi tới bàn build để vào cảnh 3D. Làm theo
-  HUD: click đúng bộ phận, giữ chuột trái kéo để xoay camera quanh tâm vật đang làm, giữ chuột phải (hoặc Shift + chuột trái, 2 ngón) kéo để trượt khung nhìn theo mặt bàn (Space về góc mặc định, Q lật xem đáy), cuộn để zoom.
+  HUD: click đúng bộ phận, giữ chuột trái kéo để xoay camera quanh tâm vật đang làm, giữ Shift + chuột trái (2 ngón) kéo để trượt khung nhìn theo mặt bàn (Space về góc mặc định, Q lật xem đáy), cuộn để zoom.
 
 ### Hàn, lube, mod stab, vít, keycap
 

@@ -24,7 +24,6 @@ import { onBench } from '@/store/carrySlice'
 import { useSceneLoading } from '@/scene/common/loadingStore'
 import { applyAudioSettings, startBgm, stopBgm } from '@/sound'
 import { TOUR_ID, Tour } from '@/features/guide/Tour'
-import { GameSettings } from '@/features/settings/GameSettings'
 
 export default function App() {
   const screen = useGame((s) => s.screen)
@@ -95,7 +94,6 @@ export default function App() {
         </>
       )}
       {/* menu Cài đặt ngoài game (Esc) */}
-      {screen !== 'title' && <GameSettings />}
       <GameOverDialog />
     </>
   )

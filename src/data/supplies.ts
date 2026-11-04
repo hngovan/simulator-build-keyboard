@@ -337,15 +337,24 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     desc: 'Mỗi lần hút thiếc cháy được 10 phím: phím đang rã + 9 phím cháy kế tiếp',
     spell: 10,
   },
+  spellStab: {
+    name: 'Phép mod stab',
+    unit: 'lần',
+    color: '#e9dfb4',
+    packs: SPELL_PACKS,
+    desc: 'Mỗi lần mod (cắt chân, dán băng, phết mỡ, lắp slider, lắp wire) làm luôn 5 stab: con đang làm + 4 con kế tiếp (vẫn tốn mỡ / băng mỗi con)',
+    spell: 5,
+  },
 }
 
-/** Sách phép mở / lube / lắp / hàn / rã hàn switch, lắp keycap (bán riêng, lượt riêng) */
+/** Sách phép mở / lube / lắp / hàn / rã hàn switch, lắp keycap, mod stab (bán riêng, lượt riêng) */
 export const SPELL_OPEN = 'spellOpen'
 export const SPELL_LUBE = 'spellLube'
 export const SPELL_ASSEM = 'spellAssem'
 export const SPELL_KEYCAP = 'spellKeycap'
 export const SPELL_SOLDER = 'spellSolder'
 export const SPELL_DESOLDER = 'spellDesolder'
+export const SPELL_STAB = 'spellStab'
 /** Số switch phép `id` cộng thêm mỗi lần dùng (0 = không có / hết lượt) */
 export const spellBonus = (supplies: Record<string, number>, id: string) =>
   (supplies[id] ?? 0) > 0 ? SUPPLIES[id].spell! : 0

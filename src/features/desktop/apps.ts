@@ -72,7 +72,7 @@ export const APPS: Record<AppId, AppDef> = {
     title: 'Cài đặt',
     icon: '/icons/apps/settings-2.svg',
     color: '#66758f',
-    width: 460,
+    width: 540,
     Component: SettingsApp,
   },
 }

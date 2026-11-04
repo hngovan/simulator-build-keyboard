@@ -142,8 +142,8 @@ export interface PackedOrder {
   /** đã gửi cho khách trong ngày (giữ lại để hiện tin nhắn khách phản hồi tới hết ngày) */
   shipped?: boolean
   /**
-   * dữ liệu đơn lúc đóng gói (kho đồ, build...): thùng chưa gửi mở ra build lại được (`unpackBox`); gửi khách thì bỏ
-   * (switch / stab thừa vào kho chung lúc gửi). Bản lưu cũ không có = không mở lại được
+   * dữ liệu đơn lúc đóng gói (kho đồ, build...): đóng gói rồi không mở lại được, giữ để gửi khách
+   * thì cất switch / stab thừa vào kho chung
    */
   session?: JobSession
   /** gửi rồi nhưng chưa thu thù lao (vào Mezzenger bấm "Thu tiền"); `false` = chưa thu, không có = đã thu / bản lưu cũ */

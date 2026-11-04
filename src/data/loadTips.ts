@@ -8,7 +8,7 @@ export const LOAD_TIPS = [
   'Mũi hàn cháy đen thì lau bùi nhùi trước khi hàn tiếp.',
   'Vặn vít quá lực sẽ trượt ren, case mica / PC còn có thể nứt.',
   'Test hết phím trước khi giao, khách phát hiện nút chết là mất sao.',
-  'Bàn build: giữ chuột phải (hoặc Shift + chuột trái) kéo để trượt khung nhìn, Space về góc mặc định.',
+  'Bàn build: giữ Shift + chuột trái kéo để trượt khung nhìn, Space về góc mặc định.',
   'Foam PCB làm tiếng gõ thock hơn, khách nào muốn thì nhớ lót.',
   'Đồ thừa sau khi giao vào kho chung, đơn sau lấy ra dùng tiếp được.',
   'Chứng chỉ thợ cao hơn thì lắp được nhiều phím mỗi lần.',

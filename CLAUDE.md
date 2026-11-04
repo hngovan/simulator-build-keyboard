@@ -61,8 +61,8 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
   `inspect-step.mjs` là script dò/kiểm tra model. Thêm / đổi model case thì chạy `node scripts/probe-case-feet.mjs`
   (dò hốc dán feet dưới đáy → `src/data/caseFeet.json`, `RubberFeet` trong Case.tsx dán feet vào đúng hốc).
 
-Không có test tự động. Dev: Cài đặt → Dev → "Chọn case" build thử mọi case (`order.dev`, bước nào cũng bỏ qua được), trên bàn build có `DevCasePanel`
-đổi case / chất liệu / màu / mount. Khi dev, store được gắn vào `window.__game`, camera / controls / scene của bàn build
+Không có test tự động. Dev: Cài đặt → Dev → "Chọn case" build thử mọi case (`order.dev`, bước nào cũng bỏ qua được; full đồ: dụng cụ bậc cao nhất, vật tư 999, không hao mòn, dư switch / stab), trên bàn build có `DevCasePanel`
+chỉ đổi màu case; "Tiền vô hạn" / "Shopii mở khoá mọi món" (`devMoney.ts`, lưu theo máy localStorage); "Xem thử màn thua game" (`previewGameOver`, `GameOver.preview`: không gửi bảng xếp hạng, không xoá save, đóng thì chơi tiếp). Khi dev, store được gắn vào `window.__game`, camera / controls / scene của bàn build
 vào `window.__r3f` để debug trong console.
 
 ## Quy ước
@@ -125,7 +125,7 @@ vào `window.__r3f` để debug trong console.
     App "Danh sách đơn" (`apps/inventory/OrderApp`, thẻ `components/game/OrderCard`): tab Đang làm / Chờ nhận / Đã giao;
     mở đơn = linh kiện cần có (thiếu → "Mua ở Shopii" `openShop`), kiểu lắp + plateless, chip yêu cầu khách, ngân sách.
     `EmptyBenchHud`: bàn chưa vào build — trống / thùng đơn còn thiếu đồ (khung liệt kê, không nút) / mọi thùng có dòng `ControlsHint`
-    (chuột phải nhả không kéo = `pickBench` cầm thùng, `useBoxPick`; chuột trái vào thùng = `buildOrder` / thùng đã đóng gói `unpackBox`, `EmptyBench`; không còn phím B). `title/`: màn hình tiêu đề.
+    (không dùng chuột phải; chuột trái vào thùng `EmptyBench`: đủ đồ = `buildOrder`, thiếu đồ / đã đóng gói = `pickBench` cầm lên; không còn phím B). `title/`: màn hình tiêu đề.
 - Phòng đi lại (kiểu PC Building Simulator): `screen = 'bench'` + `walk` (metaSlice, không lưu; `standUp('pc' | 'bench')`).
   `scene/room/`: `roomLayout.ts` (toạ độ phòng / bàn / hành lang / vùng đi `WALK_AREAS` / khối cản `BLOCKS`), `WalkControls`
   (chỉ WASD đi, không mũi tên, không chạy, không bấm sàn đi tới; kéo nhìn, cuộn chuột giữa zoom FOV, bay camera `useRoom.fly`), `RoomSpot` (vật bấm được + chữ gợi ý HUD), `PcDesk` (bàn máy tính sát
@@ -150,8 +150,8 @@ vào `window.__r3f` để debug trong console.
   đổi đơn = nút "Cầm thùng đơn lên" (`pickBench`, giữ tiến độ) → cất lại kệ cuối hành lang (ô mờ đúng chỗ ô trống đầu tiên, `placeDoor`) → lấy thùng khác. Bàn chỉ hiện build khi
   thùng đơn đang làm nằm trên bàn (`onBench`; đơn dev luôn tính); `startBuild` / `switchJob` chặn khi thùng chưa / còn trên bàn. Ô mờ (`GhostSlot`)
   chỉ hiện khi đang cầm thùng hợp chỗ đó (khối xanh nhạt viền mảnh). Thùng của đơn mất (huỷ, sang ngày) tự dọn (subscribe trong `store/index.ts`).
-  Đi lại chỉ tương tác trong tầm với `REACH_M` (`inReach`). Cầm đơn dở lên = hoạt cảnh cho lại vào thùng (`requestStash`). Thùng đã đóng gói chưa gửi
-  mở lại được (`unpackBox`, dữ liệu đơn trong `PackedOrder.session`; đồ thừa vào kho chung lúc gửi). Gửi xong thù lao chờ thu ở Mezzenger
+  Đi lại chỉ tương tác trong tầm với `REACH_M` (`inReach`). Cầm đơn dở lên = hoạt cảnh cho lại vào thùng (`requestStash`). Thùng đã đóng gói không
+  mở lại được (bỏ `unpackBox`; `PackedOrder.session` chỉ để cất đồ thừa vào kho chung lúc gửi; đi lại bấm bàn có thùng đóng gói = cầm luôn). Gửi xong thù lao chờ thu ở Mezzenger
   (`paid: false`, banner `PayBanner`, `collectPay`, qua ngày tự thu).
 - Thùng trên kệ / sàn xếp lộn xộn (`pileTier` / `pileRack` trong DoorParcels.tsx: xoay, lệch, chồng, sàn có nghiêng ngả), kẹp trong lòng kệ `IN_X`.
   Giao hàng ở kệ tường phải trong phòng (`ShipShelf`, `SHIP_SHELF` trong roomLayout, 4 tầng × 2 ô `SHIP_SLOTS` 8 cố định `neatPose`, không chồng; trước là kệ cất đơn, kệ cạnh chậu cây hành lang đã bỏ, bản lưu cũ `'shelf'` ra kệ cửa: `fitBoxes`). Nhãn thùng đơn ghi tên khách bỏ danh xưng (`shortName`).
@@ -241,7 +241,7 @@ vào `window.__r3f` để debug trong console.
   `useHoverOutline`), mũi tên vàng chỉ việc tiếp theo (`HintArrow`, StationKit). Sách phép (mục Shopii "Sách phép" = vật tư có `SupplyDef.spell`), bán riêng; mở / lube / lắp: thợ lõ có phép = 10 con, có chứng chỉ thì cộng 10 (`spellRun`): `spellOpen` (mở,
   bàn bày tới 10 đồ mở `openerSlots`) `spellLube` (+10 con mỗi mẻ lube) và `spellAssem`
   (+10 switch mỗi lần lắp, `installRun`), `spellKeycap` (+10 keycap mỗi lần lắp), `spellSolder` (1 lần hàn = 10 phím, cháy thì cháy cả 10, `solderKey`),
-  `spellDesolder` (1 lần hút = 10 phím cháy, `desolderKey`), mỗi loại 200 lần, `spellBonus(supplies, id)`,
+  `spellDesolder` (1 lần hút = 10 phím cháy, `desolderKey`), `spellStab` (phép mod stab: mọi mod stab 1 lần = 5 stab, `modStab`; hoạt cảnh `StabAnim.units`: dụng cụ đi lần lượt, lắp slider / wire cả mẻ cùng lúc), mỗi loại 200 lần, `spellBonus(supplies, id)`,
   chỉ trừ lượt khi vượt bậc thợ. Bàn build có màn hình (`scene/models/Computer.tsx`): bấm vào thì về desktop.
 - `nextDay()` (sau khi giao): ngày + 1, đợt đơn mới (số đơn + hệ số tiền công theo bậc uy tín, `data/reputation.ts`),
   job trễ quá 3 ngày thì khách huỷ (−3 uy tín). Chứng chỉ thợ cộng thu nhập cơ bản vào ví mỗi lần nhận đơn (`CERT_BONUS`).
@@ -302,15 +302,16 @@ vào `window.__r3f` để debug trong console.
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
 - Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`) **chỉ nằm trong tour** (không còn NPC đứng riêng / mẹo máy tính, không có tuỳ chọn
   ẩn / hiện, không có "Xem lại"; tạo game hỏi "Người chơi mới" / "Đã từng chơi" → `newGame(name, experienced)` ghi sẵn `ALL_TOURS` (`data/tourIds.ts`);
-  Cài đặt → Trò chơi chỉ còn "Bảng tỉ lệ" `OddsDialog`). Lớp tour dùng chung `Spotlight.tsx` (+ `spotlightRect.ts` đo `data-tour`).
+  không còn "Bảng tỉ lệ" trong game, `data/odds.ts` chỉ để README chép). Lớp tour dùng chung `Spotlight.tsx` (+ `spotlightRect.ts` đo `data-tour`).
   Tour lần đầu ngồi máy tính (`features/guide/Tour.tsx`, `TOUR_ID` trong `guideSeen`): làm tối nền, ô sáng viền vàng đúng phần tử `data-tour="..."`
   (prop `tour` của `DesktopIcon` / `TabChip` / `BackButton` / thẻ đơn + nút Nhận đơn Mezzenger), bấm đúng chỗ thì sang bước; Cài đặt → Xem lại.
 - Chuông thông báo (`components/game/NotifyBell.tsx`, chỉ ở taskbar máy tính, portal vào `data-desktop-frame`; tiền / uy tín / cấp `StatusChips` ở góc trên ngoài viền): `logNotify` ghi `Profile.inbox` + `unread` (`notify` / `addReviews` /
   bán đồ / fast bid / huỷ đơn trễ tự ghi), xoá từng cái hoặc xoá hết.
-- Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup; popup nhỏ tự bắt Esc thì `preventDefault`): mở / đóng menu Cài đặt
-  ngoài game (`features/settings/GameSettings`, `lib/settingsMenu.ts`, mở thì WASD / phím tắt bàn build không ăn) ở máy tính / bàn build / đi lại; đứng dậy = `BackButton`.
-  Tab: Trò chơi (Lưu tiến trình `saveRun` = gửi bảng xếp hạng lý do `'save'`, Keeb-chan, về màn đăng nhập) / Âm thanh (`AudioSettings.musicOff` tắt riêng nhạc nền) /
-  Phím tắt (cố định, chỉ liệt kê `KEYBINDS`, chưa cho đổi) / Hiển thị / Dev. App Cài đặt trong máy tính chỉ đổi hình nền; đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
+- Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup; popup nhỏ tự bắt Esc thì `preventDefault`) = nút quay lại `BackButton`:
+  ngồi máy tính / bàn build thì đứng dậy (máy tính đang mở Cài đặt trên cùng thì đóng Cài đặt trước), đi lại thì thôi. Không còn menu Cài đặt ngoài game.
+  Mọi cài đặt ở app Cài đặt trong máy tính (`apps/settings/SettingsApp`, tab nội dung `features/settings/SettingsTabs`): Chung (Lưu tiến trình `saveRun` = gửi
+  bảng xếp hạng lý do `'save'`, hình nền, về màn đăng nhập; hàng tab dính đầu khi cuộn) / Âm thanh (`AudioSettings.musicOff` tắt riêng nhạc nền) / Phím tắt (cố định, chỉ liệt kê `KEYBINDS`) /
+  Dev (chỉ khi dev: tiền vô hạn, build thử, FPS `PerfHud` kéo thả hút 4 góc `setPerfCorner`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
   (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Chơi mới đè save cũng gửi lượt cũ (nút phá sản ở Cài đặt đã bỏ).
 - Cấp xưởng (`data/unlocks.ts`: `SHOP_LEVELS`, `levelFor(done, rep)`, `Profile.shopLv` chỉ tăng, subscribe trong `store/index.ts` báo lên cấp):

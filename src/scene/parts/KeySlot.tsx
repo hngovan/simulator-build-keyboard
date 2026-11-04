@@ -66,7 +66,7 @@ export function KeySlot({ k }: { k: Key }) {
   const lit = useRunLit((s) => s.lit.has(k.id)) && canAct
 
   const onDown = (e: ThreeEvent<PointerEvent>) => {
-    // chỉ chuột trái (chuột phải = kéo khung nhìn)
+    // chỉ chuột trái
     if (e.button !== 0) return
     const s = useGame.getState()
     if (step === 'test') {

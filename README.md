@@ -71,9 +71,9 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 
 Chi tiết từng mục: [src/data/changelog.ts](src/data/changelog.ts) (hoặc bấm số phiên bản trong game).
 
-## Bảng tỉ lệ trong game
+## Bảng tỉ lệ
 
-Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phải màn hình máy tính). Số liệu lấy từ `src/data/odds.ts`.
+Không hiện trong game, chỉ ghi ở đây. Số liệu lấy từ `src/data/odds.ts`.
 
 <!-- prettier-ignore -->
 | Mảng | Tình huống | Tỉ lệ |
@@ -132,7 +132,7 @@ Trong game: bấm **📊 Bảng tỉ lệ** ở bong bóng Keeb-chan (góc phả
 - **Test hết phím trước khi giao**: phím chưa hàn sẽ không ăn và khách báo lỗi nút; bỏ sót test thì 5% khách gặp nút lỗi (đánh giá thấp).
 - Hội Phím Cơ → **Bài của tôi**: tự đăng bán đồ trong kho, đồ trong đơn chưa build hoặc… phím của khách (95% bị lộ, −1 uy tín; chuộc lại trên chợ thì gỡ được uy tín). Đăng giá cố định (giá cao tới 1.4× giá gốc vẫn có thể gặp đại gia chốt trong đêm) hoặc fast bid 1 phút. Gỡ bài quá 3 lần / ngày bị admin ban.
 - Hàng pass lỗi keycap / switch / stab (viền đỏ trong Kho) không lắp cho khách được, chỉ đăng bán lại.
-- **Esc**: mở / đóng menu **Cài đặt** (ở máy tính, bàn build, đi lại; trừ lúc test phím) chia tab: Trò chơi (nút xanh **Lưu tiến trình** ghi lên bảng xếp hạng — đóng tab cũng tự gửi, Keeb-chan, về màn đăng nhập) / Âm thanh (tắt / bật nhạc nền, âm lượng) / Phím tắt (cố định, chỉ xem) / Hiển thị. Đứng dậy = nút quay lại góc trên trái. App Cài đặt trong máy tính chỉ đổi hình nền.
+- **Esc** = nút quay lại góc trên trái: đứng dậy khỏi máy tính / bàn build (trừ lúc test phím). **Cài đặt** là app trong máy tính, chia tab: Chung (nút xanh **Lưu tiến trình** ghi lên bảng xếp hạng — đóng tab cũng tự gửi, hình nền, về màn đăng nhập) / Âm thanh (tắt / bật nhạc nền, âm lượng) / Phím tắt (cố định, chỉ xem).
 - Giữ đơn trong hạn để tránh mất uy tín; đơn chờ trễ quá 3 ngày sẽ bị khách huỷ. Dụng cụ có độ bền và chứng chỉ thợ giúp lắp / lube nhanh hơn.
 - **Thua game** khi uy tín từ −10 trở xuống (bị phốt quá nhiều) hoặc rảnh tay mà ví không đủ mua linh kiện cho đơn rẻ nhất. Có thể tự **tuyên bố phá sản** ở Cài đặt. Thua / phá sản / chơi mới đè bản lưu thì kết quả được ghi lên bảng xếp hạng server (app **Bảng xếp hạng**, xếp theo điểm tổng của số đơn + uy tín + số ngày + tiền, lọc lại được theo từng thông số).
 

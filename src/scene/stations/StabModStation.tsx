@@ -154,17 +154,30 @@ const standToWorld = (L: SetLayout, i: number, [x, y, z]: [number, number, numbe
 
 const ORDER: StabModKind[] = ['clip', 'bandaid', 'housing', 'assembled', 'wire', 'wired']
 
+/** mod làm bằng dụng cụ (kìm, kéo, cọ): làm lần lượt từng con trong mẻ; lắp slider / wire thì cả mẻ cùng lúc */
+const SEQ: StabModKind[] = ['clip', 'bandaid', 'housing', 'wire']
+
 /**
- * Tiến độ hoạt cảnh của 1 loại mod (null nếu không chạy); `g` = chỉ tính khi đang làm đúng stab đó (mod làm từng con).
- * Đọc thẳng store để dùng trong useFrame
+ * Tiến độ hoạt cảnh của 1 loại mod (null nếu không chạy). Không có `g`: tiến độ con đang làm (dụng cụ đi lần lượt).
+ * Có `g`: tiến độ riêng stab đó (chưa tới lượt = 0, xong = 1; ngoài mẻ = null). Đọc thẳng store để dùng trong useFrame
  */
 function animProgress(kind: StabModKind, g?: number) {
   const a = useGame.getState().stabAnim
-  if (!a || a.kind !== kind || (g !== undefined && a.unit !== g)) return null
-  return Math.min(1, (performance.now() - a.at) / (a.dur * 1000))
+  if (!a || a.kind !== kind) return null
+  const p = Math.min(1, (performance.now() - a.at) / (a.dur * 1000))
+  const m = a.units.length
+  if (!SEQ.includes(kind)) return g === undefined || a.units.includes(g) ? p : null
+  if (g === undefined) return slotOf(p, m)[1]
+  const k = a.units.indexOf(g)
+  return k < 0 ? null : seg(p, k / m, (k + 1) / m)
 }
-/** stab đang chạy hoạt cảnh (đọc trong useFrame) */
-const animUnit = () => useGame.getState().stabAnim?.unit ?? 0
+/** stab dụng cụ đang làm trong mẻ (đọc trong useFrame) */
+const animUnit = () => {
+  const a = useGame.getState().stabAnim
+  if (!a) return 0
+  const p = Math.min(1, (performance.now() - a.at) / (a.dur * 1000))
+  return a.units[SEQ.includes(a.kind) ? slotOf(p, a.units.length)[0] : 0] ?? 0
+}
 /** dụng cụ làm lần lượt n phần việc: phần thứ mấy đang làm + tiến độ trong phần đó */
 const slotOf = (p: number, n: number) => {
   const j = Math.min(n - 1, Math.floor(p * n))
@@ -605,7 +618,7 @@ export function StabModStation() {
   /** stab g đã làm loại mod này chưa */
   const done = (kind: StabModKind, g: number) => unitModded(build, kind, g)
   /** stab g đang chạy hoạt cảnh loại mod này */
-  const running = (kind: StabModKind, g: number) => anim?.kind === kind && anim.unit === g
+  const running = (kind: StabModKind, g: number) => anim?.kind === kind && anim.units.includes(g)
   // loại mod nên làm tiếp + con đầu chưa làm (mũi tên vàng)
   const next = ORDER.find((kind) => rule(kind).needed && rule(kind).allowed && !mods[kind])
   const nextG = next ? (nextUnit(build, next, n) ?? 0) : 0
@@ -633,13 +646,12 @@ export function StabModStation() {
   }, [passes])
   useFrame(() => {
     for (const kind of ['housing', 'wire'] as const) {
-      const p = animProgress(kind)
-      const unit = animUnit()
-      const own = passes[kind].filter((x) => x.g === unit)
       passes[kind].forEach((pass) => {
+        // tiến độ riêng của stab chứa nét này trong mẻ (chưa tới lượt = 0, ngoài mẻ = null → đủ mỡ)
+        const p = animProgress(kind, pass.g)
+        const own = passes[kind].filter((x) => x.g === pass.g)
         const i = own.indexOf(pass)
-        progress[pass.key].current =
-          p === null || i < 0 ? 1 : seg(passPhase(p, i, own.length), 0, 0.55)
+        progress[pass.key].current = p === null ? 1 : seg(passPhase(p, i, own.length), 0, 0.55)
       })
     }
   })
@@ -658,7 +670,7 @@ export function StabModStation() {
     mods[kind] ?? build.stabModLube?.[kind] ?? lubePick[kind]
   /** số con còn phải làm loại mod này (con đang chạy hoạt cảnh đã trừ vật tư) */
   const left = (kind: StabModKind) =>
-    n - unitsModded(build, kind, n) - (anim?.kind === kind ? 1 : 0)
+    n - unitsModded(build, kind, n) - (anim?.kind === kind ? anim.units.length : 0)
   // hũ mỡ cho housing / slider + wire: mỗi loại 1 hũ (nhãn = tên mỡ); hết mỡ mà còn con chưa phết thì để ô trống
   const jars = (() => {
     const list: { lube: string; need: number }[] = []
@@ -676,7 +688,8 @@ export function StabModStation() {
   const noClipper = m.feet && !mods.clip && TOOLS.clipper[tools.clipper].none
   const noBrush = TOOLS.brush[tools.brush].none
   // 1 miếng Urgo dán được 2 stab: con thứ 1, 3, 5... mới bóc miếng mới
-  const bandDone = unitsModded(build, 'bandaid', n) + (anim?.kind === 'bandaid' ? 1 : 0)
+  const bandDone =
+    unitsModded(build, 'bandaid', n) + (anim?.kind === 'bandaid' ? anim.units.length : 0)
   const urgoNeed = Math.ceil((n - bandDone) / 2)
   const noUrgo = !mods.bandaid && bandDone < n && bandDone % 2 === 0 && urgoLeft < 1
   // Holee chỉ cần cho stab còn chân (Cherry); stab khít / đời mới vẫn cố dán từ panel thì mới bày ra

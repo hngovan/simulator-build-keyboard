@@ -1,30 +1,27 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  FlaskConical,
-  Gamepad2,
-  Keyboard,
-  Monitor,
-  Settings,
-  Volume2,
-  VolumeX,
-  type LucideIcon,
-} from 'lucide-react'
+import { Volume2, VolumeX } from 'lucide-react'
 import { useGame } from '@/store'
-import { Button, CloseButton, HudCard, Muted, Slider, TabChip, Toggle } from '@/components/ui'
+import type { RunEndReason } from '@/lib/leaderboardApi'
+import { Button, HudCard, Muted, Slider, Toggle } from '@/components/ui'
 import { KeyCap, MouseIcon } from '@/components/game/ControlsHint'
-import { OddsDialog } from '@/features/guide/OddsDialog'
 import { cn } from '@/lib/format'
 import { setPerfHud, usePerfHud } from '@/lib/perfStats'
-import { closeSettings, useSettingsMenu, type SettingsTab } from '@/lib/settingsMenu'
-import { setDevMoney, useDevMoney } from '@/features/apps/settings/devMoney'
+import {
+  setDevMoney,
+  setDevSpells,
+  setDevUnlock,
+  useDevMoney,
+  useDevSpells,
+  useDevUnlock,
+} from '@/features/apps/settings/devMoney'
 import { DevBuildDialog } from '@/features/apps/settings/DevBuildDialog'
 import { Row, Section } from './SettingsParts'
 
 /** Hỏi có lưu tiến trình lên bảng xếp hạng trước khi về màn hình đăng nhập không */
 function ConfirmExit({ onCancel }: { onCancel: () => void }) {
   const [saving, setSaving] = useState(false)
-  const exit = () => (onCancel(), closeSettings(), useGame.getState().returnToTitle())
+  const exit = () => (onCancel(), useGame.getState().returnToTitle())
   return createPortal(
     <div
       className="fixed inset-0 z-[3500] grid animate-fade-in place-items-center bg-black/60 p-4"
@@ -61,11 +58,10 @@ function ConfirmExit({ onCancel }: { onCancel: () => void }) {
   )
 }
 
-/** Tab Trò chơi: lưu tiến trình, bảng tỉ lệ, về màn hình đăng nhập (hướng dẫn chọn 1 lần lúc tạo game: người chơi mới / đã từng chơi) */
-function GameTab() {
+/** Tab Chung: lưu tiến trình, `children` (hình nền), về màn hình đăng nhập (hướng dẫn chọn 1 lần lúc tạo game: người chơi mới / đã từng chơi) */
+export function GameTab({ children }: { children?: ReactNode }) {
   const [saving, setSaving] = useState(false)
   const [exiting, setExiting] = useState(false)
-  const [odds, setOdds] = useState(false)
   return (
     <>
       <Section
@@ -88,16 +84,7 @@ function GameTab() {
           </Button>
         </Row>
       </Section>
-      <Section title="Tỉ lệ" info="Tỉ lệ may rủi ở chợ, bán phím khách, hàn, test, đơn hàng">
-        {/* bảng tỉ lệ (chợ, bán phím khách, hàn, test, đơn hàng): trước mở từ Keeb-chan ở máy tính */}
-        <Row>
-          <span className="flex-1 font-bold">Bảng tỉ lệ may rủi</span>
-          <Button size="sm" onClick={() => setOdds(true)}>
-            Xem
-          </Button>
-        </Row>
-        {odds && <OddsDialog onClose={() => setOdds(false)} />}
-      </Section>
+      {children}
       <Section title="Phiên đăng nhập" info="Tiến trình đã tự lưu trong máy, không bị xoá">
         <Row>
           <Button
@@ -105,9 +92,7 @@ function GameTab() {
             className="flex-1"
             // tiến trình mới chưa lên bảng xếp hạng thì hỏi có lưu không
             onClick={() =>
-              useGame.getState().unsynced()
-                ? setExiting(true)
-                : (closeSettings(), useGame.getState().returnToTitle())
+              useGame.getState().unsynced() ? setExiting(true) : useGame.getState().returnToTitle()
             }
           >
             ↩ Về màn hình đăng nhập
@@ -144,7 +129,7 @@ function VolumeRow({
   )
 }
 
-function AudioTab() {
+export function AudioTab() {
   const audio = useGame((s) => s.audio)
   const { setAudio } = useGame.getState()
   return (
@@ -190,7 +175,7 @@ function AudioTab() {
   )
 }
 
-/** 1 phím / nút chuột: chuỗi = keycap, 'left' / 'right' / 'wheel' = hình chuột */
+/** 1 phím / nút chuột: chuỗi = keycap ('+' = dấu cộng, bấm cùng lúc), 'left' / 'right' / 'wheel' = hình chuột */
 type Bind = string | { mouse: 'left' | 'right' | 'wheel' }
 
 /** Phím tắt cố định (chưa cho đổi): nhóm → [việc, phím] */
@@ -198,8 +183,8 @@ const KEYBINDS: [string, [string, Bind[]][]][] = [
   [
     'Chung',
     [
-      ['Mở / đóng Cài đặt', ['Esc']],
-      ['Hoàn tác', ['Ctrl', 'Z']],
+      ['Quay lại / đứng dậy', ['Esc']],
+      ['Hoàn tác', ['Ctrl', '+', 'Z']],
     ],
   ],
   [
@@ -208,14 +193,16 @@ const KEYBINDS: [string, [string, Bind[]][]][] = [
       ['Di chuyển', ['W', 'A', 'S', 'D']],
       ['Nhìn quanh (kéo)', [{ mouse: 'left' }]],
       ['Phóng to / thu nhỏ', [{ mouse: 'wheel' }]],
-      ['Dùng đồ vật / cầm thùng', [{ mouse: 'left' }]],
+      ['Tương tác với đồ vật', [{ mouse: 'left' }]],
     ],
   ],
   [
     'Bàn build',
     [
-      ['Mở thùng đơn / bắt đầu build (bấm vào thùng)', [{ mouse: 'left' }]],
-      ['Cầm thùng trên bàn lên', [{ mouse: 'right' }]],
+      ['Tương tác với đồ vật', [{ mouse: 'left' }]],
+      ['Xoay góc nhìn (kéo)', [{ mouse: 'left' }]],
+      ['Trượt khung nhìn (kéo)', ['Shift', '+', { mouse: 'left' }]],
+      ['Phóng to / thu nhỏ', [{ mouse: 'wheel' }]],
       ['Lật xem đáy / lật lại', ['Q']],
       ['Về góc nhìn mặc định', ['Space']],
       ['Chọn đầu vít', ['1', '2', '3', '4']],
@@ -223,7 +210,7 @@ const KEYBINDS: [string, [string, Bind[]][]][] = [
   ],
 ]
 
-function KeysTab() {
+export function KeysTab() {
   return (
     <>
       {KEYBINDS.map(([group, rows]) => (
@@ -233,7 +220,11 @@ function KeysTab() {
               <span className="flex-1 font-bold">{label}</span>
               <span className="flex items-center gap-1">
                 {binds.map((b, i) =>
-                  typeof b === 'string' ? (
+                  b === '+' ? (
+                    <span key={i} className="font-head font-bold text-muted">
+                      +
+                    </span>
+                  ) : typeof b === 'string' ? (
                     <KeyCap key={i}>{b}</KeyCap>
                   ) : (
                     <MouseIcon key={i} btn={b.mouse} />
@@ -251,34 +242,39 @@ function KeysTab() {
   )
 }
 
-/** Khung thông số hiệu năng góc phải (lưu theo máy, không theo lượt chơi) */
-function DisplayTab() {
-  const perf = usePerfHud((s) => s.on)
-  return (
-    <Section
-      title="Hiển thị"
-      info="Trình duyệt không đọc được CPU / GPU cả máy: chỉ đo riêng tab game (GPU, RAM cần Chrome / Edge). Lưu theo máy này"
-    >
-      <Row>
-        <span className="flex-1 font-bold">Hiện FPS, CPU, GPU, RAM</span>
-        <Toggle checked={perf} onChange={setPerfHud} label="Hiện thông số hiệu năng" />
-      </Row>
-    </Section>
-  )
-}
-
 /** Công cụ thử nghiệm, chỉ hiện khi chạy `bun run dev` */
-function DevTab() {
+/** các lý do thua để dev xem thử popup (`previewGameOver`) */
+const LOSS_PREVIEW: [RunEndReason, string][] = [
+  ['rep', 'Phốt'],
+  ['money', 'Cạn vốn'],
+]
+
+export function DevTab() {
   const rich = useDevMoney((s) => s.on)
+  const unlock = useDevUnlock((s) => s.on)
+  const spells = useDevSpells((s) => s.on)
+  const perf = usePerfHud((s) => s.on)
   const [testing, setTesting] = useState(false)
   return (
     <Section
       title="Dev"
-      info="Chỉ có khi dev: tiền vô hạn (tắt thì trả lại tiền cũ), build thử mọi case không cần đơn"
+      info="Chỉ có khi dev: tiền vô hạn (tắt thì trả lại tiền cũ), sách phép vô hạn (tắt = làm từng con, trả lại lượt cũ), Shopii mở khoá mọi món, build thử mọi case không cần đơn, thông số hiệu năng (kéo khung sang góc khác), xem thử màn thua game"
     >
       <Row>
         <span className="flex-1 font-bold">Tiền vô hạn</span>
         <Toggle checked={rich} onChange={setDevMoney} label="Tiền vô hạn" />
+      </Row>
+      <Row>
+        <span className="flex-1 font-bold">Sách phép vô hạn (mở / lube / lắp theo mẻ)</span>
+        <Toggle checked={spells} onChange={setDevSpells} label="Sách phép vô hạn" />
+      </Row>
+      <Row>
+        <span className="flex-1 font-bold">Shopii mở khoá mọi món (bỏ qua cấp xưởng)</span>
+        <Toggle checked={unlock} onChange={setDevUnlock} label="Mở khoá mọi món Shopii" />
+      </Row>
+      <Row>
+        <span className="flex-1 font-bold">Hiện FPS, CPU, GPU, RAM</span>
+        <Toggle checked={perf} onChange={setPerfHud} label="Hiện thông số hiệu năng" />
       </Row>
       <Row>
         <span className="flex-1 font-bold">Build thử mọi case + màu</span>
@@ -286,67 +282,28 @@ function DevTab() {
           🧪 Chọn case
         </Button>
       </Row>
+      <Row>
+        <span className="flex-1 font-bold">Xem thử màn thua game</span>
+        {LOSS_PREVIEW.map(([reason, label]) => (
+          <Button
+            key={reason}
+            size="sm"
+            tone="red"
+            title="Không gửi bảng xếp hạng, không xoá bản lưu"
+            onClick={() => useGame.getState().previewGameOver(reason)}
+          >
+            {label}
+          </Button>
+        ))}
+      </Row>
       {testing && (
         <DevBuildDialog
           onClose={() => {
             setTesting(false)
-            closeSettings()
+            useGame.getState().closeApp('settings')
           }}
         />
       )}
     </Section>
-  )
-}
-
-const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
-  { id: 'game', label: 'Trò chơi', icon: Gamepad2 },
-  { id: 'audio', label: 'Âm thanh', icon: Volume2 },
-  { id: 'keys', label: 'Phím tắt', icon: Keyboard },
-  { id: 'display', label: 'Hiển thị', icon: Monitor },
-  ...(import.meta.env.DEV ? [{ id: 'dev' as const, label: 'Dev', icon: FlaskConical }] : []),
-]
-
-/**
- * Menu Cài đặt ngoài game (Esc mở / đóng ở máy tính, bàn build, đi lại): tab Trò chơi (lưu tiến trình, hướng dẫn,
- * đăng xuất) / Âm thanh / Phím tắt (cố định, chỉ xem) / Hiển thị / Dev. Cài đặt trong máy tính chỉ còn hình nền
- */
-export function GameSettings() {
-  const open = useSettingsMenu((m) => m.open)
-  const tab = useSettingsMenu((m) => m.tab)
-  if (!open) return null
-  return (
-    <div
-      className="fixed inset-0 z-[3200] grid animate-fade-in place-items-center bg-black/60 p-4"
-      onPointerDown={(e) => e.target === e.currentTarget && closeSettings()}
-    >
-      <HudCard className="flex max-h-[calc(100dvh-32px)] w-[min(560px,100%)] flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <span className="grid size-9 place-items-center rounded-xl bg-yellow text-[#3a2b00]">
-            <Settings className="size-5" strokeWidth={2.5} />
-          </span>
-          <h2 className="flex-1 font-head text-2xl font-extrabold text-yellow">Cài đặt</h2>
-          <CloseButton onClick={closeSettings} />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {TABS.map((t) => (
-            <TabChip
-              key={t.id}
-              active={tab === t.id}
-              icon={t.icon}
-              onClick={() => useSettingsMenu.setState({ tab: t.id })}
-            >
-              {t.label}
-            </TabChip>
-          ))}
-        </div>
-        <div className="-mr-1 flex min-h-0 flex-col gap-3 overflow-y-auto pr-1">
-          {tab === 'game' && <GameTab />}
-          {tab === 'audio' && <AudioTab />}
-          {tab === 'keys' && <KeysTab />}
-          {tab === 'display' && <DisplayTab />}
-          {tab === 'dev' && import.meta.env.DEV && <DevTab />}
-        </div>
-      </HudCard>
-    </div>
   )
 }

@@ -25,7 +25,11 @@ export function GameOverDialog() {
             ['Tiền còn lại', fmtMoney(entry.money)],
           ]}
         />
-        {sent === 'offline' ? (
+        {over.preview ? (
+          <div className="text-center text-[13px] text-ink/75">
+            🧪 Xem thử (dev): không gửi bảng xếp hạng, không xoá bản lưu.
+          </div>
+        ) : sent === 'offline' ? (
           <Alert title="Chưa gửi được kết quả">
             Chưa kết nối được server bảng xếp hạng, kết quả sẽ tự gửi lại lần sau.
           </Alert>
@@ -37,7 +41,7 @@ export function GameOverDialog() {
           </div>
         )}
         <Button tone="green" size="lg" onClick={close}>
-          ↩ Về màn hình chính
+          {over.preview ? '✕ Đóng, chơi tiếp' : '↩ Về màn hình chính'}
         </Button>
       </HudCard>
     </div>

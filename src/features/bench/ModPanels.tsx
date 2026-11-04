@@ -13,6 +13,7 @@ import {
   spellBonus,
   spellRun,
   SPELL_LUBE,
+  SPELL_STAB,
   SPELL_OPEN,
   type LubeUse,
 } from '@/data/supplies'
@@ -139,6 +140,9 @@ export function StabModPanel() {
   const rules = stabModRules(model)
   // mod nên làm tiếp theo (cùng thứ tự mũi tên vàng trên bàn)
   const next = rules.find((r) => r.needed && r.allowed && !mods[r.kind])?.kind
+  // phép mod stab: mỗi lần mod làm luôn nhiều con
+  const stabLeft = useGame((s) => s.supplies[SPELL_STAB] ?? 0)
+  const stabSpell = useGame((s) => spellBonus(s.supplies, SPELL_STAB))
   return (
     <HudPanel id="stabMod" title={`🛠 Mod stab (${n} stab)`}>
       <Muted>
@@ -165,6 +169,9 @@ export function StabModPanel() {
           ))}
         {/* kìm cắt chỉ cần khi phải clip chân stem */}
         <ToolWarn kinds={m.feet ? ['brush', 'clipper'] : ['brush']} />
+        {stabLeft > 0 && (
+          <div className="text-xs font-bold text-green">{`Phép mod stab: ${stabSpell} stab/lần (còn ${stabLeft} lần)`}</div>
+        )}
       </HudSection>
       <HudSection id="stabMod.housing" title="Housing + slider">
         {/* con đầu phết rồi thì các con sau dùng cùng loại mỡ */}
@@ -236,20 +243,13 @@ export function LubePanel() {
     <HudPanel
       id="switchLube"
       title="🧴 Lube switch"
+      // switch đang mở: không hiện nút (đóng hết lại trên bàn lube thì mới có nút đi tiếp)
       footer={
-        <Button
-          tone="green"
-          className="w-full"
-          onClick={finishOptional}
-          disabled={busy || mustClose}
-          title={mustClose ? 'Switch đang mở: đóng hết lại rồi mới đi lắp' : undefined}
-        >
-          {mustClose
-            ? `Đóng hết switch lại (${closed}/${opened})`
-            : opened
-              ? 'Xong, đi lắp switch →'
-              : 'Bỏ qua lube →'}
-        </Button>
+        !mustClose && (
+          <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
+            {opened ? 'Xong, đi lắp switch →' : 'Bỏ qua lube →'}
+          </Button>
+        )
       }
     >
       {/* thông tin switch lên đầu, các khung cảnh báo xếp liền nhau bên dưới */}

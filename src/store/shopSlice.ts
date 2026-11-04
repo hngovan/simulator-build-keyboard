@@ -242,6 +242,19 @@ function packedLeftover(spare: Spare, p: PackedOrder): Spare {
   return leftoverSpare(spare, j.inventory, keys, !!j.provided.stab)
 }
 
+/** số dòng tối đa của toast nhận kiện (kiện 30 món không thành list dài che màn hình) */
+const PICKUP_LINES = 6
+
+/** gộp dòng trùng thành "… ×N", quá `PICKUP_LINES` thì thêm dòng "… và N món khác" */
+function packLines(texts: string[]) {
+  const count = new Map<string, number>()
+  for (const t of texts) count.set(t, (count.get(t) ?? 0) + 1)
+  const rows = [...count].map(([t, n]) => (n > 1 ? `${t} ×${n}` : t))
+  if (rows.length <= PICKUP_LINES) return rows.join('\n')
+  const more = rows.length - (PICKUP_LINES - 1)
+  return [...rows.slice(0, PICKUP_LINES - 1), `… và ${more} món khác (xem ở app Kho)`].join('\n')
+}
+
 export const stashActive = (s: GameState): Job[] =>
   s.order && !s.result
     ? [
@@ -1077,7 +1090,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     }
     for (const kind of ['bad', 'info', 'good'] as const) {
       const same = msgs.filter((m) => (m.kind ?? 'info') === kind)
-      if (same.length) toast(same.map((m) => m.text).join('\n'), kind)
+      if (same.length) toast(packLines(same.map((m) => m.text)), kind)
     }
   },
   cancelParcel: (id) => {

@@ -13,6 +13,23 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.27',
+    date: '2026-11-04',
+    commits: [],
+    title: 'Phép mod stab làm cả mẻ, chỉ dùng chuột trái, cài đặt gọn trong máy tính',
+    items: [
+      'Phép mod stab (thay phép lube stab): mọi bước mod (cắt chân, dán băng, phết mỡ, lắp slider, lắp wire) 1 lần làm 5 stab, lắp slider / wire cả mẻ cùng di chuyển vào',
+      'Thùng đã đóng gói không mở ra build lại được; bỏ chuột phải: bấm chuột trái vào thùng để build / cầm lên',
+      'Bàn build: kéo chuột phải không còn trượt khung nhìn, trượt bằng Shift + chuột trái',
+      'Gá O-ring chỉ bấm quanh mép board, thả board vào case chỉ bấm vào case (bấm mặt PCB / board không ăn)',
+      'Lò xo thả lại vào housing đứng dọc, ngắn vừa tới stem (không xuyên qua stem)',
+      'Lube switch: bỏ nút "Đóng hết switch lại"; popup đóng gói: nút "Quay lại" gọn + lưu ý không mở lại được',
+      'Toast nhận kiện nhiều món gọn lại (tối đa 6 dòng, gộp món trùng), bấm để ẩn',
+      'Cài đặt chỉ còn trong app máy tính: tab Chung (lưu tiến trình, hình nền, về màn đăng nhập) dính đầu khi cuộn, Phím tắt ghi rõ tổ hợp; bỏ Bảng tỉ lệ',
+      'Dev: công tắc "Sách phép vô hạn" (mặc định bật), build thử làm stab cả bàn 1 lần',
+    ],
+  },
+  {
     version: '0.1.26',
     date: '2026-11-03',
     commits: ['6571bb2'],

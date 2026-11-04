@@ -116,6 +116,9 @@ export function Gaskets() {
   )
 }
 
+/** bề rộng dải bắt chuột quanh mép lúc chờ gá vòng silicon (u) */
+const RING_HIT = 0.6
+
 /** Vòng silicon quanh board. O-ring mount: cuốn quanh viền, kẹp trong khe giữa PCB và plate, lòi ra tì vách + gờ case.
  * OG mount: ôm cả mép PCB + plate. ghost = bản xem trước chưa lắp */
 export function SiliconeRing({
@@ -154,6 +157,16 @@ export function SiliconeRing({
           )}
         </RoundedBox>
       ))}
+      {/* chờ gá: dải bắt chuột vô hình rộng `RING_HIT` quanh mép (vòng thật mảnh khó bấm trúng; mặt PCB giữa không ăn) */}
+      {ghost &&
+        sides.map(([x, z, w, d], i) => (
+          <mesh key={`hit${i}`} position={[x, 0, z]}>
+            <boxGeometry
+              args={[w > d ? w + RING_HIT : RING_HIT, h + RING_HIT / 2, w > d ? RING_HIT : d]}
+            />
+            <meshBasicMaterial visible={false} />
+          </mesh>
+        ))}
     </group>
   )
 }

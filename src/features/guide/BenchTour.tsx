@@ -84,7 +84,7 @@ export function BenchTour() {
       <Spotlight
         hole={null}
         top
-        text="Đóng gói xong! Nhấn chuột phải vào thùng để cầm lên, rồi đứng dậy (nút quay lại góc trên trái) mang ra kệ giao hàng sát tường phải trong phòng."
+        text="Đóng gói xong! Nhấn chuột trái vào thùng để cầm lên, rồi đứng dậy (nút quay lại góc trên trái) mang ra kệ giao hàng sát tường phải trong phòng."
         actions={
           <Button size="sm" onClick={() => useGame.getState().seeGuide(SHIP_TOUR_ID)}>
             Bỏ qua hướng dẫn

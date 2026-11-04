@@ -1,4 +1,4 @@
-// Bảng tỉ lệ trong game (Keeb-chan mở được ở máy tính, README chép lại): lấy thẳng từ hằng số trong code
+// Bảng tỉ lệ (không hiện trong game, chỉ README chép lại): lấy thẳng từ hằng số trong code
 // để đổi tỉ lệ ở đâu thì bảng tự đúng theo. Món nào code ghi số trực tiếp (không có hằng) thì chép số ở đây.
 import { BAN_DAYS, BEG_BLOCK, BEG_GIFT, LOWBALL_BLOCK, LOWBALL_OK, MUTE_BLOCK } from './market'
 import {

@@ -237,7 +237,7 @@ function PanSpeed() {
 
 /**
  * Camera neo quanh tâm vật đang làm (CameraRig đặt tâm theo bước, Space về góc mặc định, lật xem đáy bằng Q):
- * chuột trái / 1 ngón kéo xoay quanh tâm; chuột phải / Shift + chuột trái / 2 ngón kéo trượt khung nhìn theo mặt bàn
+ * chuột trái / 1 ngón kéo xoay quanh tâm; Shift + chuột trái / 2 ngón kéo trượt khung nhìn theo mặt bàn
  * (không theo màn hình → không chui xuống bàn, tâm kẹp trong phòng ở CameraRig); cuộn / chuột giữa / 2 ngón zoom
  */
 function Controls() {
@@ -257,7 +257,7 @@ function Controls() {
         makeDefault
         enabled={!locked}
         enablePan
-        // trượt theo mặt phẳng ngang (mặt bàn), Shift + chuột trái cũng trượt (có sẵn trong OrbitControls)
+        // trượt theo mặt phẳng ngang (mặt bàn) bằng Shift + chuột trái (có sẵn trong OrbitControls)
         screenSpacePanning={false}
         // không xoay xuống dưới mặt bàn
         maxPolarAngle={1.45}
@@ -270,7 +270,7 @@ function Controls() {
         mouseButtons={{
           LEFT: THREE.MOUSE.ROTATE,
           MIDDLE: THREE.MOUSE.DOLLY,
-          RIGHT: THREE.MOUSE.PAN,
+          // chuột phải không làm gì
         }}
         touches={{
           ONE: THREE.TOUCH.ROTATE,
@@ -386,7 +386,7 @@ export function Bench() {
         <SceneReady />
       </Suspense>
       <BenchShadows />
-      {/* kéo (chuột phải / Shift + chuột trái) trượt theo mặt bàn thay vì theo màn hình */}
+      {/* kéo Shift + chuột trái trượt theo mặt bàn thay vì theo màn hình */}
       <Controls />
       <PcZoom />
       <PerfProbe />

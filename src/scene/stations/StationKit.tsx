@@ -174,7 +174,7 @@ export function Clickable({
       ref={ref}
       {...bind}
       onPointerDown={(e: ThreeEvent<PointerEvent>) => {
-        // chỉ chuột trái mới thao tác (chuột phải = cầm thùng lên / kéo khung nhìn)
+        // chỉ chuột trái mới thao tác
         if (!active || e.button !== 0) return
         e.stopPropagation()
         onAct(e)

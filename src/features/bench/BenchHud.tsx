@@ -166,6 +166,9 @@ function ConfirmDeliver({
           Giao lúc này khách có thể chấm điểm thấp và ảnh hưởng tới uy tín của bạn. Bạn không muốn
           làm tới cùng cho khách sao?
         </div>
+        <div className="text-sm font-bold text-yellow">
+          Lưu ý: đóng gói rồi thì không thể mở ra build lại được.
+        </div>
         <div className="flex justify-end gap-2">
           <Button tone="red" onClick={onConfirm}>
             Vẫn giao
@@ -173,17 +176,17 @@ function ConfirmDeliver({
           {canBack ? (
             <Button
               tone="green"
-              title="Về bước còn thiếu / bị bỏ để làm nốt (như bấm lùi ở danh sách bước)"
+              title={`Về bước ${backTitle} để làm nốt`}
               onClick={() => {
                 onCancel()
                 useGame.getState().backToStep(issues.back!)
               }}
             >
-              🛠 Quay lại: {backTitle}
+              Quay lại
             </Button>
           ) : (
             <Button tone="green" onClick={onCancel}>
-              🛠 Làm tiếp
+              Làm tiếp
             </Button>
           )}
         </div>

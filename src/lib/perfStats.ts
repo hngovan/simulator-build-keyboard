@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type * as THREE from 'three'
 
 /**
- * Thông số hiệu năng (bật ở Cài đặt → Hiển thị, lưu theo máy, không theo lượt chơi).
+ * Thông số hiệu năng (chỉ khi dev: bật ở Cài đặt → Dev, lưu theo máy, không theo lượt chơi).
  * Trình duyệt không cho đọc %CPU / %GPU cả máy, nên chỉ đo phần của tab game:
  * - FPS: số khung hình trình duyệt vẽ mỗi giây (requestAnimationFrame)
  * - CPU: % thời gian JS chạy trong các callback requestAnimationFrame (vòng vẽ R3F + hoạt cảnh); lệnh WebGL
@@ -14,6 +14,7 @@ import type * as THREE from 'three'
 const KEY = 'sbk-ui-perf'
 
 function readOn() {
+  if (!import.meta.env.DEV) return false
   try {
     return localStorage.getItem(KEY) === '1'
   } catch {
@@ -22,6 +23,31 @@ function readOn() {
 }
 
 export const usePerfHud = create(() => ({ on: readOn() }))
+
+/** góc màn hình đặt khung thông số (kéo thả để đổi, lưu theo máy) */
+export type PerfCorner = 'tl' | 'tr' | 'bl' | 'br'
+const CORNER_KEY = 'sbk-ui-perf-corner'
+const CORNERS: PerfCorner[] = ['tl', 'tr', 'bl', 'br']
+
+function readCorner(): PerfCorner {
+  try {
+    const v = localStorage.getItem(CORNER_KEY) as PerfCorner | null
+    return v && CORNERS.includes(v) ? v : 'bl'
+  } catch {
+    return 'bl'
+  }
+}
+
+export const usePerfCorner = create(() => ({ corner: readCorner() }))
+
+export function setPerfCorner(corner: PerfCorner) {
+  usePerfCorner.setState({ corner })
+  try {
+    localStorage.setItem(CORNER_KEY, corner)
+  } catch {
+    // không lưu được thì chỉ giữ trong phiên này
+  }
+}
 
 export function setPerfHud(on: boolean) {
   usePerfHud.setState({ on })

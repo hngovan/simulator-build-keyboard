@@ -2,6 +2,103 @@
 
 ## 2026-11-03
 
+### Popup "Chắc chắn đóng gói đơn này?": nút gọn + lưu ý không mở lại
+
+- Yêu cầu: bỏ icon nút "Quay lại: test phím" → chỉ "Quay lại"; ghi chú đóng gói rồi không mở ra build lại được.
+- `ConfirmDeliver` (BenchHud): nút "Quay lại" (tên bước đưa vào tooltip "Về bước … để làm nốt"), "Làm tiếp" bỏ 🛠; thêm dòng vàng
+  "Lưu ý: đóng gói rồi thì không thể mở ra build lại được." (khớp việc bỏ `unpackBox`).
+
+### Gộp thành "Phép mod stab": mọi mod stab 1 lần làm 5 con, hoạt cảnh cả mẻ
+
+- Yêu cầu: gộp thành 1 phép mod stab; như trước bấm 1 cái là cả 5 stab (cắt chân / wire...) tự di chuyển vào 1 lần.
+- `spellStab` đổi tên "Phép mod stab" (mô tả mới). `modStab` (buildSlice): mẻ = con bấm + các con còn làm được (`can(u)`, theo thứ tự vòng
+  trên bàn) tối đa `spell` con cho **mọi** loại mod (trước chỉ lube); dán băng trừ đủ miếng Urgo, lube cắt mẻ theo mỡ còn; > 1 con thì trừ 1 lượt phép
+  (dev build thử + công tắc phép vô hạn: cả bàn, không trừ). Sửa luôn: lần trước dòng clip / lắp slider / lắp wire làm hết không vào file.
+- `StabAnim.unit` → `units` (mods.ts). StabModStation: `animProgress(kind)` / `animUnit()` = con dụng cụ đang làm (`SEQ` clip / bandaid / housing / wire
+  đi lần lượt, thời lượng `stabAnimDuration(kind, lube, units.length)`), `animProgress(kind, g)` = tiến độ riêng stab đó (chưa tới lượt 0);
+  lắp slider / wire cả mẻ cùng lúc. Nét mỡ, `running`, `left`, `bandDone` tính theo cả mẻ.
+
+### Lube switch: bỏ nút "Đóng hết switch lại"
+
+- Yêu cầu: bỏ nút "Đóng hết switch lại (x/y)" ở panel lube switch.
+- `LubePanel` (ModPanels): switch đang mở (`mustClose`) thì không có footer; đóng hết trên bàn lube mới hiện "Xong, đi lắp switch →".
+
+### Dev: công tắc "Sách phép vô hạn" (mặc định bật)
+
+- Yêu cầu: build thử ở dev mặc định có phép lube stab / switch, lắp... (không lắp từng con); muốn làm bình thường thì có công tắc tắt.
+- `devMoney.ts`: `useDevSpells` (localStorage `sbk-dev-spells`, mặc định bật), `topUpSpells` bơm mọi sách phép lên 999, lần đầu cất lượt cũ
+  (`sbk-dev-spells-before`); `setDevSpells(false)` trả lại lượt cũ. `topUp` (devBuild) gọi `topUpSpells`. Cài đặt → Dev thêm công tắc.
+  `cert` giữ nguyên bậc của profile (thợ lõ + phép = 10 con / lần, có chứng chỉ thì cộng thêm).
+- Sửa: bật rồi vẫn phải cắt chân (clip) từng stab — phép stab chỉ áp bước phết mỡ. Công tắc dời sang `lib/devSpells.ts` (store đọc được, không
+  vòng import qua devMoney). `modStab` (buildSlice): đơn `order.dev` + công tắc bật (`devAll`) → mọi mod (clip / dán băng / lube / lắp slider /
+  lắp wire) 1 lần làm hết các con còn làm được (`can(u)` cùng điều kiện con đang bấm), dán băng trừ đủ số miếng Urgo, lube không trừ lượt phép.
+
+### Sách phép lube stab; công tắc dev lưu theo máy
+
+- Yêu cầu: thêm phép lube stab, lube 1 cái là được 5 stab. Công tắc dev tiền vô hạn / mở khoá Shopii tải lại trang bị mất.
+- `SUPPLIES.spellStab` (`SPELL_STAB`, `spell: 5`, cùng mục "Sách phép", cấp 5 như các phép khác): `modStab` bước `housing` / `wire` lube con đang bấm
+  - các con chưa lube kế tiếp (vòng lại từ đầu, bỏ con đã lắp slider / wire vào ngàm), tối đa 5; tốn mỡ mỗi con, chỉ trừ 1 lượt phép khi lube > 1 con.
+    Hoạt cảnh vẫn chỉ ở con đang bấm, xong thì cả nhóm vào `stabModUnits`. `StabModPanel` ghi dòng xanh "Phép lube stab: 5 stab/lần phết (còn N lần)".
+    Ảnh Shopii tạm chép từ `supply__spellLube.webp` → chạy `ONLY=spellStab bun run bake:thumbs` để chụp đúng.
+- `devMoney.ts`: tiền vô hạn lưu `sbk-dev-money` + tiền gốc `sbk-dev-money-before` (tắt sau khi tải lại vẫn trả đúng ví cũ), mở khoá `sbk-dev-unlock`;
+  chỉ đọc khi `import.meta.env.DEV`. Nạp module lúc mở game (qua apps.ts → SettingsApp) thì bật lại subscribe bơm tiền.
+
+### Toast nhận kiện nhiều món: gọn lại, bấm để ẩn
+
+- Yêu cầu: mua 30 món, nhận kiện thì toast hiện 1 list dài, không ẩn được.
+- Nguyên nhân: `pickupParcel` gom mỗi món 1 dòng vào 1 toast, thời gian hiện +0,7s / dòng (30 dòng ≈ 24s), lớp toast `pointer-events-none`.
+- `packLines` (shopSlice): gộp dòng trùng thành "×N", tối đa `PICKUP_LINES` 6 dòng + "… và N món khác (xem ở app Kho)". `toast` (metaSlice) hiện
+  tối đa 8s. `Toasts.tsx`: từng toast `pointer-events-auto`, bấm để ẩn (tooltip "Bấm để ẩn").
+
+### Dev: build thử mặc định full đồ
+
+- Yêu cầu: build thử ở dev thì đồ vô hạn, không phải mua.
+- `devBuild.ts` `topUp`: mọi dụng cụ (trừ `cert`) lên bậc cao nhất, `solderOwned` có cả bút + trạm (đổi qua lại), vật tư (trừ sách phép) ≥ 999;
+  kho đơn thử: switch dư `SPARE_SWITCHES` 20, stab gấp đôi số cần (thay được khi tuôn ren). `wearTool` bỏ qua đơn `order.dev` (dụng cụ không hỏng).
+  Dụng cụ / vật tư bơm vào là của profile (giữ lại sau khi thoát build thử, chỉ dev).
+
+### Dev: Shopii mở khoá mọi món
+
+- Yêu cầu: option dev bật lên thì mua được mọi đồ trong cửa hàng.
+- `useDevUnlock` / `setDevUnlock` (apps/settings/devMoney.ts, lưu theo máy localStorage `sbk-dev-unlock`, không vào save) + công tắc ở Cài đặt → Dev. Bật thì `Shopii` gọi `lockProduct(p, MAX_LV)`
+  thay `shopLv` (khoá cấp xưởng chỉ ở UI Shopii, store không chặn mua). Dụng cụ đã có vẫn ẩn như thường. Đơn chào / chợ vẫn theo cấp thật.
+
+### Dev: panel build thử chỉ đổi màu case; xem thử màn thua game
+
+- Yêu cầu: build thử trên bàn chỉ cần đổi màu case, không cần chọn lại option khác; thêm option dev để xem khi thua game.
+- `DevCasePanel` (bàn build) chỉ còn ô màu (`setDevCaseColor`); đổi case / chất liệu / mount bỏ (chọn ở bảng "Chọn case", `setDevCase` còn trong devBuild.ts).
+- Cài đặt → Dev: hàng "Xem thử màn thua game" 2 nút Phốt / Cạn vốn (2 cách thua thật; phá sản đã bỏ khỏi game nên không có nút) → `previewGameOver(reason)` (metaSlice) đặt `gameOver` với `preview: true`
+  từ tiến trình hiện tại; không `clearSave`, không `submitRun`. `GameOverDialog` bản xem thử ghi dòng dev + nút "Đóng, chơi tiếp" (`closeGameOver` chỉ xoá popup).
+
+### Cài đặt: gộp tab Trò chơi + Hình nền thành "Chung", hàng tab dính đầu
+
+- Yêu cầu: đưa tab hình nền và trò chơi vào chung thành "Chung"; hàng tab cố định ở trên.
+- `SettingsApp`: tab `game` đổi nhãn "Chung" (icon `Settings`), bỏ tab `wallpaper`; `GameTab({ children })` chèn `WallpaperSection`
+  giữa "Tiến trình" và "Phiên đăng nhập". Hàng tab `sticky` bù padding cửa sổ (cùng kiểu thanh lọc app Kho `OwnedItems`).
+
+### Bàn build: bỏ kéo chuột phải trượt khung nhìn, phím tắt ghi Shift + chuột trái
+
+- Yêu cầu: Cài đặt → Phím tắt thiếu "giữ Shift + chuột trái để trượt"; bỏ dùng chuột phải để trượt; tổ hợp phím có dấu "+" cho biết bấm cùng lúc.
+- `Bench.tsx` `Controls`: `mouseButtons` bỏ `RIGHT` (chuột phải chỉ còn cầm thùng `useBoxPick`), trượt = Shift + chuột trái / 2 ngón
+  (có sẵn trong OrbitControls). `KEYBINDS` (SettingsTabs) bàn build thêm xoay (chuột trái kéo), trượt (Shift + chuột trái), zoom (cuộn), bấm chuột trái ghi chung "Tương tác với đồ vật";
+  phần tử `'+'` trong danh sách phím vẽ thành dấu cộng (Ctrl + Z, Shift + chuột trái). Sửa mẹo `loadTips.ts`, OVERVIEW.
+
+### Cài đặt về lại app trong máy tính, Esc = nút quay lại, FPS chỉ khi dev
+
+- Yêu cầu: đưa cài đặt vào lại app Cài đặt trong máy tính, bỏ menu ngoài game; Esc để lại làm phím quay lại. Hiện FPS chỉ là tuỳ chọn dev, khung kéo thả được nhiều góc.
+- Bỏ `features/settings/GameSettings.tsx` + `lib/settingsMenu.ts` (cùng chặn phím `menuOpen` ở `WalkControls` / `useBenchKey`). Tab nội dung tách ra
+  `features/settings/SettingsTabs.tsx` (`GameTab` / `AudioTab` / `KeysTab` / `DevTab`); `SettingsApp` (rộng 540) tab `TabChip` Trò chơi / Âm thanh / Phím tắt /
+  Hình nền / Dev, nhớ tab giữa các lần mở (zustand nhỏ trong file, không lưu save). Bỏ tab Hiển thị.
+- Esc (`useAppShortcuts`) quay về bản cũ: máy tính đang mở Cài đặt trên cùng thì đóng nó, không thì `standUp('pc')`; bàn build `standUp('bench')`; đi lại không làm gì.
+  Vẫn chờ `setTimeout` để popup nhỏ `preventDefault` chặn được. `BackButton` tooltip "Quay lại (Esc)", `KEYBINDS` "Quay lại / đứng dậy".
+- FPS: `perfStats` `readOn` luôn tắt ngoài dev, nút bật ở tab Dev. `PerfHud` bắt chuột: kéo theo con trỏ, thả thì hút góc theo nửa màn hình chứa con trỏ
+  (`PerfCorner` tl / tr / bl / br, `setPerfCorner` lưu localStorage `sbk-ui-perf-corner`; góc dưới ở máy tính nằm trên taskbar).
+
+### Bỏ "Bảng tỉ lệ may rủi" khỏi Cài đặt
+
+- Yêu cầu: bảng tỉ lệ may rủi không cần hiện, bỏ đi.
+- `SettingsTabs.tsx` `GameTab`: bỏ mục "Tỉ lệ"; xoá `features/guide/OddsDialog.tsx`. Giữ `data/odds.ts` làm nguồn số cho bảng trong README.
+
 ### Hỏi người chơi mới / đã từng chơi lúc tạo game; bỏ "Xem lại tour" ở Cài đặt
 
 - Yêu cầu: lần đầu chơi hỏi người mới hay đã chơi rồi; đã chơi thì không hướng dẫn; bỏ tuỳ chọn hướng dẫn trong Cài đặt.
@@ -172,7 +269,7 @@
 - Thử popup túi đồ (phím I) gom mọi chỗ đổi đồ (tua vít, đầu vít, mỏ hàn, thiếc, lube, feet, O-ring) và bỏ nút đổi trên bàn build.
   Người dùng thấy không hợp, **bỏ, trả lại như cũ**: đổi đồ vẫn ở bàn build (nút ⇄ tua vít, tua vít dự phòng trên bàn, `BitPicker`, chip trong ModPanels).
 
-### Menu Cài đặt ngoài game (Esc)
+### Menu Cài đặt ngoài game (Esc) — đã bỏ 2026-11-03 (về lại app Cài đặt trong máy tính)
 
 - Yêu cầu: cài đặt ra ngoài màn hình chính, Esc mở; tab key binding, tắt / bật nhạc, lưu tiến trình; Cài đặt trong máy tính chỉ đổi hình nền.
 - Làm: `features/settings/GameSettings.tsx` (popup z-[3200], tab `TabChip` Trò chơi / Âm thanh / Phím tắt / Hiển thị / Dev), trạng thái

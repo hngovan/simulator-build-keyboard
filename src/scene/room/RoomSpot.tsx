@@ -53,14 +53,14 @@ export function RoomSpot({
       onPointerOver={(e: ThreeEvent<PointerEvent>) => {
         if (!active) return
         bind.onPointerOver(e)
-        if (can(e)) useRoom.setState({ hover: label, hoverAlt: null, hoverNote: null })
+        if (can(e)) useRoom.setState({ hover: label, hoverNote: null })
       }}
       // con tự bắt hover (màn hình máy tính) chặn onPointerOver lan lên: lấy chữ gợi ý theo lúc rê
       onPointerMove={(e: ThreeEvent<PointerEvent>) => {
         if (!active) return
         const ok = can(e)
         const cur = useRoom.getState().hover
-        if (ok && cur !== label) useRoom.setState({ hover: label, hoverAlt: null, hoverNote: null })
+        if (ok && cur !== label) useRoom.setState({ hover: label, hoverNote: null })
         else if (!ok && cur === label) useRoom.setState({ hover: null })
       }}
       onPointerOut={() => {

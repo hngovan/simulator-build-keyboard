@@ -96,8 +96,10 @@ export interface MetaSlice extends Profile {
   gameOver: GameOver | null
   /** kết thúc lượt chơi: gửi bảng xếp hạng, xoá bản lưu, hiện popup */
   endRun: (reason: RunEndReason) => void
-  /** đóng popup thua game, về màn hình tiêu đề */
+  /** đóng popup thua game, về màn hình tiêu đề (bản xem thử của dev thì chỉ đóng popup) */
   closeGameOver: () => void
+  /** dev: hiện popup thua game với tiến trình hiện tại, không gửi / không xoá save */
+  previewGameOver: (reason: RunEndReason) => void
   /** lưu tiến trình hiện tại lên bảng xếp hạng (lượt vẫn chơi tiếp), trả đã gửi được chưa */
   saveRun: () => Promise<boolean>
   /** tiến trình đã đổi so với lần ghi bảng xếp hạng gần nhất */
@@ -111,6 +113,8 @@ export interface GameOver {
   entry: RunEntry
   /** đang gửi / hạng theo uy tín trên server / gửi lỗi (đã cất hàng chờ) */
   sent: 'sending' | { rank: number; total: number } | 'offline'
+  /** dev xem thử (`previewGameOver`): không gửi bảng xếp hạng, không xoá save, đóng thì chơi tiếp */
+  preview?: boolean
 }
 
 export interface Notice {
@@ -261,8 +265,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   toast: (text, kind = 'info') => {
     const id = ++toastId
     set((s) => ({ toasts: [...s.toasts, { id, text, kind }].slice(-4) }))
-    // nhiều dòng (vd nhận kiện nhiều món) thì hiện lâu hơn cho kịp đọc
-    const ms = 3500 + 700 * (text.split('\n').length - 1)
+    // nhiều dòng (vd nhận kiện nhiều món) thì hiện lâu hơn cho kịp đọc, tối đa 8s (bấm vào toast để ẩn sớm)
+    const ms = Math.min(3500 + 700 * (text.split('\n').length - 1), 8000)
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), ms)
   },
   addReviews: (reviews) => {
@@ -455,6 +459,11 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       if (g?.entry.runId === entry.runId) set({ gameOver: { ...g, sent: res ?? 'offline' } })
     })
   },
+  previewGameOver: (reason) => {
+    const s = get()
+    if (s.gameOver || !s.name) return
+    set({ gameOver: { reason, entry: runEntry(s, reason), sent: 'sending', preview: true } })
+  },
   saveRun: async () => {
     const s = get()
     if (!s.name || s.gameOver) return false
@@ -475,6 +484,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     return !!s.name && !s.gameOver && runSig(s) !== s.lbSynced
   },
   closeGameOver: () => {
+    if (get().gameOver?.preview) return set({ gameOver: null })
     stopBgm()
     set({ gameOver: null, name: '', screen: 'title', windows: [], minimized: [] })
   },

@@ -4,7 +4,7 @@ import { Button } from './Button'
 
 /**
  * Nút quay lại / đứng dậy dùng chung màn máy tính + bàn build: khối nút kiểu game (cùng bóng đổ với IconButton),
- * chỉ mũi tên dày; tooltip chung mọi màn "Quay lại" (Esc giờ mở menu Cài đặt)
+ * chỉ mũi tên dày; tooltip chung mọi màn "Quay lại (Esc)" (Esc = bấm nút này, `useAppShortcuts`)
  */
 export function BackButton({
   onClick,
@@ -16,7 +16,7 @@ export function BackButton({
   /** nhãn cho tour hướng dẫn (`data-tour`) */
   tour?: string
 }) {
-  const label = 'Quay lại'
+  const label = 'Quay lại (Esc)'
   return (
     <Button
       onClick={onClick}

@@ -1484,3 +1484,20 @@
   `Box3.setFromObject` của bàn phím lúc nằm trên bàn (chờ đóng gói mỗi 20 khung vì model / keycap tải muộn; bấm cất dở ở bước khác mà chưa
   đo thì đo khung đầu) → `usePack.top`, rời đóng gói thì reset. Vòng cung bay, nắp, băng keo, súng theo `H` mới.
 - Kiểm (Duality + SA, tab chặn ghi): thùng cao 2,79u (miệng 1,844), lúc bàn phím hạ xong đỉnh 1,676 → dư 0,17u dưới miệng.
+
+### Lò xo thả lại vào housing đứng dọc (bàn lube switch)
+
+- Yêu cầu: lò xo lúc đóng switch lại nằm ngang, phải nằm dọc.
+- Nguyên nhân: lò xo trong housing (`springRef`) + lò xo bay từ hộp vào housing (`FlyingSprings`) dùng chung `SPRING_GEO` của hộp (xoay nằm ngang).
+- LubeStation.tsx: `SPRING_UP_GEO` (đứng dọc, gốc = đáy lò xo trên sàn hốc `SPRING_IN_Y`) cho lò xo trong housing; `FlyingSprings` xoay dần
+  ngang → dọc, đích là tâm lò xo đứng (`SPRING_IN_Y + SPRING_H / 2`); lò xo bay từ đồ mở vào hộp lúc mở switch thì ngược lại (dọc → nằm).
+- Sửa (cùng ngày): lò xo đứng 18mm xuyên qua stem đang nổi → lò xo trong housing cao `SPRING_IN_H` = từ sàn hốc tới đáy thân stem
+  (`body.bottom + RAISE - (SPRING_IN_Y - SEAT_Y)` ≈ 10,7mm, 6 vòng); `FlyingSprings` co dần theo trục lò xo (`scale.x`) cho khớp lúc tới nơi.
+
+### Gá O-ring: chỉ bấm quanh mép, bấm mặt PCB không gá
+
+- Yêu cầu: bước gá O-ring bấm trên mặt PCB vẫn gá được; phải bấm quanh vùng gá mới được.
+- Board.tsx: bỏ `ring` khỏi `boardClick` (PCB / foam / plate không gá vòng nữa); vòng chờ gá có handler riêng `onRing` + `useHover` riêng.
+- BoardDetails.tsx `SiliconeRing`: lúc chờ gá (`ghost`) thêm dải bắt chuột vô hình rộng `RING_HIT` 0,6u quanh 4 cạnh (vòng thật mảnh khó bấm trúng).
+- Tương tự bước thả board vào case (`caseIn`): bỏ khỏi `boardClick`, chỉ bấm case dưới (`onClick('caseIn', dropInCase)` trong Case.tsx) mới thả;
+  board đang nhấc chờ thả thì `onBoard` chặn tia bấm (`stopPropagation`) để bấm board không xuyên xuống case bên dưới.

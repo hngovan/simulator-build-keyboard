@@ -7,7 +7,11 @@ const KIND = { info: 'bg-panel-2', good: 'bg-[#1f7a43]', bad: 'bg-[#a8322f]' } a
 const lines = (text: string) =>
   text.split(/\s+—\s+|\n/).map((l, i) => (i ? l.charAt(0).toUpperCase() + l.slice(1) : l))
 
-/** Thông báo nổi ở giữa phía trên màn hình */
+/** ẩn 1 toast trước khi hết giờ */
+const hide = (id: number) =>
+  useGame.setState((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
+
+/** Thông báo nổi ở giữa phía trên màn hình, bấm vào để ẩn */
 export function Toasts() {
   const toasts = useGame((s) => s.toasts)
   return (
@@ -15,8 +19,11 @@ export function Toasts() {
       {toasts.map((t) => (
         <div
           key={t.id}
+          title="Bấm để ẩn"
+          onClick={() => hide(t.id)}
+          style={{ cursor: 'var(--cursor-hand)' }}
           className={cn(
-            'animate-pop rounded-xl px-4.5 py-2 font-extrabold shadow-[0_4px_0_#0006]',
+            'pointer-events-auto animate-pop rounded-xl px-4.5 py-2 font-extrabold shadow-[0_4px_0_#0006]',
             KIND[t.kind],
           )}
         >

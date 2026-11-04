@@ -29,7 +29,6 @@ const HINT = (
 /** HUD khi đi lại trong phòng: trạng thái, chữ gợi ý vật đang rê, cách điều khiển */
 export function RoomHud() {
   const hover = useRoom((r) => r.hover)
-  const hoverAlt = useRoom((r) => r.hoverAlt)
   const hoverNote = useRoom((r) => r.hoverNote)
   const calendar = useRoom((r) => r.calendar)
   // thùng đang chờ ở kệ cuối hành lang: thùng đơn khách gửi tới + thùng kiện Shopii / chợ đã tới
@@ -86,17 +85,7 @@ export function RoomHud() {
           <>
             <span>Nhấn</span>
             <MouseIcon btn="left" />
-            <span>
-              {hover.charAt(0).toLowerCase() + hover.slice(1)}
-              {hoverAlt && ','}
-            </span>
-            {hoverAlt && (
-              <>
-                <span>nhấn</span>
-                <MouseIcon btn="right" />
-                <span>{hoverAlt}</span>
-              </>
-            )}
+            <span>{hover.charAt(0).toLowerCase() + hover.slice(1)}</span>
           </>
         ) : (
           HINT

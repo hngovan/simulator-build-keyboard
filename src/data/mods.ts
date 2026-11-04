@@ -184,8 +184,8 @@ export interface StabAnim {
   kind: StabModKind
   /** lube đang bôi (nếu là bước lube) */
   lube?: string
-  /** stab đang làm (chỉ số trong `stabUnits`): mod làm từng con */
-  unit: number
+  /** các stab trong mẻ (chỉ số trong `stabUnits`, con bấm đứng đầu): phép mod stab làm nhiều con / lần */
+  units: number[]
   /** performance.now() lúc bắt đầu */
   at: number
   /** thời lượng (giây) */

@@ -606,33 +606,25 @@ function benchMode(s: ReturnType<typeof useGame.getState>): BenchMode {
   if (!s.held) return 'empty'
   return isPackedBox(s, s.held) ? 'heldPacked' : 'place'
 }
-/** chữ gợi ý theo trạng thái bàn: [chuột trái, chuột phải, dòng chữ không bấm được] */
-const BENCH_HINT: Record<BenchMode, [string | null, string | null, string | null]> = {
-  empty: [
-    null,
-    null,
-    'Chưa có đơn hàng nào, lấy thùng đơn từ kệ cuối hành lang để tiến hành build',
-  ],
-  place: ['để đặt thùng đơn lên bàn build', null, null],
-  heldPacked: [null, null, 'Thùng đã đóng gói: đặt lên kệ giao hàng trong phòng'],
-  busy: [
-    null,
-    null,
-    'Bàn build đang có thùng khác: cất thùng đang cầm lại kệ cuối hành lang trước',
-  ],
-  sit: ['để vào bàn build', null, null],
-  closed: ['để vào bàn build', 'để cầm thùng đơn lên', null],
-  packed: ['để vào bàn build', 'để cầm thùng đã đóng gói lên', null],
+/** chữ gợi ý theo trạng thái bàn: [chuột trái, dòng chữ không bấm được] */
+const BENCH_HINT: Record<BenchMode, [string | null, string | null]> = {
+  empty: [null, 'Chưa có đơn hàng nào, lấy thùng đơn từ kệ cuối hành lang để tiến hành build'],
+  place: ['để đặt thùng đơn lên bàn build', null],
+  heldPacked: [null, 'Thùng đã đóng gói: đặt lên kệ giao hàng trong phòng'],
+  busy: [null, 'Bàn build đang có thùng khác: cất thùng đang cầm lại kệ cuối hành lang trước'],
+  sit: ['để vào bàn build', null],
+  closed: ['để vào bàn build', null],
+  packed: ['để cầm thùng đã đóng gói lên', null],
 }
 
 /** đẩy chữ gợi ý bàn build lên HUD (useRoom) + con trỏ; `on` = false thì xoá */
 function pushHint(on: boolean) {
   const m = benchMode(useGame.getState())
-  const [left, right, note] = BENCH_HINT[m]
+  const [left, note] = BENCH_HINT[m]
   useRoom.setState(
     on
-      ? { hover: left, hoverAlt: right, hoverNote: note, benchHover: m === 'place' }
-      : { hover: null, hoverAlt: null, hoverNote: null, benchHover: false },
+      ? { hover: left, hoverNote: note, benchHover: m === 'place' }
+      : { hover: null, hoverNote: null, benchHover: false },
   )
   document.body.style.cursor = on && left ? 'var(--cursor-hand)' : ''
 }
@@ -641,7 +633,7 @@ function pushHint(on: boolean) {
  * Bàn build khi đang đi lại: hộp vô hình phủ mặt bàn chặn bấm nhầm đồ trên bàn. Trong tầm với mới tương tác:
  * - bàn trống, không cầm gì: chỉ hiện chữ "Chưa có đơn hàng nào…" (không viền, bấm không làm gì)
  * - cầm thùng đơn tới bàn trống: khối chỗ đặt trên bàn sáng viền (không viền cả bàn), bấm = đặt thùng rồi ngồi xuống
- * - bàn có thùng: viền cả bàn, chuột trái = ngồi vào build; thùng đã đóng gói thì chuột phải = cầm thùng lên
+ * - bàn có thùng: viền cả bàn, chuột trái = ngồi vào build; thùng đã đóng gói thì chuột trái = cầm thùng lên (không dùng chuột phải)
  */
 function BenchSeat() {
   const walk = useGame((s) => s.walk)
@@ -690,17 +682,12 @@ function BenchSeat() {
             const g = useGame.getState()
             const m = benchMode(g)
             if (m === 'empty' || m === 'heldPacked' || m === 'busy') return
+            // thùng đã đóng gói: cầm luôn lên mang đi giao (không ngồi, không mở lại được)
+            if (m === 'packed') return g.pickBench()
             // cầm thùng đơn tới bàn trống: đặt lên (chuyển sang đơn đó, bấm thùng mới vào build) rồi ngồi xuống
             if (m === 'place' && !g.placeBench()) return
             show(false)
             sitAtBench()
-          }}
-          // chuột phải: cầm thùng lên (thùng đã đóng gói mang đi giao / thùng đơn chưa mở cất kệ, đổi đơn)
-          onContextMenu={(e: ThreeEvent<MouseEvent>) => {
-            e.stopPropagation()
-            const m = benchMode(useGame.getState())
-            if (!inReach(e) || (m !== 'packed' && m !== 'closed')) return
-            useGame.getState().pickBench()
           }}
         >
           <meshBasicMaterial transparent opacity={0} depthWrite={false} />

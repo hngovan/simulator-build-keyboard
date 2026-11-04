@@ -16,7 +16,8 @@ import { SHOP_CATS, buildCatalog } from '@/data/parts'
 import { SALE_EVERY, isSaleDay, nextSaleDay, saleMap, withSale } from '@/data/sale'
 import { SHIP_SPEEDS } from '@/data/shipping'
 import { cartLine, optName } from '@/data/cart'
-import { lockProduct } from '@/data/unlocks'
+import { MAX_LV, lockProduct } from '@/data/unlocks'
+import { useDevUnlock } from '@/features/apps/settings/devMoney'
 import type { ShopCategory, ToolItem } from '@/types'
 import { ListFilterPicker } from './OptionFilter'
 import { CartList } from './CartList'
@@ -137,7 +138,10 @@ export function Shopii() {
   const undoPurchase = useGame((s) => s.undoSolderPurchase)
   const tools = useGame((s) => s.tools)
   const solderOwned = useGame((s) => s.solderOwned)
-  const shopLv = useGame((s) => s.shopLv)
+  const realLv = useGame((s) => s.shopLv)
+  // dev bật "Mở khoá mọi món" thì coi như cấp tối đa
+  const devUnlock = useDevUnlock((s) => s.on)
+  const shopLv = devUnlock ? MAX_LV : realLv
   const { buyTool, addCart } = useGame.getState()
   const cart = useGame((s) => s.cart)
   // số món đã thêm (cộng số lượng từng dòng) cho badge giỏ hàng

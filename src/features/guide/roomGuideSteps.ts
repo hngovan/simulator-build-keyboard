@@ -43,7 +43,7 @@ export function roomGuide(s: GameState): RoomGuideStep | null {
       }
     if (s.benchBox === id)
       return {
-        text: 'Phím đã đóng gói! Tới bàn build, nhấn chuột phải vào thùng trên bàn để cầm lên.',
+        text: 'Phím đã đóng gói! Tới bàn build, nhấn chuột trái vào bàn để cầm thùng lên.',
         target: 'bench',
       }
   }

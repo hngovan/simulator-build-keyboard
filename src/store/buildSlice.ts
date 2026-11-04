@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand'
+import { useDevSpells } from '@/lib/devSpells'
 import {
   CASE_SCREW_STEPS,
   CRACK_CHANCE,
@@ -35,6 +36,7 @@ import {
   SPELL_OPEN,
   SPELL_DESOLDER,
   SPELL_KEYCAP,
+  SPELL_STAB,
   installTargets,
   SPELL_SOLDER,
   spellSolderKeys,
@@ -636,6 +638,28 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!rule.allowed) return fail(rule.reason ?? 'Không làm được mod này')
 
       let lube: string | undefined
+      // phép mod stab: con đang bấm + các con còn làm được mod này (theo thứ tự trên bàn), tối đa `spell` con / lần,
+      // mọi loại mod (cắt chân, dán băng, lube, lắp slider, lắp wire); dev build thử + công tắc "Sách phép vô hạn" = hết mọi con
+      const devAll = !!s.order?.dev && useDevSpells.getState().on
+      const spell = devAll ? n : spellBonus(s.supplies, SPELL_STAB)
+      /** con `u` còn làm được mod này không (cùng điều kiện như con đang bấm, không báo lỗi) */
+      const can = (u: number) => {
+        if (unitModded(b, kind, u)) return false
+        const d = (k: StabModKind) => unitModded(b, k, u)
+        if (kind === 'clip' || kind === 'bandaid' || kind === 'housing') return !d('assembled')
+        if (kind === 'assembled')
+          return (!needed('clip') || d('clip')) && (!needed('housing') || d('housing'))
+        if (kind === 'wired') return d('assembled')
+        return !d('wired')
+      }
+      // các stab làm trong lần này
+      let units =
+        spell > 1
+          ? [g, ...Array.from({ length: n - 1 }, (_, i) => (g + 1 + i) % n).filter(can)].slice(
+              0,
+              spell,
+            )
+          : [g]
       switch (kind) {
         case 'clip':
           if (done('assembled'))
@@ -643,15 +667,17 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
           if (TOOLS.clipper[s.tools.clipper].none)
             return fail('Cần kìm cắt — mua ở Shopii → Dụng cụ')
           break
-        case 'bandaid':
+        case 'bandaid': {
           if (done('assembled'))
             return fail('Phải Holee mod (dán băng vào lỗ wire trên slider) trước khi lắp slider')
           // 1 miếng Urgo cắt đôi dán được 2 stab: con thứ 1, 3, 5... mới bóc miếng mới
-          if (unitsModded(b, 'bandaid', n) % 2 === 0 && !s.useSupply('urgo', 1)) return false
+          const had = unitsModded(b, 'bandaid', n)
+          const pieces = Math.ceil((had + units.length) / 2) - Math.ceil(had / 2)
+          if (pieces && !s.useSupply('urgo', pieces)) return false
           // chỉ cảnh báo khi dán thừa (stab khít không cần Holee); stab cần dán thì `reason` chỉ là câu giải thích, không báo
-          if (!rule.needed && rule.reason && !unitsModded(b, 'bandaid', n))
-            s.toast(`⚠️ ${rule.reason}`, 'bad')
+          if (!rule.needed && rule.reason && !had) s.toast(`⚠️ ${rule.reason}`, 'bad')
           break
+        }
         case 'assembled':
           if (needed('clip') && !done('clip')) return fail('Clip chân stem trước khi lắp slider')
           if (needed('housing') && !done('housing'))
@@ -659,7 +685,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
           break
         case 'wired':
           if (!done('assembled')) return fail('Lắp slider vào housing trước rồi mới lắp wire')
-          if (!done('wire')) s.toast('⚠️ Wire chưa lube! Lắp vào rồi sẽ không lube được nữa', 'bad')
+          if (units.some((u) => !unitModded(b, 'wire', u)))
+            s.toast('⚠️ Wire chưa lube! Lắp vào rồi sẽ không lube được nữa', 'bad')
           break
         case 'housing':
         case 'wire': {
@@ -672,20 +699,25 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
           lube = b.stabModLube?.[kind] ?? s.lubePick[kind]
           const [fit, note] = lubeUseFit(lube, kind)
           if (!fit) return fail(`Không dùng ${SUPPLIES[lube].name} cho phần này được`)
-          if (!s.useSupply(lube, 1)) return false
+          // mỡ còn ít hơn số con thì chỉ phết được chừng đó
+          units = units.slice(0, (s.supplies[lube] ?? 0) || 1)
+          if (!s.useSupply(lube, units.length)) return false
           if (fit < 0.7 && !unitsModded(b, kind, n)) s.toast(`⚠️ ${note}`, 'bad')
           s.wearTool('brush')
         }
       }
-      const dur = stabAnimDuration(kind, lube, 1)
+      // chỉ tốn 1 lượt phép khi làm > 1 con (build thử phép vô hạn thì không trừ)
+      if (units.length > 1 && !devAll) s.useSupply(SPELL_STAB, 1)
+      // dụng cụ (kìm, kéo, cọ) làm lần lượt từng con trong mẻ; lắp slider / wire thì cả mẻ cùng di chuyển vào
+      const dur = stabAnimDuration(kind, lube, units.length)
       commit(snap)
-      set({ stabAnim: { kind, lube, unit: g, at: performance.now(), dur } })
+      set({ stabAnim: { kind, lube, units, at: performance.now(), dur } })
       setTimeout(() => {
         const cur = get()
         if (!cur.build) return set({ stabAnim: null })
         set({ stabAnim: null })
         const cb = cur.build
-        const list = [...new Set([...(cb.stabModUnits?.[kind] ?? []), g])]
+        const list = [...new Set([...(cb.stabModUnits?.[kind] ?? []), ...units])]
         const all = list.length >= n
         cur.patchBuild({
           stabModUnits: { ...cb.stabModUnits, [kind]: list },
@@ -900,7 +932,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     wearTool: (kind) => {
       const s = get()
       const tool = TOOLS[kind][s.tools[kind]]
-      if (!tool.life) return
+      // đơn build thử (dev): đồ vô hạn, không hao mòn
+      if (!tool.life || s.order?.dev) return
       const used = (s.wear[kind] ?? 0) + 1
       if (kind === 'solder') {
         const solderOwned = { ...s.solderOwned }

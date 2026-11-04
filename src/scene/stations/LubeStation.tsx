@@ -313,7 +313,7 @@ function OpenedSwitches({
       <instancedMesh ref={shutTopRef} args={[parts.top, m.top, total]} raycast={noHit} castShadow />
       <instancedMesh
         ref={springRef}
-        args={[SPRING_GEO, undefined, total]}
+        args={[SPRING_UP_GEO, undefined, total]}
         material={springLubed ? SPRING_WET : SPRING_DRY}
         raycast={noHit}
       />
@@ -491,10 +491,18 @@ function SwitchBrush({
   )
 }
 
+/** chiều dài lò xo (mm) */
+const SPRING_H = 18
 /** lò xo trong hộp: nằm ngang (trục x), gốc dời về giữa */
-const SPRING_GEO = springGeometry(2.6, 18, 9, 0.25)
-  .translate(0, -9, 0)
+const SPRING_GEO = springGeometry(2.6, SPRING_H, 9, 0.25)
+  .translate(0, -SPRING_H / 2, 0)
   .rotateZ(Math.PI / 2)
+/**
+ * lò xo đã thả lại vào housing dưới: đứng dọc, gốc = đáy lò xo (ngồi trên sàn hốc), cao tới vừa đáy thân stem đang nổi
+ * (không xuyên qua stem)
+ */
+const SPRING_IN_H = body.bottom + RAISE - (SPRING_IN_Y - SEAT_Y)
+const SPRING_UP_GEO = springGeometry(2.6, SPRING_IN_H, 6, 0.25)
 const springMat = (lubed: boolean) =>
   new THREE.MeshPhysicalMaterial({
     color: '#d6dae0',
@@ -593,7 +601,8 @@ function SpringShaker({
           TMP.position
             .lerpVectors(from, BOX_AT.clone().add(springSpot(count + j, total)), go)
             .add(v(0, Math.sin(go * Math.PI) * 1.2, 0))
-          TMP.rotation.set(0, 0, 0)
+          // rời switch còn đứng dọc, bay vào hộp thì nằm dần xuống
+          TMP.rotation.set(0, 0, (-Math.PI / 2) * (1 - go))
           TMP.scale.setScalar(U * (1 - (1 - IN_BOX) * go))
           TMP.updateMatrix()
           f.setMatrixAt(j, TMP.matrix)
@@ -716,11 +725,14 @@ function FlyingSprings({
     for (let j = 0; j < k; j++) {
       const go = ease(seg(q, (j / k) * 0.4, 0.6 + (j / k) * 0.4))
       const start = BOX_AT.clone().add(springSpot(Math.max(0, from - 1 - j), total))
+      // đích = tâm lò xo đứng trong housing (đáy trên sàn hốc); bay tới thì xoay dần từ nằm ngang sang dựng đứng
       const end = grid.at(to + j).clone()
-      end.y = TABLE + SPRING_IN_Y * U * grid.size
+      end.y = TABLE + (SPRING_IN_Y + SPRING_IN_H / 2) * U * grid.size
       TMP.position.lerpVectors(start, end, go).add(v(0, Math.sin(go * Math.PI) * 1.4, 0))
-      TMP.rotation.set(0, 0, 0)
+      TMP.rotation.set(0, 0, (-Math.PI / 2) * go)
       TMP.scale.setScalar(U * (IN_BOX + (grid.size - IN_BOX) * go))
+      // co dần theo trục lò xo (trục x của hình nằm) cho khớp chiều cao trong housing
+      TMP.scale.x *= 1 + (SPRING_IN_H / SPRING_H - 1) * go
       TMP.updateMatrix()
       m.setMatrixAt(j, TMP.matrix)
     }

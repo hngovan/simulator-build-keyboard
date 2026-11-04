@@ -2,6 +2,15 @@
 
 ## 2026-11-03
 
+### Đóng gói rồi không mở lại; bỏ chuột phải cầm thùng, chỉ chuột trái
+
+- Yêu cầu: build xong xác nhận đóng gói thì không mở lại được nữa, chỉ bấm chuột trái để cầm lên; bỏ tương tác chuột phải cầm thùng.
+- Bỏ `unpackBox` (carrySlice) + dòng "mở ra build lại"; `PackedOrder.session` giữ để cất đồ thừa vào kho chung lúc gửi.
+- `EmptyBench` `act`: thùng đơn đủ đồ = `buildOrder`, thiếu đồ / đã đóng gói = `pickBench` (thùng luôn bấm được khi ngồi). Bỏ `useBoxPick`
+  (EmptyBenchHud), `onContextMenu` bàn build trong Room.tsx, `hoverAlt` (roomStore / RoomHud / RoomSpot). Đi lại: bấm bàn có thùng đã đóng
+  gói = cầm luôn; thùng đơn chưa mở = ngồi vào bàn (không còn cầm thẳng từ ngoài). Đổi đơn khi thùng đủ đồ: vào build rồi "Cầm thùng đơn lên".
+- Lời dẫn BenchTour / roomGuideSteps, Phím tắt (bỏ dòng chuột phải) sửa theo.
+
 ### Số đơn mỗi ngày theo cấp xưởng
 
 - Yêu cầu: thợ mới mỗi ngày chỉ 1–2 đơn, càng lên cấp càng nhiều. `ShopLevel.offers` (1–2 / 2–3 / 3–5 / 4–6 / 5–7), `offerRange(lv, rep)`:
