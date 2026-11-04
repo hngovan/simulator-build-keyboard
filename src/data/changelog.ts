@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.28',
     date: '2026-11-04',
-    commits: [],
+    commits: ['47c52a9'],
     title: 'Ảnh dụng cụ ở bàn build, hoạt cảnh đóng switch, phép cộng dồn bậc thợ, dây JST nằm sàn',
     items: [
       'Cột phải bàn build: ô ảnh model tua vít tay / điện, bút hàn / trạm hàn; bảng dán feet có ảnh feet + ô chọn màu, dán 1 cái là khoá màu',
