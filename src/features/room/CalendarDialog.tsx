@@ -223,8 +223,8 @@ export function CalendarDialog() {
         <div className="flex w-[300px] shrink-0 flex-col gap-3 max-md:w-[min(92vw,360px)]">
           {/* drop-shadow ở lớp ngoài: clip-path cắt mất box-shadow */}
           <div className="min-h-0 flex-1 drop-shadow-[0_10px_14px_rgba(0,0,0,0.5)]">
-            {/* min-h: màn hẹp (xếp dọc) không có tờ lịch kéo cao */}
-            <div className="relative h-full min-h-[360px]">
+            {/* min-h: màn hẹp (xếp dọc) không có tờ lịch kéo cao; màn thấp (xếp ngang) tờ note co theo tờ lịch, 2 nút luôn hiện */}
+            <div className="relative h-full min-h-[140px] max-md:min-h-[360px]">
               <span className="absolute -top-2 left-1/2 z-10 h-7 w-24 -translate-x-1/2 -rotate-6 bg-[#f2c9a8]/80 shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
               <div
                 // absolute: nhiều việc thì cuộn trong tờ note, không đẩy cao cả popup (cao bằng tờ lịch)

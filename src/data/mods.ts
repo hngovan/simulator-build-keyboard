@@ -142,7 +142,23 @@ interface SwitchLubeInput {
   brushQ: number
 }
 
-/** Chấm phần lube switch theo yêu cầu khách. Trả về 0..1 + mô tả */
+/**
+ * Lời khuyên lube theo cảm giác switch (ngoài đời): clicky lube thân là mất tiếng click (lá click / jacket phải khô),
+ * tactile lube thân làm khấc nhẹ đi (chỉ quét mỏng mỡ loãng lên rail, tránh chân stem); lò xo thì loại nào cũng lube
+ * được (dầu, hết tiếng ping). Linear: null
+ */
+export function lubeAdvice(feel: 'linear' | 'tactile' | 'clicky') {
+  if (feel === 'clicky')
+    return 'Clicky: đừng lube thân (mất tiếng click), chỉ lube lò xo cho hết ping'
+  if (feel === 'tactile')
+    return 'Tactile: lube thân làm khấc nhẹ đi (chỉ quét mỏng mỡ loãng, tránh chân stem); lube lò xo là đủ hết ping'
+  return null
+}
+
+/**
+ * Chấm phần lube switch theo yêu cầu khách. Trả về 0..1 + mô tả. Khách muốn lube switch tactile / clicky: lube lò xo
+ * (hết ping) là chính; clicky lube thân thì trừ theo độ hợp (gần như mất hết), tactile lube thân mỏng cũng tính
+ */
 export function switchLubeEval({
   switchType,
   lubeType,
@@ -159,7 +175,8 @@ export function switchLubeEval({
   if (lubeType && lubed) {
     const [fit, note] = lubeUseFit(lubeType, sw.feel)
     quality = fit * brushQ
-    if (fit < 0.8) notes.push(note)
+    // tactile / clicky lube thân luôn có ghi chú (khấc nhẹ đi / mất tiếng click)
+    if (fit < 0.8 || sw.feel !== 'linear') notes.push(note)
     if (sw.prelubed) {
       quality *= 0.75
       notes.push('Switch đã lube sẵn, lube thêm dễ over-lube')
@@ -174,6 +191,11 @@ export function switchLubeEval({
   if (pref === 'want') {
     if (!lubed && sw.prelubed) return { q: 0.95, notes: ['Switch đã lube sẵn từ nhà máy'] }
     if (!spring) notes.push('Chưa lube lò xo (tiếng ping)')
+    // phần thân đã lube bị mất khấc / click bao nhiêu (chưa lube thân = giữ nguyên)
+    const body = lubed ? 1 - frac * (1 - quality) : 1
+    if (sw.feel === 'clicky') return { q: spring * body, notes }
+    if (sw.feel === 'tactile')
+      return { q: Math.max(spring * body, frac * quality * 0.9 + 0.1 * spring), notes }
     return { q: frac * quality * 0.9 + 0.1 * spring, notes }
   }
   return { q: lubed ? 1 - frac * (1 - quality) : 1, notes }

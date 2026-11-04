@@ -154,8 +154,10 @@ const standToWorld = (L: SetLayout, i: number, [x, y, z]: [number, number, numbe
 
 const ORDER: StabModKind[] = ['clip', 'bandaid', 'housing', 'assembled', 'wire', 'wired']
 
-/** mod làm bằng dụng cụ (kìm, kéo, cọ): làm lần lượt từng con trong mẻ; lắp slider / wire thì cả mẻ cùng lúc */
-const SEQ: StabModKind[] = ['clip', 'bandaid', 'housing', 'wire']
+/** mod làm bằng kìm / kéo: làm lần lượt từng con trong mẻ; lắp slider / wire thì cả mẻ cùng lúc */
+const SEQ: StabModKind[] = ['clip', 'bandaid']
+/** lube housing / wire (như lube switch): cọ chỉ phết con đầu mẻ, các con còn lại xong cùng lúc khi hết hoạt cảnh */
+const FIRST: StabModKind[] = ['housing', 'wire']
 
 /**
  * Tiến độ hoạt cảnh của 1 loại mod (null nếu không chạy). Không có `g`: tiến độ con đang làm (dụng cụ đi lần lượt).
@@ -166,6 +168,8 @@ function animProgress(kind: StabModKind, g?: number) {
   if (!a || a.kind !== kind) return null
   const p = Math.min(1, (performance.now() - a.at) / (a.dur * 1000))
   const m = a.units.length
+  if (FIRST.includes(kind))
+    return g === undefined || g === a.units[0] ? p : a.units.includes(g) ? 0 : null
   if (!SEQ.includes(kind)) return g === undefined || a.units.includes(g) ? p : null
   if (g === undefined) return slotOf(p, m)[1]
   const k = a.units.indexOf(g)

@@ -164,22 +164,22 @@ vào `window.__r3f` để debug trong console.
 - Mua/được cung cấp linh kiện → chọn mount → `startBuild` kiểm tra kho rồi tạo `ctx = buildContext(...)`
   và `build = newBuild()`. `ctx` là dữ liệu dẫn xuất, không lưu — dựng lại từ order + inventory + mount.
 - Các action trong `buildSlice` cập nhật `build` qua `patchBuild` (không tự chuyển bước; người chơi bấm
-  `nextStep`; riêng `dropInCase` case 1 mảnh thả xong, `placeFoot` dán xong feet cuối, `turnScrew` bắt đủ vít bước vặn vào (chờ `SPIN_MS`) thì tự sang bước kế) → bước `test` → `deliver()` gọi `scoreDelivery`, trừ uy tín theo số ngày trễ hạn.
+  `nextStep`; riêng `dropInCase` thả board vào case / ghép case trên xong, `placeFoot` dán xong feet cuối, `turnScrew` bắt đủ vít bước vặn vào (chờ `SPIN_MS`) thì tự sang bước kế) → bước `test` → `deliver()` gọi `scoreDelivery`, trừ uy tín theo số ngày trễ hạn.
 - Hàn (PCB solder): cần mỏ hàn (`tools.solder` ≥ 1) + thiếc (`SOLDER_IDS` trong supplies, chọn ở `solderPick`).
   Hàn + vặn vít vào = skill check (`data/skillCheck.ts`, `scene/common/skill.ts`, thanh `components/game/SkillBar`): nhấn giữ chuột cho thanh lực / nhiệt chạy lên rồi tụt xuống (3 khoảng cố định tối / xanh / đỏ cuối),
   nhả chuột dừng (camera khoá lúc giữ, `useCamLock`); chưa tới xanh = thiếu (hụt / vít vào 1 phần), xanh đạt (bỏ vùng hoàn hảo + điểm thưởng),
   nhả ở đỏ = quá (cháy / trượt ren). Hàn cháy thì `tipDirty`, phải lau bùi nhùi
-  (`tipCleaner`, `cleanTip`). Dụng cụ có độ bền (`ToolDef.life`, đếm ở `wear`, hết thì về "chưa có"): bút hàn 300, trạm 1000, bùi nhùi 1000.
+  (`tipCleaner`, `cleanTip`). Dụng cụ có độ bền (`ToolDef.life`, đếm ở `wear`, hết thì về "chưa có"): bút hàn 300, trạm 1000, bùi nhùi 1000, tua vít điện 1000 lần vặn / tháo vít (`wearScrew`, hỏng thì về tua vít thường; tua vít thường không hỏng).
   Đồ hàn trên bàn: `SolderKit` (model ở `public/models/tools/solder/`, `bun run convert:solder-tools`).
-  Độ khó hàn (`solderSkill`): bút hàn vùng xanh 20% thanh / 0,5 lượt/s, trạm 26% / 0,42, thiếc đểu (`slow`) hẹp vùng xanh
+  Độ khó hàn (`solderSkill`): bút hàn vùng xanh 20% thanh / 0,42 lượt/s (nóng chậm), trạm 26% / 0,5; bút hàn khó giữ nhiệt: `PEN_BURN` 10% cháy dù nhả đúng vùng xanh (gộp với `burnChance` thiếc), thiếc đểu (`slow`) hẹp vùng xanh
   và `burnChance` ẩn 15%. Hút thiếc cháy: bấm 1 lần là bút hút tự chạy. Bút / trạm đã mua đổi qua lại được (`solderOwned`).
   Thiếc đểu có `burnChance` (cháy dù nhả đúng vùng xanh). Bàn mod stab bày đúng số stab của layout (`stabUnits`).
   Vít / chân hàn / hốc feet ở mặt nào chỉ bấm được khi mặt đó quay lên (`useAssemblyFlipped` trong caseSplit.ts: Q lật lại xem mặt kia thì không
   bấm xuyên case / board; `ScrewSet` `flip` = vít bắt từ đáy).
   Đầu vít đang lắp (`screwBit`) lưu trong Profile; đầu cần theo bước `stepBit(step)` (`SCREW_BITS` + vít DTB / ốc tạ lục giác: bảng `BitPicker`, tua vít trên bàn,
-  sai đầu ở DTB / tạ cũng trượt ren `slipBit`). Sai đầu vít không chặn: trượt ren, `STRIP_TRIES` 3 lần / vít mới tuôn ren (`build.slips` → `build.stripped`, hoàn tác không gỡ).
+  sai đầu ở DTB / tạ cũng trượt ren `slipBit`). Sai đầu vít không chặn: trượt ren, `STRIP_TRIES` 3 lần / vít mới tuôn ren (`build.slips` → `build.stripped`, hoàn tác không gỡ; siết chưa tới (đỏ trái) cũng tính chung vào `slips`).
   Bước vặn vào là skill check canh lực (`tightenScrew(id, result)`, `torqueSpec` theo `ToolDef.torque` {width, speed}:
-  điện 24% / 0,55, tay 20% / 0,45), đỏ = trượt ren (3 lần thì tuôn); vít ăn vào case PC / mica / acrylic (`CASE_SCREW_STEPS`, `brittleCase`) `CRACK_CHANCE` nứt case (`build.cracked`).
+  điện 24% / 0,55, tay 20% / 0,45; tua vít tay phải đạt 2 lần vít mới vào hết, lần 1 vào nửa chừng), đỏ = trượt ren (3 lần thì tuôn); vít ăn vào case PC / mica / acrylic (`CASE_SCREW_STEPS`, `brittleCase`) `CRACK_CHANCE` nứt case (`build.cracked`).
   Vít stab tuôn ren = stab hỏng (vòng đỏ, không tự sang bước): có stab dư cùng cỡ thì bấm vít đỏ thay (`replaceStab`, vặn lại cả stab).
   Giao: `DeliveryResult.refund` + `repLoss` (case nứt / vít case-top-tray tuôn ren bị phát hiện: 80% giá case `CASE_REFUND`, −2 uy tín
   `CASE_DAMAGE_REP`; stab tuôn ren: đền nguyên giá bộ stab). Khách không để ý tuôn ren 20% (`STRIP_UNNOTICED`), hỏng ≤ 1/3 số lỗ
@@ -238,10 +238,10 @@ vào `window.__r3f` để debug trong console.
   ra bỏ 1 lò xo vào hộp, mở hết mới lắc lube lò xo được. Cuối cùng bấm lưới xen kẽ thả lò xo lại vào housing (`springBack`, `build.springsIn`) rồi đóng switch lại
   (`closeSwitch`, `build.swClosed`, chỉ con đã có lò xo, theo thứ tự lưới, mỗi lần = bậc thợ + phép mở; bấm lưới khi đã lube hết con đã mở): bước chỉ xong khi đóng hết,
   bắt đầu thả lò xo thì khoá mở / lube / lube lò xo. Mod stab làm từng con (`modStab(kind, unit)`, `build.stabModUnits`, đủ mọi con mới bật `stabMods[kind]`). Vật bấm được ở bàn lube / mod stab viền vàng khi rê (`Clickable` +
-  `useHoverOutline`), mũi tên vàng chỉ việc tiếp theo (`HintArrow`, StationKit). Sách phép (mục Shopii "Sách phép" = vật tư có `SupplyDef.spell`), bán riêng; mở / lube / lắp: thợ lõ có phép = 10 con, có chứng chỉ thì cộng 10 (`spellRun`): `spellOpen` (mở,
+  `useHoverOutline`), mũi tên vàng chỉ việc tiếp theo (`HintArrow`, StationKit). Sách phép (mục Shopii "Sách phép" = vật tư có `SupplyDef.spell`), bán riêng; mọi phép cộng dồn với bậc thợ (lõ 1 / middle 5 / senior 10): mở / lube / lắp = bậc thợ + 10 (`spellRun`, vd lõ 11), hàn / hút thiếc / mod stab không phép = 1, có phép = bậc thợ + phép (`spellBatch`): `spellOpen` (mở,
   bàn bày tới 10 đồ mở `openerSlots`) `spellLube` (+10 con mỗi mẻ lube) và `spellAssem`
-  (+10 switch mỗi lần lắp, `installRun`), `spellKeycap` (+10 keycap mỗi lần lắp), `spellSolder` (1 lần hàn = 10 phím, cháy thì cháy cả 10, `solderKey`),
-  `spellDesolder` (1 lần hút = 10 phím cháy, `desolderKey`), `spellStab` (phép mod stab: mọi mod stab 1 lần = 5 stab, `modStab`; hoạt cảnh `StabAnim.units`: dụng cụ đi lần lượt, lắp slider / wire cả mẻ cùng lúc), mỗi loại 200 lần, `spellBonus(supplies, id)`,
+  (+10 switch mỗi lần lắp, `installRun`), `spellKeycap` (+10 keycap mỗi lần lắp), `spellSolder` (1 lần hàn = bậc thợ + 10 phím, cháy thì cháy cả mẻ, `solderKey`),
+  `spellDesolder` (1 lần hút = bậc thợ + 10 phím cháy, `desolderKey`), `spellStab` (phép mod stab: mọi mod stab 1 lần = bậc thợ + 5 stab, `modStab`; hoạt cảnh `StabAnim.units`: kìm / kéo đi lần lượt, cọ lube housing / wire chỉ phết con đầu như lube switch, lắp slider / wire cả mẻ cùng lúc), mỗi loại 200 lần, `spellBonus(supplies, id)`,
   chỉ trừ lượt khi vượt bậc thợ. Bàn build có màn hình (`scene/models/Computer.tsx`): bấm vào thì về desktop.
 - `nextDay()` (sau khi giao): ngày + 1, đợt đơn mới (số đơn + hệ số tiền công theo bậc uy tín, `data/reputation.ts`),
   job trễ quá 3 ngày thì khách huỷ (−3 uy tín). Chứng chỉ thợ cộng thu nhập cơ bản vào ví mỗi lần nhận đơn (`CERT_BONUS`).

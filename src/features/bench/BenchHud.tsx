@@ -20,7 +20,15 @@ import { OrderSpec } from '@/components/game/OrderSpec'
 import { StatusChips } from '@/components/game/StatusChips'
 import type { StepId, ToolKind } from '@/types'
 import { StepList } from './StepList'
-import { FeetPanel, FoamPanel, LubePanel, RingPanel, SolderPanel, StabModPanel } from './ModPanels'
+import {
+  FeetPanel,
+  FoamPanel,
+  InstallPanel,
+  LubePanel,
+  RingPanel,
+  SolderPanel,
+  StabModPanel,
+} from './ModPanels'
 import { DevCasePanel } from './DevCasePanel'
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
@@ -90,9 +98,18 @@ function useDeliverIssues(): DeliverIssues {
   }
   const n = ctx.keys.length
   const prelubed = !!(swType && SWITCHES[swType]?.prelubed)
-  if (order?.lubePref === 'want' && !prelubed && build.lubed < n) {
-    requested.push(`Khách muốn lube switch: mới lube ${build.lubed}/${n} con`)
-    at.push('switchLube')
+  // tactile / clicky: khách muốn lube = lube lò xo cho hết ping (lube thân thì mất khấc / tiếng click)
+  const feel = swType ? SWITCHES[swType]?.feel : undefined
+  if (order?.lubePref === 'want' && !prelubed) {
+    if (feel && feel !== 'linear') {
+      if (!build.springLube) {
+        requested.push('Khách muốn lube: chưa lube lò xo (tiếng ping)')
+        at.push('switchLube')
+      }
+    } else if (build.lubed < n) {
+      requested.push(`Khách muốn lube switch: mới lube ${build.lubed}/${n} con`)
+      at.push('switchLube')
+    }
   }
   if (order?.lubePref === 'none' && build.lubed > 0) {
     requested.push('Khách dặn KHÔNG lube switch nhưng đã lube')
@@ -292,8 +309,6 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
   const toolLv =
     toolKind === 'screw' ? screwLevel(s.tools, s.screwPick) : toolKind && s.tools[toolKind]
   const tool = toolKind && TOOLS[toolKind][toolLv as number]
-  // đã có tua vít điện: bấm ô dụng cụ để đổi qua lại tay / điện
-  const swapTo = toolKind === 'screw' && s.tools.screw > 0 ? (toolLv ? 0 : s.tools.screw) : null
   const isFlipped = canFlip && (autoFlip(step, ctx) ? !s.viewFlip : s.viewFlip)
   const hint =
     step === 'switch' && !s.inventory.switch?.count
@@ -350,24 +365,12 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
         )}
         {/* dụng cụ đang dùng + nút bước sau: cùng cỡ, đứng cạnh nhau (thu gọn thì chỉ còn nút) */}
         <div className="flex flex-wrap items-center justify-center gap-2.5">
-          {open &&
-            tool &&
-            !tool.none &&
-            (swapTo !== null ? (
-              // đổi tua vít: viền vàng = bấm được
-              <button
-                type="button"
-                title={`Đổi sang ${TOOLS.screw[swapTo].name}`}
-                onClick={() => s.setScrewPick(swapTo)}
-                className="inline-flex h-9 min-w-[180px] items-center justify-center gap-1.5 rounded-[10px] border-2 border-yellow bg-panel-2 px-4 font-head text-sm font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.35)] transition-transform hover:-translate-y-0.5"
-              >
-                🔧 {tool.name} ⇄
-              </button>
-            ) : (
-              <span className="inline-flex h-9 min-w-[180px] items-center justify-center gap-1.5 rounded-[10px] bg-panel-2 px-4 font-head text-sm font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.35)]">
-                🔧 {tool.name}
-              </span>
-            ))}
+          {open && tool && !tool.none && (
+            // tua vít đổi tay / điện ở bảng đầu vít cột phải (BitPicker)
+            <span className="inline-flex h-9 min-w-[180px] items-center justify-center gap-1.5 rounded-[10px] bg-panel-2 px-4 font-head text-sm font-extrabold shadow-[0_4px_0_rgba(0,0,0,0.35)]">
+              🔧 {tool.name}
+            </span>
+          )}
           {/* bước đóng gói: nút như bấm thùng carton */}
           {step === 'pack' && (
             <span data-tour="bench-pack" className="contents">
@@ -479,6 +482,8 @@ export function BenchHud() {
       <LubePanel />
     ) : step === 'solder' ? (
       <SolderPanel />
+    ) : step === 'switch' || step === 'keycap' ? (
+      <InstallPanel kind={step} />
     ) : step === 'feet' ? (
       <FeetPanel />
     ) : step === 'foam' ? (

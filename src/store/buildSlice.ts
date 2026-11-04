@@ -39,9 +39,11 @@ import {
   SPELL_STAB,
   installTargets,
   SPELL_SOLDER,
+  PEN_BURN,
   spellSolderKeys,
   lubeUseFit,
   spellBonus,
+  spellBatch,
   spellRun,
 } from '@/data/supplies'
 import {
@@ -322,17 +324,25 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
    * trượt ren 1 vít (sai đầu vít / quá lực): `STRIP_TRIES` lần mới tuôn ren hẳn (vít coi như xong nhưng ghi hỏng;
    * vít ăn vào case giòn thì có thể nứt case), các lần trước chỉ cảnh báo, vít giữ nguyên
    */
-  const strip = (step: ScrewStep, id: string) => {
+  /** mỗi lần vặn / tháo 1 vít bằng tua vít điện: mòn 1 lần (`life`, hết thì về tua vít thường); tua vít thường không hỏng */
+  const wearScrew = () => {
+    const s = get()
+    if (screwLevel(s.tools, s.screwPick) > 0) s.wearTool('screw')
+  }
+  /**
+   * 1 lần làm hỏng ren (sai đầu vít / quá tay / `under` = cố siết chưa tới): cộng `slips`, tới `STRIP_TRIES` lần thì tuôn ren;
+   * chưa tới thì ghi thêm `patch` (siết chưa tới: vít vào thêm 1 phần)
+   */
+  const strip = (step: ScrewStep, id: string, under = false, patch: Partial<BuildState> = {}) => {
     const s = get()
     if (!s.build) return
     const n = (s.build.slips?.[id] ?? 0) + 1
     if (n < STRIP_TRIES) {
-      s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
-      const why = s.screwBit !== SCREW_BITS[step] ? 'sai đầu vít' : 'quá tay'
-      s.toast(
-        `⚠️ Trượt ren (${why}) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
-        'bad',
-      )
+      s.patchBuild({ ...patch, slips: { ...s.build.slips, [id]: n } })
+      const why = under
+        ? 'Siết chưa tới, ren bị mòn'
+        : `Trượt ren (${s.screwBit !== SCREW_BITS[step] ? 'sai đầu vít' : 'quá tay'})`
+      s.toast(`⚠️ ${why} ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`, 'bad')
       return
     }
     const crack =
@@ -501,15 +511,14 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       commit(snap)
       get().patchBuild({ ring: s.oringPick })
     },
-    // case 1 mảnh: thả board vào case xong thì sang luôn bước kế (bắt vít tray...): mũi tên + tua vít hiện ngay,
-    // khỏi bấm "Bước tiếp theo"; 1 thao tác = 1 lần hoàn tác (về lại lúc chưa thả). Case 2 mảnh vẫn chờ bấm rồi mới đậy case
+    // thả board vào case (case 2 mảnh: ghép case trên vào case dưới) xong thì sang luôn bước kế (bắt vít / đậy case):
+    // mũi tên + tua vít hiện ngay, khỏi bấm "Bước tiếp theo"; 1 thao tác = 1 lần hoàn tác (về lại lúc chưa thả)
     dropInCase: () => {
       const s = at('caseIn')
       if (!s || s.build.inCase) return
       commit(snapshot())
-      const auto = s.ctx.caseDef.pieces !== 2
       set({
-        build: { ...s.build, inCase: true, stepIdx: s.build.stepIdx + (auto ? 1 : 0) },
+        build: { ...s.build, inCase: true, stepIdx: s.build.stepIdx + 1 },
         viewFlip: false,
         testIdleFrom: performance.now(),
       })
@@ -546,6 +555,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const cur = s.build.screws[id] ?? 0
       if (cur >= SCREW_FULL) return
       commit(snapshot())
+      wearScrew()
       // sai đầu vít: toét ren, vít vẫn ra / vào nhưng ghi hỏng
       if (s.screwBit !== SCREW_BITS[step]) return strip(step, id)
       // tua vít tay mỗi click 1 nấc, tua vít điện 1 click là đủ
@@ -567,15 +577,21 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const cur = s.build.screws[id] ?? 0
       if (cur >= SCREW_FULL) return
       commit(snapshot())
+      wearScrew()
       if (s.screwBit !== SCREW_BITS[step] || result === 'high') return strip(step, id)
-      // dừng sớm (đỏ trái): vít mới vào 1 phần, vặn tiếp lần sau
-      if (result === 'low') {
-        s.patchBuild({
+      // dừng sớm (đỏ trái): vít mới vào 1 phần, vặn tiếp lần sau; cố siết chưa tới đủ `STRIP_TRIES` lần (tính chung
+      // với trượt ren) cũng mòn tuôn ren
+      if (result === 'low')
+        return strip(step, id, true, {
           screws: {
             ...s.build.screws,
             [id]: Math.max(cur, Math.min(SCREW_FULL * 0.9, cur + SCREW_FULL / 3)),
           },
         })
+      // tua vít thường: canh lực đạt 2 lần vít mới vào hết (lần 1 vào nửa chừng), tua vít điện 1 lần là xong
+      const half = SCREW_FULL / 2
+      if (!screwLevel(s.tools, s.screwPick) && cur < half) {
+        s.patchBuild({ screws: { ...s.build.screws, [id]: half } })
         return
       }
       s.patchBuild({
@@ -641,7 +657,9 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       // phép mod stab: con đang bấm + các con còn làm được mod này (theo thứ tự trên bàn), tối đa `spell` con / lần,
       // mọi loại mod (cắt chân, dán băng, lube, lắp slider, lắp wire); dev build thử + công tắc "Sách phép vô hạn" = hết mọi con
       const devAll = !!s.order?.dev && useDevSpells.getState().on
-      const spell = devAll ? n : spellBonus(s.supplies, SPELL_STAB)
+      const spell = devAll
+        ? n
+        : spellBatch(TOOLS.cert[s.tools.cert ?? 0].n!, spellBonus(s.supplies, SPELL_STAB))
       /** con `u` còn làm được mod này không (cùng điều kiện như con đang bấm, không báo lỗi) */
       const can = (u: number) => {
         if (unitModded(b, kind, u)) return false
@@ -708,8 +726,13 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       }
       // chỉ tốn 1 lượt phép khi làm > 1 con (build thử phép vô hạn thì không trừ)
       if (units.length > 1 && !devAll) s.useSupply(SPELL_STAB, 1)
-      // dụng cụ (kìm, kéo, cọ) làm lần lượt từng con trong mẻ; lắp slider / wire thì cả mẻ cùng di chuyển vào
-      const dur = stabAnimDuration(kind, lube, units.length)
+      // kìm / kéo làm lần lượt từng con trong mẻ; lube housing / wire chỉ phết con đầu (các con kia xong cùng lúc, như lube switch);
+      // lắp slider / wire thì cả mẻ cùng di chuyển vào
+      const dur = stabAnimDuration(
+        kind,
+        lube,
+        kind === 'housing' || kind === 'wire' ? 1 : units.length,
+      )
       commit(snap)
       set({ stabAnim: { kind, lube, units, at: performance.now(), dur } })
       setTimeout(() => {
@@ -977,13 +1000,14 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       commit(snapshot())
       const solder = { ...s.build.solder }
       delete solder[id]
-      // phép rã hàn: 1 lần hút = 10 phím (phím này + 9 phím cháy kế tiếp, thứ tự hàng → cột)
+      // phép rã hàn: 1 lần hút = bậc thợ + 10 phím (phím này + các phím cháy kế tiếp, thứ tự hàng → cột)
       const bonus = spellBonus(s.supplies, SPELL_DESOLDER)
       const isBurnt = (k: string) => {
         const j = s.build.solder[k]
         return !!j && j !== true && j.burnt
       }
-      const extra = bonus ? spellSolderKeys(s.ctx.keys, (k) => !isBurnt(k), id, bonus - 1) : []
+      const more = spellBatch(TOOLS.cert[s.tools.cert ?? 0].n!, bonus) - 1
+      const extra = bonus ? spellSolderKeys(s.ctx.keys, (k) => !isBurnt(k), id, more) : []
       extra.forEach((k) => delete solder[k.id])
       if (extra.length) s.useSupply(SPELL_DESOLDER, 1)
       s.patchBuild({ solder })
@@ -1024,12 +1048,14 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!s || s.build.solder[id] || !s.canSolder()) return
       const snap = snapshot()
       if (!s.useSupply(s.solderPick, JOINTS_PER_KEY)) return
-      // thiếc đểu: có lúc cháy chân dù nhả đúng vùng xanh
-      const luck = !burnt && Math.random() < (SUPPLIES[s.solderPick].solder?.burnChance ?? 0)
+      // thiếc đểu / bút hàn khó giữ nhiệt (`PEN_BURN`): có lúc cháy chân dù nhả đúng vùng xanh
+      const wireBurn = SUPPLIES[s.solderPick].solder?.burnChance ?? 0
+      const penBurn = s.tools.solder >= 2 ? 0 : PEN_BURN
+      const luck = !burnt && Math.random() < 1 - (1 - wireBurn) * (1 - penBurn)
       if (luck) burnt = true
       commit(snap)
       const solder = { ...s.build.solder, [id]: { wire: s.solderPick, burnt } }
-      // phép hàn switch: 1 lần hàn = 10 phím (phím này + 9 phím chưa hàn kế tiếp, thứ tự hàng → cột),
+      // phép hàn switch: 1 lần hàn = bậc thợ + 10 phím (phím này + các phím chưa hàn kế tiếp, thứ tự hàng → cột),
       // mỗi phím vẫn tốn 2 mối thiếc; hàn cháy thì cháy luôn cả 10
       const bonus = spellBonus(s.supplies, SPELL_SOLDER)
       let extraN = 0
@@ -1038,7 +1064,10 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
           s.ctx.keys,
           (k) => !!solder[k],
           id,
-          Math.min(bonus - 1, Math.floor((get().supplies[s.solderPick] ?? 0) / JOINTS_PER_KEY)),
+          Math.min(
+            spellBatch(TOOLS.cert[s.tools.cert ?? 0].n!, bonus) - 1,
+            Math.floor((get().supplies[s.solderPick] ?? 0) / JOINTS_PER_KEY),
+          ),
         )
         if (extra.length) {
           s.useSupply(s.solderPick, extra.length * JOINTS_PER_KEY)
@@ -1094,9 +1123,12 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!s || s.build.feet?.[i]) return
       // chụp trước khi trừ vật tư: hoàn tác thì trả lại feet
       const snap = snapshot()
-      if (!s.useSupply(s.feetPick, 1)) return
+      // dán 1 cái rồi thì khoá màu: các feet sau cùng màu feet đầu (bảng chọn màu cũng khoá)
+      const color = Object.values(s.build.feet ?? {})[0] ?? s.feetPick
+      if (!s.useSupply(color, 1)) return
       commit(snap)
-      const feet = { ...s.build.feet, [i]: s.feetPick }
+      if (color !== s.feetPick) set({ feetPick: color })
+      const feet = { ...s.build.feet, [i]: color }
       // dán xong feet cuối thì sang luôn bước kế (case tự lật lại), khỏi bấm "Bước tiếp theo"
       const all = Object.keys(feet).length >= s.ctx.feet.length
       const build = get().build!
@@ -1110,6 +1142,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const c = s?.build.cover ?? {}
       if (!s || c.out?.[i] || i < 0 || i >= coverScrews(s.ctx)) return
       commit(snapshot())
+      wearScrew()
       s.patchBuild({ cover: { ...c, out: { ...c.out, [i]: true } } })
     },
     liftCover: () => {
@@ -1146,6 +1179,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (result === 'low')
         return s.toast('Chưa đủ lực, ốc tạ mới vào 1 phần: giữ chuột lâu hơn', 'bad')
       commit(snapshot())
+      wearScrew()
       const tight = { ...c.tight, [i]: true as const }
       const patch: Partial<BuildState> = { cover: { ...c, tight } }
       const badBit = s.screwBit !== stepBit('coverOn')
@@ -1193,6 +1227,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const d = s?.build.dtb ?? {}
       if (!s || d.placed || d.out?.[i] || i < 0 || i >= DTB_MM.holes.length) return
       commit(snapshot())
+      wearScrew()
       // sai đầu vít: trượt ren, chưa ra; tới STRIP_TRIES lần thì tuôn ren (vít vẫn ra được nhưng ghi hỏng)
       if (s.screwBit !== stepBit('dtb') && !get().slipBit(`dtb-${i}`, 'vít DTB')) return
       get().patchBuild({ dtb: { ...d, out: { ...d.out, [i]: true } } })
@@ -1216,6 +1251,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (result === 'low')
         return s.toast('Chưa đủ lực, vít DTB mới vào 1 phần: giữ chuột lâu hơn', 'bad')
       commit(snapshot())
+      wearScrew()
       const done = { dtb: { ...d, screws: { ...d.screws, [i]: true as const } } }
       const badBit = s.screwBit !== stepBit('dtb')
       if (result === 'high' || badBit) {

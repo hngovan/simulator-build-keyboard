@@ -90,3 +90,14 @@
   đỏ, đỏ cuối `RED` 16% (`hi` = 0,84, `lo` = hi − width), không random; `needleAt` lại chạy lên hết thanh rồi tụt xuống (ping-pong) tới khi
   nhả, nhả mới chấm (bỏ tự dừng khi chạm đỏ). Bỏ vùng hoàn hảo (`plo = phi`) + dòng thưởng "Thao tác hoàn hảo" trong `scoreDelivery`.
   Chậm lại: tua vít tay 0,2 / 0,45 lượt/s, điện 0,24 / 0,55 (xanh rộng hơn tay một chút); hàn bút 0,2 / 0,5, trạm 0,26 / 0,42. SkillBar 180px.
+
+## 2026-11-04: bút hàn khó giữ nhiệt (10% cháy dù đúng vùng xanh)
+
+- Yêu cầu: chơi không thấy bút hàn với trạm hàn khác nhau mấy. Thử tách độ khó (vùng xanh 13% / 30%, độ bóng mối hàn theo dụng cụ)
+  thì người dùng không muốn: giữ độ khó + mô tả như cũ (không ghi phần trăm), chỉ thêm khác biệt: bút hàn khó kiểm soát nhiệt.
+- `PEN_BURN` = 0,1 (supplies.ts): `solderKey` bút hàn (`tools.solder < 2`) cháy ẩn 10% dù nhả đúng vùng xanh, gộp với `burnChance`
+  thiếc: `1 − (1 − thiếc)(1 − bút)`; trạm hàn 0. `SOLDER_SKILL` giữ 20% / 0,5 và 26% / 0,42.
+- Mô tả bút hàn thêm "Khó giữ nhiệt, có lúc cháy chân dù nhả đúng vùng xanh" (không ghi số).
+- `SolderPanel` (ModPanels.tsx): khung `Alert` "Hướng dẫn" duy nhất, luôn hiện, 2 gạch đầu dòng: cách hàn (giữ / nhả vùng xanh)
+  - bút hàn nhiệt không ổn định nên nhả đúng vùng xanh vẫn có tỉ lệ cháy, trạm hàn không bị (không ghi số).
+- Tốc độ thanh nhiệt đảo lại cho đúng thực tế: bút hàn 60W nóng chậm 0,42 lượt/s, trạm hàn 0,5 (trước bút 0,5 nhanh hơn trạm 0,42).

@@ -806,3 +806,14 @@ kiện chợ không; tên trên thùng bỏ "chị / anh".
   đã qua `switch` mà còn phím trống thì lắp switch lấy từ kho (đủ thì lắp), qua `solder` thì hàn sẵn, qua `keycap` thì lắp keycap. Kiểm
   `loadSave()` trên save thật (chỉ đọc): F13 có switch + keycap, kho switch 5 → 4, 13 phím đã test giữ nguyên. Chưa xem trong game: phiên
   khác đang sửa App.tsx (import `features/bag/BagDialog` chưa có) làm app không chạy.
+
+## 2026-11-04 — Lube switch tactile / clicky theo thực tế
+
+- Yêu cầu: tactile / clicky không nên lube thân (mất khấc / tiếng click), lube lò xo (hết ping) thì được.
+- Đã làm:
+  - `supplies.ts` hạ độ hợp: clicky mọi mỡ ≤ 0,3 (205g2 0,1), cảnh báo "Lube thân switch clicky là mất tiếng click, chỉ nên lube lò xo";
+    tactile Tribosys 3203 0,85 / 3204 0,8 / 205g00 0,75 / 205g0 0,5 / 205g2 0,25, mỡ loãng cũng ghi "Khấc nhẹ đi một chút". Lò xo giữ nguyên (GPL 105 = 1).
+  - `switchLubeEval` (mods.ts): tactile / clicky lube thân luôn có ghi chú; khách muốn lube: clicky = độ hợp lube lò xo × phần thân còn nguyên,
+    tactile = max(chỉ lube lò xo, lube thân mỏng như cũ); linear như cũ. `lubeAdvice(feel)` = câu khuyên.
+  - Lời khách (`orders.ts`) đơn muốn lube: clicky "lube lò xo, đừng lube thân", tactile "lò xo là chính, thân chỉ quét mỏng".
+  - `ConfirmDeliver` (BenchHud): tactile / clicky muốn lube thì chỉ nhắc khi chưa lube lò xo. `LubePanel`: khung `Alert` lời khuyên theo loại switch.

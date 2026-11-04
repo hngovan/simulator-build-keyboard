@@ -9,9 +9,8 @@ import type { Key } from '@/types'
 import { useGame } from '@/store'
 import { isPackedBox } from '@/store/carrySlice'
 import { DIPLOMA_URL, createDiploma } from './models/diplomaModel'
-import { ElectricScrewdriver, ManualScrewdriver } from './models/HandTools'
 import { CurrentDriver } from './parts/Screw'
-import { Clickable } from './stations/StationKit'
+import { useDriverInHand } from './common/screwSpin'
 import { DisplayKeyboard } from './models/ShelfDisplay'
 import {
   CALENDAR,
@@ -429,13 +428,12 @@ function ShelfToolBox(props: JSX.IntrinsicElements['group']) {
 }
 
 /**
- * Tua vít đang dùng nằm thẳng trên mặt bàn, chỉ ở bước vặn / tháo vít. Đã mua tua vít điện thì bày thêm cây còn lại
- * bên cạnh: rê chuột viền xanh, bấm để đổi sang dùng cây đó (`setScrewPick`)
+ * Tua vít đang dùng nằm thẳng trên mặt bàn, chỉ ở bước vặn / tháo vít. Đổi tay / điện ở bảng đầu vít cột phải HUD
+ * (`BitPicker`), trên bàn không bày cây còn lại
  */
 function DeskTools(props: JSX.IntrinsicElements['group']) {
   // mặt tì vô hình ngang mặt bàn cho RestOn bắn tia xuống
   const floor = useRef<THREE.Group>(null)
-  const owned = useGame((s) => s.tools.screw)
   const level = useGame((s) => screwLevel(s.tools, s.screwPick))
   const electric = level > 0
   // tua vít chỉ bày ở bước vặn / tháo vít; kìm cắt chỉ dùng ở bàn mod stab (có kìm riêng) nên không bày trên bàn
@@ -443,9 +441,11 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
     const step = s.build && s.ctx?.steps[s.build.stepIdx]
     return !!stepBit(step)
   })
+  // đang cầm tua vít trên vít (rê / vặn) thì cây trên bàn ẩn, xong mới đặt lại bàn
+  const inHand = useDriverInHand((s) => s.n > 0)
   if (!screwStep) return null
   return (
-    <group {...props}>
+    <group {...props} visible={!inHand}>
       <group scale={M}>
         <group ref={floor}>
           <mesh visible={false} rotation-x={-Math.PI / 2}>
@@ -459,37 +459,17 @@ function DeskTools(props: JSX.IntrinsicElements['group']) {
             // nằm nghiêng một bên hông (mặt phẳng thân úp xuống), mũi chĩa sang trái
             <group rotation-y={Math.PI / 2} scale={3.6 / M}>
               <group rotation-x={-Math.PI / 2}>
-                <CurrentDriver spinKey={0} />
+                <CurrentDriver spinKey={0} desk />
               </group>
             </group>
           ) : (
             // tua vít tay vẽ bằng code, nằm ngang trên bàn, mũi chĩa sang trái
             <group rotation-z={-Math.PI / 2} scale={3.6 / M}>
-              <CurrentDriver spinKey={0} />
+              <CurrentDriver spinKey={0} desk />
             </group>
           )}
         </RestOn>
       </group>
-      {owned > 0 && (
-        // cây tua vít còn lại: bấm để đổi sang dùng
-        <group scale={M}>
-          <RestOn key={electric ? 'spare-m' : 'spare-e'} surface={floor} at={[0.12, 0.07]}>
-            <Clickable active onAct={() => useGame.getState().setScrewPick(electric ? 0 : owned)}>
-              {electric ? (
-                <group rotation-z={-Math.PI / 2} scale={3.6 / M}>
-                  <ManualScrewdriver />
-                </group>
-              ) : (
-                <group rotation-y={Math.PI / 2} scale={3.6 / M}>
-                  <group rotation-x={-Math.PI / 2}>
-                    <ElectricScrewdriver spinKey={0} />
-                  </group>
-                </group>
-              )}
-            </Clickable>
-          </RestOn>
-        </group>
-      )}
     </group>
   )
 }

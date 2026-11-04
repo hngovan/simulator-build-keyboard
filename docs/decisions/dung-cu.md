@@ -188,3 +188,27 @@
   thay `torqueWindow`; `tightenScrew(id, result)`: low → vít vào thêm 1/3 (tối đa 90%), high / sai đầu vít → trượt ren, ok / perfect → chặt
   (perfect ghi `build.perfect`). Screw.tsx bỏ giữ chuột / `TorqueBar`, tua vít quay liên tục khi kim chạy, `SkillBar` trên vít.
 - Ốc top mount đổi đầu vít lục giác (đầu trụ lục giác chìm). Đã thử: vít tray bấm thật + Space dừng vùng xanh → vít chặt.
+
+## 2026-11-04 — Khoá đổi tua vít / đầu vít khi đang vặn; tua vít tay canh lực 2 lần
+
+- Yêu cầu: đang vặn mà đổi tua vít được → tua vít cũ kẹt lại trên vít (hình còn lưu lại); tua vít thường phải canh lực 2 lần vít mới vào.
+- Đã làm: `scene/common/screwSpin.ts` mới: `markScrewSpin(ms)` (Screw.tsx gọi lúc tua vít bắt đầu quay sau cú bấm tháo / siết),
+  `useScrewBusy` / `screwBusy` = tua vít còn quay hoặc đang giữ chuột chạy thanh lực. `BitPicker`: nút tua vít + nút đầu vít (cả phím 1–4)
+  khoá khi đang vặn (mờ, tooltip "Đang vặn vít, xong mới đổi được").
+- `tightenScrew` (buildSlice): tua vít thường đạt (xanh / vàng) lần 1 chỉ vào nửa chừng (`SCREW_FULL / 2`), lần 2 mới đủ (điểm hoàn hảo tính ở lần cuối);
+  tua vít điện vẫn 1 lần. Vít DTB / ốc tạ (state đúng / sai, không có nửa chừng) vẫn 1 lần.
+- Cùng ngày: cố siết chưa tới (nhả ở đỏ trái `low`) cũng mòn ren: `strip(step, id, under, patch)` cộng chung `slips` với sai đầu / quá tay,
+  chưa tới `STRIP_TRIES` 3 thì vẫn vào thêm 1 phần + toast "Siết chưa tới, ren bị mòn n/3", lần thứ 3 tuôn ren. Chỉ áp cho vít thường (`tightenScrew`), vít DTB / ốc tạ chưa.
+
+## 2026-11-04 — Tua vít điện có độ bền 1000
+
+- Yêu cầu: tua vít cũng có độ bền 1000.
+- Đã làm: `TOOLS.screw[1].life = 1000` (parts.ts, mô tả Shopii ghi số lần); `wearScrew()` trong buildSlice gọi sau mỗi `commit` của
+  `turnScrew` / `tightenScrew` / `unscrewCover` / `screwCover` / `unscrewDtb` / `screwDtb` khi đang dùng tua vít điện (`screwLevel > 0`) → `wearTool('screw')`,
+  hết thì `tools.screw = 0` (về tua vít thường) + toast mua lại. Tua vít thường (miễn phí, mặc định) không có độ bền: hỏng thì không có gì thay.
+  App Kho tự hiện "còn n / 1000" (OwnedItems theo `life`). Đơn dev không hao mòn.
+
+## 2026-11-04: tua vít điện quay 0,75s mỗi lần
+
+- Yêu cầu: tăng thời gian quay mỗi lần bấm của tua vít điện lên 0,75s.
+- `SPIN_MS.electric` (steps.ts) 700 → 750ms (tay giữ 550ms). Dùng cho hoạt cảnh quay, chờ tự sang bước (`turnScrew`), khoá đổi tua vít.

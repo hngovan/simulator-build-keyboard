@@ -1735,7 +1735,8 @@ export const TOOLS: Record<ToolKind, ToolDef[]> = {
       name: 'Tua vít điện',
       clicks: 1,
       price: 350,
-      desc: 'Vặn nhanh, vùng xanh rộng hơn tua vít tay một chút',
+      life: 1000,
+      desc: 'Vặn nhanh, vùng xanh rộng hơn tua vít tay một chút. Dùng được 1.000 lần vặn / tháo vít.',
       torque: { width: 0.24, speed: 0.55 },
     },
   ],
@@ -1747,7 +1748,7 @@ export const TOOLS: Record<ToolKind, ToolDef[]> = {
       hold: 1.4,
       price: 90,
       life: 300,
-      desc: 'Bắt buộc cho PCB hàn. Nóng chậm: giữ ~1.4 giây mỗi phím. Bền 300 lần hàn',
+      desc: 'Bắt buộc cho PCB hàn. Nóng chậm: giữ ~1.4 giây mỗi phím. Khó giữ nhiệt, có lúc cháy chân dù nhả đúng vùng xanh. Bền 300 lần hàn',
     },
     {
       name: 'Trạm hàn',

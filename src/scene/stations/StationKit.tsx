@@ -4,7 +4,7 @@ import { Line } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import { useFrame, type GroupProps, type ThreeEvent } from '@react-three/fiber'
 import { useHover } from '../common/useHover'
-import { HINT_COLOR, HINT_HOVER, useHoverOutline } from '../common/hoverOutline'
+import { HINT_COLOR, HINT_HOVER, noHit, useHoverOutline } from '../common/hoverOutline'
 import { CuttingMat } from '../common/CuttingMat'
 
 /** Chữ nằm trên mặt bàn */
@@ -193,7 +193,8 @@ export function HintArrow({ at, size = 1 }: { at: [number, number, number]; size
       ref.current.position.y = at[1] + (0.15 + Math.sin(clock.elapsedTime * 4) * 0.08) * size
   })
   return (
-    <mesh ref={ref} position={at} rotation-x={Math.PI} scale={size}>
+    // không nhận chuột: mũi tên ẩn khi rê vào vật, gỡ khỏi cảnh lúc đang hover thì R3F không gọi pointerout (kẹt hover)
+    <mesh ref={ref} position={at} rotation-x={Math.PI} scale={size} raycast={noHit}>
       <coneGeometry args={[0.12, 0.3, 12]} />
       <meshBasicMaterial color={HINT_COLOR} />
     </mesh>

@@ -11,8 +11,10 @@ import {
   SUPPLIES,
   solderSkill,
   spellBonus,
+  spellBatch,
   spellSolderKeys,
 } from '@/data/supplies'
+import { TOOLS } from '@/data/parts'
 import { Y } from '@/data/steps'
 import type { Key, SolderJoint } from '@/types'
 import { playSolder, playDesolder } from '@/sound'
@@ -49,12 +51,12 @@ function lightFrom(id: string | null) {
       s.ctx.keys,
       (k) => !burnt(k),
       id,
-      spellBonus(s.supplies, SPELL_DESOLDER) - 1,
+      spellBatch(TOOLS.cert[s.tools.cert ?? 0].n!, spellBonus(s.supplies, SPELL_DESOLDER)) - 1,
     )
     return useSolderLit.setState({ lit: new Set([id, ...more.map((k) => k.id)]) })
   }
   const n = Math.min(
-    spellBonus(s.supplies, SPELL_SOLDER) - 1,
+    spellBatch(TOOLS.cert[s.tools.cert ?? 0].n!, spellBonus(s.supplies, SPELL_SOLDER)) - 1,
     Math.floor(((s.supplies[s.solderPick] ?? 0) - JOINTS_PER_KEY) / JOINTS_PER_KEY),
   )
   const extra = spellSolderKeys(s.ctx.keys, (k) => !!solder[k], id, n)

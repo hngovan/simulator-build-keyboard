@@ -20,9 +20,10 @@ import { cancelSkill, skillBusy, startSkill, useSkill } from '../common/skill'
 import { SkillBar } from '@/components/game/SkillBar'
 import { SKILL_PORTAL } from '@/components/game/skillPortal'
 import { BitDriver, SCREW_SPIN, SPIN_MS } from '../models/HandTools'
+import { markScrewSpin, useHoldDriver } from '../common/screwSpin'
 import { MM } from '../models/Switch'
 import { HintArrow } from '../stations/StationKit'
-import { HINT_COLOR } from '../common/hoverOutline'
+import { HINT_COLOR, noHit } from '../common/hoverOutline'
 // vòng import với caseSplit (lấy OUT_MS) chỉ dùng trong hàm, không chạy lúc nạp module
 import { useAssemblyFlipped } from './caseSplit'
 
@@ -285,6 +286,8 @@ function ScrewGhost({ style }: { style: ScrewStyle }) {
       new THREE.LineDashedMaterial({ color: HINT_COLOR, dashSize: 0.025, gapSize: 0.018 }),
     )
     l.computeLineDistances()
+    // không nhận chuột (ngưỡng bắt line mặc định 1u quá rộng); vùng bấm là khối `ScrewHit`
+    l.raycast = noHit
     return l
   }, [style])
   return <primitive object={line} />
@@ -423,6 +426,7 @@ function Screw({
     lastTurns.current = turns
     if (!up) return
     setBusy(true)
+    markScrewSpin(spinMs)
     const t = setTimeout(() => setBusy(false), spinMs)
     return () => clearTimeout(t)
   }, [turns, spinMs])
@@ -459,6 +463,13 @@ function Screw({
         onPointerOver={bind.onPointerOver}
         onPointerOut={bind.onPointerOut}
       >
+        {interactive && !gone && (
+          // vùng bấm vô hình cố định từ miệng lỗ tới trên đầu ốc: vòng xanh / khung nét đứt ẩn hiện theo hover, nếu chúng nhận
+          // chuột thì lúc bị gỡ khỏi cảnh R3F xoá hover mà không gọi pointerout → kẹt hover (tua vít ở lại, mất vòng xanh)
+          <mesh position-y={mouth - y - liftAt(p) + (liftAt(p) + 0.12) / 2} visible={false}>
+            <cylinderGeometry args={[0.2, 0.2, liftAt(p) + 0.12, 16]} />
+          </mesh>
+        )}
         {/* vặn vào mà chưa bấm lần nào: chỉ khung nét đứt ở miệng lỗ (ốc chưa tra), bấm mới tra ốc vào rồi vặn */}
         {mode === 'tighten' && turns === 0 && (
           <group position-y={mouth - y - liftAt(0)}>
@@ -488,6 +499,7 @@ function Screw({
           <mesh
             position-y={mode === 'tighten' && turns === 0 ? mouth - y + 0.04 - liftAt(0) : 0.04}
             rotation-x={-Math.PI / 2}
+            raycast={noHit}
           >
             <ringGeometry args={[0.15, 0.2, 24]} />
             <meshBasicMaterial color={HINT_COLOR} transparent opacity={0.8} />
@@ -495,7 +507,7 @@ function Screw({
         )}
         {interactive && stripped && (
           // vít tuôn ren: vòng đỏ (vít stab: bấm để thay stab)
-          <mesh position-y={0.04} rotation-x={-Math.PI / 2}>
+          <mesh position-y={0.04} rotation-x={-Math.PI / 2} raycast={noHit}>
             <ringGeometry args={[0.15, hover ? 0.24 : 0.2, 24]} />
             <meshBasicMaterial color="#ff4a4a" transparent opacity={0.85} />
           </mesh>
@@ -608,8 +620,20 @@ export function ScrewSet({
   )
 }
 
-/** Tua vít đang dùng (tay / điện) gắn đầu vít đang chọn */
-export function CurrentDriver({ spinKey, dir }: { spinKey: number; dir?: 1 | -1 }) {
+/**
+ * Tua vít đang dùng (tay / điện) gắn đầu vít đang chọn. `desk` = cây nằm trên bàn; không có `desk` = đang cầm trên vít
+ * (lúc đó cây trên bàn ẩn, `useHoldDriver`)
+ */
+export function CurrentDriver({
+  spinKey,
+  dir,
+  desk = false,
+}: {
+  spinKey: number
+  dir?: 1 | -1
+  desk?: boolean
+}) {
+  useHoldDriver(!desk)
   const electric = useGame((s) => screwLevel(s.tools, s.screwPick) > 0)
   const bit = useGame((s) => s.screwBit)
   const prevBit = useGame((s) => s.prevScrewBit)

@@ -18,6 +18,7 @@ import { createSolderSpool, createSpoolHolder } from '@/scene/models/solderSpool
 import { createScrewTray } from '@/scene/models/screwTrayModel'
 import { DIPLOMA_URL, createDiploma } from '@/scene/models/diplomaModel'
 import { createScroll } from '@/scene/models/scrollModel'
+import { createManualScrewdriver } from '@/scene/models/HandTools'
 import baked from '@/data/generated/thumbs.json'
 
 // Ảnh sản phẩm Shopii chụp từ chính model 3D trong game: 1 renderer ẩn dùng chung, chụp lần lượt
@@ -298,6 +299,11 @@ export async function buildScene(kind: ThumbKind, type: string) {
       opener.scale.setScalar(0.07)
       opener.position.y = -0.7
       group.add(opener)
+    } else if (tool === 'screw' && level === 0) {
+      // tua vít tay (dựng bằng code như trên bàn build): nằm nghiêng, mũi chĩa xuống trái
+      const driver = createManualScrewdriver()
+      driver.rotation.z = 0.9
+      group.add(driver)
     } else if (tool === 'screw') {
       // tua vít điện (model thật, mũi ở gốc, trục +y): nằm nghiêng, mũi chĩa xuống trái
       const driver = (await glbScene('/models/tools/electric-screwdriver.glb')).clone(true)

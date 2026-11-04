@@ -114,7 +114,7 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
 }
 
 /** thời gian 1 lần vặn (ms): tay vặn 1 vòng cổ tay, điện quay liền 1 hơi tới khi vít ăn hết ren */
-export const SPIN_MS = { manual: 550, electric: 700 }
+export const SPIN_MS = { manual: 550, electric: 750 }
 
 export const SCREW_STEPS: Record<ScrewStep, 'remove' | 'tighten'> = {
   caseOpen: 'remove',

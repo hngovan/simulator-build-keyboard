@@ -191,10 +191,10 @@ export const SUPPLIES: Record<string, SupplyDef> = {
       [260, 220],
     ],
     desc: 'Mỡ loãng vừa, chuẩn cho switch linear. Tactile thì chỉ quét siêu mỏng',
-    fit: { linear: 1, tactile: 0.55, clicky: 0.4, housing: 0.75, wire: 0.3, spring: 0.6 },
+    fit: { linear: 1, tactile: 0.5, clicky: 0.2, housing: 0.75, wire: 0.3, spring: 0.6 },
     warn: {
       tactile: 'Lỡ tay quét dày là mất khấc, bết như phím màng',
-      clicky: 'Clicky lube giảm tiếng ồn và tiếng sạn của switch đi',
+      clicky: 'Lube thân switch clicky là mất tiếng click, chỉ nên lube lò xo',
     },
   },
   g00: {
@@ -205,8 +205,11 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     color: '#f7f7f2',
     packs: [[120, 130]],
     desc: 'Loãng hơn 205g0: dùng được cho tactile nếu quét micro-layer',
-    fit: { linear: 0.9, tactile: 0.85, clicky: 0.5, housing: 0.6, wire: 0.2, spring: 0.7 },
-    warn: { clicky: 'Clicky lube giảm tiếng ồn và tiếng sạn của switch đi' },
+    fit: { linear: 0.9, tactile: 0.75, clicky: 0.3, housing: 0.6, wire: 0.2, spring: 0.7 },
+    warn: {
+      tactile: 'Quét mỏng vẫn làm khấc nhẹ đi, tránh chân stem',
+      clicky: 'Lube thân switch clicky là mất tiếng click, chỉ nên lube lò xo',
+    },
   },
   g2: {
     viscosity: 0.7,
@@ -219,10 +222,10 @@ export const SUPPLIES: Record<string, SupplyDef> = {
       [150, 250],
     ],
     desc: 'Mỡ đặc: lube housing + slider stab rất tốt, switch linear cho tiếng đầm',
-    fit: { linear: 0.95, tactile: 0.35, clicky: 0.3, housing: 1, wire: 0.6, spring: 0.3 },
+    fit: { linear: 0.95, tactile: 0.25, clicky: 0.1, housing: 1, wire: 0.6, spring: 0.3 },
     warn: {
       tactile: 'Mỡ đặc làm khấc tactile không còn rõ',
-      clicky: 'Mỡ đặc làm clicky bẹt tiếng',
+      clicky: 'Mỡ đặc làm clicky mất hẳn tiếng click',
     },
   },
   t3203: {
@@ -232,8 +235,12 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     unit: 'switch',
     color: '#e3dcf5',
     packs: [[120, 130]],
-    desc: 'Mỡ loãng, an toàn nhất cho tactile: giảm ma sát mà vẫn giữ khấc',
-    fit: { linear: 0.8, tactile: 1, clicky: 0.6, housing: 0.6, wire: 0.3, spring: 0.5 },
+    desc: 'Mỡ loãng, an toàn nhất cho tactile (quét mỏng rail, tránh chân stem): khấc chỉ nhẹ đi chút',
+    fit: { linear: 0.8, tactile: 0.85, clicky: 0.3, housing: 0.6, wire: 0.3, spring: 0.5 },
+    warn: {
+      tactile: 'Khấc nhẹ đi một chút so với để khô',
+      clicky: 'Lube thân switch clicky là mất tiếng click, chỉ nên lube lò xo',
+    },
   },
   t3204: {
     viscosity: 0.4,
@@ -242,8 +249,12 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     unit: 'switch',
     color: '#d9cdf2',
     packs: [[120, 130]],
-    desc: 'Đặc hơn 3203 một chút, rất hợp tactile, linear dùng cũng ổn',
-    fit: { linear: 0.85, tactile: 1, clicky: 0.6, housing: 0.65, wire: 0.3, spring: 0.5 },
+    desc: 'Đặc hơn 3203 một chút, hợp tactile (khấc nhẹ đi chút), linear dùng cũng ổn',
+    fit: { linear: 0.85, tactile: 0.8, clicky: 0.25, housing: 0.65, wire: 0.3, spring: 0.5 },
+    warn: {
+      tactile: 'Khấc nhẹ đi một chút so với để khô',
+      clicky: 'Lube thân switch clicky là mất tiếng click, chỉ nên lube lò xo',
+    },
   },
   gpl105: {
     viscosity: 0.05,
@@ -253,10 +264,11 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     color: '#f0f6ff',
     packs: [[200, 110]],
     desc: 'Dầu loãng: dùng riêng cho lò xo (hết tiếng ping) hoặc pha với 205g0',
-    fit: { spring: 1, linear: 0.5, tactile: 0.5, clicky: 0.5 },
+    fit: { spring: 1, linear: 0.5, tactile: 0.5, clicky: 0.25 },
     warn: {
       linear: 'Dầu quá loãng, chỉ nên dùng cho lò xo',
       tactile: 'Dầu quá loãng, chỉ nên dùng cho lò xo',
+      clicky: 'Lube thân switch clicky là mất tiếng click, chỉ nên lube lò xo',
     },
   },
   bdz: {
@@ -267,7 +279,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     color: '#f2e6c9',
     packs: [[60, 110]],
     desc: 'Mỡ rất đặc cho wire stab: ít chảy xuống PCB, dễ vệ sinh, chống rattle tốt nhất',
-    fit: { wire: 1, housing: 0.5, linear: 0.15, tactile: 0.15, clicky: 0.15 },
+    fit: { wire: 1, housing: 0.5, linear: 0.15, tactile: 0.1, clicky: 0.05 },
     warn: {
       linear: 'Quá đặc, switch bị trì, nảy chậm',
       tactile: 'Quá đặc, switch bị trì, nảy chậm',
@@ -281,7 +293,7 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     color: '#cfe0ee',
     packs: [[150, 90]],
     desc: 'Mỡ dielectric chỉ dùng cho wire stab, rẻ và dùng lâu',
-    fit: { wire: 0.9, housing: 0.4, linear: 0.15, tactile: 0.15, clicky: 0.15 },
+    fit: { wire: 0.9, housing: 0.4, linear: 0.15, tactile: 0.1, clicky: 0.05 },
     warn: {
       linear: 'Permatex cho switch là bị trì',
       tactile: 'Permatex cho switch là bị trì',
@@ -359,11 +371,16 @@ export const SPELL_STAB = 'spellStab'
 export const spellBonus = (supplies: Record<string, number>, id: string) =>
   (supplies[id] ?? 0) > 0 ? SUPPLIES[id].spell! : 0
 /**
- * Số con mỗi lần khi có phép: thợ lõ (1 con) thì phép thay hẳn thành 10, có chứng chỉ (middle 5 / senior 10)
- * mới cộng dồn (15 / 20). bonus = 0 (không có phép) thì giữ nguyên bậc thợ
+ * Số con mỗi lần (mở / lube / lắp switch, lắp keycap): bậc thợ (lõ 1 / middle 5 / senior 10) cộng dồn phép
+ * (vd lõ + phép 10 = 11, middle = 15, senior = 20). bonus = 0 (không có phép) thì giữ nguyên bậc thợ
  */
-export const spellRun = (certN: number, bonus: number) =>
-  certN > 1 ? certN + bonus : Math.max(certN, bonus)
+export const spellRun = (certN: number, bonus: number) => certN + bonus
+
+/**
+ * Số phím / stab mỗi lần của việc bậc thợ không tự tăng (hàn, hút thiếc, mod stab): không phép = 1,
+ * có phép thì bậc thợ cộng dồn phép như `spellRun`
+ */
+export const spellBatch = (certN: number, bonus: number) => (bonus ? certN + bonus : 1)
 
 /**
  * Lắp switch / keycap 1 lần: phím `id` + các phím chưa lắp liền sau trong cùng hàng (trái → phải), tối đa `n` phím.
@@ -412,11 +429,13 @@ export const SOLDER_IDS = Object.keys(SUPPLIES)
 export const JOINTS_PER_KEY = 2
 
 /** Cửa sổ hàn (giây thật): bút hàn thiếc chảy sau 2–2,5s, 3s là cháy; trạm hàn 1–2s, 3s cháy */
-/** skill check hàn: bút hàn thanh nhiệt chạy nhanh hơn + vùng xanh hẹp hơn trạm hàn */
+/** skill check hàn: bút hàn 60W nóng chậm → thanh nhiệt chạy chậm hơn trạm hàn, vùng xanh hẹp hơn */
 const SOLDER_SKILL = {
-  pen: { width: 0.2, speed: 0.5 },
-  station: { width: 0.26, speed: 0.42 },
+  pen: { width: 0.2, speed: 0.42 },
+  station: { width: 0.26, speed: 0.5 },
 } as const
+/** bút hàn khó giữ nhiệt: tỉ lệ ẩn cháy chân dù nhả đúng vùng xanh (cộng với `burnChance` của thiếc), trạm hàn không có */
+export const PEN_BURN = 0.1
 
 /** Độ khó 1 lần hàn theo dụng cụ; thiếc chảy chậm (thiếc đểu, `slow`) thu hẹp vùng xanh */
 export function solderSkill(station: boolean, wire: string): SkillSpec {

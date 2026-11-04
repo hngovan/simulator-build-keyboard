@@ -1501,3 +1501,73 @@
 - BoardDetails.tsx `SiliconeRing`: lúc chờ gá (`ghost`) thêm dải bắt chuột vô hình rộng `RING_HIT` 0,6u quanh 4 cạnh (vòng thật mảnh khó bấm trúng).
 - Tương tự bước thả board vào case (`caseIn`): bỏ khỏi `boardClick`, chỉ bấm case dưới (`onClick('caseIn', dropInCase)` trong Case.tsx) mới thả;
   board đang nhấc chờ thả thì `onBoard` chặn tia bấm (`stopPropagation`) để bấm board không xuyên xuống case bên dưới.
+
+## 2026-11-04: kẹt tua vít trên ốc khi nhấp nhả (vặn chưa xong)
+
+- Yêu cầu: bấm nhả nhanh ở bước vặn vít (kim dừng sớm, vít vào 1 phần) thì tua vít đứng lại trên ốc, mất vòng xanh.
+- Nguyên nhân: hover nằm trên khung nét đứt / vòng xanh (con của group vít). Vặn 1 phần thì khung nét đứt bị gỡ (ốc hiện ra),
+  vòng xanh vốn ẩn khi hover; R3F v8 `removeInteractivity` xoá mục hover của vật bị gỡ mà **không gọi `onPointerOut`**
+  → `hover` kẹt `true` (tua vít hiện mãi, vòng xanh + mũi tên ẩn).
+- Sửa (`scene/parts/Screw.tsx`): khối trụ vô hình `visible={false}` cố định từ miệng lỗ tới trên đầu ốc làm vùng bấm;
+  khung nét đứt (`line.raycast = noHit`, ngưỡng line mặc định 1u cũng quá rộng), vòng xanh, vòng đỏ không nhận chuột.
+  `HintArrow` (StationKit) cũng `raycast={noHit}`; `noHit` dùng chung ở `common/hoverOutline.ts`.
+- Quy tắc: vật ẩn / hiện theo hover hoặc theo tiến độ không được nhận chuột; dùng vùng bấm cố định.
+
+## 2026-11-04 — Ghép case trên vào case dưới xong tự sang bước vặn ốc
+
+- Yêu cầu: bước "Ghép case trên vào case dưới" (case 2 mảnh) xong thì tự sang bước vặn ốc, không phải bấm nút bước tiếp.
+- Đã làm: `dropInCase` (buildSlice.ts) bỏ điều kiện `pieces !== 2`, case nào thả / ghép xong cũng `stepIdx + 1` (top mount → `caseScrew`, case 2 mảnh thường → `caseClose`).
+  `closeNext` trong Case.tsx / gợi ý BenchHud (caseIn đã thả, chờ đậy) giữ lại cho bản lưu cũ đang đứng ở trạng thái đó.
+
+## 2026-11-04 — Vít DTB lòi qua đáy case
+
+- Yêu cầu: nhìn đáy case (bước tháo vít mở case) thấy 2 chấm bạc xuyên ra; soát case 40 / 60 / TKL / mica ghép.
+- Nguyên nhân: 2 vít M2 bắt sẵn trong lỗ ren DTB dùng `socket-cap-m2x6.glb` dài 8mm (đầu 2 + thân 6, gốc = đỉnh đầu), đầu nhô 2mm
+  → mũi xuống 6mm dưới mặt sàn; sàn mọi case dựng bằng code (`Y.floorTop − Y.floorBot` = 0,3u ≈ 5,7mm) và mica (2 tấm đáy × 0,15u) đều 5,7mm → lòi 0,3mm.
+  Mọi case dựng bằng code đều dính (40 / 60 / TKL / full, nhôm / nhựa / gỗ / mica); case CAD có trụ / sàn dày thì không.
+- Đã làm: `Daughterboard.tsx` `shortScrew` clone model vít, ép đỉnh dưới `SCREW_LEN` 5,5mm lên mức đó (thân còn 3,5mm, đầu giữ nguyên);
+  dùng cho vít trong lỗ ren, vít bay ra và vít đã siết qua DTB (mũi −1,9mm).
+
+## 2026-11-04 — Phép mod stab: lube housing / wire chỉ phết con đầu
+
+- Yêu cầu: có phép / chứng chỉ thì lube chỉ cần phết 1 con đầu (như lube switch), không đi phết từng stab; bôi mỡ wire cũng vậy.
+- Đã làm: StabModStation.tsx tách `FIRST = ['housing', 'wire']`: `animProgress` con đầu mẻ chạy theo hoạt cảnh, các con khác trong mẻ = 0
+  rồi xong cùng lúc khi hết; `SEQ` còn clip / bandaid (kìm, kéo vẫn đi lần lượt). `modStab` (buildSlice) lube housing / wire tính thời gian như 1 con.
+
+## 2026-11-04: hoạt cảnh đóng switch sau khi lube
+
+- Yêu cầu: bước đóng switch lại (`closeSwitch`) không có hoạt cảnh, switch nhảy thẳng sang dáng nguyên.
+- Trước đó `closeSwitch` đã đặt `lubeAnim.kind = 'close'` (0,7s) nhưng chỉ dùng để phát tiếng click.
+- Thêm `ClosingSwitches` (`scene/stations/LubeStation.tsx`): với mẻ đang đóng (`moving` = các con từ `swClosed`, tính trong
+  `LubeStation`), stem (+ thân, giữ màu đã lube) hạ từ chỗ nổi `RAISE` xuống housing dưới (0 → 0,4, lệch nhịp từng con), housing trên
+  nhấc lên cao hơn đỉnh stem (0,35 → 0,6), dời 17mm tới trên switch (0,5 → 0,8) rồi úp xuống (0,8 → 1).
+  `OpenedSwitches` nhận `moving` để ẩn stem / housing trên / mỡ của các con đó khỏi lớp tĩnh. Hàm chung `placeSwitches`.
+- Lò xo co theo stem: mẻ đang đóng ẩn khỏi lớp lò xo tĩnh (`still`), `ClosingSwitches` vẽ lò xo đứng trên sàn hốc, chiều cao = tới đáy
+  thân stem đang hạ (`placeSwitches` thêm `sy`), co tối đa còn 30% (ép hết cỡ vòng dây chồng thành đĩa).
+
+## 2026-11-04: tua vít trên bàn ẩn khi đang cầm vặn
+
+- Yêu cầu: đang vặn vít thì tua vít nằm trên bàn phải biến mất, xong mới hiện lại (chỉ có 1 cây).
+- `common/screwSpin.ts`: `useDriverInHand` (đếm) + `useHoldDriver(on)`; `CurrentDriver` (Screw.tsx) thêm prop `desk`, không phải `desk`
+  thì đếm là đang cầm (vít thường, ốc tạ / badge trong Case.tsx). `DeskTools` (Room.tsx) `visible={!inHand}` (vẫn mount, giữ chỗ đặt).
+- Tua vít hiện trên vít cả lúc rê chuột (cầm sẵn) nên cây trên bàn cũng ẩn lúc đó; rời chuột 200ms thì về bàn.
+
+## 2026-11-04 — Dây JST chưa cắm đâm xuyên standoff tray
+
+- Yêu cầu: dây JST nằm trên sàn (chờ cắm) xuyên qua trụ standoff tray mount.
+- Nguyên nhân: case không có rãnh dây đặt đầu dây chưa cắm cố định lệch DTB `LOOSE` (0,63u sang phải, 1,6u ra trước), không biết vị trí standoff.
+- Đã làm: `JstCable` (Daughterboard.tsx) với mount tray tính standoff theo `ctx.screws.trayScrew` (+ `seat.dx / dz`, về hệ DTB), thử lần lượt `LOOSE_TRY`
+  (chỗ cũ trước, rồi các dz 1,6 / 1,3 / 1,9 / 1,0 / 2,2 × dx ±0,63 / ±0,3 / ±1 / 0) tới khi đoạn dây từ đuôi đầu cắm DTB tới đầu chưa cắm cách mọi trụ
+  > `POST_CLEAR` 0,26u (`segDist` trên mặt sàn). Case CAD có rãnh (`via`) không đổi. Chưa né: dây đã cắm lên PCB (đi dưới PCB, có thể sượt trụ).
+
+## 2026-11-04: dây JST nằm sát sàn case (không đè socket / chân switch)
+
+- Yêu cầu: đậy case xong dây JST không được đè lên socket hotswap / chân switch (trước: dây chùng thẳng từ DTB tới jack ngang tầm
+  socket, xuyên qua socket các hàng giữa; rõ nhất layout 40% jack cách DTB ~2,7u).
+- Đã thử A* tìm đường qua khe giữa phím → dây ngoằn ngoèo như rắn, người dùng không muốn: **bỏ**. Cách đúng: dây nằm sát sàn.
+- Đo: chân switch (GLB `pins`) thò tới −7,76mm dưới mặt plate ≈ −0,41u, đáy socket `pcbBot − 0,09` = −0,434u, sàn case code −0,6u
+  → hở ~3mm, dây Ø ~0,84mm.
+- `wireGeometries(…, floor)` (Daughterboard.tsx): đã cắm, không rãnh → ra khỏi đầu cắm DTB hạ xuống sàn (`at.floor − at.y + WIRE_R`),
+  chạy phẳng dọc sàn (điểm giữa mỗi 0,4u), tới ngay dưới đầu dây ló khỏi jack (lead 0,12u thay 0,3u) thì dựng thẳng lên cắm.
+  Case CAD có rãnh giữ nguyên đi theo rãnh.
+- Chưa xử lý: case tray mount, đường sàn thẳng có thể đi qua trụ standoff (mảnh, r ≈ 0,1u).

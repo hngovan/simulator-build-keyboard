@@ -23,6 +23,36 @@ import type { WallPort } from './caseShell'
 
 const DTB_GLB = '/models/dtb/unified-c3.glb'
 const SCREW_GLB = '/models/screws/socket-cap-m2x6.glb'
+/**
+ * vít M2 trong file dài 8mm (đầu 2mm + thân 6mm, gốc = đỉnh đầu, trục −y): bắt sẵn trong lỗ ren đầu nhô 2mm thì mũi xuống 6mm
+ * dưới mặt sàn, sàn case dựng bằng code / mica 2 tấm đáy chỉ dày 5,7mm (0,3u) → mũi lòi ra mặt đáy. Rút còn 5,5mm (thân 3,5mm
+ * ăn trong bạc ren): mũi chỉ xuống 3,5mm dưới mặt sàn
+ */
+const SCREW_LEN = 5.5
+
+/** clone model vít, ép mọi đỉnh dưới `SCREW_LEN` lên đúng mức đó (thân hình trụ nên chỉ ngắn lại, đầu giữ nguyên) */
+function shortScrew(src: THREE.Object3D) {
+  const out = src.clone(true)
+  out.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return
+    const g = (o.geometry as THREE.BufferGeometry).clone()
+    const pos = g.getAttribute('position')
+    // đỉnh trong hệ mesh: đổi qua hệ gốc model bằng ma trận của mesh (file chỉ có 1 node, thường là ma trận đơn vị)
+    o.updateWorldMatrix(true, false)
+    const m = o.matrixWorld
+    const inv = m.clone().invert()
+    const v = new THREE.Vector3()
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m)
+      if (v.y < -SCREW_LEN) pos.setXYZ(i, ...v.setY(-SCREW_LEN).applyMatrix4(inv).toArray())
+    }
+    pos.needsUpdate = true
+    g.computeBoundingBox()
+    g.computeBoundingSphere()
+    o.geometry = g
+  })
+  return out
+}
 useGLTF.preload(DTB_GLB)
 
 /** khe chừa trên gờ đỡ trong lòng case cho DTB (u) */
@@ -38,6 +68,25 @@ export const usbPort = (x: number): WallPort => ({
 
 /** đầu dây chưa cắm nằm trên sàn trước DTB (case không rãnh dây): lệch so với DTB (u) */
 const LOOSE = { dx: 0.63, dz: 1.6 }
+/** các chỗ thử đặt đầu dây (dx, dz) khi chỗ mặc định vướng standoff tray: gần trước, xa sau */
+const LOOSE_TRY: [number, number][] = [
+  [LOOSE.dx, LOOSE.dz],
+  ...[1.6, 1.3, 1.9, 1.0, 2.2].flatMap((dz) =>
+    [0.63, -0.63, 0.3, -0.3, 1, -1, 0].map((dx) => [dx, dz] as [number, number]),
+  ),
+]
+/** dây + đầu cắm cách tâm standoff tối thiểu (u): bán kính trụ 0,1 + nửa bề ngang đầu cắm / dây */
+const POST_CLEAR = 0.26
+
+/** khoảng cách từ điểm `p` tới đoạn `a`–`b` trên mặt sàn (x, z) */
+function segDist(p: [number, number], a: [number, number], b: [number, number]) {
+  const [dx, dz] = [b[0] - a[0], b[1] - a[1]]
+  const t = Math.max(
+    0,
+    Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / (dx * dx + dz * dz)),
+  )
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dz)
+}
 /** đầu dây chưa cắm dựng đứng ló lên khỏi sàn / khe rãnh (u): miệng đầu cắm cao hơn chỗ dây nằm, cho thấy là chờ cắm */
 const LOOSE_RISE = 0.5
 
@@ -171,12 +220,31 @@ function wireGeometries(
   b: THREE.Vector3,
   out: THREE.Vector3,
   via: THREE.Vector3[],
+  /** cao độ sàn case (hệ DTB): có thì dây (không rãnh) ra khỏi đầu cắm DTB là hạ sát sàn, chạy dọc sàn tới dưới jack rồi mới
+   * dựng lên cắm — sàn thấp hơn socket hotswap / chân switch nên dây không đè lên chúng */
+  floor?: number,
 ) {
-  const lead = 0.3
+  // dây nằm sàn: đoạn ló khỏi jack ngắn để chỗ dựng lên sát ngay miệng jack (jack đã né socket, xa hơn có thể đụng)
+  const lead = floor !== undefined && !via.length ? 0.12 : 0.3
   const ends = [b.clone().addScaledVector(out, lead), b.clone()]
   const pts = [a.clone(), a.clone().add(new THREE.Vector3(0, 0, via.length ? 0.1 : lead))]
   if (via.length) pts.push(...via.map((p) => p.clone()))
-  else {
+  else if (floor !== undefined) {
+    // hạ xuống sàn ngay trước DTB, chạy sát sàn, tới dưới đầu dây ló khỏi jack thì dựng thẳng lên
+    const down = pts[1]
+      .clone()
+      .add(new THREE.Vector3(0, 0, 0.12))
+      .setY(floor)
+    const under = ends[0].clone().setY(floor)
+    const dist = Math.hypot(under.x - down.x, under.z - down.z)
+    pts.push(down)
+    // điểm giữa dọc sàn: giữ dây phẳng, không võng / cong lên khỏi sàn
+    const n = Math.floor(dist / 0.4)
+    for (let k = 1; k < n; k++) pts.push(down.clone().lerp(under, k / n))
+    if (dist > 0.15) pts.push(under)
+    // dựng lên: 1 điểm lưng chừng sát đường thẳng đứng cho khúc cua gọn
+    pts.push(under.clone().setY((floor + ends[0].y) / 2))
+  } else {
     // dây dài, chùng xuống giữa 2 đầu khi 2 đầu gần nhau (nằm dưới PCB)
     const mid = pts[1].clone().lerp(ends[0], 0.5)
     mid.y = Math.min(pts[1].y, ends[0].y) + 0.05
@@ -184,7 +252,7 @@ function wireGeometries(
   }
   pts.push(...ends)
   const center = new THREE.CatmullRomCurve3(pts, false, 'centripetal')
-  const n = via.length ? 120 : 40
+  const n = via.length ? 120 : floor !== undefined ? 80 : 40
   const up = new THREE.Vector3(0, 1, 0)
   let side = new THREE.Vector3(1, 0, 0)
   const samples = Array.from({ length: n + 1 }, (_, k) => {
@@ -208,6 +276,7 @@ function wireGeometries(
 function JstCable({ at }: { at: DtbSpot }) {
   const step = useStep()
   const b = useBuild()
+  const ctx = useCtx()
   const meshes = useRef<(THREE.Mesh | null)[]>([])
   const plugRef = useRef<THREE.Group>(null)
   const plugged = !!b.jst
@@ -232,16 +301,34 @@ function JstCable({ at }: { at: DtbSpot }) {
   }, [at, tailA])
   // đầu chưa cắm nằm trên sàn case: cuối rãnh, không rãnh thì trước DTB (DTB kê trụ thì sàn thấp hơn mặt dưới mạch)
   // đầu chưa cắm dựng đứng ló lên khỏi cuối rãnh (không rãnh: khỏi sàn trước DTB), miệng quay lên chờ cắm
+  // không rãnh: né standoff tray (trụ đồng dưới PCB, `TrayStandoffs` trong Case.tsx) — dây từ đuôi đầu cắm DTB chạy thẳng tới đầu
+  // chưa cắm không được đi xuyên trụ, thử lần lượt các chỗ `LOOSE_TRY`
+  const looseXz = useMemo(() => {
+    if (via.length || ctx.mount !== 'tray') return LOOSE_TRY[0]
+    const seat = ctx.caseDef.seat
+    const posts = ctx.screws.trayScrew.map(
+      (p) => [p.x + (seat?.dx ?? 0) - at.x, p.z + (seat?.dz ?? 0) - at.z] as [number, number],
+    )
+    const from: [number, number] = [0, tailA.z]
+    return (
+      LOOSE_TRY.find(([dx, dz]) => {
+        const to: [number, number] = [dx, mouth.z + dz]
+        return posts.every((p) => segDist(p, from, to) > POST_CLEAR)
+      }) ?? LOOSE_TRY[0]
+    )
+  }, [ctx, at, via, mouth, tailA])
   const loose = useMemo(
     () =>
       (via.length
         ? via[via.length - 1].clone()
-        : new THREE.Vector3(LOOSE.dx, at.floor - at.y, mouth.z + LOOSE.dz)
+        : new THREE.Vector3(looseXz[0], at.floor - at.y, mouth.z + looseXz[1])
       ).setY((via.length ? via[via.length - 1].y : at.floor - at.y) + LOOSE_RISE),
-    [mouth, at, via],
+    [mouth, at, via, looseXz],
   )
   // miệng cổng JST trên PCB (hệ board): cổng treo ngược dưới mặt PCB, miệng quay ra sau
   const pcbLocal = useMemo(() => new THREE.Vector3(at.jack.x, PCB_MOUTH_Y, at.jack.z), [at])
+  // sàn case (hệ DTB): dây đã cắm nằm sát sàn, thấp hơn socket hotswap + chân switch dưới PCB nên không đè lên
+  const floorY = at.floor - at.y + WIRE_R * MM
   // hướng jack trên PCB (xoay quanh trục đứng của board, né socket / chân switch: `DtbSpot.jack`)
   const jackQ = useMemo(
     () => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), at.jack.ry),
@@ -270,7 +357,7 @@ function JstCable({ at }: { at: DtbSpot }) {
     last.current = key
     const tailB = end.clone().addScaledVector(back, (PLUG.l - PLUG.in) * MM)
     // chưa cắm: dây nằm dọc hết rãnh rồi dựng lên đầu cắm ở cuối rãnh
-    wireGeometries(tailA, tailB, back, via).forEach((g, i) => {
+    wireGeometries(tailA, tailB, back, via, plugged ? floorY : undefined).forEach((g, i) => {
       const m = meshes.current[i]
       if (!m) return g.dispose()
       m.geometry.dispose()
@@ -429,7 +516,8 @@ export function Daughterboard({ at }: { at: DtbSpot }) {
   const nextHole = d.placed ? DTB_MM.holes.findIndex((_, i) => !screws[i]) : -1
   const mouth: [number, number, number] = [0, DTB_MM.jst.y * MM, DTB_MM.jst.z * MM]
   const headY = (DTB_MM.t + 2) * MM
-  const screwModel = useGLTF(SCREW_GLB).scene
+  const screwSrc = useGLTF(SCREW_GLB).scene
+  const screwModel = useMemo(() => shortScrew(screwSrc), [screwSrc])
   // kê trụ: mặt dưới mạch cao hơn sàn (case CAD lỗ USB nằm cao)
   const post = at.y - at.floor
   const out = d.out ?? {}

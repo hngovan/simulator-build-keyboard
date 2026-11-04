@@ -13,6 +13,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.28',
+    date: '2026-11-04',
+    commits: [],
+    title: 'Ảnh dụng cụ ở bàn build, hoạt cảnh đóng switch, phép cộng dồn bậc thợ, dây JST nằm sàn',
+    items: [
+      'Cột phải bàn build: ô ảnh model tua vít tay / điện, bút hàn / trạm hàn; bảng dán feet có ảnh feet + ô chọn màu, dán 1 cái là khoá màu',
+      'Bảng lắp switch / keycap: tiến độ, số phím mỗi lần, dòng chứng chỉ thợ + phép lắp',
+      'Mọi sách phép cộng dồn với bậc thợ (thợ lõ + phép = 11), cả phép hàn / hút thiếc / mod stab; ghi chung "N switch/lần"',
+      'Bút hàn khó giữ nhiệt: 10% cháy dù nhả đúng vùng xanh, thanh nhiệt bút 60W chạy chậm hơn trạm hàn; khung Hướng dẫn gộp',
+      'Lube switch: hoạt cảnh đóng switch (stem hạ xuống, lò xo co lại, housing trên úp vào)',
+      'Tua vít: không còn kẹt trên ốc khi nhấp nhả, tua vít trên bàn ẩn khi đang cầm vặn; tua vít điện quay 0,75s, độ bền 1000; tua vít tay canh lực 2 lần, đang vặn không đổi được tua vít / đầu vít',
+      'Dây JST nằm sát sàn case, không đè lên socket / chân switch',
+      'Lube tactile / clicky theo thực tế (lube thân clicky mất tiếng click, nên lube lò xo); popup lịch màn thấp không khuất nút',
+    ],
+  },
+  {
     version: '0.1.27',
     date: '2026-11-04',
     commits: ['a6dc294'],

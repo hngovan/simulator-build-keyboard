@@ -12,12 +12,15 @@ import {
   lubeUseFit,
   spellBonus,
   spellRun,
+  spellBatch,
   SPELL_LUBE,
   SPELL_STAB,
   SPELL_OPEN,
+  SPELL_ASSEM,
+  SPELL_KEYCAP,
   type LubeUse,
 } from '@/data/supplies'
-import { stabModRules, unitsModded } from '@/data/mods'
+import { lubeAdvice, stabModRules, unitsModded } from '@/data/mods'
 import { toolOnWay } from '@/data/shipping'
 import { stabSets } from '@/data/steps'
 import type { LubePick } from '@/store/shopSlice'
@@ -31,9 +34,12 @@ import {
   OptionChip,
   ProgressBar,
   StepDot,
+  ThumbLoading,
   type StepDotState,
 } from '@/components/ui'
 import { Info, Lightbulb } from 'lucide-react'
+import { ToolCard } from './ToolCard'
+import { useModelThumb } from '@/features/apps/shop/modelThumb'
 import { cn, fmt } from '@/lib/format'
 
 const fitTone = (fit: number) =>
@@ -143,6 +149,8 @@ export function StabModPanel() {
   // phép mod stab: mỗi lần mod làm luôn nhiều con
   const stabLeft = useGame((s) => s.supplies[SPELL_STAB] ?? 0)
   const stabSpell = useGame((s) => spellBonus(s.supplies, SPELL_STAB))
+  // bậc thợ cộng dồn phép (`spellBatch`): số stab mỗi lần mod
+  const stabRun = useGame((s) => spellBatch(TOOLS.cert[s.tools.cert ?? 0].n!, stabSpell))
   return (
     <HudPanel id="stabMod" title={`🛠 Mod stab (${n} stab)`}>
       <Muted>
@@ -170,7 +178,10 @@ export function StabModPanel() {
         {/* kìm cắt chỉ cần khi phải clip chân stem */}
         <ToolWarn kinds={m.feet ? ['brush', 'clipper'] : ['brush']} />
         {stabLeft > 0 && (
-          <div className="text-xs font-bold text-green">{`Phép mod stab: ${stabSpell} stab/lần (còn ${stabLeft} lần)`}</div>
+          <>
+            <div className="text-xs">{`Mỗi lần mod ${stabRun} stab`}</div>
+            <div className="text-xs font-bold text-green">{`Phép mod stab: ${stabSpell} stab/lần (còn ${stabLeft} lần)`}</div>
+          </>
         )}
       </HudSection>
       <HudSection id="stabMod.housing" title="Housing + slider">
@@ -199,7 +210,7 @@ export function LubePanel() {
   const build = useBuild()
   const opener = useGame((s) => TOOLS.opener[s.tools.opener])
   const certLv = useGame((s) => s.tools.cert ?? 0)
-  // phép mở / phép lube switch (bán riêng, lượt riêng): thợ lõ thành 10 con, có chứng chỉ thì cộng 10 (`spellRun`)
+  // phép mở / phép lube switch (bán riêng, lượt riêng): bậc thợ cộng dồn 10 (`spellRun`)
   const openLeft = useGame((s) => s.supplies[SPELL_OPEN] ?? 0)
   const lubeLeft = useGame((s) => s.supplies[SPELL_LUBE] ?? 0)
   const openSpell = useGame((s) => spellBonus(s.supplies, SPELL_OPEN))
@@ -217,8 +228,6 @@ export function LubePanel() {
   const closed = build.swClosed ?? 0
   // lò xo đã thả lại vào housing (bản lưu cũ: = số con đã đóng)
   const springsIn = Math.max(build.springsIn ?? 0, closed)
-  // đã mở switch thì phải đóng hết lại mới đi tiếp (chưa mở con nào = bỏ qua lube)
-  const mustClose = opened > 0 && closed < opened
   if (!sw)
     return (
       <HudPanel
@@ -243,11 +252,11 @@ export function LubePanel() {
     <HudPanel
       id="switchLube"
       title="🧴 Lube switch"
-      // switch đang mở: không hiện nút (đóng hết lại trên bàn lube thì mới có nút đi tiếp)
+      // chỉ còn nút bỏ qua khi chưa mở con nào; đã mở thì đi tiếp bằng nút bước tiếp dưới đáy
       footer={
-        !mustClose && (
+        !opened && (
           <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
-            {opened ? 'Xong, đi lắp switch →' : 'Bỏ qua lube →'}
+            Bỏ qua lube →
           </Button>
         )
       }
@@ -264,6 +273,12 @@ export function LubePanel() {
           {PREF_TEXT[pref]}
         </div>
       )}
+      {/* tactile / clicky: lube thân dễ mất khấc / tiếng click, lube lò xo thì luôn được */}
+      {pref !== 'none' && lubeAdvice(sw.feel) && (
+        <Alert title={sw.feel === 'clicky' ? 'Switch clicky' : 'Switch tactile'}>
+          {lubeAdvice(sw.feel)}
+        </Alert>
+      )}
       <ToolWarn kinds={['opener', 'brush']} />
       <HudSection
         id="switchLube.open"
@@ -274,9 +289,9 @@ export function LubePanel() {
           </span>
         }
       >
-        <div className="text-xs">{`Click switch trên đồ mở để tách housing, stem và lò xo, mỗi lần ${perOpen} con`}</div>
+        <div className="text-xs">{`Click switch trên đồ mở để tách housing, stem và lò xo, mỗi lần ${perOpen} switch`}</div>
         {openLeft > 0 && (
-          <div className="text-xs font-bold text-green">{`Phép mở switch: ${perOpen}/lần (còn ${openLeft} lần)`}</div>
+          <div className="text-xs font-bold text-green">{`Phép mở switch: ${openSpell} switch/lần (còn ${openLeft} lần)`}</div>
         )}
         <ProgressBar value={opened / total} tone="green" className="mt-1" />
       </HudSection>
@@ -292,10 +307,10 @@ export function LubePanel() {
         }
       >
         {!opener.none && (
-          <div className="text-xs">{`Đã mở chờ lube: ${opened - build.lubed} · ${perLube} con / mẻ (theo bậc thợ${lubeSpell ? ' + phép' : ''})`}</div>
+          <div className="text-xs">{`Đã mở chờ lube: ${opened - build.lubed} · mỗi lần lube ${perLube} switch`}</div>
         )}
         {lubeLeft > 0 && (
-          <div className="text-xs font-bold text-green">{`Phép lube switch: ${perLube}/mẻ (còn ${lubeLeft} lần)`}</div>
+          <div className="text-xs font-bold text-green">{`Phép lube switch: ${lubeSpell} switch/lần (còn ${lubeLeft} lần)`}</div>
         )}
         <LubePicker slot="switch" use={sw.feel} disabled={!!build.lubeType} />
         <ProgressBar value={build.lubed / total} tone="green" className="mt-1" />
@@ -330,7 +345,7 @@ export function LubePanel() {
         }
       >
         <div className="text-xs">
-          {`Lube xong thì click lưới switch trên bàn, xen kẽ: lần 1 thả lò xo từ hộp vào housing, lần 2 lắp stem + úp housing trên đóng lại (mỗi lần ${perOpen} con). Đã thả lò xo thì không lube thêm / lube lò xo được nữa`}
+          {`Lube xong thì click lưới switch trên bàn, xen kẽ: lần 1 thả lò xo từ hộp vào housing, lần 2 lắp stem + úp housing trên đóng lại (mỗi lần ${perOpen} switch). Đã thả lò xo thì không lube thêm / lube lò xo được nữa`}
         </div>
         <ProgressBar value={opened ? closed / opened : 0} tone="green" className="mt-1" />
       </HudSection>
@@ -394,7 +409,7 @@ export function SolderPanel() {
       <HudSection id="solder.tools" title="Dụng cụ">
         {tool(iron, 'solder')}
         {/* đổi qua lại bút hàn / trạm hàn đã mua; chưa có thì bấm thêm vào giỏ Shopii (thanh toán ở máy tính) */}
-        <div className="flex flex-wrap gap-1">
+        <div className="flex gap-1">
           {TOOLS.solder.map((item, level) => {
             if (item.none) return null
             const using = tools.solder === level
@@ -404,10 +419,13 @@ export function SolderPanel() {
             // chưa có: thêm vào giỏ Shopii, thanh toán ở máy tính rồi ra cửa nhận mới dùng
             const coming = !owned && toolOnWay(parcels, 'solder', level)
             return (
-              <Button
+              <ToolCard
                 key={level}
-                size="sm"
-                tone={using ? 'green' : 'default'}
+                kind="solder"
+                level={level}
+                label={SOLDER_SHORT[level]}
+                note={owned ? undefined : coming ? 'Đang giao' : fmt(item.price)}
+                active={using}
                 disabled={using || coming}
                 title={
                   owned
@@ -426,10 +444,7 @@ export function SolderPanel() {
                     qty: 1,
                   })
                 }}
-              >
-                {using ? '✓ ' : ''}
-                {SOLDER_SHORT[level]}
-              </Button>
+              />
             )
           })}
         </div>
@@ -441,13 +456,18 @@ export function SolderPanel() {
         {tool(cleaner, 'tipCleaner')}
         {tool(pump, 'desolder')}
         {burnt > 0 && <Muted>Bấm mối cháy để hút thiếc, lau mũi hàn rồi hàn lại.</Muted>}
-        {!iron.none && (
-          <Alert tone="yellow" icon={Lightbulb} title="Hướng dẫn">
-            <span className="text-xs">
+        {/* 1 khung chung: cách hàn + bút hàn khó giữ nhiệt (`PEN_BURN`), luôn hiện để biết khác biệt lúc chọn dụng cụ */}
+        <Alert tone="yellow" icon={Lightbulb} title="Hướng dẫn">
+          <ul className="flex list-disc flex-col gap-1 pl-4 text-xs">
+            <li>
               Giữ chuột cho thanh nhiệt chạy, nhả trong vùng xanh, nhả vùng đỏ là bị cháy chân hàn
-            </span>
-          </Alert>
-        )}
+            </li>
+            <li>
+              Nhiệt độ bút hàn không ổn định nên nhả đúng vùng xanh vẫn có tỉ lệ bị cháy chân. Trạm
+              hàn giữ nhiệt ổn định, không bị
+            </li>
+          </ul>
+        </Alert>
       </HudSection>
       <HudSection id="solder.wire" title="Thiếc hàn">
         <div className="flex flex-wrap gap-1">
@@ -475,6 +495,27 @@ export function SolderPanel() {
   )
 }
 
+/** Ảnh model feet theo màu (`supply:<id>`, chụp sẵn bằng bake:thumbs; chưa có thì ô màu) */
+function FeetThumb({ id }: { id: string }) {
+  const thumb = useModelThumb('supply', id)
+  return (
+    <div className="relative grid h-24 w-full place-items-center overflow-hidden rounded-xl bg-black/15">
+      {thumb ? (
+        <img
+          src={thumb}
+          alt=""
+          className="absolute inset-0 size-full object-contain"
+          draggable={false}
+        />
+      ) : thumb === undefined ? (
+        <ThumbLoading />
+      ) : (
+        <span className="size-12 rounded-full" style={{ background: SUPPLIES[id].color }} />
+      )}
+    </div>
+  )
+}
+
 /** Panel bước dán feet: chọn feet đen / trắng (số còn trong kho), tiến độ, hết feet thì mở Shopii */
 export function FeetPanel() {
   const ctx = useCtx()
@@ -487,6 +528,9 @@ export function FeetPanel() {
   const total = ctx.feet.length
   const left = total - done
   const have = FEET_IDS.reduce((a, id) => a + (supplies[id] ?? 0), 0)
+  // đã dán ≥ 1 cái: khoá màu theo feet đầu (placeFoot cũng dùng màu này), hoàn tác hết thì mở lại
+  const locked = Object.values(build.feet ?? {})[0]
+  const cur = locked ?? pick
   return (
     <HudPanel id="feet" title="🦶 Dán feet cao su">
       <ProgressBar value={total ? done / total : 1} tone="green" />
@@ -494,27 +538,61 @@ export function FeetPanel() {
         Đã dán {done}/{total} feet
       </div>
       <HudSection id="feet.pick" title="Loại feet">
-        <div className="flex flex-wrap gap-1">
-          {/* nhiều màu: chỉ hiện màu đang có trong kho + màu đang chọn */}
-          {FEET_IDS.filter((id) => id === pick || (supplies[id] ?? 0) > 0).map((id) => (
-            <OptionChip
-              key={id}
-              active={pick === id}
-              swatch={SUPPLIES[id].color}
-              onClick={() => setFeetPick(id)}
-            >
-              {SUPPLIES[id].name.replace('Feet cao su ', 'Feet ')} ({supplies[id] ?? 0})
-            </OptionChip>
-          ))}
+        {/* ảnh model feet màu đang chọn (ảnh chụp sẵn như thẻ Shopii) + hàng ô màu để chọn */}
+        <FeetThumb id={cur} />
+        <div className="text-center text-xs font-bold">
+          {SUPPLIES[cur].name}
+          <span
+            className={cn('font-semibold', (supplies[cur] ?? 0) > 0 ? 'text-muted' : 'text-red')}
+          >
+            {` · còn ${supplies[cur] ?? 0}`}
+          </span>
         </div>
-        <Muted>Chọn màu feet hợp màu case (mua thêm màu khác ở Shopii). 1 lần mua = 4 cái.</Muted>
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {FEET_IDS.map((id) => {
+            const n = supplies[id] ?? 0
+            const off = !!locked && id !== locked
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setFeetPick(id)}
+                disabled={off}
+                title={
+                  off
+                    ? `Đã dán ${SUPPLIES[locked].name.toLowerCase()}, các feet phải cùng màu (hoàn tác để đổi)`
+                    : `${SUPPLIES[id].name}: ${n > 0 ? `còn ${n}` : 'chưa có, mua ở Shopii'}`
+                }
+                className={cn(
+                  'relative size-7 rounded-full border-2 shadow-[0_2px_0_#0006]',
+                  cur === id
+                    ? 'border-green ring-2 ring-green/50'
+                    : 'border-black/40 enabled:hover:border-yellow',
+                  (off || (n <= 0 && cur !== id)) && 'opacity-35',
+                )}
+                style={{ background: SUPPLIES[id].color }}
+              >
+                {n > 0 && (
+                  <span className="absolute -right-1.5 -bottom-1.5 rounded-md bg-black/80 px-1 text-[9px] leading-tight font-extrabold text-white">
+                    {n}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        <Muted>
+          {locked
+            ? 'Đã dán feet đầu tiên: các feet còn lại phải cùng màu (hoàn tác hết để đổi màu).'
+            : 'Chọn màu feet hợp màu case (mua thêm màu khác ở Shopii). 1 lần mua = 4 cái.'}
+        </Muted>
       </HudSection>
-      {left > 0 && (supplies[pick] ?? 0) < left && (
+      {left > 0 && (supplies[cur] ?? 0) < left && (
         <Alert
           tone="yellow"
-          title={`Còn thiếu feet: cần ${left}, ${SUPPLIES[pick].name.toLowerCase()} còn ${supplies[pick] ?? 0}`}
+          title={`Còn thiếu feet: cần ${left}, ${SUPPLIES[cur].name.toLowerCase()} còn ${supplies[cur] ?? 0}`}
         >
-          {have >= left && <Muted>Màu khác còn đủ, đổi màu để dán tiếp.</Muted>}
+          {have >= left && !locked && <Muted>Màu khác còn đủ, đổi màu để dán tiếp.</Muted>}
           <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
             Mua feet ở Shopii
           </Button>
@@ -594,6 +672,54 @@ export function FoamPanel() {
             Mua foam ở Shopii
           </Button>
         </Alert>
+      )}
+    </HudPanel>
+  )
+}
+
+/**
+ * Panel bước lắp switch / keycap: tiến độ, số phím mỗi lần bấm (bậc thợ + phép lắp), phép còn bao nhiêu lần;
+ * chưa có phép thì nhắc mua ở Shopii → Sách phép
+ */
+export function InstallPanel({ kind }: { kind: 'switch' | 'keycap' }) {
+  const ctx = useCtx()
+  const build = useBuild()
+  const certLv = useGame((s) => s.tools.cert ?? 0)
+  const spellId = kind === 'switch' ? SPELL_ASSEM : SPELL_KEYCAP
+  const left = useGame((s) => s.supplies[spellId] ?? 0)
+  const bonus = useGame((s) => spellBonus(s.supplies, spellId))
+  const openShop = useGame((s) => s.openShop)
+  const certN = TOOLS.cert[certLv].n!
+  const per = spellRun(certN, bonus)
+  const total = ctx.keys.length
+  const done = ctx.keys.filter(
+    (k) => (kind === 'switch' ? build.switches : build.keycaps)[k.id],
+  ).length
+  const what = kind === 'switch' ? 'switch' : 'keycap'
+  return (
+    <HudPanel id={`install.${kind}`} title={kind === 'switch' ? '🔩 Lắp switch' : '⌨️ Lắp keycap'}>
+      <ProgressBar value={done / total} tone="green" />
+      <div className="text-xs">
+        Đã lắp {done}/{total}
+      </div>
+      <div className="text-xs">{`Mỗi lần bấm lắp ${per} ${what} liền nhau trong hàng`}</div>
+      {/* chứng chỉ thợ + phép cộng dồn (`spellRun`): mỗi nguồn 1 dòng; thợ lõ không có dòng chứng chỉ */}
+      {certN > 1 && (
+        <div className="text-xs font-bold text-green">
+          {`${TOOLS.cert[certLv].name.replace('Chứng chỉ thợ', 'Thợ')}: ${certN} ${what}/lần`}
+        </div>
+      )}
+      {left > 0 ? (
+        <div className="text-xs font-bold text-green">
+          {`${SUPPLIES[spellId].name}: ${bonus} ${what}/lần (còn ${left} lần)`}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Muted className="flex-1">{`Chưa có ${SUPPLIES[spellId].name}`}</Muted>
+          <Button size="sm" onClick={() => openShop('spell')}>
+            Mua ở Shopii
+          </Button>
+        </div>
       )}
     </HudPanel>
   )

@@ -363,7 +363,13 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
     lines.push(`Plate ${PLATES[plateMaterial].name} giúp mình, đúng chất liệu đó nhé.`)
   if (stabType) lines.push(`Stab dùng đúng ${STABS[stabType].name} cho mình nha.`)
   if (lubePref === 'want')
-    lines.push('Nhớ lube switch giúp mình nha, lube đúng loại mỡ nhé (switch lube sẵn thì thôi).')
+    lines.push(
+      switchKind === 'Clicky'
+        ? 'Lube lò xo giúp mình cho hết tiếng ping nha, đừng lube thân switch kẻo mất tiếng click.'
+        : switchKind === 'Tactile' || switchKind === 'SilentTactile'
+          ? 'Lube giúp mình cho hết tiếng ping nha, lò xo là chính, thân switch chỉ quét mỏng thôi kẻo mất khấc.'
+          : 'Nhớ lube switch giúp mình nha, lube đúng loại mỡ nhé (switch lube sẵn thì thôi).',
+    )
   if (lubePref === 'none') lines.push('Mình thích tiếng sạn gốc của switch, đừng lube switch nhé!')
   if (keys.some((k) => k.stab)) lines.push('Stab phải êm, không được lạch cạch đâu đó!')
   if (foam) lines.push('Lót giúp mình tấm foam Poron giữa PCB và plate nhé, cho gõ thock hơn.')

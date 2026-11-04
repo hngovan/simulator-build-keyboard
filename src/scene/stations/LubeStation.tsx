@@ -160,6 +160,7 @@ function OpenedSwitches({
   closing,
   closeFrom,
   closeN,
+  moving,
 }: {
   type: string
   total: number
@@ -175,6 +176,8 @@ function OpenedSwitches({
   closeFrom: number
   /** số con mỗi lần thả lò xo / đóng */
   closeN: number
+  /** các con đang chạy hoạt cảnh đóng (`ClosingSwitches` vẽ stem + housing trên): ẩn khỏi lớp tĩnh */
+  moving: number[]
   /** các con đã lube (thứ tự trong lưới) */
   lubed: number[]
   /** số con 1 mẻ lube (bậc thợ + sách phép): rê vào 1 con thì viền cả mẻ sẽ bôi */
@@ -228,8 +231,10 @@ function OpenedSwitches({
     const open = all.filter((i) => i >= closed)
     const shut = all.filter((i) => i < closed)
     const done = new Set(lubed)
-    const wet = open.filter((i) => done.has(i))
-    const dry = open.filter((i) => !done.has(i))
+    const busy = new Set(moving)
+    const still = open.filter((i) => !busy.has(i))
+    const wet = still.filter((i) => done.has(i))
+    const dry = still.filter((i) => !done.has(i))
     place(bottomRef.current, all, SEAT_Y)
     place(shutStemRef.current, shut, SEAT_Y)
     place(shutBodyRef.current, shut, SEAT_Y)
@@ -237,7 +242,7 @@ function OpenedSwitches({
     place(greaseRef.current, wet, SEAT_Y)
     place(
       springRef.current,
-      open.filter((i) => i < springsIn),
+      still.filter((i) => i < springsIn),
       SPRING_IN_Y,
     )
     // stem nổi phía trên housing dưới
@@ -246,10 +251,10 @@ function OpenedSwitches({
     place(wetBodyRef.current, wet, SEAT_Y + RAISE)
     place(dryBodyRef.current, dry, SEAT_Y + RAISE)
     // housing trên đặt cạnh sau (đáy housing trên ở y 0.743 → hạ sát bàn), lùi 17mm
-    place(topRef.current, open, -0.743, 17)
+    place(topRef.current, still, -0.743, 17)
     // khối bắt chuột: gốc mặt bàn (y 0 = TABLE)
     place(hitRef.current, all, 0)
-  }, [opened, closed, springsIn, lubed, grid, grease])
+  }, [opened, closed, springsIn, lubed, grid, grease, moving])
   // viền cả mẻ sẽ bôi nếu bấm con đang rê (con đã lube bấm vào không làm gì); lúc đóng: viền mẻ đóng tiếp theo
   const lit =
     closing && hover !== null && hover < opened
@@ -442,6 +447,141 @@ function OpenerSlot({
           <WholeSwitch type={type} topRef={top} />
         </group>
       )}
+    </group>
+  )
+}
+
+/** đặt instance k của `mesh` = switch `list[k]` trong lưới, gốc cao `y(k)` mm trên bàn, lùi `back` mm */
+function placeSwitches(
+  mesh: THREE.InstancedMesh,
+  grid: ReturnType<typeof switchGrid>,
+  list: number[],
+  y: (k: number) => number,
+  back: number,
+  /** co dãn theo trục y (lò xo bị stem ép) */
+  sy: (k: number) => number = () => 1,
+) {
+  mesh.count = list.length
+  list.forEach((i, k) => {
+    TMP.position.copy(grid.at(i))
+    TMP.position.y = TABLE + y(k) * U * grid.size
+    TMP.position.z -= back * U * grid.size
+    TMP.rotation.set(0, 0, 0)
+    TMP.scale.setScalar(U * grid.size)
+    TMP.scale.y *= sy(k)
+    TMP.updateMatrix()
+    mesh.setMatrixAt(k, TMP.matrix)
+  })
+  mesh.instanceMatrix.needsUpdate = true
+}
+
+/**
+ * Hoạt cảnh đóng 1 mẻ switch (`closeSwitch`): stem hạ từ chỗ nổi xuống vào housing dưới, rồi housing trên (đang nằm lùi sau)
+ * nhấc lên cao hơn đỉnh stem, dời tới trên switch và úp xuống đúng chỗ lắp. Xong thì lớp tĩnh vẽ các con này thành switch nguyên
+ */
+function ClosingSwitches({
+  type,
+  ids,
+  lubed,
+  total,
+  springLubed,
+}: {
+  type: string
+  ids: number[]
+  lubed: number[]
+  total: number
+  springLubed: boolean
+}) {
+  const parts = useSwitchParts()
+  const m = switchMaterials(type)
+  const grid = useMemo(() => switchGrid(total), [total])
+  const wetIds = useMemo(() => ids.filter((i) => lubed.includes(i)), [ids, lubed])
+  const dryIds = useMemo(() => ids.filter((i) => !lubed.includes(i)), [ids, lubed])
+  const wetStem = useRef<THREE.InstancedMesh>(null)
+  const wetBody = useRef<THREE.InstancedMesh>(null)
+  const dryStem = useRef<THREE.InstancedMesh>(null)
+  const dryBody = useRef<THREE.InstancedMesh>(null)
+  const top = useRef<THREE.InstancedMesh>(null)
+  const spring = useRef<THREE.InstancedMesh>(null)
+  /** độ cao housing trên lúc dời qua (mm trên mặt plate): đáy housing (0.743) cao hơn đỉnh stem */
+  const OVER = SWITCH_CAD.stemTop + 2
+  useFrame(() => {
+    const q = animProgress('close') ?? 1
+    const put = (
+      mesh: THREE.InstancedMesh | null,
+      list: number[],
+      y: (k: number) => number,
+      back = 0,
+      sy?: (k: number) => number,
+    ) => mesh && placeSwitches(mesh, grid, list, y, back, sy)
+    // stem lần lượt hạ xuống (lệch nhịp nhẹ mỗi con) trong 40% đầu
+    const stemY = (k: number, n: number) =>
+      SEAT_Y +
+      RAISE * (1 - ease(seg(q, (k / Math.max(1, n)) * 0.1, 0.3 + (k / Math.max(1, n)) * 0.1)))
+    put(wetStem.current, wetIds, (k) => stemY(k, wetIds.length))
+    put(wetBody.current, wetIds, (k) => stemY(k, wetIds.length))
+    put(dryStem.current, dryIds, (k) => stemY(k, dryIds.length))
+    put(dryBody.current, dryIds, (k) => stemY(k, dryIds.length))
+    // lò xo đứng trên sàn hốc, đỉnh luôn chạm đáy thân stem: stem hạ tới đâu lò xo co tới đó
+    const wetAt = new Map(wetIds.map((i, k) => [i, k]))
+    const dryAt = new Map(dryIds.map((i, k) => [i, k]))
+    const springTop = (i: number) =>
+      wetAt.has(i) ? stemY(wetAt.get(i)!, wetIds.length) : stemY(dryAt.get(i) ?? 0, dryIds.length)
+    put(
+      spring.current,
+      ids,
+      () => SPRING_IN_Y,
+      0,
+      // co tối đa còn 30%: ép hết cỡ thì vòng dây chồng thành đĩa dẹt (đầu lò xo lọt vào lòng stem, không thấy)
+      (k) => Math.max(0.3, (springTop(ids[k]) + body.bottom - SPRING_IN_Y) / SPRING_IN_H),
+    )
+    // housing trên: nhấc lên (0.35 → 0.6), dời tới trên switch (0.5 → 0.8), úp xuống (0.8 → 1)
+    const lift = ease(seg(q, 0.35, 0.6))
+    const slide = ease(seg(q, 0.5, 0.8))
+    const drop = ease(seg(q, 0.8, 1))
+    const y = -0.743 + (SEAT_Y + OVER + 0.743) * lift - OVER * drop
+    put(top.current, ids, () => y, 17 * (1 - slide))
+  })
+  const n = Math.max(1, ids.length)
+  return (
+    <group>
+      <instancedMesh
+        ref={spring}
+        args={[SPRING_UP_GEO, springLubed ? SPRING_WET : SPRING_DRY, n]}
+        raycast={noHit}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={wetStem}
+        args={[parts.stemTop, m.stemLubed, n]}
+        raycast={noHit}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={wetBody}
+        args={[bodyGeo, m.stemLubed, n]}
+        raycast={noHit}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={dryStem}
+        args={[parts.stemTop, m.stem, n]}
+        raycast={noHit}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={dryBody}
+        args={[bodyGeo, m.stem, n]}
+        raycast={noHit}
+        frustumCulled={false}
+      />
+      <instancedMesh
+        ref={top}
+        args={[parts.top, m.top, n]}
+        raycast={noHit}
+        castShadow
+        frustumCulled={false}
+      />
     </group>
   )
 }
@@ -779,6 +919,14 @@ export function LubeStation() {
   )
   const k = ctx.width / 12
   const busy = !!anim
+  // mẻ đang đóng: các con từ `closed` (swClosed chỉ cộng khi hoạt cảnh xong)
+  const moving = useMemo(
+    () =>
+      anim?.kind === 'close'
+        ? Array.from({ length: Math.min(anim.batch, opened - closed) }, (_, j) => closed + j)
+        : [],
+    [anim, opened, closed],
+  )
 
   // đồ còn thiếu: ô nét đứt xanh như bàn mod stab, bấm để mở Shopii đúng mục
   const supplies = useGame((s) => s.supplies)
@@ -862,6 +1010,7 @@ export function LubeStation() {
           closing={canClose || canSpring}
           closeFrom={closeFrom}
           closeN={openN}
+          moving={moving}
           active={canLube && !springsIn}
           type={type}
           total={total}
@@ -871,6 +1020,16 @@ export function LubeStation() {
           lube={build.lubeType ?? null}
         />
       </Clickable>
+      {anim?.kind === 'close' && moving.length > 0 && (
+        <ClosingSwitches
+          key={anim.at}
+          type={type}
+          ids={moving}
+          lubed={lubed}
+          total={total}
+          springLubed={!!build.springLube}
+        />
+      )}
       {anim?.kind === 'switch' && (
         <LiveGrease key={anim.at} lube={anim.lube} at={nextAt} size={grid.size} />
       )}

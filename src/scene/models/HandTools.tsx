@@ -59,35 +59,38 @@ const handleRed = new THREE.MeshStandardMaterial({ color: '#e0553a', roughness: 
 const gripBlack = new THREE.MeshStandardMaterial({ color: '#25262b', roughness: 0.85 })
 const chrome = new THREE.MeshStandardMaterial({ color: '#d6dbe2', metalness: 1, roughness: 0.2 })
 
+/** các khối của tua vít tay: [hình, vật liệu, cao độ tâm, co theo y] */
+const MANUAL_PARTS: [() => THREE.BufferGeometry, THREE.Material, number, number?][] = [
+  // đầu kẹp lục giác ôm chuôi đầu vít
+  [() => new THREE.CylinderGeometry(0.05, 0.045, 0.14, 6), chrome, 0.01],
+  // thân thép
+  [() => new THREE.CylinderGeometry(0.03, 0.03, 0.42, 12), chrome, 0.29],
+  // khâu nối cán
+  [() => new THREE.CylinderGeometry(0.075, 0.05, 0.06, 16), chrome, 0.52],
+  // cán nhựa thon dần về đầu, 6 rãnh bám tay
+  [() => new THREE.CylinderGeometry(0.1, 0.12, 0.66, 6), handleRed, 0.88],
+  // đệm cao su ôm giữa cán
+  [() => new THREE.CylinderGeometry(0.125, 0.13, 0.28, 18), gripBlack, 0.9],
+  // đầu cán bo tròn
+  [() => new THREE.SphereGeometry(0.1, 18, 10), handleRed, 1.21, 0.45],
+]
+
+/** Tua vít tay dựng thành THREE.Group (dùng cả cho ảnh chụp dụng cụ ở HUD / Shopii) */
+export function createManualScrewdriver() {
+  const g = new THREE.Group()
+  for (const [geo, mat, y, sy] of MANUAL_PARTS) {
+    const m = new THREE.Mesh(geo(), mat)
+    m.position.y = y
+    if (sy) m.scale.y = sy
+    m.castShadow = true
+    g.add(m)
+  }
+  return g
+}
+
 export function ManualScrewdriver() {
-  return (
-    <group>
-      {/* đầu kẹp lục giác ôm chuôi đầu vít */}
-      <mesh material={chrome} position-y={0.01} castShadow>
-        <cylinderGeometry args={[0.05, 0.045, 0.14, 6]} />
-      </mesh>
-      {/* thân thép */}
-      <mesh material={chrome} position-y={0.29} castShadow>
-        <cylinderGeometry args={[0.03, 0.03, 0.42, 12]} />
-      </mesh>
-      {/* khâu nối cán */}
-      <mesh material={chrome} position-y={0.52} castShadow>
-        <cylinderGeometry args={[0.075, 0.05, 0.06, 16]} />
-      </mesh>
-      {/* cán nhựa thon dần về đầu, 6 rãnh bám tay */}
-      <mesh material={handleRed} position-y={0.88} castShadow>
-        <cylinderGeometry args={[0.1, 0.12, 0.66, 6]} />
-      </mesh>
-      {/* đệm cao su ôm giữa cán */}
-      <mesh material={gripBlack} position-y={0.9} castShadow>
-        <cylinderGeometry args={[0.125, 0.13, 0.28, 18]} />
-      </mesh>
-      {/* đầu cán bo tròn */}
-      <mesh material={handleRed} position-y={1.21} scale-y={0.45} castShadow>
-        <sphereGeometry args={[0.1, 18, 10]} />
-      </mesh>
-    </group>
-  )
+  const obj = useMemo(() => createManualScrewdriver(), [])
+  return <primitive object={obj} />
 }
 
 // Tua vít điện: "Electric Screwdriver_ Tool" (MugoflighterfluidArt, Sketchfab, CC BY 4.0),

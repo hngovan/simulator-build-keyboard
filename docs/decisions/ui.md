@@ -1443,3 +1443,63 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
   Store không đổi mỗi khung. Profile: render ~48%, ContactShadows 20%, projectObject 9%, raycast con trỏ 6%.
 - Cùng ngày: khung thông số đè bảng chọn đầu vít (cột phải bàn build) → đổi thành dải ngang gọn góc trái dưới (`left-3 bottom-3`, ngồi máy
   tính thì trên taskbar `--taskbar-h`); góc phải dưới là avatar Keeb-chan. Tên GPU chuyển vào Cài đặt → Hiển thị (dòng GPU, đỏ nếu SwiftShader).
+
+## 2026-11-04 — Popup lịch: màn thấp bị khuất nút "Kết thúc ngày"
+
+- Yêu cầu: thu cửa sổ thấp (vd 1181 × 476) thì tờ note không co, đẩy mất nút "Kết thúc ngày".
+- Nguyên nhân: tờ note có `min-h-[360px]` (dành cho màn hẹp xếp dọc) áp cả khi xếp ngang, cột phải cao hơn tờ lịch (78vh).
+- Đã làm: `CalendarDialog.tsx` đổi thành `min-h-[140px] max-md:min-h-[360px]` — xếp ngang thì tờ note co theo tờ lịch (việc nhiều thì cuộn trong note), 2 nút luôn hiện.
+
+## 2026-11-04 — Panel lube switch: bỏ nút "Xong, đi lắp switch →"
+
+- Yêu cầu: bỏ nút này ở panel trái khi build.
+- Đã làm: `LubePanel` (ModPanels.tsx) chỉ còn nút "Bỏ qua lube →" khi chưa mở switch nào; đã mở thì đi tiếp bằng nút bước tiếp dưới đáy (BenchHud).
+
+## 2026-11-04 — Đổi tua vít tay / điện ở bảng cột phải
+
+- Yêu cầu: đổi tua vít ở menu bên phải, không bày cây còn lại trên bàn build để bấm đổi qua lại nữa.
+- Đã làm: `BitPicker.tsx` thêm `DriverButtons` (2 nút Tua vít thường / Tua vít điện dưới hàng đầu vít, chỉ hiện khi đã mua tua vít điện, `setScrewPick`);
+  `DeskTools` (Room.tsx) chỉ bày cây đang dùng, bỏ cây dự phòng `Clickable`; ô dụng cụ ở thẻ mục tiêu dưới đáy (BenchHud `Objective`) chỉ hiện tên, bỏ nút ⇄.
+
+## 2026-11-04: ảnh model dụng cụ ở HUD bàn build (tua vít, máy hàn)
+
+- Yêu cầu: menu bên phải chỉ hiện chữ tên tua vít / máy hàn, nhìn "phèn".
+- `features/bench/ToolCard.tsx`: ô chọn dụng cụ = ảnh model 3D chụp như thẻ Shopii (`useModelThumb('tool', 'kind:level')`, chưa chụp xong
+  thì `ThumbLoading`, không có model thì `ToolArt`) + tên dưới, đang dùng viền xanh.
+- `BitPicker` `DriverButtons`: luôn hiện (chưa có tua vít điện thì 1 ô tua vít tay); `SolderPanel`: bút hàn / trạm hàn (chưa có thì dòng
+  phụ giá / "Đang giao").
+- Ảnh tua vít tay (`tool:screw:0`) trước rơi vào khối hộp mặc định: thêm nhánh trong `modelThumb.ts` dùng `createManualScrewdriver()`
+  (HandTools.tsx, `ManualScrewdriver` giờ dựng từ hàm này). Chưa có ảnh chụp sẵn: thêm thì chạy `bun run bake:thumbs`.
+
+## 2026-11-04: bảng phải bước lắp switch / keycap (phép lắp)
+
+- Yêu cầu: tới bước lắp switch không thấy phép lắp switch ở cột phải (bàn lube / mod stab thì có dòng phép).
+- `InstallPanel({ kind })` trong `features/bench/ModPanels.tsx`, BenchHud gắn cho bước `switch` / `keycap`: tiến độ đã lắp, switch còn
+  trong kho, số phím mỗi lần bấm (`spellRun(bậc thợ, spellBonus)` giống `installRun`), dòng xanh phép còn bao nhiêu lần; chưa có phép thì
+  nút "Mua ở Shopii" (`openShop('spell')`).
+
+## 2026-11-04: bảng dán feet có ảnh model + ô chọn màu
+
+- Yêu cầu: bước dán feet, cột phải chỉ có chip chữ; muốn 1 ảnh model feet + chọn màu cho trực quan.
+- `FeetPanel` (ModPanels.tsx): `FeetThumb` = ảnh model feet màu đang chọn (`useModelThumb('supply', id)`, ảnh chụp sẵn `supply:feet*`
+  trong thumbs.json; chưa có thì chấm màu), dưới là tên + "còn N" (hết = đỏ), rồi hàng ô màu tròn đủ mọi màu `FEET_IDS`
+  (đang chọn viền xanh, số còn ở góc, màu chưa có mờ nhưng vẫn chọn được; tooltip tên + số còn / "chưa có, mua ở Shopii").
+  Trước chỉ hiện màu đang có + màu đang chọn.
+- Sửa ảnh feet bị phóng to / cắt: khung `grid place-items-center` có hàng tự cao theo ảnh gốc (360 × 240) nên `h-full` của `<img>` không
+  bị giới hạn. Khung `relative` + ảnh `absolute inset-0 size-full object-contain` (FeetThumb + ToolCard).
+- Khoá màu feet sau khi dán cái đầu: `placeFoot` luôn dùng màu feet đã dán đầu tiên (`Object.values(build.feet)[0]`, đồng bộ lại
+  `feetPick`), `FeetPanel` disable mọi ô màu khác (mờ, tooltip "các feet phải cùng màu, hoàn tác để đổi"), ảnh / tên / cảnh báo thiếu
+  theo màu đã khoá, ẩn gợi ý "đổi màu để dán tiếp"; hoàn tác hết feet thì mở lại.
+- `InstallPanel`: bỏ "còn N switch trong kho" và phần "(Chứng chỉ thợ … + phép)" (người dùng thấy thô); chỉ còn "Mỗi lần bấm lắp N … liền
+  nhau trong hàng" + dòng phép xanh.
+- `InstallPanel` tách nguồn số phím mỗi lần: dòng xanh "Thợ middle / senior: N …/lần" (chỉ khi có chứng chỉ) + dòng phép "+10/lần"
+  (có chứng chỉ: cộng dồn, `spellRun`) hoặc "10/lần" (thợ lõ: phép thay hẳn).
+
+## 2026-11-04: phép luôn cộng dồn với bậc thợ, ghi chung "N switch/lần"
+
+- Yêu cầu: chứng chỉ thợ mặc định cộng dồn với mọi phép mua sẵn (trước: thợ lõ có phép = thay hẳn thành 10; hàn / hút thiếc /
+  mod stab không tính bậc thợ). Mô tả ghi chung 1 kiểu "10 switch/lần" (trước lệch: thợ "10/lần", phép "+10/lần").
+- `spellRun(certN, bonus)` = certN + bonus (lõ + phép = 11). `spellBatch(certN, bonus)` (supplies.ts) cho hàn / hút thiếc / mod stab:
+  không phép = 1, có phép = bậc thợ + phép; dùng ở `solderKey` / `desolderKey` / `modStab` (buildSlice) + viền sáng `SolderPad`.
+- HUD (ModPanels): dòng tổng "Mỗi lần … N switch", dòng xanh "Thợ middle: 5 switch/lần" (có chứng chỉ), dòng xanh
+  "Phép …: 10 switch/lần (còn M lần)"; mod stab thêm "Mỗi lần mod N stab". Bỏ "con", bỏ ngoặc "(theo bậc thợ + phép)".

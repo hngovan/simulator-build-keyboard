@@ -5,6 +5,8 @@ import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 /** màu tương tác trong cảnh 3D (viền hover, mũi tên hướng dẫn, chỗ chờ đặt / bấm): xanh lá như `--color-green` */
 export const HINT_COLOR = '#3ecf6e'
+/** `raycast={noHit}`: vật trang trí (gợi ý, viền) không nhận chuột */
+export const noHit = () => null
 /** sáng hơn khi rê chuột */
 export const HINT_HOVER = '#8af5ac'
 const HOVER_COLOR = HINT_COLOR
