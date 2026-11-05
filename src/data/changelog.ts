@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.29',
     date: '2026-11-05',
-    commits: [],
+    commits: ['a5c9420'],
     title: 'Màn bắt đầu mới, chế độ Free build, icon HUD / Shopii mới',
     items: [
       'Màn bắt đầu: logo game mới (icon keycap + BUILD KEYBOARD / SIMULATOR), nền ảnh góc bàn cạnh cửa sổ phủ mờ, menu giữa màn: Sự nghiệp (Tiếp tục / Chơi mới), Hướng dẫn build, Free build',
