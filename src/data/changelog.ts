@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.30',
     date: '2026-11-05',
-    commits: [],
+    commits: ['f1f01aa'],
     title: 'Free build chọn case là build, phòng mượt hơn, sắp lại tranh treo tường',
     items: [
       'Free build: vào là chọn case (màu, layout, mount, PCB, plate, stab) rồi build luôn với đủ đồ, không phải lấy từng món ở Shopii; build xong chọn case khác',
