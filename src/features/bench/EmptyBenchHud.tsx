@@ -22,6 +22,17 @@ function BenchStatus() {
       {body}
     </div>
   )
+  // Free build: bàn trống (vừa build xong / đóng bảng chọn) thì mở lại bảng chọn case
+  if (!box && s.free)
+    return frame(
+      'Free build',
+      <div className="flex flex-col items-center gap-2 text-base">
+        Chọn case để build, có sẵn đủ linh kiện
+        <Button tone="green" onClick={() => useGame.setState({ freePick: true })}>
+          Chọn case
+        </Button>
+      </div>,
+    )
   if (!box)
     return frame(
       'Bàn build đang trống',
@@ -51,25 +62,15 @@ function BenchStatus() {
     </ControlsHint>
   )
   if (!missing.length) return hint
-  // thiếu đồ: khung liệt kê món thiếu (Free build thì mỗi dòng có nút lấy ở Shopii đúng mục), dưới là dòng hướng dẫn
+  // thiếu đồ: khung chỉ liệt kê món thiếu (không nút), dưới là dòng hướng dẫn
   return (
     <>
       {frame(
         `Đơn ${who} còn thiếu linh kiện`,
         <ul className="flex flex-col gap-1 text-left">
           {missing.map((m) => (
-            <li
-              key={m.cat}
-              className="flex items-center gap-2 rounded-lg bg-panel-2 px-3 py-1.5 text-sm"
-            >
-              <span className="min-w-0 flex-1">
-                <b>{CATS[m.cat]}</b>: <span className="text-yellow">{m.msg}</span>
-              </span>
-              {s.free && (
-                <Button size="sm" tone="orange" onClick={() => s.openShop(m.cat)}>
-                  Lấy ở Shopii
-                </Button>
-              )}
+            <li key={m.cat} className="rounded-lg bg-panel-2 px-3 py-1.5 text-sm">
+              <b>{CATS[m.cat]}</b>: <span className="text-yellow">{m.msg}</span>
             </li>
           ))}
         </ul>,

@@ -1539,3 +1539,21 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
   không phép = 1, có phép = bậc thợ + phép; dùng ở `solderKey` / `desolderKey` / `modStab` (buildSlice) + viền sáng `SolderPad`.
 - HUD (ModPanels): dòng tổng "Mỗi lần … N switch", dòng xanh "Thợ middle: 5 switch/lần" (có chứng chỉ), dòng xanh
   "Phép …: 10 switch/lần (còn M lần)"; mod stab thêm "Mỗi lần mod N stab". Bỏ "con", bỏ ngoặc "(theo bậc thợ + phép)".
+
+## 2026-11-05: Free build chọn case như build thử dev, bỏ build thử dev
+
+- Người dùng: Free build lấy đồ ở Shopii rồi vẫn không biết build thế nào ("ở free build ko cần mua chỉ cần cho chọn case build như ở chế độ
+  dev"), rồi "bỏ chế độ dev đi" (đã hỏi lại: chỉ bỏ Build thử, giữ tiền vô hạn / mở khoá / phép vô hạn / xem thử màn thua / FPS).
+- Bảng Build thử dev → `features/free/FreeBuildDialog.tsx` (case + màu, layout, mount, PCB, plate, stab; mở theo `freePick`, App.tsx, chờ phòng tải xong).
+  `features/free/freeBuild.ts` `startFreeBuild`: đơn `Order.free` kit đủ linh kiện (dư 20 switch, stab gấp đôi), thùng nằm sẵn trên bàn, vào build luôn.
+  `DevCasePanel` → `FreeCasePanel` ("Màu case" trên bàn, `setFreeCaseColor`).
+- `startFree`: ngồi bàn build, chưa có đơn, mở bảng chọn (trước: mở Shopii mục Case, thùng đơn `freeOrder` trống trên bàn). Giao xong: dọn bàn,
+  mở lại bảng. Bàn trống Free build: khung "Free build" + nút "Chọn case". Bỏ nút "Lấy ở Shopii" ở khung thiếu đồ (thêm sáng cùng ngày).
+- Bỏ `order.dev` cùng các nhánh riêng (buildSlice deliver / mod stab cả mẻ / không hao mòn, `onBench`, `isOptionalStep` bỏ qua mọi bước,
+  benchMode Room, `fillAddedKeys`), `devBuild.ts`, hàng "Build thử" tab Dev; bỏ `freeOrder` / `FREE_LAYOUT` (orders.ts). Free build không bỏ qua
+  được mọi bước như build thử dev cũ (chơi như đơn thường, chỉ không chấm điểm).
+
+## 2026-11-05: hộp thoại "Lưu tiến trình trước khi thoát?"
+
+- Bỏ icon 💾 ở tiêu đề + nút "Lưu & thoát"; khung giống cửa sổ app: `TitleBar` màu app Cài đặt (`#66758f`, ghi thẳng vì import apps.ts thành vòng)
+  - `TitleButton` đóng (= Ở lại), thân `p-3.5` (SettingsTabs.tsx `ConfirmExit`).

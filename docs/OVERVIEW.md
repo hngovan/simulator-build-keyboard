@@ -102,7 +102,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
 
 1. **Title** (`features/title/TitleScreen.tsx`): nền ảnh góc bàn cạnh cửa sổ chụp trong game (phủ mờ), logo game (icon keycap +
    "BUILD KEYBOARD / SIMULATOR") + menu chữ chính giữa màn: "Sự nghiệp" → Tiếp tục (tên, ngày, tiền; chưa có bản lưu thì mờ) / Chơi mới
-   (nhập tên, không hướng dẫn), "Hướng dẫn build" (nhập tên, có tour Keeb-chan), "Free build" (Shopii mở khoá + miễn phí, không lưu, `startFree`);
+   (nhập tên, không hướng dẫn), "Hướng dẫn build" (nhập tên, có tour Keeb-chan), "Free build" (chọn case ở bảng `FreeBuildDialog`, có sẵn đủ đồ, không lưu, `startFree`);
    ↑ ↓ + Enter, có âm thanh menu, nhạc nền phát ngay. Góc trên trái: bật / tắt nhạc; đáy: Facebook, số phiên bản (bấm xem lịch sử cập nhật).
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar, hiện trong khung đúng mặt kính màn hình 3D (~90%, quanh đó thấy bàn / phòng). Chơi mới mở sẵn
    Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc bấm vùng phòng ngoài màn hình; Esc cũng vậy)

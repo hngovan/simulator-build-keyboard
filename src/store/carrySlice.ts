@@ -39,9 +39,9 @@ export function boxCustomer(s: GameState, id: string) {
   return o?.customer ?? 'khách'
 }
 
-/** đơn đang làm có đang nằm trên bàn build (đơn build thử dev luôn tính là trên bàn) */
+/** đơn đang làm có đang nằm trên bàn build */
 export const onBench = (s: Pick<GameState, 'order' | 'benchBox'>) =>
-  !!s.order && (!!s.order.dev || s.benchBox === s.order.id)
+  !!s.order && s.benchBox === s.order.id
 
 export const createCarrySlice: StateCreator<GameState, [], [], CarrySlice> = (set, get) => ({
   boxes: {},

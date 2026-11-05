@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Volume2, VolumeX } from 'lucide-react'
+import { Volume2, VolumeX, X } from 'lucide-react'
 import { useGame } from '@/store'
 import type { RunEndReason } from '@/lib/leaderboardApi'
-import { Button, HudCard, Muted, Slider, Toggle } from '@/components/ui'
+import { Button, Muted, Slider, TitleBar, TitleButton, Toggle } from '@/components/ui'
 import { KeyCap, MouseIcon } from '@/components/game/ControlsHint'
 import { cn } from '@/lib/format'
 import { setPerfHud, usePerfHud } from '@/lib/perfStats'
@@ -15,8 +15,10 @@ import {
   useDevSpells,
   useDevUnlock,
 } from '@/features/apps/settings/devMoney'
-import { DevBuildDialog } from '@/features/apps/settings/DevBuildDialog'
 import { Row, Section } from './SettingsParts'
+
+/** màu thanh tiêu đề app Cài đặt (`APPS.settings.color`; import apps.ts ở đây thành vòng) */
+const SETTINGS_COLOR = '#66758f'
 
 /** Hỏi có lưu tiến trình lên bảng xếp hạng trước khi về màn hình đăng nhập không */
 function ConfirmExit({ onCancel }: { onCancel: () => void }) {
@@ -27,32 +29,37 @@ function ConfirmExit({ onCancel }: { onCancel: () => void }) {
       className="fixed inset-0 z-[3500] grid animate-fade-in place-items-center bg-black/60 p-4"
       onPointerDown={(e) => e.target === e.currentTarget && onCancel()}
     >
-      <HudCard className="flex w-[min(460px,100%)] flex-col gap-3">
-        <h3 className="font-head text-xl font-extrabold text-yellow">
-          💾 Lưu tiến trình trước khi thoát?
-        </h3>
-        <Muted className="text-sm">
-          Tiến trình mới chưa được ghi lên bảng xếp hạng. Bản lưu trong máy vẫn còn, vào lại chơi
-          tiếp được.
-        </Muted>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button onClick={onCancel}>Ở lại</Button>
-          <Button tone="red" onClick={exit}>
-            Thoát không lưu
-          </Button>
-          <Button
-            tone="green"
-            disabled={saving}
-            onClick={async () => {
-              setSaving(true)
-              await useGame.getState().saveRun()
-              exit()
-            }}
-          >
-            {saving ? 'Đang lưu...' : '💾 Lưu & thoát'}
-          </Button>
+      {/* khung giống cửa sổ app: thanh tiêu đề màu app Cài đặt + nút đóng (= Ở lại) */}
+      <div className="flex w-[min(460px,100%)] flex-col overflow-hidden rounded-2xl border-[3px] border-black/40 bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]">
+        <TitleBar title="Lưu tiến trình trước khi thoát?" color={SETTINGS_COLOR}>
+          <TitleButton close aria-label="Đóng" title="Đóng" onClick={onCancel}>
+            <X />
+          </TitleButton>
+        </TitleBar>
+        <div className="flex flex-col gap-3 p-3.5">
+          <Muted className="text-sm">
+            Tiến trình mới chưa được ghi lên bảng xếp hạng. Bản lưu trong máy vẫn còn, vào lại chơi
+            tiếp được.
+          </Muted>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button onClick={onCancel}>Ở lại</Button>
+            <Button tone="red" onClick={exit}>
+              Thoát không lưu
+            </Button>
+            <Button
+              tone="green"
+              disabled={saving}
+              onClick={async () => {
+                setSaving(true)
+                await useGame.getState().saveRun()
+                exit()
+              }}
+            >
+              {saving ? 'Đang lưu...' : 'Lưu & thoát'}
+            </Button>
+          </div>
         </div>
-      </HudCard>
+      </div>
     </div>,
     document.body,
   )
@@ -258,11 +265,10 @@ export function DevTab() {
   const unlock = useDevUnlock((s) => s.on)
   const spells = useDevSpells((s) => s.on)
   const perf = usePerfHud((s) => s.on)
-  const [testing, setTesting] = useState(false)
   return (
     <Section
       title="Dev"
-      info="Chỉ có khi dev: tiền vô hạn (tắt thì trả lại tiền cũ), sách phép vô hạn (tắt = làm từng con, trả lại lượt cũ), Shopii mở khoá mọi món, build thử mọi case không cần đơn, thông số hiệu năng (kéo khung sang góc khác), xem thử màn thua game"
+      info="Chỉ có khi dev: tiền vô hạn (tắt thì trả lại tiền cũ), sách phép vô hạn (tắt = làm từng con, trả lại lượt cũ), Shopii mở khoá mọi món, thông số hiệu năng (kéo khung sang góc khác), xem thử màn thua game"
     >
       <Row>
         <span className="flex-1 font-bold">Tiền vô hạn</span>
@@ -281,12 +287,6 @@ export function DevTab() {
         <Toggle checked={perf} onChange={setPerfHud} label="Hiện thông số hiệu năng" />
       </Row>
       <Row>
-        <span className="flex-1 font-bold">Build thử mọi case + màu</span>
-        <Button size="sm" tone="blue" onClick={() => setTesting(true)}>
-          🧪 Chọn case
-        </Button>
-      </Row>
-      <Row>
         <span className="flex-1 font-bold">Xem thử màn thua game</span>
         {LOSS_PREVIEW.map(([reason, label]) => (
           <Button
@@ -300,14 +300,6 @@ export function DevTab() {
           </Button>
         ))}
       </Row>
-      {testing && (
-        <DevBuildDialog
-          onClose={() => {
-            setTesting(false)
-            useGame.getState().closeApp('settings')
-          }}
-        />
-      )}
     </Section>
   )
 }

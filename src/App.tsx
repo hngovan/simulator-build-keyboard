@@ -7,6 +7,7 @@ import { PerfHud } from '@/components/game/PerfHud'
 import { GlobalTooltip } from '@/components/ui/GlobalTooltip'
 import { ReviewPops } from '@/features/apps/reviews/ReviewPops'
 import { GameOverDialog } from '@/features/gameover/GameOverDialog'
+import { FreeBuildDialog } from '@/features/free/FreeBuildDialog'
 import { BenchTour } from '@/features/guide/BenchTour'
 import { PayTour } from '@/features/guide/PayTour'
 import { TitleScreen } from '@/features/title/TitleScreen'
@@ -42,6 +43,8 @@ export default function App() {
   const loading = useSceneLoading((s) => !s.settled) && (screen === 'pc' || screen === 'bench')
   // fast bid ở Hội Phím Cơ: bot ghé bid / bình luận, hết giờ thì chốt bán (kể cả khi không mở tab chợ)
   const hasBid = useGame((s) => s.listings.some((l) => l.bid))
+  // Free build: bảng chọn case (lúc vào chế độ / build xong / bấm "Chọn case" ở bàn trống), chờ phòng tải xong mới hiện
+  const freePick = useGame((s) => s.freePick) && !loading
   useEffect(() => {
     if (!hasBid) return
     const t = setInterval(() => {
@@ -94,6 +97,7 @@ export default function App() {
       )}
       {/* menu Cài đặt ngoài game (Esc) */}
       <GameOverDialog />
+      {freePick && <FreeBuildDialog />}
     </>
   )
 }

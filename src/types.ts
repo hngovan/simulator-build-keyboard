@@ -293,9 +293,7 @@ export interface Order {
   days: number
   /** ngày phải giao (đặt khi nhận đơn) */
   dueDay?: number
-  /** đơn build thử (chỉ khi dev): bỏ qua bước nào cũng được, giao thì dọn bàn, không chấm điểm */
-  dev?: true
-  /** đơn Free build (chế độ Free build, `startFree`): không khách / không chấm điểm, layout theo PCB vừa lấy ở Shopii, giao = dọn bàn build tiếp */
+  /** đơn Free build (chế độ Free build, chọn case ở `FreeBuildDialog`): không khách / không chấm điểm, đủ linh kiện, giao = dọn bàn, chọn case khác */
   free?: true
   /** khách huỷ kèo giữa chừng: 'sold' = phát hiện shop đem đồ khách gửi đi bán ở chợ (đơn còn hiện tới hết ngày) */
   cancel?: 'sold'

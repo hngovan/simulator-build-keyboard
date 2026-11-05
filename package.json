@@ -1,7 +1,7 @@
 {
   "name": "simulator-build-keyboard",
   "private": true,
-  "version": "0.1.29",
+  "version": "0.1.30",
   "type": "module",
   "packageManager": "bun@1.4.3",
   "scripts": {
@@ -34,7 +34,8 @@
     "convert:hand-tools": "node scripts/convert-hand-tools.mjs",
     "convert:desk-gear": "bunx @gltf-transform/cli@4.1.1 optimize assets/desk/topre_realforce_87u.glb public/models/desk/realforce-87u.glb --compress meshopt --texture-compress false --simplify-ratio 0.02 --simplify-error 0.0005 && bunx @gltf-transform/cli@4.1.1 optimize assets/desk/mouse_-_razer_deathadder.glb public/models/desk/deathadder.glb --compress meshopt --texture-compress false",
     "fetch:room": "node scripts/fetch-room.mjs",
-    "convert:desolder-pump": "node scripts/convert-desolder-pump.mjs"
+    "convert:desolder-pump": "node scripts/convert-desolder-pump.mjs",
+    "convert:cafe-pictures": "node scripts/convert-cafe-pictures.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

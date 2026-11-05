@@ -1,5 +1,4 @@
 import type { StateCreator } from 'zustand'
-import { useDevSpells } from '@/lib/devSpells'
 import {
   CASE_SCREW_STEPS,
   CRACK_CHANCE,
@@ -63,7 +62,6 @@ import { deadKey, noPower, scoreDelivery } from './scoring'
 import type { SkillResult } from '@/data/skillCheck'
 import type { GameState } from '.'
 import { emptyInventory } from './shopSlice'
-import { freeOrder } from '@/data/orders'
 
 export type { StabModKind }
 
@@ -656,11 +654,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
 
       let lube: string | undefined
       // phép mod stab: con đang bấm + các con còn làm được mod này (theo thứ tự trên bàn), tối đa `spell` con / lần,
-      // mọi loại mod (cắt chân, dán băng, lube, lắp slider, lắp wire); dev build thử + công tắc "Sách phép vô hạn" = hết mọi con
-      const devAll = !!s.order?.dev && useDevSpells.getState().on
-      const spell = devAll
-        ? n
-        : spellBatch(TOOLS.cert[s.tools.cert ?? 0].n!, spellBonus(s.supplies, SPELL_STAB))
+      // mọi loại mod (cắt chân, dán băng, lube, lắp slider, lắp wire)
+      const spell = spellBatch(TOOLS.cert[s.tools.cert ?? 0].n!, spellBonus(s.supplies, SPELL_STAB))
       /** con `u` còn làm được mod này không (cùng điều kiện như con đang bấm, không báo lỗi) */
       const can = (u: number) => {
         if (unitModded(b, kind, u)) return false
@@ -725,8 +720,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
           s.wearTool('brush')
         }
       }
-      // chỉ tốn 1 lượt phép khi làm > 1 con (build thử phép vô hạn thì không trừ)
-      if (units.length > 1 && !devAll) s.useSupply(SPELL_STAB, 1)
+      // chỉ tốn 1 lượt phép khi làm > 1 con
+      if (units.length > 1) s.useSupply(SPELL_STAB, 1)
       // kìm / kéo làm lần lượt từng con trong mẻ; lube housing / wire chỉ phết con đầu (các con kia xong cùng lúc, như lube switch);
       // lắp slider / wire thì cả mẻ cùng di chuyển vào
       const dur = stabAnimDuration(
@@ -957,7 +952,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const s = get()
       const tool = TOOLS[kind][s.tools[kind]]
       // đơn build thử (dev): đồ vô hạn, không hao mòn
-      if (!tool.life || s.order?.dev || s.free) return
+      if (!tool.life || s.free) return
       const used = (s.wear[kind] ?? 0) + 1
       if (kind === 'solder') {
         const solderOwned = { ...s.solderOwned }
@@ -1338,31 +1333,10 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     deliver: () => {
       const s = get()
       if (!s.order || !s.build || !s.ctx) return
-      // đơn build thử (dev): dọn bàn luôn, không đóng gói / chấm điểm, đồ không vào kho chung
-      if (s.order.dev) {
+      // Free build: không chấm điểm, dọn bàn, mở lại bảng chọn case để build con tiếp theo
+      if (s.order.free) {
         set({
           order: null,
-          result: null,
-          inventory: emptyInventory(),
-          provided: {},
-          spent: 0,
-          posts: [],
-          mount: null,
-          screen: 'pc',
-          build: null,
-          ctx: null,
-          benchBox: null,
-          history: [],
-          future: [],
-          supplyUsed: {},
-        })
-        return s.toast('Xong đơn build thử, đã dọn bàn')
-      }
-      // Free build: không chấm điểm, dọn bàn, thùng đơn Free build mới (cùng layout) nằm sẵn trên bàn để build tiếp
-      if (s.order.free) {
-        const order = freeOrder(s.day, s.order.layout)
-        set({
-          order,
           result: null,
           inventory: emptyInventory(),
           provided: {},
@@ -1372,13 +1346,13 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
           screen: 'bench',
           build: null,
           ctx: null,
-          benchBox: order.id,
-          worked: [...s.worked, order.id],
+          benchBox: null,
           history: [],
           future: [],
           supplyUsed: {},
+          freePick: true,
         })
-        return s.toast('🎉 Build xong! Đã dọn bàn, lấy đồ ở Shopii để build con tiếp theo', 'good')
+        return s.toast('🎉 Build xong! Chọn case để build con tiếp theo', 'good')
       }
       if (!s.inventory.switch)
         return s.toast('Đơn này đang thiếu switch, mua thêm rồi hãy giao', 'bad')

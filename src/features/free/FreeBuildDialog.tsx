@@ -5,15 +5,17 @@ import { cn } from '@/lib/format'
 import { LAYOUTS } from '@/data/layouts'
 import { CASES, CASE_COLORS, MOUNTS, PCB_TYPES, PLATES, STABS, plateIds } from '@/data/parts'
 import type { FormFactor, LayoutId } from '@/types'
-import { devLayouts, startDevBuild } from './devBuild'
+import { useGame } from '@/store'
+import { freeLayouts, startFreeBuild } from './freeBuild'
 
 /** thứ tự nhóm cỡ case trong bảng */
 const FF_ORDER: FormFactor[] = ['40', 'planck', '60', '65', '75', 'alice', 'frl', 'tkl', 'full']
 const PLATE_IDS = plateIds()
 const STAB_IDS = Object.keys(STABS)
 
-/** Chỉ khi dev: bảng mọi case + màu, chọn 1 ô rồi vào build thử ngay (đủ đồ, bỏ qua bước nào cũng được) */
-export function DevBuildDialog({ onClose }: { onClose: () => void }) {
+/** Free build: bảng mọi case + màu, chọn 1 ô (+ layout, mount, PCB, plate, stab) rồi vào build ngay với đủ đồ */
+export function FreeBuildDialog() {
+  const onClose = () => useGame.setState({ freePick: false })
   const [pick, setPick] = useState<{ caseId: string; color: string } | null>(null)
   const [layout, setLayout] = useState<LayoutId | ''>('')
   const [mount, setMount] = useState('')
@@ -27,14 +29,14 @@ export function DevBuildDialog({ onClose }: { onClose: () => void }) {
   })).filter((g) => g.ids.length)
   const choose = (caseId: string, color: string) => {
     setPick({ caseId, color })
-    const lays = devLayouts(caseId)
+    const lays = freeLayouts(caseId)
     if (!layout || !lays.includes(layout)) setLayout(lays[0] ?? '')
     if (!CASES[caseId].mounts.includes(mount)) setMount(CASES[caseId].mounts[0])
   }
-  const layouts = pick ? devLayouts(pick.caseId) : []
+  const layouts = pick ? freeLayouts(pick.caseId) : []
   const go = () => {
     if (!pick || !layout) return
-    startDevBuild({
+    startFreeBuild({
       ...pick,
       layout,
       mount,
@@ -42,7 +44,6 @@ export function DevBuildDialog({ onClose }: { onClose: () => void }) {
       plate: PLATE_IDS[plate],
       stab: STAB_IDS[stab],
     })
-    onClose()
   }
 
   return createPortal(
@@ -51,10 +52,10 @@ export function DevBuildDialog({ onClose }: { onClose: () => void }) {
       onPointerDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <HudCard className="flex max-h-[90vh] w-[min(920px,100%)] flex-col gap-3">
-        <h3 className="font-head text-xl font-extrabold text-yellow">🧪 Build thử mọi case</h3>
+        <h3 className="font-head text-xl font-extrabold text-yellow">Free build: chọn case</h3>
         <Muted className="text-sm">
-          Bấm 1 ô màu để chọn case. Đơn thử có sẵn đủ linh kiện + dụng cụ + vật tư, bước nào cũng bỏ
-          qua được, giao thì chỉ dọn bàn (không chấm điểm). Đơn đang làm được cất lại.
+          Bấm 1 ô màu để chọn case. Có sẵn đủ linh kiện + dụng cụ + vật tư, không cần mua; build
+          xong thì dọn bàn, chọn case khác build tiếp (không chấm điểm).
         </Muted>
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-2xl bg-black/15 p-1.5">
           {groups.map((g) => (
@@ -152,7 +153,7 @@ export function DevBuildDialog({ onClose }: { onClose: () => void }) {
         <div className="flex flex-wrap justify-end gap-2">
           <Button onClick={onClose}>Đóng</Button>
           <Button tone="green" disabled={!pick || !layout} onClick={go}>
-            🔧 Build thử
+            Build
           </Button>
         </div>
       </HudCard>

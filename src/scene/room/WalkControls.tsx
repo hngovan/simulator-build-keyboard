@@ -135,9 +135,10 @@ export function WalkControls() {
 
   // dev: mở camera trong console như CameraRig (không có OrbitControls)
   const scene = useThree((s) => s.scene)
+  const gl = useThree((s) => s.gl)
   useEffect(() => {
-    if (import.meta.env.DEV) window.__r3f = { camera, controls: null, scene }
-  }, [camera, scene])
+    if (import.meta.env.DEV) window.__r3f = { camera, controls: null, scene, gl }
+  }, [camera, scene, gl])
 
   // bay tới tư thế khác (ngồi vào bàn build...) theo yêu cầu từ ngoài
   useEffect(

@@ -28,7 +28,6 @@ export const CREDITS: CreditGroup[] = [
       ['Shelf 01', 'Gabriel Radić', 'Shelf_01'],
       ['Screwdriver', 'PierreB3D', 'screwdriver'],
       ['Painted Wooden Chair 01', 'Kuutti Siitonen', 'painted_wooden_chair_01'],
-      ['Hanging Picture Frame 01', 'James Ray Cock', 'hanging_picture_frame_01'],
       ['Wall Clock', 'PierreB3D', 'wall_clock'],
       ['Laminate Floor 02 (texture)', 'Dario Barresi, Charlotte Baglioni', 'laminate_floor_02'],
       ['Beige Wall 001 (texture)', 'Dimitrios Savva, Rico Cilliers', 'beige_wall_001'],
@@ -156,6 +155,13 @@ export const CREDITS: CreditGroup[] = [
         author: 'Jerovdl',
         license: 'CC BY 4.0',
         url: 'https://sketchfab.com/3d-models/zz-plant-in-ceramic-pot-crafted-by-jerovdl-544d4c1621254fa28144c2f1e27287a7',
+      },
+      {
+        what: 'Cafe Wall Pictures (bộ 3 tranh treo tường phải)',
+        author: 'Guy in a Poncho',
+        license: 'CC BY 4.0',
+        url: 'https://sketchfab.com/3d-models/cafe-wall-pictures-7016b8389cdc45658bb1399f476fad00',
+        note: 'Bỏ normal / ORM map, ảnh màu nén JPEG',
       },
       {
         what: 'Window Blind - 3MB (rèm lá cửa sổ)',

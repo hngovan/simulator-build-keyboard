@@ -1571,3 +1571,32 @@
   chạy phẳng dọc sàn (điểm giữa mỗi 0,4u), tới ngay dưới đầu dây ló khỏi jack (lead 0,12u thay 0,3u) thì dựng thẳng lên cắm.
   Case CAD có rãnh giữ nguyên đi theo rãnh.
 - Chưa xử lý: case tray mount, đường sàn thẳng có thể đi qua trụ standoff (mảnh, r ≈ 0,1u).
+
+## 2026-11-05: giảm khựng khi đi ra hành lang rồi quay lại phòng
+
+- Người dùng: "đi ra hành lang lấy đồ rồi quay lưng lại thì bị khựng vài s". Đo (Chrome, Intel UHD 630, như máy người dùng): nhìn về phòng từ
+  hành lang 3,73 triệu tam giác / 1.666 draw call, lần đầu quay +32 shader +42 texture; 8 bàn phím chưng trên kệ tường trước ~3,2 triệu
+  tam giác / ~1.400 mesh (keycap CAD ~2.500 tam giác / phím), 15 vật liệu `transmission` (case PC / mica trên kệ + kính khung chứng chỉ:
+  three vẽ lại cả cảnh vào render target mỗi khung có vật transmission trong tầm nhìn).
+- `scene/common/warmup.ts`: `cheapGlass` (transmission → trong suốt thường, cho đồ trang trí), `warmUp` (initTexture + `compileAsync`
+  trước), `mergeByMaterial` (gộp mesh tĩnh theo vật liệu). `SceneReady` (Bench.tsx) warm cả phòng trước khi báo `ready` (màn chờ còn che).
+- `DisplayKeyboard` (ShelfDisplay.tsx): `THREE.LOD` — gần (< 1,3 m) bản đầy đủ như cũ, xa: `buildKeyboardModel(spec, false, false, true)`
+  (`lite`: keycap dựng bằng code `capGeometry` ~136 tam giác) gộp theo vật liệu; warm xong mới gắn vào cảnh. Bấm kệ vẫn mở khung xem 3D đầy đủ.
+- Sau: nhìn về phòng 350–680k tam giác, 160–300 draw call, không biên dịch shader khi quay, đứng yên không còn khung treo. Còn vài khung
+  0,3–1s lúc xoay không có long task JS (phía GPU / driver, hoặc do Chrome bị điều khiển tự động khi đo); món nặng nhất còn lại: Realforce
+  trên bàn máy tính (143k tam giác).
+- Dev: `window.__r3f` có thêm `gl` (WebGLRenderer) để đo `gl.info`.
+
+## 2026-11-05: tranh treo tường
+
+- Xoá tranh khung đen cạnh đồng hồ (tường trước, `hanging_picture_frame_01`) + tranh khung trắng hành lang đối diện ô cửa
+  (`hanging_picture_frame_02`), bỏ `ModelPainting` + 3 GLB khung Poly Haven (cả `fetch-room.mjs`, ghi công).
+- Tranh phượng hoàng: khung chạm trổ `fancy_picture_frame_02` (35k tam giác) → `CanvasPainting` khung hộp mạ vàng như tờ "300k";
+  tường phải lệch về phía tường sau (`WORK_TABLE.z - 1.15`).
+- Bộ 3 tranh cafe (Sketchfab "Cafe Wall Pictures", Guy in a Poncho, CC BY 4.0; nguồn `assets/room/cafe_wall_pictures.glb`):
+  `bun run convert:cafe-pictures` (bỏ normal / ORM map, ảnh màu PNG → JPEG bằng bộ giải PNG tự viết vì sharp của gltf-transform lỗi
+  colourspace; bỏ tam giác tấm kính alpha < 128 — vật liệu đục thì kính thành tấm đen che tranh; giữ 2 mặt vì mặt tranh có tam giác ngược
+  chiều) 5,6MB → 530KB. Treo tường phải trên kệ giao hàng (`SHIP_SHELF.z - 0.25`), xoay π (model gốc mặt quay +x), lùi khỏi tường 1,5cm
+  (tranh nghiêng ~1°, sát tường thì nửa dưới lẹm vào tường), `Model noShadow` (bóng khung hắt sọc lên mặt tranh).
+- Poster: "MY KEYBOARDS" + "CHERRY" từ tường trước sang tường trái (z 3,45 / 2,6 m, giữa góc tường trước và ô cửa); "ベースライン303" lên
+  tường cuối hành lang trên kệ sắt nhận hàng; "CAUTION" sang tường trước cạnh kệ chưng bàn phím (`-SHELF_X + 0.9`).

@@ -29,7 +29,7 @@ import {
   SolderPanel,
   StabModPanel,
 } from './ModPanels'
-import { DevCasePanel } from './DevCasePanel'
+import { FreeCasePanel } from './FreeCasePanel'
 import { SoundMeter } from './SoundMeter'
 import { BitPicker } from './BitPicker'
 import { ResetCamButton } from './CamModeButton'
@@ -495,7 +495,7 @@ export function BenchHud() {
     ) : null
 
   // dev: đơn build thử có bảng đổi case / màu / mount ngay trên bàn
-  const devCase = import.meta.env.DEV && !!order.dev
+  const freeCase = !!order.free
   // bảng chọn đầu vít: cố định đầu cột phải
   const need = stepBit(step)
   const dockBits = need ? <BitPicker need={need} /> : null
@@ -510,11 +510,11 @@ export function BenchHud() {
         </HudPanel>
         <StepList />
       </div>
-      {(side || devCase || dockBits) && (
+      {(side || freeCase || dockBits) && (
         // cột phải: chữ 14px đồng bộ với cột trái (chữ nhỏ 12 → 14px, tiêu đề lớn hơn 1 bậc)
         <div className="fixed top-16 right-3 z-[5] flex max-h-[calc(100vh-160px)] w-[310px] flex-col gap-2 text-sm max-md:hidden [&_.text-base]:text-lg [&_.text-xs]:text-sm">
           {dockBits}
-          {devCase && <DevCasePanel />}
+          {freeCase && <FreeCasePanel />}
           {side}
         </div>
       )}

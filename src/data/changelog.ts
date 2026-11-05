@@ -13,6 +13,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.30',
+    date: '2026-11-05',
+    commits: [],
+    title: 'Free build chọn case là build, phòng mượt hơn, sắp lại tranh treo tường',
+    items: [
+      'Free build: vào là chọn case (màu, layout, mount, PCB, plate, stab) rồi build luôn với đủ đồ, không phải lấy từng món ở Shopii; build xong chọn case khác',
+      'Bàn build Free build có bảng đổi màu case; bàn trống có nút "Chọn case"',
+      'Đi lại mượt hơn: kệ chưng bàn phím đứng xa dùng bản nhẹ, bỏ kính tốn tài nguyên, dựng sẵn shader lúc tải; quay về phòng từ hành lang không còn khựng',
+      'Tranh: bỏ 2 khung trống, thêm bộ 3 tranh quán cafe trên tường phải, tranh phượng hoàng khung đơn giản; dời poster sang tường trái / cuối hành lang / cạnh kệ',
+      'Hộp thoại lưu trước khi thoát có thanh tiêu đề như cửa sổ app, bỏ icon',
+    ],
+  },
+  {
     version: '0.1.29',
     date: '2026-11-05',
     commits: ['a5c9420'],

@@ -6,9 +6,6 @@ Từ [Poly Haven](https://polyhaven.com), giấy phép CC0:
 - Shelf 01 (`Shelf_01`) — Gabriel Radić
 - Screwdriver (`screwdriver-lite.glb`, bản nhẹ bỏ texture; gốc ở `assets/tools/polyhaven/`) — PierreB3D
 - Painted Wooden Chair 01 (`painted_wooden_chair_01`) — Kuutti Siitonen
-- Hanging Picture Frame 01 (`hanging_picture_frame_01`) — James Ray Cock
-- Hanging Picture Frame 02 (`hanging_picture_frame_02`) — James Ray Cock
-- Fancy Picture Frame 02 (`fancy_picture_frame_02`) — Rob Tuytel, Rico Cilliers
 - Wall Clock (`wall_clock`) — PierreB3D
 - Metal Office Desk (`metal_office_desk`) — Ulan Cabanilla
 - Wooden Table 03 (`WoodenTable_03`) — Gabriel Radić
@@ -26,6 +23,7 @@ Từ [Sketchfab](https://sketchfab.com), giấy phép CC BY 4.0 (bắt buộc gh
 
 - Voxel Cutting Mat (`voxel_cutting_mat.glb`) — shpawen
 - Old Tool Box (`old_tool_box.glb`) — Марк (Mark-kon)
+- Cafe Wall Pictures (`cafe-wall-pictures.glb`) — Guy in a Poncho (Sketchfab, CC BY 4.0)
 - ZZ Plant in Ceramic Pot | Crafted by jerovdl (`zz_plant.glb`) — Jerovdl
 - Window Blind - 3MB (`window-blind.glb`) — Mehdi Shahsavan
 - Light Fixture - Ceiling Recessed (`ceiling-recessed.glb`) — MozillaHubs

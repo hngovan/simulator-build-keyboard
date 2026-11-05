@@ -18,6 +18,7 @@ import { SolderKit } from './stations/SolderKit'
 import { ScrewTray } from './parts/ScrewTray'
 import { useSceneLoading } from './common/loadingStore'
 import { useCamLock } from './common/camLock'
+import { warmUp } from './common/warmup'
 import { Room } from './Room'
 import { ROOM_BOUNDS } from './room/roomLayout'
 import { WalkControls } from './room/WalkControls'
@@ -28,12 +29,22 @@ import { fitAspect } from './common/fitAspect'
 import { pcEye, screenCenter } from './models/computerLayout'
 import { M } from './room/roomLayout'
 
-/** Báo cảnh đã sẵn sàng khi Suspense ngoài cùng tải xong */
+/**
+ * Báo cảnh đã sẵn sàng khi Suspense ngoài cùng tải xong; trước đó (màn chờ còn che) biên dịch shader + tải texture cả phòng,
+ * không để tới lần đầu quay về phía đó mới làm (khựng)
+ */
 function SceneReady() {
+  const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
+  const camera = useThree((s) => s.camera)
   useEffect(() => {
-    useSceneLoading.setState({ ready: true })
-    return () => useSceneLoading.setState({ ready: false, settled: false })
-  }, [])
+    let alive = true
+    void warmUp(gl, scene, camera).then(() => alive && useSceneLoading.setState({ ready: true }))
+    return () => {
+      alive = false
+      useSceneLoading.setState({ ready: false, settled: false })
+    }
+  }, [gl, scene, camera])
   return null
 }
 
@@ -84,7 +95,12 @@ function Workbench() {
 
 declare global {
   interface Window {
-    __r3f?: { camera: THREE.Camera; controls: OrbitControlsImpl | null; scene: THREE.Scene }
+    __r3f?: {
+      camera: THREE.Camera
+      controls: OrbitControlsImpl | null
+      scene: THREE.Scene
+      gl?: THREE.WebGLRenderer
+    }
   }
 }
 

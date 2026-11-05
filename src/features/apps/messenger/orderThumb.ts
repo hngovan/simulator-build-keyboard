@@ -166,7 +166,13 @@ const buildKeyboard = (order: Order, tilt = true) => buildKeyboardModel(orderSpe
  * Ghép bàn phím hoàn chỉnh từ spec: case (CAD thật nếu có) → PCB → plate → switch → keycap → khối chặn.
  * caseOnly: chỉ dựng vỏ case (+ khối chặn liền case) cho ảnh / khung xem case trên Shopii
  */
-export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOnly = false) {
+export async function buildKeyboardModel(
+  spec: KeyboardSpec,
+  tilt = true,
+  caseOnly = false,
+  /** keycap dựng bằng code thay model CAD (~136 thay vì ~2.500 tam giác / phím): bản xa của bàn phím chưng trên kệ */
+  lite = false,
+) {
   const { caseId, color, keycapKit } = spec
   const profile = KEYCAP_KITS[keycapKit].profile
   const { keys, width, depth, origin, outline } = getLayout(spec.layout, spec.variant)
@@ -302,7 +308,7 @@ export async function buildKeyboardModel(spec: KeyboardSpec, tilt = true, caseOn
     const own = spec.capOf?.(k)
     const mat = own ? capMat(own) : isMod(k.label) && k.code !== 'Space' ? accentMat : mainMat
     // cả bàn 1 profile: model CAD 1u (phím rộng kéo dãn), ASA chưa có CAD thì dựng theo thông số
-    const model = keycapModel(profile, k.row)
+    const model = lite ? null : keycapModel(profile, k.row)
     let cap: THREE.Object3D
     if (model) {
       cap = (await glbScene(`/models/keycaps/${model}.glb`)).clone(true)

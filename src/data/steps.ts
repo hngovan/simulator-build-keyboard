@@ -184,13 +184,12 @@ export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'foam', 'switchLube', 'test'
 /** bước build thật (tính tiến độ / chấm điểm / hỏi lại khi giao sớm): bỏ bước đóng gói cuối */
 export const isBuildStep = (step: StepId) => step !== 'pack'
 /**
- * Bước tuỳ chọn với đơn này: khách đòi lót foam (`order.foam`) thì bước `foam` bắt buộc; đơn build thử (dev) bỏ qua được mọi bước,
- * trừ lắp plate khi bước sau cần plate (`steps` có `topCase`: không plate thì không có gì bắt vào case trên; có `gasket`: dải gasket
+ * Bước tuỳ chọn với đơn này: khách đòi lót foam (`order.foam`) thì bước `foam` bắt buộc; lắp plate không bỏ qua được khi bước sau cần plate (`steps` có `topCase`: không plate thì không có gì bắt vào case trên; có `gasket`: dải gasket
  * dán lên tai plate)
  */
 export const isOptionalStep = (
   step: StepId,
-  order?: { foam?: true; dev?: true; tutorial?: true } | null,
+  order?: { foam?: true; tutorial?: true } | null,
   steps?: StepId[],
 ) =>
   step === 'plate' && (steps?.includes('topCase') || steps?.includes('gasket'))
@@ -198,10 +197,10 @@ export const isOptionalStep = (
     : // đơn hướng dẫn: test phím bắt buộc (dạy test hết phím trước khi giao, không cho bỏ qua)
       step === 'test' && order?.tutorial
       ? false
-      : // tháo / lắp tạ che DTB: không bỏ qua được kể cả đơn dev (tạ còn đè thì không lắp được DTB)
+      : // tháo / lắp tạ che DTB: không bỏ qua được (tạ còn đè thì không lắp được DTB)
         step === 'coverOff' || step === 'coverOn'
         ? false
-        : !!order?.dev || (OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam))
+        : OPTIONAL_STEPS.includes(step) && !(step === 'foam' && order?.foam)
 /** lắp lại tạ trước khi cắm dây JST vào PCB (case `jstUp`: dây luồn lên qua tạ) */
 export const coverBeforeJst = (steps: StepId[]) => {
   const on = steps.indexOf('coverOn')

@@ -41,7 +41,6 @@ import { Stool } from './room/Stool'
 import { Cable, LightSwitch, Outlet, plugExit } from './room/Wiring'
 import { Downlight } from './room/Downlight'
 import { MetalRack, PanelDoor } from './room/HallProps'
-import { ModelPainting } from './room/ModelPainting'
 import { drawPhoenix } from './room/phoenixArt'
 import { drawBanknote } from './room/banknoteArt'
 import { drawQmk } from './room/qmkArt'
@@ -65,8 +64,9 @@ const MODELS = {
   desk: `${DIR}/wooden_table_02.glb`,
   // chậu cây ZZ (jerovdl, Sketchfab, CC BY 4.0): đơn vị mét, gốc ở đáy chậu, cao 0,6m
   plant: `${DIR}/zz_plant.glb`,
+  // bộ 3 tranh quán cafe (Guy in a Poncho, Sketchfab, CC BY 4.0; `bun run convert:cafe-pictures`)
+  cafePictures: `${DIR}/cafe-wall-pictures.glb`,
   shelf: `${DIR}/Shelf_01.glb`,
-  picture: `${DIR}/hanging_picture_frame_01.glb`,
   clock: `${DIR}/wall_clock.glb`,
   workTable: `${DIR}/WoodenTable_03.glb`,
   lamp: `${DIR}/desk_lamp_arm_01.glb`,
@@ -317,15 +317,23 @@ function useTiled(
 }
 
 /** Model glb đặt trong hệ mét → scale về đơn vị cảnh, bật đổ bóng */
-function Model({ url, ...props }: { url: string } & JSX.IntrinsicElements['group']) {
+function Model({
+  url,
+  noShadow,
+  ...props
+}: {
+  url: string
+  /** không đổ / nhận bóng (tranh treo sát tường: khung hắt bóng sọc lên mặt tranh) */
+  noShadow?: boolean
+} & JSX.IntrinsicElements['group']) {
   const { scene } = useGLTF(url)
   const copy = useMemo(() => {
     const model = scene.clone(true)
     model.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true
+      if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = !noShadow
     })
     return model
-  }, [scene])
+  }, [scene, noShadow])
   return (
     <group {...props}>
       <primitive object={copy} scale={M} />
@@ -574,8 +582,6 @@ function ShelfDiploma(props: JSX.IntrinsicElements['group']) {
 /** bàn build đang thế nào (khi đi lại trỏ vào bàn): quyết định viền sáng, chữ gợi ý, bấm trái / phải làm gì */
 type BenchMode = 'empty' | 'place' | 'heldPacked' | 'busy' | 'sit' | 'closed' | 'packed'
 function benchMode(s: ReturnType<typeof useGame.getState>): BenchMode {
-  // đơn build thử (Cài đặt → Dev) không có thùng thật, luôn tính là đang nằm trên bàn (`onBench`): vào bàn build được
-  if (!s.benchBox && s.order?.dev) return s.held ? 'busy' : 'sit'
   if (s.benchBox) {
     if (s.held) return 'busy'
     if (isPackedBox(s, s.benchBox)) return 'packed'
@@ -1014,15 +1020,15 @@ export function Room() {
       <Wall maps={wallMaps} w={ROOM.w} position={[0, wallY, ROOM.back]} />
       {/* chứng chỉ thợ treo tường sau bàn, phía trên khoảng giữa đèn và hộp đồ nghề (rộng 40cm) */}
       <Wall maps={wallMaps} w={ROOM.w} position={[0, wallY, FRONT_Z]} rotationY={Math.PI} />
-      {/* cặp poster bàn phím (ảnh người dùng đưa) giữa tường trước, sau lưng khi ngồi bàn build */}
+      {/* cặp poster bàn phím (ảnh người dùng đưa) tường trái, đoạn giữa góc tường trước và ô cửa hành lang */}
       <ImagePainting
         url={POSTERS.cherry}
         w={0.4}
         h={0.4 / POSTERS.cherryAspect}
         mat={0.05}
         frame="#18181c"
-        position={[-0.36 * M, FLOOR_Y + 1.5 * M, FRONT_Z]}
-        rotation-y={Math.PI}
+        position={[-HALF_W * M, FLOOR_Y + 1.5 * M, 2.6 * M]}
+        rotation-y={Math.PI / 2}
         scale={M}
       />
       <ImagePainting
@@ -1031,16 +1037,11 @@ export function Room() {
         h={0.45 / POSTERS.keyboardsAspect}
         mat={0}
         frame="#c9a77c"
-        position={[0.36 * M, FLOOR_Y + 1.5 * M, FRONT_Z]}
-        rotation-y={Math.PI}
+        position={[-HALF_W * M, FLOOR_Y + 1.5 * M, 3.45 * M]}
+        rotation-y={Math.PI / 2}
         scale={M}
       />
-      {/* tranh và đồng hồ treo ở tường sau lưng người chơi */}
-      <Model
-        url={MODELS.picture}
-        position={[1.95 * M, FLOOR_Y + 1.5 * M, FRONT_Z - 0.03 * M]}
-        rotation-y={Math.PI}
-      />
+      {/* đồng hồ treo ở tường sau lưng người chơi */}
       <Model
         url={MODELS.clock}
         position={[1.15 * M, FLOOR_Y + 1.75 * M, FRONT_Z - 0.03 * M]}
@@ -1055,40 +1056,47 @@ export function Room() {
         position={[ROOM.w / 2, wallY, ROOM_CZ]}
         rotationY={-Math.PI / 2}
       />
-      {/* tranh treo tường hông + hành lang (khung Poly Haven CC0, `ModelPainting`) */}
-      <ModelPainting
-        frame="hanging02"
-        // tường ngoài hành lang, đối diện ô cửa
-        position={[HALL.x0 * M, FLOOR_Y + 1.5 * M, ((DOORWAY.z0 + DOORWAY.z1) / 2) * M]}
-        rotation-y={Math.PI / 2}
-        scale={M}
-      />
-      {/* hành lang: 2 poster giấy dán thẳng lên tường (không khung) thay tranh khung oval */}
+      {/* 2 poster giấy dán thẳng lên tường (không khung): cạnh kệ chưng bàn phím + cuối hành lang */}
       <WallPoster
         url={POSTERS.caution}
         w={0.42}
         h={0.42 / POSTERS.cautionAspect}
-        // tường hành lang phía phòng, giữa đường ra cửa chính
-        position={[HALL.x1 * M, FLOOR_Y + 1.5 * M, -1.6 * M]}
-        rotation-y={-Math.PI / 2}
+        // tường trước, cạnh kệ chưng bàn phím (kệ ở x = -SHELF_X, phía giữa phòng)
+        position={[-SHELF_X + 0.9 * M, FLOOR_Y + 1.5 * M, FRONT_Z]}
+        rotation-y={Math.PI}
         scale={M}
       />
       <WallPoster
         url={POSTERS.bassline}
         w={0.45}
         h={0.45 / POSTERS.basslineAspect}
-        // tường ngoài hành lang, giữa cửa chính và tranh đối diện ô cửa
-        position={[HALL.x0 * M, FLOOR_Y + 1.5 * M, -0.7 * M]}
-        rotation-y={Math.PI / 2}
+        // tường cuối hành lang, trên kệ sắt nhận hàng (kệ cao 1,25m)
+        position={[RACK.x * M, FLOOR_Y + 1.78 * M, HALL.z0 * M]}
         scale={M}
       />
-      {/* tường phải: "Phượng hoàng tái sinh" (tự vẽ, ký keeb) khung mạ vàng trên bàn gỗ */}
-      <ModelPainting
-        frame="fancy02"
+      {/* tường phải: "Phượng hoàng tái sinh" (tự vẽ, ký keeb) khung mạ vàng đơn giản */}
+      <CanvasPainting
         draw={drawPhoenix}
-        position={[HALF_W * M, FLOOR_Y + 1.62 * M, WORK_TABLE.z * M]}
+        px={400}
+        py={512}
+        w={0.36}
+        h={0.46}
+        mat={0.04}
+        frame="#b08a3e"
+        metal
+        // lệch về phía tường sau, nhường chỗ cho cụm tranh cafe
+        position={[HALF_W * M, FLOOR_Y + 1.62 * M, (WORK_TABLE.z - 1.15) * M]}
         rotation-y={-Math.PI / 2}
         scale={M}
+      />
+      {/* tường phải phía trên kệ giao hàng: bộ 3 tranh quán cafe treo chung 1 cụm */}
+      <Model
+        url={MODELS.cafePictures}
+        // model gốc dàn theo trục z, mặt tranh quay +x: xoay π cho mặt quay vào phòng; tranh hơi nghiêng ~1° nên
+        // đẩy ra khỏi tường 1,5cm (sát tường thì nửa dưới mặt tranh lẹm vào tường)
+        position={[(HALF_W - 0.015) * M, FLOOR_Y + 1.6 * M, (SHIP_SHELF.z - 0.25) * M]}
+        rotation-y={Math.PI}
+        noShadow
       />
       {/* trần */}
       <Ceiling maps={wallMaps} w={ROOM.w} d={ROOM.d} position={[0, FLOOR_Y + ROOM.h, ROOM_CZ]} />

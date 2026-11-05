@@ -61,8 +61,7 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
   `inspect-step.mjs` là script dò/kiểm tra model. Thêm / đổi model case thì chạy `node scripts/probe-case-feet.mjs`
   (dò hốc dán feet dưới đáy → `src/data/caseFeet.json`, `RubberFeet` trong Case.tsx dán feet vào đúng hốc).
 
-Không có test tự động. Dev: Cài đặt → Dev → "Chọn case" build thử mọi case (`order.dev`, bước nào cũng bỏ qua được; full đồ: dụng cụ bậc cao nhất, vật tư 999, không hao mòn, dư switch / stab), trên bàn build có `DevCasePanel`
-chỉ đổi màu case; "Tiền vô hạn" / "Shopii mở khoá mọi món" (`devMoney.ts`, lưu theo máy localStorage); "Xem thử màn thua game" (`previewGameOver`, `GameOver.preview`: không gửi bảng xếp hạng, không xoá save, đóng thì chơi tiếp). Khi dev, store được gắn vào `window.__game`, camera / controls / scene của bàn build
+Không có test tự động; build thử mọi case = Free build ở màn tiêu đề (bảng chọn case). Dev: Cài đặt → Dev → "Tiền vô hạn" / "Shopii mở khoá mọi món" (`devMoney.ts`, lưu theo máy localStorage); "Xem thử màn thua game" (`previewGameOver`, `GameOver.preview`: không gửi bảng xếp hạng, không xoá save, đóng thì chơi tiếp). Khi dev, store được gắn vào `window.__game`, camera / controls / scene / gl của bàn build
 vào `window.__r3f` để debug trong console.
 
 ## Quy ước
@@ -214,8 +213,10 @@ vào `window.__r3f` để debug trong console.
   Đơn kit có case không còn hợp layout (dữ liệu case đổi, vd Duality TKL → chỉ TKL F13) tự đổi sang layout cùng cỡ mà case hợp mỗi lần nạp save
   (`fixKitLayout` persistence.ts: đổi layout / variant / PCB + plate kit + kho; build dở dời dữ liệu phím theo tên phím vì id = thứ tự phím; phím mới mà build đã qua bước lắp thì `fillAddedKeys` lắp nốt switch từ kho / hàn / keycap,
   vì lịch sử hoàn tác đã xoá nên không quay lại bước được).
-- Free build (menu tiêu đề, `startFree`, `free` không lưu): không ghi save / bảng xếp hạng / thua / lên cấp, đủ dụng cụ + vật tư 999, Shopii mở khoá,
-  giá "Miễn phí", nút "Lấy luôn" = `freeTake` (vào thẳng đơn `Order.free` trên bàn, PCB đổi layout đơn, switch đủ số phím); giao = dọn bàn + đơn Free build mới.
+- Free build (menu tiêu đề, `startFree`, `free` không lưu): không ghi save / bảng xếp hạng / thua / lên cấp, đủ dụng cụ + vật tư 999. Vào là ngồi bàn build,
+  bảng chọn case `FreeBuildDialog` (`freePick`, case + màu, layout, mount, PCB, plate, stab) → `startFreeBuild` (`features/free/freeBuild.ts`: đơn `Order.free`
+  kit đủ linh kiện, dư switch / stab, thùng nằm sẵn trên bàn, vào build luôn); bảng "Màu case" `FreeCasePanel` trên bàn; giao = dọn bàn, mở lại bảng chọn
+  (bàn trống có nút "Chọn case"). Shopii vẫn mở khoá + miễn phí ("Lấy luôn" = `freeTake`, thay món đơn đang build).
 - Đơn có thể đòi đích danh `switchType` / `caseId` / `stabType` / `plateMaterial` (món khách không gửi), `checkInventory` bắt đúng; thiếc / vật tư không bị đòi.
 - Keycap có chất liệu `material` (PBT / ABS / Mix, `KEYCAP_MATERIALS`; option Shopii `group` = chất liệu, `label` = màu, giỏ hàng 2 ô `OptionPick`), đơn có thể đòi `keycapMaterial` (`keycapCheck`); bộ `KEYCAP_KITS.base` ẩn (`hidden`).
 - Đơn có `switchKind` (Linear / Tactile / Clicky / Silent / SilentTactile, `SWITCH_KINDS`): kho phải hợp loại (`switchFits`: Silent Tactile hợp cả Tactile / Silent).
@@ -313,7 +314,7 @@ vào `window.__r3f` để debug trong console.
   ngồi máy tính / bàn build thì đứng dậy (máy tính đang mở Cài đặt trên cùng thì đóng Cài đặt trước), đi lại thì thôi. Không còn menu Cài đặt ngoài game.
   Mọi cài đặt ở app Cài đặt trong máy tính (`apps/settings/SettingsApp`, tab nội dung `features/settings/SettingsTabs`): Chung (Lưu tiến trình `saveRun` = gửi
   bảng xếp hạng lý do `'save'`, hình nền, về màn đăng nhập; hàng tab dính đầu khi cuộn) / Âm thanh (`AudioSettings.musicOff` tắt riêng nhạc nền) / Phím tắt (cố định, chỉ liệt kê `KEYBINDS`) /
-  Dev (chỉ khi dev: tiền vô hạn, build thử, FPS `PerfHud` kéo thả hút 4 góc `setPerfCorner`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
+  Dev (chỉ khi dev: tiền vô hạn, FPS `PerfHud` kéo thả hút 4 góc `setPerfCorner`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
   (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Chơi mới đè save cũng gửi lượt cũ (nút phá sản ở Cài đặt đã bỏ).
 - Cấp xưởng (`data/unlocks.ts`: `SHOP_LEVELS`, `levelFor(done, rep)`, `Profile.shopLv` chỉ tăng, subscribe trong `store/index.ts` báo lên cấp):

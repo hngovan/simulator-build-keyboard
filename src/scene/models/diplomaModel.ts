@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { cheapGlass } from '../common/warmup'
 
 // Khung ảnh để bàn có chân chống sau (assets/supplies/picture-frame.glb, người dùng cung cấp, chưa rõ giấy phép):
 // mét, đáy ở y = 0, mặt trước +z, khổ dọc 18.9 × 24.6cm. Tấm giấy trắng sẵn có ("Unprinted frame insert")
@@ -57,6 +58,8 @@ export function createDiploma(source: THREE.Object3D, rank: string) {
     if (/insert/i.test(o.name)) o.visible = false
     o.castShadow = o.receiveShadow = true
   })
+  // kính khung: trong suốt thường (transmission bắt vẽ lại cả cảnh mỗi khung)
+  cheapGlass(frame)
   group.add(frame)
   const paper = new THREE.Mesh(
     new THREE.PlaneGeometry(PAPER.w, PAPER.h),

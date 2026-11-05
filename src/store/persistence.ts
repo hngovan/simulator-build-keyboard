@@ -394,8 +394,7 @@ function fillAddedKeys<S extends Pick<JobSession, 'inventory' | 'mount' | 'build
   sess: S,
 ): S {
   const b = sess.build
-  if (!order || order.dev || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb)
-    return sess
+  if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
   const ctx = buildContext(order, sess.inventory, sess.mount)
   const past = (st: StepId) => {
     const i = ctx.steps.indexOf(st)

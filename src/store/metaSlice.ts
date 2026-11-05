@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import { fitBoxes, type BoxSpot } from '@/data/boxes'
-import { freeOrder, randomOffers, tutorialOrder } from '@/data/orders'
+import { randomOffers, tutorialOrder } from '@/data/orders'
 import { TOOLS } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { MAX_LV } from '@/data/unlocks'
@@ -85,7 +85,9 @@ export interface MetaSlice extends Profile {
   newGame: (name: string, experienced?: boolean) => void
   /** chế độ Free build đang chơi: không lưu, không bảng xếp hạng, không thua, Shopii mở khoá + miễn phí (không lưu) */
   free: boolean
-  /** vào Free build: phòng như chơi thường, đủ dụng cụ / vật tư, thùng đơn Free build nằm sẵn trên bàn; không đụng bản lưu */
+  /** Free build: đang mở bảng chọn case (`FreeBuildDialog`, không lưu) */
+  freePick: boolean
+  /** vào Free build: ngồi bàn build, đủ dụng cụ / vật tư, mở bảng chọn case; không đụng bản lưu */
   startFree: () => void
   continueGame: () => void
   goPC: () => void
@@ -265,6 +267,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   pcZoom: false,
   walk: false,
   free: false,
+  freePick: false,
   standUp: (from) => {
     useRoom.setState({ spot: from, fly: null })
     set({ screen: 'bench', walk: true, pcZoom: false })
@@ -322,6 +325,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       // giữ cài đặt âm thanh đang chọn (nút nhạc ở màn tiêu đề)
       audio: get().audio,
       free: false,
+      freePick: false,
       runId: newRunId(),
       gameOver: null,
       reviewPops: [],
@@ -369,7 +373,6 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     const solderOwned: Record<number, number> = {}
     TOOLS.solder.forEach((t, lv) => !t.none && lv !== tools.solder && (solderOwned[lv] = 0))
     const supplies = Object.fromEntries(Object.keys(SUPPLIES).map((id) => [id, FREE_STOCK]))
-    const order = freeOrder(START.day)
     set({
       ...START,
       free: true,
@@ -379,7 +382,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       rejected: [],
       acceptedToday: 0,
       dayStart: { money: START.money, rep: START.rep },
-      worked: [order.id],
+      worked: [],
       name: 'Free build',
       guideSeen: [...ALL_TOURS],
       shopLv: MAX_LV,
@@ -388,21 +391,20 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       supplies,
       lastSolderPurchase: null,
       audio: s.audio,
-      // ngồi luôn vào máy tính, Shopii mở sẵn mục Case (chọn case trước, rồi PCB / plate... theo các mục)
-      screen: 'pc',
-      walk: true,
+      // ngồi luôn ở bàn build, mở bảng chọn case (chọn xong là có đủ đồ, vào build)
+      screen: 'bench',
+      walk: false,
       pcZoom: false,
-      windows: ['shopii'],
+      windows: [],
       minimized: [],
-      shopCat: 'case',
+      freePick: true,
       offers: [],
       jobs: [],
       packed: [],
-      // thùng đơn Free build nằm sẵn trên bàn build: lấy đủ đồ ở Shopii rồi bấm thùng là build
       boxes: {},
-      benchBox: order.id,
+      benchBox: null,
       held: null,
-      order,
+      order: null,
       inventory: emptyInventory(),
       provided: {},
       spent: 0,
@@ -414,13 +416,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       history: [],
       future: [],
     })
-    useRoom.setState({ spot: 'pc', fly: null })
-    afterLoad(() =>
-      get().toast(
-        'Free build: chọn case ở Shopii rồi lấy đủ PCB / plate / stab / switch / keycap, xong ra bàn build bấm thùng',
-        'good',
-      ),
-    )
+    useRoom.setState({ spot: 'bench', fly: null })
   },
   continueGame: () => {
     const save = loadSave()
@@ -468,6 +464,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       runId: profile.runId || newRunId(),
       gameOver: null,
       free: false,
+      freePick: false,
       // cài đặt âm thanh đang chọn ở màn tiêu đề (đã nạp từ bản lưu lúc mở game) thắng bản lưu
       audio: get().audio,
       screen: 'bench',
