@@ -1,5 +1,41 @@
 # Giao diện
 
+## 2026-11-05
+
+### Màn tiêu đề làm lại: logo mới, menu giữa màn, nhạc + âm thanh menu; Keeb-chan chỉ còn trong tour
+
+- Yêu cầu (nhiều vòng): Keeb-chan chỉ trong tour (bỏ ở màn tiêu đề rồi bỏ cả ở màn chờ tải); nền = ảnh góc làm việc cạnh cửa sổ trong game;
+  menu kiểu PC Building Simulator (Sự nghiệp → Tiếp tục / Chơi mới, Hướng dẫn build, Free build), luôn hiện Tiếp tục, chỉ Chơi mới mới hỏi tên;
+  logo theo PDF "Logo game — kiểu PC Building Simulator" mục 03 (icon app) + 04 (trên màn bắt đầu); nhạc nền phát ngay ở màn tiêu đề,
+  menu có âm thanh; nút nhạc góc trên trái thay cho cài đặt.
+- Ảnh `public/art/workspace.webp` (1920 × 1080): chụp trong game, camera đi lại ở (0.15, sàn + 1.3, 2.1) m nhìn (-0.95, sàn + 1.0, -0.3) m
+  (bay bằng `useRoom.fly`, render lại scene bằng WebGLRenderer riêng ACES + sRGB, xuất webp). Hằng `WORKSPACE_ART` (`components/art/workspace.ts`).
+- `TitleScreen`: ảnh nền tràn màn `blur-sm` (phóng 1,05 che mép) + phủ `#15131e/60` toàn màn (đã thử panel xiên trái, elip, dải giữa
+  răng cưa mờ: người dùng chọn phủ mờ đều). Logo `GameLogo` (`components/art/GameLogo.tsx`): `LogoIcon` (ô bo góc + keycap stem dấu +,
+  4 lớp: ô ngoài / thân keycap / mặt phím cùng màu ô / dấu +, 2 vạch chân) trắng trên, chữ nghiêng đậm font Kanit 800 italic
+  (`--font-logo`, Google Fonts trong index.html) "BUILD KEYBOARD" trắng + "SIMULATOR" vàng. Favicon = icon app mục 03 (ô xanh đậm `#1f2340`,
+  keycap trắng). Menu chữ căn giữa (`MenuItem`, mục con `sub` chữ nhỏ, dấu chọn "› ‹" 2 bên, mục tắt mờ, ↑ ↓ bỏ qua mục tắt / Enter / Esc thoát form),
+  form tên chỉ ô tên + cảnh báo ghi đè + Quay lại / Mở xưởng (bỏ chọn Người chơi mới / Đã từng chơi: "Sự nghiệp → Chơi mới" =
+  `newGame(name, true)` không hướng dẫn, "Hướng dẫn build" = `newGame(name, false)` có tour). Góc trên trái: nút nhạc (`Music`, tắt = mờ +
+  gạch chéo, `setAudio({ musicOff })`); đáy giữa: chữ "f" Facebook trắng; góc dưới phải: số phiên bản (bấm xem lịch sử cập nhật, `Changelog` dùng
+  khung `TitleModal`). Bỏ mục "Lịch sử cập nhật" khỏi menu, bỏ thanh đáy / popup âm thanh.
+- Âm thanh: `startBgm` ở mọi màn kể cả màn tiêu đề (App.tsx; `returnToTitle` / `closeGameOver` không còn `stopBgm`), `sound.ts` mở lại
+  AudioContext ở lần bấm / gõ phím đầu (trình duyệt chặn tự phát). `audio` khởi tạo theo bản lưu ngay ở màn tiêu đề; `newGame` / `continueGame`
+  giữ `audio` đang chọn (không bị bản lưu đè). Menu: `playUiHover` (tick khi đổi mục) / `playUiSelect` (sample gõ phím khi chọn, nút nhạc, form).
+- `BenchLoader`: nền = ảnh góc bàn phủ tối dần 2 đầu, bỏ Keeb-chan giữa màn (để trống).
+
+### Bộ icon mới (PDF UI kit trang 1) cho chip HUD + mục hàng Shopii; desktop giữ icon cũ
+
+- Yêu cầu: áp bộ icon kiểu keycap vào game; sau đó màn hình máy tính (desktop, taskbar) trả về bộ icon cũ màu trắng, không nổi khối.
+- `components/art/GameIcons.tsx`: icon nét 2.2 / lưới 24 (`make`), `SHOP_CAT_ICONS` cho 10 mục Shopii, `IconWallet` / `IconStar` / `IconShield` cho HUD.
+- `StatusChips`: `ChipIcon` (icon trong ô tròn tối đầu chip), cấp xưởng dùng khiên; màu chip `Badge` `TONES` money `#1f9d55`, rep `#c8930a`,
+  name `#6d4ae0`. `TabChip` nhận `icon` lucide hoặc `GameIcon` + `iconClass` (màu icon khi chưa chọn, Shopii vàng cam `#f5a623`).
+- Desktop / taskbar (`features/desktop/`) giữ nguyên bản cũ (`public/icons/apps/*.svg` trắng).
+
+### Bàn build trống: dòng hướng dẫn thêm "[Esc] để rời bàn"
+
+- `EmptyBenchHud` `ControlsHint`: thêm `KeyCap` Esc "để rời bàn" (Esc ở bàn build vốn là đứng dậy).
+
 ## 2026-11-03
 
 ### Popup "Chắc chắn đóng gói đơn này?": nút gọn + lưu ý không mở lại

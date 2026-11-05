@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Badge, OptionChip, QtyInput, SoundBars } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
+import { useGame } from '@/store'
 import type { Product, ProductOption } from '@/types'
 import { productSpecs, productTags } from './productSpecs'
 
@@ -46,6 +47,8 @@ export function ProductPanel({
   /** nút mua / dùng máy này */
   action: ReactNode
 }) {
+  // Free build: mọi món miễn phí
+  const free = useGame((s) => s.free)
   const specs = productSpecs(product, opt)
   const tags = productTags(product, opt)
   const multiTile = tiles.length > 1
@@ -184,11 +187,11 @@ export function ProductPanel({
         <div className="flex items-end justify-between gap-2">
           <span className="text-sm font-bold text-muted">Giá</span>
           <span className="flex items-baseline gap-1.5">
-            {opt.was !== undefined && (
+            {!free && opt.was !== undefined && (
               <s className="text-sm font-bold text-muted">{fmt(opt.was * (qty ?? 1))}</s>
             )}
             <span className="font-head text-3xl leading-none font-extrabold text-green">
-              {fmt(total)}
+              {free ? 'Miễn phí' : fmt(total)}
             </span>
           </span>
         </div>

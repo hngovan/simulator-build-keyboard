@@ -13,6 +13,7 @@ import { Button, SoundLegend, TabChip, Tooltip } from '@/components/ui'
 import { useGame } from '@/store'
 import { cn } from '@/lib/format'
 import { SHOP_CATS, buildCatalog } from '@/data/parts'
+import { SHOP_CAT_ICONS } from '@/components/art/GameIcons'
 import { SALE_EVERY, isSaleDay, nextSaleDay, saleMap, withSale } from '@/data/sale'
 import { SHIP_SPEEDS } from '@/data/shipping'
 import { cartLine, optName } from '@/data/cart'
@@ -81,6 +82,28 @@ function SaleBanner() {
  * Banner ngày thường (không sale) cùng khuôn `SaleBanner` nhưng tông cam Shopii: đếm ngày tới đợt sale kế,
  * dòng phụ tự chọn theo tình huống (kiện đã tới kệ cửa / giỏ đang có hàng / mẹo giao tiết kiệm miễn phí)
  */
+/** Banner Free build: mọi món mở khoá, miễn phí, lấy là vào thùng đơn trên bàn build */
+function FreeBanner() {
+  return (
+    <div
+      className="relative flex min-w-0 flex-1 items-center gap-3 overflow-hidden rounded-2xl px-4 py-2 shadow-[0_4px_0_rgba(0,0,0,0.35)]"
+      style={{
+        background:
+          'repeating-linear-gradient(-45deg, rgba(255,255,255,0.06) 0 10px, transparent 10px 22px), linear-gradient(100deg, #15803d 0%, #16a34a 50%, #22c55e 100%)',
+      }}
+    >
+      <div className="min-w-0">
+        <div className="font-head text-xl leading-tight font-extrabold text-white">
+          Free build: mọi món miễn phí
+        </div>
+        <div className="truncate text-xs font-bold text-white/85">
+          Bấm "Lấy luôn" là vào thùng đơn trên bàn build, đủ đồ thì ra bàn bấm thùng để build
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ShopBanner({ day, arrived, cartN }: { day: number; arrived: number; cartN: number }) {
   const left = nextSaleDay(day) - day
   const sub = arrived
@@ -141,8 +164,10 @@ export function Shopii() {
   const realLv = useGame((s) => s.shopLv)
   // dev bật "Mở khoá mọi món" thì coi như cấp tối đa
   const devUnlock = useDevUnlock((s) => s.on)
-  const shopLv = devUnlock ? MAX_LV : realLv
-  const { buyTool, addCart } = useGame.getState()
+  // Free build: mở khoá mọi món, không sale, bấm là lấy luôn (không giỏ hàng / kiện)
+  const free = useGame((s) => s.free)
+  const shopLv = devUnlock || free ? MAX_LV : realLv
+  const { buyTool, addCart, freeTake } = useGame.getState()
   const cart = useGame((s) => s.cart)
   // số món đã thêm (cộng số lượng từng dòng) cho badge giỏ hàng
   const cartQty = cart.reduce((a, l) => a + l.qty, 0)
@@ -197,10 +222,12 @@ export function Shopii() {
             ),
         )
         .map((p) => lockProduct(p, shopLv))
-        .map((p) => withSale(p, saleUsed.has(p.id) || p.locked ? 0 : (sales.get(p.id) ?? 0)))
+        .map((p) =>
+          withSale(p, free || saleUsed.has(p.id) || p.locked ? 0 : (sales.get(p.id) ?? 0)),
+        )
         // món chưa mở khoá xếp cuối, cấp thấp trước
         .sort((a, b) => (a.locked ?? 0) - (b.locked ?? 0)),
-    [catalog, tools, solderOwned, sales, saleUsed, shopLv],
+    [catalog, tools, solderOwned, sales, saleUsed, shopLv, free],
   )
   // mục có món đang sale: gắn ruy băng SALE
   const saleCats = new Set(stock.filter((p) => p.sale).map((p) => p.cat))
@@ -224,7 +251,9 @@ export function Shopii() {
     >
       {/* hàng trên cùng: banner sale (ngày sale) / banner thường (ngày khác) */}
       <div className="flex shrink-0 items-stretch gap-3">
-        {isSaleDay(day) ? (
+        {free ? (
+          <FreeBanner />
+        ) : isSaleDay(day) ? (
           <SaleBanner />
         ) : (
           <ShopBanner day={day} arrived={arrived} cartN={cartQty} />
@@ -238,6 +267,8 @@ export function Shopii() {
               <TabChip
                 key={id}
                 tour={`shopcat-${id}`}
+                icon={SHOP_CAT_ICONS[id]}
+                iconClass="text-[#f5a623]"
                 // đang tìm vẫn sáng mục (tìm trong mục đang chọn)
                 active={!shipView && cat === id}
                 title={saleCats.has(id) ? 'Mục này đang có món sale' : undefined}
@@ -249,7 +280,7 @@ export function Shopii() {
               </TabChip>
             ))}
           </div>
-          <div className="flex shrink-0 flex-col gap-1.5">
+          <div className="flex shrink-0 flex-col gap-1.5" hidden={free}>
             {/* giỏ hàng: tab có ô số món, có hàng thì viền cam */}
             <TabChip
               tour="cart"
@@ -329,6 +360,7 @@ export function Shopii() {
                 onEquip={(o) => void buyTool('solder', (o.item as ToolItem).level)}
                 // giá sale chỉ 1 món: thêm nhiều thì 1 món giá sale + phần còn lại giá thường
                 onCart={(p, o, qty) => {
+                  if (free) return freeTake(cartLine(p, o, qty))
                   addCart(cartLine(p, o, p.sale ? 1 : qty))
                   const base = catalog.find((x) => x.id === p.id)
                   const bo = base?.options.find((x) => optName(x) === optName(o))

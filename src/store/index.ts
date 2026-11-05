@@ -131,7 +131,7 @@ useGame.subscribe((s, prev) => {
 
 // Lên cấp xưởng (giao đủ đơn + đủ uy tín): ghi cấp mới, thông báo món vừa mở khoá
 useGame.subscribe((s, prev) => {
-  if (s.screen === 'title' || (s.done === prev.done && s.rep === prev.rep)) return
+  if (s.screen === 'title' || s.free || (s.done === prev.done && s.rep === prev.rep)) return
   const lv = levelFor(s.done, s.rep)
   if (lv <= s.shopLv) return
   useGame.setState({ shopLv: lv })
@@ -143,7 +143,8 @@ useGame.subscribe((s, prev) => {
 const LOSS_KEYS = ['rep', 'money', 'offers', 'order', 'jobs', 'packed'] as const
 let lossTimer: ReturnType<typeof setTimeout> | undefined
 useGame.subscribe((s, prev) => {
-  if (s.screen === 'title' || s.gameOver || !LOSS_KEYS.some((k) => s[k] !== prev[k])) return
+  if (s.screen === 'title' || s.gameOver || s.free || !LOSS_KEYS.some((k) => s[k] !== prev[k]))
+    return
   clearTimeout(lossTimer)
   lossTimer = setTimeout(() => {
     const now = useGame.getState()

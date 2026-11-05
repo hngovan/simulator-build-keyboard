@@ -1,8 +1,8 @@
 import { useGame } from '@/store'
 import { CATS, checkInventory } from '@/data/parts'
-import { BackButton } from '@/components/ui'
+import { BackButton, Button } from '@/components/ui'
 import { StatusChips } from '@/components/game/StatusChips'
-import { ControlsHint, MouseIcon } from '@/components/game/ControlsHint'
+import { ControlsHint, KeyCap, MouseIcon } from '@/components/game/ControlsHint'
 import { boxCustomer, isPackedBox } from '@/store/carrySlice'
 import { ResetCamButton } from './CamModeButton'
 
@@ -36,7 +36,8 @@ function BenchStatus() {
   if (isPackedBox(s, box))
     return (
       <ControlsHint>
-        Nhấn <MouseIcon btn="left" /> vào thùng để cầm lên đặt vào kệ giao hàng
+        Nhấn <MouseIcon btn="left" /> vào thùng để cầm lên đặt vào kệ giao hàng,{' '}
+        <KeyCap>Esc</KeyCap> để rời bàn
       </ControlsHint>
     )
   // thùng đơn trên bàn nhưng chưa vào build: còn thiếu linh kiện
@@ -45,19 +46,30 @@ function BenchStatus() {
   // thùng đơn đủ đồ: bấm = build (đổi đơn thì vào build bấm "Cầm thùng đơn lên"); thiếu đồ: bấm = cầm lên
   const hint = (
     <ControlsHint>
-      Nhấn <MouseIcon btn="left" /> vào thùng để {missing.length ? 'cầm thùng lên' : 'build'}
+      Nhấn <MouseIcon btn="left" /> vào thùng để {missing.length ? 'cầm thùng lên' : 'build'},{' '}
+      <KeyCap>Esc</KeyCap> để rời bàn
     </ControlsHint>
   )
   if (!missing.length) return hint
-  // thiếu đồ: khung chỉ liệt kê món thiếu (không nút), dưới là dòng hướng dẫn
+  // thiếu đồ: khung liệt kê món thiếu (Free build thì mỗi dòng có nút lấy ở Shopii đúng mục), dưới là dòng hướng dẫn
   return (
     <>
       {frame(
         `Đơn ${who} còn thiếu linh kiện`,
         <ul className="flex flex-col gap-1 text-left">
           {missing.map((m) => (
-            <li key={m.cat} className="rounded-lg bg-panel-2 px-3 py-1.5 text-sm">
-              <b>{CATS[m.cat]}</b>: <span className="text-yellow">{m.msg}</span>
+            <li
+              key={m.cat}
+              className="flex items-center gap-2 rounded-lg bg-panel-2 px-3 py-1.5 text-sm"
+            >
+              <span className="min-w-0 flex-1">
+                <b>{CATS[m.cat]}</b>: <span className="text-yellow">{m.msg}</span>
+              </span>
+              {s.free && (
+                <Button size="sm" tone="orange" onClick={() => s.openShop(m.cat)}>
+                  Lấy ở Shopii
+                </Button>
+              )}
             </li>
           ))}
         </ul>,

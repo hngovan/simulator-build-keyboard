@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Hammer, Star, Wallet } from 'lucide-react'
 import { useGame } from '@/store'
+import { IconShield, IconStar, IconWallet, type GameIcon } from '@/components/art/GameIcons'
 import { TOOLS } from '@/data/parts'
 import { CERT_BONUS, REP_RULES, REP_TIERS, certBonus, repTier } from '@/data/reputation'
 import { cn, fmt, fmtMoney } from '@/lib/format'
@@ -263,6 +263,15 @@ function MoneyInfo({ money, cert }: { money: number; cert: number }) {
   )
 }
 
+/** icon nét trong ô tròn tối đầu chip HUD (bộ icon kiểu keycap) */
+function ChipIcon({ icon: Icon }: { icon: GameIcon }) {
+  return (
+    <span className="-ml-2 grid size-6 shrink-0 place-items-center rounded-full bg-black/20">
+      <Icon className="size-3.5" />
+    </span>
+  )
+}
+
 /**
  * Tên thợ, tiền, uy tín (ngày xem ở lịch treo tường): icon lucide + chữ, rê chuột hiện tooltip; tiền / uy tín rê chuột hiện luôn bảng giải thích.
  * `tipSide`: taskbar sát đáy màn hình thì tooltip + bảng mở lên trên
@@ -273,14 +282,22 @@ export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
   const cert = useGame((s) => s.tools.cert ?? 0)
   const lv = useGame((s) => s.shopLv)
   const done = useGame((s) => s.done)
+  // Free build: không tiền / uy tín / cấp, chỉ 1 chip tên chế độ
+  const free = useGame((s) => s.free)
+  if (free)
+    return (
+      <div className="flex gap-1.5">
+        <Chip tone="money">Free build</Chip>
+      </div>
+    )
   return (
-    <div className="flex gap-1.5 [&_svg]:size-4 [&_svg]:shrink-0">
+    <div className="flex gap-1.5">
       <InfoChip
         tip="Ví tiền"
         side={tipSide}
         chip={
           <Chip tone="money">
-            <Wallet className="text-[#9ff0b8]" />
+            <ChipIcon icon={IconWallet} />
             {fmtMoney(money)}
           </Chip>
         }
@@ -292,7 +309,7 @@ export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
         side={tipSide}
         chip={
           <Chip tone="rep">
-            <Star className="fill-yellow text-yellow" />
+            <ChipIcon icon={IconStar} />
             {rep}
           </Chip>
         }
@@ -304,7 +321,7 @@ export function StatusChips({ tipSide = 'bottom' }: { tipSide?: Side }) {
         side={tipSide}
         chip={
           <Chip tone="name">
-            <Hammer className="text-orange" />
+            <ChipIcon icon={IconShield} />
             Cấp {lv}
           </Chip>
         }

@@ -17,6 +17,8 @@
 
   --font-sans: 'Nunito', system-ui, 'Segoe UI', sans-serif;
   --font-head: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+  /* chữ logo game (nghiêng đậm, màn bắt đầu) */
+  --font-logo: 'Kanit', 'Baloo 2', system-ui, sans-serif;
 
   --animate-pop: pop 0.2s ease-out;
   --animate-bob: bob 2.4s ease-in-out infinite;

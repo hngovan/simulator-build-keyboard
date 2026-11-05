@@ -8,11 +8,11 @@ const TONES = {
   blue: 'bg-blue',
   yellow: 'bg-yellow text-[#3a2b00]',
   red: 'bg-[#6a2424]',
-  money: 'bg-[#2f6d3f]',
-  rep: 'bg-[#7a5a12]',
+  money: 'bg-[#1f9d55]',
+  rep: 'bg-[#c8930a]',
   day: 'bg-[#2a4a7a]',
   // tên thợ: tím sáng cho dễ đọc trên nền tối
-  name: 'bg-[#5b45c9]',
+  name: 'bg-[#6d4ae0]',
 } as const
 
 // Nhãn nhỏ: nền nhạt cùng màu + viền mảnh, chữ đậm màu (đỡ thô hơn khối màu đặc)

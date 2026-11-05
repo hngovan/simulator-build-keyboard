@@ -1,5 +1,22 @@
 # Đơn hàng
 
+## 2026-11-05
+
+### Chế độ Free build (menu tiêu đề)
+
+- Yêu cầu: thêm chế độ Free build: mở khoá mọi món Shopii, không cần mua, chỉ pick rồi build; vào phòng như chơi thường (chọn
+  "Vào phòng + Shopii miễn phí"), không đụng bản lưu Sự nghiệp.
+- `free` (metaSlice, không lưu) + `startFree()`: state mới trong bộ nhớ (`START`), tên "Free build", `runId` rỗng, `guideSeen` = `ALL_TOURS`,
+  `shopLv` = `MAX_LV`, dụng cụ bậc cao nhất (trừ chứng chỉ, bút + trạm hàn đổi qua lại), mọi vật tư + sách phép 999 (`FREE_STOCK`), không đơn chào;
+  đơn `freeOrder` (orders.ts, `Order.free`: type full, không đòi gì, hạn 999 ngày) nằm sẵn trên bàn (`benchBox`).
+- Chặn: `save()` / `endRun` / `saveRun` / `unsynced` bỏ qua khi `free` (không ghi `sbk-save-v3`, không gửi bảng xếp hạng, tab đóng không beacon);
+  subscribe thua game + lên cấp (store/index.ts) bỏ qua; `nextDay` không sinh đơn; `wearTool` không hao dụng cụ; Cài đặt ẩn "Lưu tiến trình";
+  `StatusChips` chỉ 1 chip "Free build". `newGame` / `continueGame` trả `free: false`.
+- Shopii (`free`): mọi món mở khoá, không sale, banner xanh `FreeBanner`, ẩn Giỏ hàng; thẻ / panel giá "Miễn phí", nút "Lấy luôn" →
+  `freeTake(line)` (shopSlice): `cartItems` giá 0 qua `receiveParcelItem` vào thẳng đơn (không kiện); lấy PCB khác layout (chưa build) thì đơn đổi
+  layout + variant mặc định (`defaultVariant`); switch tự đủ số phím layout.
+- Giao (`deliver`, đơn `free`): không chấm điểm, dọn bàn, đơn Free build mới cùng layout nằm sẵn trên bàn để build tiếp.
+
 ## 2026-11-03
 
 ### Đóng gói rồi không mở lại; bỏ chuột phải cầm thùng, chỉ chuột trái

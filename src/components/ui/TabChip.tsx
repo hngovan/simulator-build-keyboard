@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import type { GameIcon } from '@/components/art/GameIcons'
 import { cn } from '@/lib/format'
 
 /** Tab lọc kiểu bảng xếp hạng: icon + chữ (+ số món), đang chọn = khối vàng đặc có bóng đổ */
 export function TabChip({
   active,
   icon: Icon,
+  iconClass,
   count,
   title,
   onClick,
@@ -14,8 +16,10 @@ export function TabChip({
   tour,
 }: {
   active: boolean
-  /** không có thì chỉ chữ (menu mục hàng Shopii) */
-  icon?: LucideIcon
+  /** icon lucide hoặc icon bộ keycap (`GameIcons`, mục hàng Shopii); không có thì chỉ chữ */
+  icon?: LucideIcon | GameIcon
+  /** màu icon khi chưa chọn (vd vàng cam ở mục hàng Shopii); đang chọn thì theo màu chữ */
+  iconClass?: string
   /** số món trong mục (Kho) */
   count?: number
   /** tooltip 1 dòng */
@@ -41,7 +45,7 @@ export function TabChip({
         className,
       )}
     >
-      {Icon && <Icon className="size-4" />}
+      {Icon && <Icon className={cn('size-4 shrink-0', !active && iconClass)} />}
       {children}
       {count !== undefined && (
         <span

@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { useGame } from '@/store'
 import { useSceneLoading } from '@/scene/common/loadingStore'
-import { GuideGirl } from '@/components/art/GuideGirl'
+import { WORKSPACE_ART } from '@/components/art/workspace'
 import { LOAD_TIPS } from '@/data/loadTips'
 
-/** nền giống màn hình tiêu đề */
-const BG =
-  'radial-gradient(circle at 30% 20%, #3b2a6b, transparent 50%), radial-gradient(circle at 80% 80%, #0f5a5a, transparent 50%), #12131c'
+/** nền: ảnh góc bàn cạnh cửa sổ trong game (như màn tiêu đề), phủ tối 2 đầu cho chữ dễ đọc */
+const BG = `linear-gradient(180deg, #15131ee6 0%, #15131e66 30%, #15131e55 60%, #15131ef2 88%), url(${WORKSPACE_ART}) center / cover no-repeat, #15131e`
 /** đổi mẹo sau mỗi bao lâu (ms) */
 const TIP_MS = 4500
 
@@ -151,16 +150,14 @@ export function BenchLoader() {
       style={{ background: BG }}
     >
       <h1 className="text-[34px] leading-[0.95] text-white [text-shadow:0_4px_0_#000a] max-md:text-2xl">
-        SIMULATOR
-        <br />
-        <span className="text-yellow">BUILD KEYBOARD</span>
+        <span className="block font-head text-sm font-black tracking-[0.3em] text-yellow">
+          SIMULATOR
+        </span>
+        BUILD KEYBOARD
       </h1>
 
-      {/* Keeb-chan nhún giữa màn + bóng đổ dưới chân */}
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-        <GuideGirl className="max-h-[52vh] w-[220px] animate-bob max-md:w-[150px]" />
-        <span className="-mt-3 h-5 w-40 rounded-[50%] bg-black/45 blur-md" />
-      </div>
+      {/* giữa màn để trống cho thấy ảnh góc bàn phía sau */}
+      <div className="min-h-0 flex-1" />
 
       <div className="flex flex-col gap-2">
         <div className="flex justify-center">

@@ -1,7 +1,8 @@
 import { levelFor } from '@/data/unlocks'
 import { isSaleDay } from '@/data/sale'
 import type { StateCreator } from 'zustand'
-import { groupPosts, randomOffers } from '@/data/orders'
+import { defaultVariant, groupPosts, randomOffers } from '@/data/orders'
+import { LAYOUTS, getLayout } from '@/data/layouts'
 import { buildContext } from '@/data/steps'
 import {
   CASES,
@@ -160,6 +161,8 @@ export interface ShopSlice {
   /** xoá hết giỏ hàng */
   clearCart: () => void
   orderCart: (speed: ShipSpeed) => BuyResult
+  /** Free build: lấy luôn 1 dòng (miễn phí, không qua giỏ / kiện), linh kiện vào thẳng đơn Free build */
+  freeTake: (line: CartLine) => void
   /** nhận kiện đã tới cửa: cấp các món trong kiện rồi xoá kiện */
   pickupParcel: (id: string) => void
   /** huỷ kiện Shopii chưa tới cửa: hoàn đủ tiền (cả phí giao) */
@@ -706,7 +709,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     money -= fines.reduce((a, f) => a + f.fine, 0)
     set({
       lastSolderPurchase: null,
-      offers: randomOffers(rep, lv),
+      // Free build: không có khách đặt đơn
+      offers: s.free ? [] : randomOffers(rep, lv),
       // chợ Hội Phím Cơ qua ngày mới: bỏ bài cũ, đăng đợt hàng mới cho từng đơn đang làm / đang chờ
       jobs: s.jobs
         .filter((j) => !cancelled.includes(j) && !sold.includes(j))
@@ -1072,6 +1076,31 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       ...(sale.length ? { saleBought: { day: s.day, ids: [...cur, ...sale] } } : {}),
     })
     return res
+  },
+  freeTake: (line) => {
+    const s = get()
+    if (!s.free) return
+    const u = line.unit
+    if (u.kind === 'tool') {
+      const err = toolBlock(s, u.tool, u.level)
+      if (err) return s.toast(err, 'bad')
+    }
+    for (const it of cartItems(line))
+      receiveParcelItem(get, set, { ...it, price: 0 }, get().order?.id)
+    // PCB khác layout đơn (chưa build): đơn Free build đổi theo layout PCB
+    const g = get()
+    const pcb = g.inventory.pcb
+    if (g.order?.free && !g.build && pcb && pcb.layout !== g.order.layout) {
+      set({ order: { ...g.order, layout: pcb.layout, variant: defaultVariant(pcb.layout) } })
+      g.toast(`Free build đổi sang layout ${LAYOUTS[pcb.layout].name} theo PCB`, 'good')
+    }
+    // switch: lấy 1 lần là đủ số phím layout (không phải chỉnh số lượng)
+    const h = get()
+    const sw = h.inventory.switch
+    if (h.order?.free && sw) {
+      const need = getLayout(h.order.layout, h.order.variant).keys.length
+      if (sw.count < need) set({ inventory: { ...h.inventory, switch: { ...sw, count: need } } })
+    }
   },
   pickupParcel: (id) => {
     const s = get()

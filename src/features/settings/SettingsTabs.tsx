@@ -62,28 +62,32 @@ function ConfirmExit({ onCancel }: { onCancel: () => void }) {
 export function GameTab({ children }: { children?: ReactNode }) {
   const [saving, setSaving] = useState(false)
   const [exiting, setExiting] = useState(false)
+  // Free build không lưu / không lên bảng xếp hạng
+  const free = useGame((s) => s.free)
   return (
     <>
-      <Section
-        title="Tiến trình"
-        info="Ghi tiến trình hiện tại lên bảng xếp hạng, chơi tiếp bình thường"
-      >
-        <Row>
-          <Button
-            tone="green"
-            className="flex-1"
-            disabled={saving}
-            title="Ghi tiến trình hiện tại lên bảng xếp hạng"
-            onClick={async () => {
-              setSaving(true)
-              await useGame.getState().saveRun()
-              setSaving(false)
-            }}
-          >
-            {saving ? 'Đang lưu...' : 'Lưu tiến trình'}
-          </Button>
-        </Row>
-      </Section>
+      {!free && (
+        <Section
+          title="Tiến trình"
+          info="Ghi tiến trình hiện tại lên bảng xếp hạng, chơi tiếp bình thường"
+        >
+          <Row>
+            <Button
+              tone="green"
+              className="flex-1"
+              disabled={saving}
+              title="Ghi tiến trình hiện tại lên bảng xếp hạng"
+              onClick={async () => {
+                setSaving(true)
+                await useGame.getState().saveRun()
+                setSaving(false)
+              }}
+            >
+              {saving ? 'Đang lưu...' : 'Lưu tiến trình'}
+            </Button>
+          </Row>
+        </Section>
+      )}
       {children}
       <Section title="Phiên đăng nhập" info="Tiến trình đã tự lưu trong máy, không bị xoá">
         <Row>

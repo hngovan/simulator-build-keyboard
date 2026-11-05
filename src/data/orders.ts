@@ -7,6 +7,7 @@ import type {
   LubePref,
   Order,
   SoundWish,
+  Variant,
 } from '@/types'
 import { LAYOUTS, getLayout, randomVariant, variantText } from './layouts'
 import { repTier } from './reputation'
@@ -462,6 +463,42 @@ export function tutorialOrder(): Order {
     ],
   }
 }
+
+/** layout mặc định của đơn Free build (đổi theo PCB lấy ở Shopii, `freeLayout`) */
+export const FREE_LAYOUT: LayoutId = '60'
+
+/**
+ * Đơn Free build: không khách, không đòi gì (switch / keycap / mount tuỳ), không hạn, không tiền; layout theo PCB lấy ở Shopii
+ * (`freeLayout` đổi layout + variant mặc định)
+ */
+export function freeOrder(day: number, layout: LayoutId = FREE_LAYOUT): Order {
+  return {
+    id: `free${Date.now().toString(36)}`,
+    free: true,
+    days: 999,
+    dueDay: day + 999,
+    customer: 'Free build',
+    avatar: avatarSrc(0),
+    layout,
+    variant: defaultVariant(layout),
+    wish: 'thock',
+    keycapColor: 'white',
+    type: 'full',
+    kit: null,
+    caseColor: null,
+    mount: null,
+    lubePref: 'any',
+    budget: 0,
+    labor: 0,
+    lines: [
+      'Free build: lấy đồ ở Shopii (miễn phí, mọi món đã mở khoá), mang thùng lên bàn rồi build.',
+    ],
+  }
+}
+
+/** variant đầu tiên của mỗi lựa chọn layout */
+export const defaultVariant = (layout: LayoutId): Variant =>
+  Object.fromEntries(Object.entries(LAYOUTS[layout].variants).map(([k, opts]) => [k, opts?.[0]]))
 
 const SELLERS = [
   'Hùng Keeb',

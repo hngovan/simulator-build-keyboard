@@ -1,10 +1,14 @@
 import type { StateCreator } from 'zustand'
 import { fitBoxes, type BoxSpot } from '@/data/boxes'
-import { randomOffers, tutorialOrder } from '@/data/orders'
+import { freeOrder, randomOffers, tutorialOrder } from '@/data/orders'
+import { TOOLS } from '@/data/parts'
+import { SUPPLIES } from '@/data/supplies'
+import { MAX_LV } from '@/data/unlocks'
 import { ALL_TOURS } from '@/data/tourIds'
 import { buildContext } from '@/data/steps'
 import type {
   AudioSettings,
+  ToolKind,
   LayoutId,
   NotifyItem,
   Order,
@@ -21,7 +25,7 @@ import { START, clearSave, loadSave, writeSave, type Profile, type SaveData } fr
 import { emptyInventory } from './shopSlice'
 import { compactHistory } from './buildSlice'
 import type { GameState } from '.'
-import { applyAudioSettings, stopBgm } from '@/sound'
+import { applyAudioSettings } from '@/sound'
 import { useRoom } from '@/scene/room/roomStore'
 import { afterLoad } from '@/scene/common/loadingStore'
 
@@ -79,6 +83,10 @@ export interface MetaSlice extends Profile {
   toast: (text: string, kind?: Toast['kind']) => void
   /** experienced = đã từng chơi: ghi sẵn mọi tour là đã xem (không hiện hướng dẫn) */
   newGame: (name: string, experienced?: boolean) => void
+  /** chế độ Free build đang chơi: không lưu, không bảng xếp hạng, không thua, Shopii mở khoá + miễn phí (không lưu) */
+  free: boolean
+  /** vào Free build: phòng như chơi thường, đủ dụng cụ / vật tư, thùng đơn Free build nằm sẵn trên bàn; không đụng bản lưu */
+  startFree: () => void
   continueGame: () => void
   goPC: () => void
   goBench: () => void
@@ -124,6 +132,8 @@ export interface Notice {
 }
 
 let toastId = 0
+/** Free build: số vật tư / lượt sách phép có sẵn */
+const FREE_STOCK = 999
 /** số đánh giá giữ lại trong bản lưu */
 const REVIEW_KEEP = 100
 /** số thông báo giữ lại ở chuông */
@@ -241,6 +251,8 @@ function oldBoxes(order: Order | null, building: boolean, waiting: string[]) {
 
 export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set, get) => ({
   ...START,
+  // âm thanh lấy theo bản lưu ngay từ màn tiêu đề (nút bật / tắt nhạc ở góc trên trái)
+  audio: { ...START.audio, ...loadSave()?.audio },
   screen: 'title',
   saveInfo: infoOf(loadSave()),
   windows: [],
@@ -252,6 +264,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   camKey: 0,
   pcZoom: false,
   walk: false,
+  free: false,
   standUp: (from) => {
     useRoom.setState({ spot: from, fly: null })
     set({ screen: 'bench', walk: true, pcZoom: false })
@@ -306,6 +319,9 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     if (old?.name) void submitRun(runEntry(old, 'newgame'))
     set({
       ...START,
+      // giữ cài đặt âm thanh đang chọn (nút nhạc ở màn tiêu đề)
+      audio: get().audio,
+      free: false,
       runId: newRunId(),
       gameOver: null,
       reviewPops: [],
@@ -343,6 +359,68 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     get().save()
     // chào sau khi phòng 3D tải xong (màn chờ còn che thì chưa)
     afterLoad(() => get().toast(`Chào mừng ${get().name} tới xưởng phím! 🎉`, 'good'))
+  },
+  startFree: () => {
+    const s = get()
+    // đủ đồ nghề: dụng cụ bậc cao nhất (trừ chứng chỉ; bút + trạm hàn đổi qua lại), vật tư + sách phép 999
+    const tools = { ...START.tools }
+    for (const kind of Object.keys(TOOLS) as ToolKind[])
+      if (kind !== 'cert' && TOOLS[kind].length > 1) tools[kind] = TOOLS[kind].length - 1
+    const solderOwned: Record<number, number> = {}
+    TOOLS.solder.forEach((t, lv) => !t.none && lv !== tools.solder && (solderOwned[lv] = 0))
+    const supplies = Object.fromEntries(Object.keys(SUPPLIES).map((id) => [id, FREE_STOCK]))
+    const order = freeOrder(START.day)
+    set({
+      ...START,
+      free: true,
+      runId: '',
+      gameOver: null,
+      reviewPops: [],
+      rejected: [],
+      acceptedToday: 0,
+      dayStart: { money: START.money, rep: START.rep },
+      worked: [order.id],
+      name: 'Free build',
+      guideSeen: [...ALL_TOURS],
+      shopLv: MAX_LV,
+      tools,
+      solderOwned,
+      supplies,
+      lastSolderPurchase: null,
+      audio: s.audio,
+      // ngồi luôn vào máy tính, Shopii mở sẵn mục Case (chọn case trước, rồi PCB / plate... theo các mục)
+      screen: 'pc',
+      walk: true,
+      pcZoom: false,
+      windows: ['shopii'],
+      minimized: [],
+      shopCat: 'case',
+      offers: [],
+      jobs: [],
+      packed: [],
+      // thùng đơn Free build nằm sẵn trên bàn build: lấy đủ đồ ở Shopii rồi bấm thùng là build
+      boxes: {},
+      benchBox: order.id,
+      held: null,
+      order,
+      inventory: emptyInventory(),
+      provided: {},
+      spent: 0,
+      posts: [],
+      mount: null,
+      build: null,
+      ctx: null,
+      result: null,
+      history: [],
+      future: [],
+    })
+    useRoom.setState({ spot: 'pc', fly: null })
+    afterLoad(() =>
+      get().toast(
+        'Free build: chọn case ở Shopii rồi lấy đủ PCB / plate / stab / switch / keycap, xong ra bàn build bấm thùng',
+        'good',
+      ),
+    )
   },
   continueGame: () => {
     const save = loadSave()
@@ -389,6 +467,9 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       // bản lưu cũ chưa có mã lượt chơi
       runId: profile.runId || newRunId(),
       gameOver: null,
+      free: false,
+      // cài đặt âm thanh đang chọn ở màn tiêu đề (đã nạp từ bản lưu lúc mở game) thắng bản lưu
+      audio: get().audio,
       screen: 'bench',
       walk: true,
       windows: [],
@@ -436,20 +517,20 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     set((s) => ({ audio: { ...s.audio, ...audio } }))
     applyAudioSettings(get().audio)
   },
+  // về màn tiêu đề nhạc nền vẫn phát tiếp (màn tiêu đề cũng có nhạc)
   returnToTitle: () => {
-    stopBgm()
     set({ screen: 'title', windows: [], minimized: [] })
   },
   save: () => {
     const s = get()
-    if (s.screen === 'title' || !s.name || s.gameOver) return
+    if (s.screen === 'title' || !s.name || s.gameOver || s.free) return
     const data = snapshot(s)
     writeSave(data)
     set({ saveInfo: infoOf(data) })
   },
   endRun: (reason) => {
     const s = get()
-    if (s.gameOver || !s.name) return
+    if (s.gameOver || !s.name || s.free) return
     const entry = runEntry(s, reason)
     // thua là hết: bản lưu bị xoá, màn tiêu đề chỉ còn chơi mới
     clearSave()
@@ -466,7 +547,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   },
   saveRun: async () => {
     const s = get()
-    if (!s.name || s.gameOver) return false
+    if (!s.name || s.gameOver || s.free) return false
     s.save()
     const sig = runSig(s)
     const res = await submitRun(runEntry(s, 'save'))
@@ -481,11 +562,10 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
   seeGuide: (id) => set((s) => ({ guideSeen: [...new Set([...s.guideSeen, id])] })),
   unsynced: () => {
     const s = get()
-    return !!s.name && !s.gameOver && runSig(s) !== s.lbSynced
+    return !!s.name && !s.gameOver && !s.free && runSig(s) !== s.lbSynced
   },
   closeGameOver: () => {
     if (get().gameOver?.preview) return set({ gameOver: null })
-    stopBgm()
     set({ gameOver: null, name: '', screen: 'title', windows: [], minimized: [] })
   },
 })

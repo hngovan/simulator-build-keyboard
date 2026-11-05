@@ -63,6 +63,7 @@ import { deadKey, noPower, scoreDelivery } from './scoring'
 import type { SkillResult } from '@/data/skillCheck'
 import type { GameState } from '.'
 import { emptyInventory } from './shopSlice'
+import { freeOrder } from '@/data/orders'
 
 export type { StabModKind }
 
@@ -956,7 +957,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const s = get()
       const tool = TOOLS[kind][s.tools[kind]]
       // đơn build thử (dev): đồ vô hạn, không hao mòn
-      if (!tool.life || s.order?.dev) return
+      if (!tool.life || s.order?.dev || s.free) return
       const used = (s.wear[kind] ?? 0) + 1
       if (kind === 'solder') {
         const solderOwned = { ...s.solderOwned }
@@ -1356,6 +1357,28 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
           supplyUsed: {},
         })
         return s.toast('Xong đơn build thử, đã dọn bàn')
+      }
+      // Free build: không chấm điểm, dọn bàn, thùng đơn Free build mới (cùng layout) nằm sẵn trên bàn để build tiếp
+      if (s.order.free) {
+        const order = freeOrder(s.day, s.order.layout)
+        set({
+          order,
+          result: null,
+          inventory: emptyInventory(),
+          provided: {},
+          spent: 0,
+          posts: [],
+          mount: null,
+          screen: 'bench',
+          build: null,
+          ctx: null,
+          benchBox: order.id,
+          worked: [...s.worked, order.id],
+          history: [],
+          future: [],
+          supplyUsed: {},
+        })
+        return s.toast('🎉 Build xong! Đã dọn bàn, lấy đồ ở Shopii để build con tiếp theo', 'good')
       }
       if (!s.inventory.switch)
         return s.toast('Đơn này đang thiếu switch, mua thêm rồi hãy giao', 'bad')

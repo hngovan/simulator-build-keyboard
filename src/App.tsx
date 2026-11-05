@@ -22,7 +22,7 @@ import { Bench } from '@/scene/Bench'
 import { PayBanner } from '@/components/game/PayBanner'
 import { onBench } from '@/store/carrySlice'
 import { useSceneLoading } from '@/scene/common/loadingStore'
-import { applyAudioSettings, startBgm, stopBgm } from '@/sound'
+import { applyAudioSettings, startBgm } from '@/sound'
 import { TOUR_ID, Tour } from '@/features/guide/Tour'
 
 export default function App() {
@@ -54,9 +54,8 @@ export default function App() {
   useAppShortcuts()
   useEffect(() => {
     applyAudioSettings(audio)
-    // nhạc nền ở cả máy tính lẫn bàn build (không phát ở màn hình tiêu đề)
-    if (screen === 'pc' || screen === 'bench') startBgm(audio)
-    else stopBgm()
+    // nhạc nền phát mặc định ở mọi màn (cả màn tiêu đề), tắt bằng nút nhạc / cài đặt âm thanh (`musicOff`)
+    startBgm(audio)
   }, [audio, screen])
   return (
     <>

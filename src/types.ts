@@ -295,6 +295,8 @@ export interface Order {
   dueDay?: number
   /** đơn build thử (chỉ khi dev): bỏ qua bước nào cũng được, giao thì dọn bàn, không chấm điểm */
   dev?: true
+  /** đơn Free build (chế độ Free build, `startFree`): không khách / không chấm điểm, layout theo PCB vừa lấy ở Shopii, giao = dọn bàn build tiếp */
+  free?: true
   /** khách huỷ kèo giữa chừng: 'sold' = phát hiện shop đem đồ khách gửi đi bán ở chợ (đơn còn hiện tới hết ngày) */
   cancel?: 'sold'
   /** đơn kit theo thiết kế bàn phím mở (Bakeneko 60, Planck...) */

@@ -134,6 +134,18 @@ export function playKey(profile: SoundProfile, down = true) {
     noiseBurst(t, { freq: 4200 * j, q: 6, dur: 0.025, gain: sampled ? 0.34 : 1.2 })
 }
 
+/** Menu màn tiêu đề: rê / đổi mục đang chọn = tiếng tick nhẹ */
+export function playUiHover() {
+  noiseBurst(ac().currentTime, { freq: 3200, q: 4, dur: 0.025, gain: 0.18 })
+}
+
+/** Menu màn tiêu đề: bấm chọn mục = tiếng gõ phím cơ (sample keypress, thiếu file thì tổng hợp) */
+export function playUiSelect() {
+  const key = `keypress/${1 + Math.floor(Math.random() * 3)}.wav`
+  if (playSfx(key, 0.75, 0.95 + Math.random() * 0.1)) return
+  noiseBurst(ac().currentTime, { freq: 900, q: 1.2, dur: 0.07, gain: 0.6 })
+}
+
 export function playClick(freq = 2500) {
   if (playSfx('assembly/click.wav', 0.48, 0.94 + Math.random() * 0.12)) return
   noiseBurst(ac().currentTime, { freq, q: 3, dur: 0.04, gain: 0.5 })
@@ -259,7 +271,19 @@ function pickTrack() {
   return pool.length ? pool[Math.floor(Math.random() * pool.length)] : -1
 }
 
-/** Nhạc nền ở máy tính / bàn build: xoay ngẫu nhiên các bài trong BGM_URLS */
+// Trình duyệt chặn phát âm thanh tới lần tương tác đầu tiên: nhạc nền bắt đầu ở màn tiêu đề sẽ chờ (AudioContext tạm dừng),
+// bấm / gõ phím lần đầu thì mở lại để nhạc chạy luôn
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    if (ctx) void ctx.resume().catch(() => undefined)
+    window.removeEventListener('pointerdown', unlock)
+    window.removeEventListener('keydown', unlock)
+  }
+  window.addEventListener('pointerdown', unlock)
+  window.addEventListener('keydown', unlock)
+}
+
+/** Nhạc nền ở màn tiêu đề / máy tính / bàn build: xoay ngẫu nhiên các bài trong BGM_URLS */
 export function startBgm(settings = audioSettings) {
   applyAudioSettings(settings)
   const a = ac()

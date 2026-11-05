@@ -67,6 +67,8 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
   const equipped = !!solderItem && tools.solder === solderItem.level
   const canEquip = !!solderItem && owned[solderItem.level] !== undefined
   const parcels = useGame((s) => s.parcels)
+  // Free build: mọi món miễn phí, bấm là lấy luôn (không qua giỏ / kiện)
+  const free = useGame((s) => s.free)
   const toolItem = product.cat === 'tool' || product.cat === 'cert' ? (opt.item as ToolItem) : null
   const onWay = !!toolItem && !canEquip && toolOnWay(parcels, toolItem.kind, toolItem.level)
   // giá gốc (phí giao tính lúc thanh toán giỏ theo tốc độ giao)
@@ -102,15 +104,17 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
         title={
           onWay
             ? 'Đang trên đường giao, xem ở Chờ giao hàng'
-            : product.sale
-              ? 'Giá sale chỉ cho 1 món, mua thêm là giá thường'
-              : 'Thêm vào giỏ hàng, chọn tốc độ giao lúc thanh toán'
+            : free
+              ? 'Free build: lấy luôn, miễn phí'
+              : product.sale
+                ? 'Giá sale chỉ cho 1 món, mua thêm là giá thường'
+                : 'Thêm vào giỏ hàng, chọn tốc độ giao lúc thanh toán'
         }
         onClick={() => onCart(product, opt, stackable ? qty : 1)}
         className={cn(big && 'inline-flex w-full items-center justify-center gap-2')}
       >
         {big && !onWay && <ShoppingCart className="size-5" />}
-        {onWay ? 'Đang giao' : 'Thêm vào giỏ'}
+        {onWay ? 'Đang giao' : free ? 'Lấy luôn' : 'Thêm vào giỏ'}
       </Button>
     )
   const kindName = (o: ProductOption) => (isPack(o) ? o.label.split(' · ')[0] : o.label)
@@ -227,8 +231,10 @@ export function ProductCard({ product, onEquip, onCart }: Props) {
       <div className="mt-auto flex items-center justify-between gap-2">
         {/* ngày sale: giá gốc gạch ngang + % giảm */}
         <span className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
-          <span className="font-head text-xl font-extrabold text-green">{fmt(total)}</span>
-          {opt.was !== undefined && (
+          <span className="font-head text-xl font-extrabold text-green">
+            {free ? 'Miễn phí' : fmt(total)}
+          </span>
+          {!free && opt.was !== undefined && (
             <s className="text-xs font-bold text-muted">{fmt(opt.was * (stackable ? qty : 1))}</s>
           )}
         </span>

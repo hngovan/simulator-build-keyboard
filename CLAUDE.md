@@ -214,6 +214,8 @@ vào `window.__r3f` để debug trong console.
   Đơn kit có case không còn hợp layout (dữ liệu case đổi, vd Duality TKL → chỉ TKL F13) tự đổi sang layout cùng cỡ mà case hợp mỗi lần nạp save
   (`fixKitLayout` persistence.ts: đổi layout / variant / PCB + plate kit + kho; build dở dời dữ liệu phím theo tên phím vì id = thứ tự phím; phím mới mà build đã qua bước lắp thì `fillAddedKeys` lắp nốt switch từ kho / hàn / keycap,
   vì lịch sử hoàn tác đã xoá nên không quay lại bước được).
+- Free build (menu tiêu đề, `startFree`, `free` không lưu): không ghi save / bảng xếp hạng / thua / lên cấp, đủ dụng cụ + vật tư 999, Shopii mở khoá,
+  giá "Miễn phí", nút "Lấy luôn" = `freeTake` (vào thẳng đơn `Order.free` trên bàn, PCB đổi layout đơn, switch đủ số phím); giao = dọn bàn + đơn Free build mới.
 - Đơn có thể đòi đích danh `switchType` / `caseId` / `stabType` / `plateMaterial` (món khách không gửi), `checkInventory` bắt đúng; thiếc / vật tư không bị đòi.
 - Keycap có chất liệu `material` (PBT / ABS / Mix, `KEYCAP_MATERIALS`; option Shopii `group` = chất liệu, `label` = màu, giỏ hàng 2 ô `OptionPick`), đơn có thể đòi `keycapMaterial` (`keycapCheck`); bộ `KEYCAP_KITS.base` ẩn (`hidden`).
 - Đơn có `switchKind` (Linear / Tactile / Clicky / Silent / SilentTactile, `SWITCH_KINDS`): kho phải hợp loại (`switchFits`: Silent Tactile hợp cả Tactile / Silent).
@@ -300,8 +302,8 @@ vào `window.__r3f` để debug trong console.
 - Test phím: PCB hàn còn phím chưa hàn / cháy thì bấm không ăn (`deadKey`, `build.testFaults` → StepList sáng "!" bước hàn để quay lại sửa);
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
-- Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`) **chỉ nằm trong tour** (không còn NPC đứng riêng / mẹo máy tính, không có tuỳ chọn
-  ẩn / hiện, không có "Xem lại"; tạo game hỏi "Người chơi mới" / "Đã từng chơi" → `newGame(name, experienced)` ghi sẵn `ALL_TOURS` (`data/tourIds.ts`);
+- Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`) **chỉ nằm trong tour** (màn tiêu đề / màn chờ tải `BenchLoader` không có Keeb-chan; nền 2 màn = ảnh góc bàn `components/art/workspace.ts`; logo game `components/art/GameLogo.tsx`, icon chip HUD / mục Shopii `components/art/GameIcons.tsx`) (không còn NPC đứng riêng / mẹo máy tính, không có tuỳ chọn
+  ẩn / hiện, không có "Xem lại"; màn tiêu đề: "Hướng dẫn build" = `newGame(name, false)` có tour, "Sự nghiệp → Chơi mới" = `newGame(name, true)` ghi sẵn `ALL_TOURS` (`data/tourIds.ts`);
   không còn "Bảng tỉ lệ" trong game, `data/odds.ts` chỉ để README chép). Lớp tour dùng chung `Spotlight.tsx` (+ `spotlightRect.ts` đo `data-tour`).
   Tour lần đầu ngồi máy tính (`features/guide/Tour.tsx`, `TOUR_ID` trong `guideSeen`): làm tối nền, ô sáng viền vàng đúng phần tử `data-tour="..."`
   (prop `tour` của `DesktopIcon` / `TabChip` / `BackButton` / thẻ đơn + nút Nhận đơn Mezzenger), bấm đúng chỗ thì sang bước; Cài đặt → Xem lại.
