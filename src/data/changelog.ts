@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.31',
     date: '2026-11-06',
-    commits: [],
+    commits: ['4dc9b20'],
     title: 'Tiếng switch thật, tuôn ren phải đền, foam đáy case, trụ đỡ O-ring, case nhôm gộp',
     items: [
       'Mỗi switch gõ bằng tiếng thật của nó (bộ tiếng kbsim, MIT): theo hàng phím, Space / Enter / Backspace riêng, tiếng nhả riêng; plate / case / lube / foam chỉnh nhẹ quanh tiếng gốc',
