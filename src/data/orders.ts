@@ -31,6 +31,7 @@ import {
   PLATES,
   plateIds,
   STABS,
+  mountStabIssue,
   PCB_TYPES,
   pcbLabel,
   MOUNTS,
@@ -235,7 +236,13 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
         : {}),
       // khách gửi stab thì gửi đủ số cho layout (full size có cả stab lẻ)
       stab: send.stab
-        ? { type: pick(atLv(Object.keys(STABS), (t) => stabLv(t) <= lv)), ...stabNeed(keys) }
+        ? {
+            // case O-ring mount: khách không gửi stab screw-in (cấn vòng O-ring)
+            type: pick(
+              atLv(Object.keys(STABS), (t) => stabLv(t) <= lv && !mountStabIssue(mount, t)),
+            ),
+            ...stabNeed(keys),
+          }
         : null,
     }
   }
@@ -296,7 +303,7 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
       : undefined
   const stabType =
     keys.some((k) => k.stab) && !kit?.stab && Math.random() < 0.3
-      ? pick(atLv(Object.keys(STABS), (t) => stabLv(t) <= lv))
+      ? pick(atLv(Object.keys(STABS), (t) => stabLv(t) <= lv && !mountStabIssue(mount, t)))
       : undefined
   const plateMaterial =
     !kit?.plate && Math.random() < 0.3 ? pick(atLv(plateIds(), (m) => plateLv(m) <= lv)) : undefined
@@ -305,7 +312,8 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
   const foam = lv >= 2 && Math.random() < 0.25
   // dây O-ring: đơn kit gửi case O-ring / OG mount → 60% khách dặn độ cứng dây; đơn mua đủ (không đòi đích danh case)
   // ~12% đòi luôn O-ring mount + đúng độ cứng dây (shop chọn case có O-ring mount)
-  if (!kit && !caseId && Math.random() < 0.12) mount = 'oring'
+  // (khách đòi stab screw-in thì không đòi O-ring mount: vít stab cấn vòng)
+  if (!kit && !caseId && !mountStabIssue('oring', stabType) && Math.random() < 0.12) mount = 'oring'
   const oring =
     (mount === 'oring' || mount === 'og') && (!kit || Math.random() < 0.6)
       ? pick(ORING_IDS)

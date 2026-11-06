@@ -22,17 +22,19 @@ function BenchStatus() {
       {body}
     </div>
   )
-  // Free build: bàn trống (vừa build xong / đóng bảng chọn) thì mở lại bảng chọn case
+  // Free build: bàn trống (vừa build xong / đóng bảng chọn) thì mở lại bảng chọn case; bảng đang mở thì ẩn khung này
   if (!box && s.free)
-    return frame(
-      'Free build',
-      <div className="flex flex-col items-center gap-2 text-base">
-        Chọn case để build, có sẵn đủ linh kiện
-        <Button tone="green" onClick={() => useGame.setState({ freePick: true })}>
-          Chọn case
-        </Button>
-      </div>,
-    )
+    return s.freePick
+      ? null
+      : frame(
+          'Free build',
+          <div className="flex flex-col items-center gap-2 text-base">
+            Chọn case để build, có sẵn đủ linh kiện
+            <Button tone="green" onClick={() => useGame.setState({ freePick: true })}>
+              Chọn case
+            </Button>
+          </div>,
+        )
   if (!box)
     return frame(
       'Bàn build đang trống',

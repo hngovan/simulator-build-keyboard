@@ -28,6 +28,8 @@ import { useHover } from '../common/useHover'
 import { Gaskets, HotswapSockets, SiliconeRing } from './BoardDetails'
 import { SUPPLIES } from '@/data/supplies'
 import { KeySlot } from './KeySlot'
+import { PingWaves } from './PingWaves'
+import { ringPosts } from './ringPosts'
 import { KeycapPreload } from './Keycap'
 import { PcbFoam } from './Foam'
 import { PcbSurface } from './PcbSurface'
@@ -325,6 +327,11 @@ export function Board() {
     (ctx.variant.rshift ?? '2.75u') === '2.75u'
   // tray mount: vít xuyên plate + PCB bắt vào trụ đồng đáy case (vị trí đã dò không chạm lỗ switch / stab)
   const trayHoles = ctx.mount === 'tray' ? ctx.screws.trayScrew : NO_HOLES
+  // rãnh tròn mép PCB chỗ trụ đỡ O-ring / OG trong case (r + khe 0,02u), cố định theo case nên PCB lúc nào cũng khoét sẵn
+  const pcbNotches = useMemo(
+    () => ringPosts(ctx).map((p) => ({ x: p.x, z: p.z, r: p.r + 0.02 })),
+    [ctx],
+  )
   const topFull = ctx.mount === 'top' && !ctx.caseDef.model
   const plateGeo = useMemo(
     () =>
@@ -367,6 +374,7 @@ export function Board() {
           keys={ctx.keys}
           screwHoles={at('stabScrew') >= 0 ? ctx.screws.stabScrew : []}
           mountHoles={trayHoles}
+          notches={pcbNotches}
           type={ctx.pcbType}
           hover={hover}
         />
@@ -433,6 +441,7 @@ export function Board() {
       {ctx.keys.map((k) => (
         <KeySlot key={k.id} k={k} />
       ))}
+      {step === 'test' && <PingWaves />}
       {(step === 'solder' || Object.keys(b.solder).length > 0) &&
         ctx.keys.map((k) => <SolderPad key={k.id} k={k} />)}
       {at('stabScrew') >= 0 && stepIdx >= at('stabScrew') && (

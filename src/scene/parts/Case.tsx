@@ -12,13 +12,14 @@ import {
   Vector3,
 } from 'three'
 import type * as THREE from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { ringPosts } from './ringPosts'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import {
   CASE_MARGIN,
   CASE_WALL,
   GASKET,
   GASKET_NOTCH,
-  LEDGE_GAP,
   TOP_FLIP_STEPS,
   TOP_HOLE,
   TOP_NOTCH,
@@ -48,7 +49,6 @@ import { useAssemblyFlipped, useCaseSplit } from './caseSplit'
 import { HintArrow } from '../stations/StationKit'
 import {
   caseShellGeometry,
-  ledgeGeometry,
   micaEdgeMaterial,
   micaHitsPort,
   micaLayerGeometry,
@@ -58,7 +58,7 @@ import {
   type WallNotch,
   type WallPort,
 } from './caseShell'
-import { Daughterboard, DTB_GAP, jstStand, usbPort } from './Daughterboard'
+import { Daughterboard, jstStand, usbPort } from './Daughterboard'
 import { caseModelOf } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { MM } from '../models/Switch'
@@ -341,24 +341,23 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
   })
 }
 
-/** gờ lấn vào vách bao nhiêu (giấu mép ngoài trong vách) */
-const LEDGE_IN = 0.02
-/** dày gờ đỡ / gờ chặn trên gasket (u) */
-const LEDGE_H = 0.1
-
 /**
- * Gờ chạy quanh lòng case (case dựng bằng code): từ mặt vách vào tới cách mép board `LEDGE_GAP`, không chạm PCB / plate.
- * O-ring / OG: đỡ vòng silicon khỏi lọt xuống đáy; gasket: đỡ (case dưới) / chặn trên (case trên) miếng gasket
+ * O-ring / OG case 1 mảnh dựng bằng code: trụ tròn đúc liền vách trước / sau mọc từ sàn lên (`ringPosts`), đỉnh sát mặt dưới
+ * mép board; gộp 1 lưới
  */
-function Ledge({ y0, y1, mat }: { y0: number; y1: number; mat: ReactNode }) {
+function RingPosts({ mat }: { mat: ReactNode }) {
   const ctx = useCtx()
   const geometry = useMemo(() => {
-    const o = CASE_MARGIN + LEDGE_IN
-    // daughterboard sát vách sau: chừa khe trên gờ cho DTB + cổng USB
-    const gap = ctx.dtb ? { x: ctx.dtb.x, w: DTB_GAP } : undefined
-    return ledgeGeometry(ctx.width + 2 * o, ctx.depth + 2 * o, y0, y1, o - LEDGE_GAP, gap)
-  }, [ctx, y0, y1])
-  useEffect(() => () => geometry.dispose(), [geometry])
+    const parts = ringPosts(ctx).map((p) =>
+      new CylinderGeometry(p.r, p.r, p.y1 - p.y0, 24).translate(p.x, (p.y0 + p.y1) / 2, p.z),
+    )
+    if (!parts.length) return null
+    const g = mergeGeometries(parts)
+    parts.forEach((p) => p.dispose())
+    return g
+  }, [ctx])
+  useEffect(() => () => geometry?.dispose(), [geometry])
+  if (!geometry) return null
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
       {mat}
@@ -1170,8 +1169,8 @@ export function Case({
             <HintArrow at={[0, (model ? BLOCKER_TOP : wallTop) + 0.05, frontZ]} size={1.6} />
           )}
           {coded && !two && ring && (
-            // O-ring / OG: gờ đỡ vòng silicon (vòng tì vách + nằm trên gờ, không lọt xuống đáy)
-            <Ledge y0={ring.bottom - LEDGE_H} y1={ring.bottom} mat={bottomMat(bottom.hover)} />
+            // O-ring / OG: trụ đúc liền vách mọc từ sàn (phay từ trên xuống được) đỡ vòng silicon, không lọt xuống đáy
+            <RingPosts mat={bottomMat(bottom.hover)} />
           )}
           {gasket && (
             // tab gasket: vấu case dưới trong hốc vách đỡ dải gasket dưới tai plate

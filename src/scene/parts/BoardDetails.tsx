@@ -128,7 +128,7 @@ export function SiliconeRing({
 }: {
   ghost: boolean
   between: boolean
-  /** màu dây O-ring đã cuốn (trắng 30A / đen 50A / đỏ 70A) */
+  /** màu dây O-ring đã cuốn (trắng 30A / đen 50A / cam 70A) */
   color?: string
 }) {
   const ctx = useCtx()

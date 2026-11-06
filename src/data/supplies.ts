@@ -41,12 +41,16 @@ export interface SupplyDef {
   oring?: { shore: number }
   /** tấm foam Poron lót giữa PCB và plate (bước `foam`): bán tấm nguyên, lót thì cắt theo layout */
   pcbFoam?: true
+  /** tấm foam lót đáy case (bước `caseFoam`): 1 tấm / bàn phím, lót thì khoét lỗ trụ tray + chỗ DTB */
+  caseFoam?: true
   /** dải gasket Poron dán tai plate (bước `gasket`): mỗi điểm gasket dán 2 miếng, trên + dưới tai */
   gasketStrip?: true
 }
 
 /** foam Poron lót PCB – plate: 1 tấm / bàn phím */
 export const FOAM_ID = 'foamPoron'
+/** foam Poron lót đáy case: 1 tấm / bàn phím */
+export const CASE_FOAM_ID = 'foamCase'
 /** dải gasket Poron 20mm (gasket mount): mỗi điểm gasket dán đủ dải phủ hết tai, mặt trên + mặt dưới (`gasketStrips`) */
 export const GASKET_ID = 'gasketPoron'
 
@@ -65,11 +69,11 @@ const FEET_COLORS: [id: string, name: string, color: string][] = [
 ]
 export const FEET_IDS = FEET_COLORS.map(([id]) => id)
 
-/** dây O-ring silicon theo độ cứng: trắng 30A (mềm, nhún nhiều) → đen 50A → đỏ 70A (cứng, chắc tay) */
+/** dây O-ring silicon theo độ cứng: trắng 30A (mềm, nhún nhiều) → đen 50A → cam 70A (cứng, chắc tay) */
 const ORING_DEFS: [id: string, shore: number, name: string, color: string, desc: string][] = [
   ['oring30', 30, 'trắng', '#f1f0ea', 'Mềm nhất: board nhún sâu, tiếng trầm êm, gõ mềm tay'],
   ['oring50', 50, 'đen', '#1f2024', 'Độ cứng vừa: cân bằng giữa nhún và chắc, dùng đa số build'],
-  ['oring70', 70, 'đỏ', '#c8341f', 'Cứng nhất: board ít nhún, tiếng chắc, cao hơn chút'],
+  ['oring70', 70, 'cam', '#e8762a', 'Cứng nhất: board ít nhún, tiếng chắc, cao hơn chút'],
 ]
 export const ORING_IDS = ORING_DEFS.map(([id]) => id)
 
@@ -156,6 +160,17 @@ export const SUPPLIES: Record<string, SupplyDef> = {
     ],
     desc: 'Tấm Poron đen nguyên tấm, dùng được mọi layout (lót lên PCB thì cắt lỗ switch + khe stab): giảm rung, tiếng thock trầm hơn',
     pcbFoam: true,
+  },
+  foamCase: {
+    name: 'Foam Poron lót đáy case (đen)',
+    unit: 'tấm',
+    color: '#1f2024',
+    packs: [
+      [1, 50],
+      [5, 210],
+    ],
+    desc: 'Tấm Poron đen lót đáy case (lót thì khoét lỗ trụ tray mount + chỗ daughterboard): bớt tiếng rỗng trong lòng case, đỡ vang góc case viền mỏng',
+    caseFoam: true,
   },
   // tham khảo "Poron Gasket Foam Strips 20pcs" (20 × 4mm, dày 2 / 3mm, ~8–10 USD)
   gasketPoron: {

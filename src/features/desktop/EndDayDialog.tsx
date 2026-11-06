@@ -23,7 +23,7 @@ function Delta({ n, text }: { n: number; text: string }) {
 export function EndDayDialog({ onClose }: { onClose: () => void }) {
   const s = useGame()
   const start = s.dayStart ?? { money: s.money, rep: s.rep }
-  const unsent = s.packed.filter((p) => !p.shipped)
+  const unsent = s.packed.filter((p) => !p.shipped && !p.order.free)
   // gửi rồi chưa thu thù lao: qua ngày cũng tự thu
   const unpaid = s.packed.filter((p) => p.shipped && p.paid === false)
   const income = [...unsent, ...unpaid].reduce((a, p) => a + payout(p.result), 0)

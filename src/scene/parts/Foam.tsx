@@ -1,10 +1,13 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import polygonClipping, { type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping'
-import { CASE_MARGIN, TRAY_HOLE, Y, stabSpan } from '@/data/steps'
+import { CASE_MARGIN, DTB_MM, TRAY_HOLE, Y, stabSpan } from '@/data/steps'
+import { MM as MM_U } from '../models/Switch'
+import { useCtx } from '@/store'
 import { blockerGaps } from '@/data/layouts'
 import type { Key, Point } from '@/types'
 import { boardOutline } from './boardOutline'
+import { ringPosts } from './ringPosts'
 
 /** foam Poron lấp kín khe PCB – plate (~3,3mm): mặt dưới plate tì sát mặt foam */
 const FOAM_T = Y.plateBot - Y.pcbTop - 0.004
@@ -116,6 +119,92 @@ export function PcbFoam({
         roughness={0.95}
         transparent={ghost}
         opacity={ghost ? 0.55 : 1}
+      />
+    </mesh>
+  )
+}
+
+/** foam đáy case dày 2,5mm (u): mặt trên còn cách socket hotswap / chân hàn dưới PCB, không cấn */
+export const CASE_FOAM_T = 2.5 * MM_U
+/** khe chừa quanh trụ tray / DTB (u) */
+const CASE_FOAM_GAP = 0.06
+
+/**
+ * Tấm foam Poron đen lót đáy case (case dựng bằng code): phủ lòng case theo viền board, khoét lỗ tròn quanh trụ tray mount,
+ * ô chữ nhật quanh daughterboard (dư phía trước cho đầu cắm + dây JST), khe khối chặn liền case. `ghost` = tấm chờ lót lơ lửng mờ
+ */
+export function CaseFoam({ ghost = false, hover = false }: { ghost?: boolean; hover?: boolean }) {
+  const ctx = useCtx()
+  const geo = useMemo(() => {
+    const { keys, width, depth, outline, dtb } = ctx
+    const { shapes } = boardOutline(keys, width, depth, -CASE_MARGIN + 0.02, outline)
+    const ring = (pts: [number, number][]): Ring => [...pts, pts[0]]
+    const holes: Polygon[] = []
+    const box = (x0: number, x1: number, z0: number, z1: number) =>
+      holes.push([
+        ring([
+          [x0, -z0],
+          [x1, -z0],
+          [x1, -z1],
+          [x0, -z1],
+        ]),
+      ])
+    if (ctx.mount === 'tray')
+      for (const { x, z } of ctx.screws.trayScrew)
+        holes.push([
+          ring(
+            Array.from({ length: 20 }, (_, i): [number, number] => {
+              const a = (i / 20) * Math.PI * 2
+              const r = 0.1 + CASE_FOAM_GAP
+              return [x + Math.cos(a) * r, -(z + Math.sin(a) * r)]
+            }),
+          ),
+        ])
+    if (dtb) {
+      // DTB: mạch rộng w, sâu d (mm) quanh tâm; phía trước chừa chỗ đầu cắm JST + dây ra
+      const hw = (DTB_MM.w / 2) * MM_U + CASE_FOAM_GAP
+      const hd = (DTB_MM.d / 2) * MM_U
+      box(dtb.x - hw, dtb.x + hw, dtb.z - hd - 0.15, dtb.z + hd + 0.35)
+    }
+    // trụ đỡ O-ring liền vách (case 1 mảnh): khoét chân trụ (khối chạm sàn)
+    for (const p of ringPosts(ctx)) {
+      const r = p.r + 0.02
+      box(p.x - r, p.x + r, p.z - r, p.z + r)
+    }
+    for (const g of blockerGaps(keys, width, depth, CASE_MARGIN + 0.05))
+      box(g.x - g.w / 2 - 0.02, g.x + g.w / 2 + 0.02, g.z - g.d / 2 - 0.02, g.z + g.d / 2 + 0.02)
+    const plates = shapes.map((sh): Polygon => [
+      ring(sh.getPoints(24).map((v): [number, number] => [v.x, v.y])),
+    ])
+    const cut = holes.length
+      ? polygonClipping.difference(plates as MultiPolygon, ...holes)
+      : (plates as MultiPolygon)
+    const out = cut.map(([outer, ...inner]) => {
+      const shape = new THREE.Shape(outer.slice(0, -1).map(([x, y]) => new THREE.Vector2(x, y)))
+      for (const h of inner)
+        shape.holes.push(new THREE.Path(h.slice(0, -1).map(([x, y]) => new THREE.Vector2(x, y))))
+      return shape
+    })
+    return new THREE.ExtrudeGeometry(out, { depth: CASE_FOAM_T, bevelEnabled: false }).rotateX(
+      -Math.PI / 2,
+    )
+  }, [ctx])
+  useEffect(() => () => geo.dispose(), [geo])
+  const floor = ctx.dtb?.floor ?? Y.floorTop
+  return (
+    <mesh
+      geometry={geo}
+      position-y={ghost ? floor + 0.9 : floor + 0.001}
+      castShadow={!ghost}
+      receiveShadow
+    >
+      <meshStandardMaterial
+        color={COLOR}
+        roughness={0.95}
+        transparent={ghost}
+        opacity={ghost ? (hover ? 0.8 : 0.55) : 1}
+        emissive={hover ? '#3ddc84' : '#000000'}
+        emissiveIntensity={hover ? 0.35 : 0}
       />
     </mesh>
   )

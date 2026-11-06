@@ -12,7 +12,8 @@ Mỗi tương tác 1 thư mục trong `sfx/` (hàm phát tiếng tương ứng t
 
 | Thư mục     | Tương tác                                                      | Hàm                      | File                                |
 | ----------- | -------------------------------------------------------------- | ------------------------ | ----------------------------------- |
-| `keypress/` | gõ phím (bước test)                                            | `playKey`                | `1.wav` – `3.wav` (chọn ngẫu nhiên) |
+| `switch/`   | gõ phím (bước test): bộ tiếng thật của từng switch             | `playKey`                | `<bộ>/press`, `<bộ>/release`        |
+| `keypress/` | gõ phím dự phòng (bộ tiếng switch chưa tải xong)               | `playKey`                | `1.wav` – `3.wav` (chọn ngẫu nhiên) |
 | `screw/`    | vặn vít bằng tua vít tay (tua vít điện phát `1.wav` tua nhanh) | `playScrew`, `playDrill` | `1.wav`, `2.wav`                    |
 | `assembly/` | lắp linh kiện khớp vào chỗ                                     | `playClick`              | `click.wav`                         |
 | `open-box/` | mở kiện hàng: bóc băng keo rồi bao bì sột soạt                 | `playOpenBox`            | `tape.wav`, `plastic.wav`           |
@@ -26,4 +27,7 @@ Nguồn: `keypress/`, `screw/`, `assembly/`, `open-box/` là CC0 từ các bộ 
 - `keypress/`: từ [Bb Keyboard Sounds](<https://cc0-sounds.exi.software/collection/bb%20-%20keyboard%20sounds%20(mar%202021)/>).
 - `screw/`, `assembly/`: ratchet và tiếng khớp cơ khí, từ [Bb Smol Mechanisms](<https://cc0-sounds.exi.software/collection/bb%20-%20smol%20mechanisms%20(may%202021)/>).
 - `open-box/`: bóc băng keo và bao bì sột soạt, từ [Bb Toolbox Rummaging](<https://cc0-sounds.exi.software/collection/bb%20-%20toolbox%20rummaging%20(sept%202021)/>).
+- `switch/`: 10 bộ tiếng switch chân MX (mxblack, mxbrown, mxblue, boxnavy, alpaca, blackink, redink, cream, holypanda, turquoise) từ
+  [tplai/kbsim](https://github.com/tplai/kbsim), giấy phép **MIT** (nguyên văn trong `switch/LICENSE.md`, phải giữ file này). Mỗi switch trong
+  game chọn 1 bộ qua `SwitchDef.sound` (`src/data/parts.ts`).
 - `desolder/suction.wav`: cắt từ bản gốc người dùng đưa (`assets/audio/sfx/desolder/suction-source.mp3`).

@@ -158,6 +158,10 @@ const STAB_MOUNT_LV: Record<string, number> = { clip: 1, plate: 2, screw: 3 }
 const KEYCAP_LV: Record<string, number> = { sa: 3, mt3: 3, asa: 3 }
 /** switch cao cấp (còn lại phổ thông, cấp 1: đủ mọi loại Linear / Tactile / Clicky / Silent) */
 const PREMIUM_SWITCHES = new Set([
+  'gateronBlackInk',
+  'nkCream',
+  'zealTealios',
+  'holyPanda',
   'rubenBumblebee',
   'hmxWhite',
   'hmxSnowfall',
@@ -185,6 +189,7 @@ const SUPPLY_LV: Record<string, number> = {
   t3204: 2,
   gpl105: 2,
   foamPoron: 2,
+  foamCase: 2,
   gasketPoron: 3,
 }
 const TOOL_LV: Partial<Record<ToolKind, number>> = {

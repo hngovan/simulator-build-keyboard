@@ -227,7 +227,8 @@ export async function buildScene(kind: ThumbKind, type: string) {
   if (kind === 'supply') {
     if (SUPPLIES[type]?.spell) return createScroll(SUPPLIES[type].name)
     if (SUPPLIES[type]?.feet) return createFeetStrip(SUPPLIES[type].color)
-    if (SUPPLIES[type]?.pcbFoam) return createFoamSheet(SUPPLIES[type].color)
+    if (SUPPLIES[type]?.pcbFoam || SUPPLIES[type]?.caseFoam)
+      return createFoamSheet(SUPPLIES[type].color)
     if (SUPPLIES[type]?.gasketStrip) return createGasketStrips(SUPPLIES[type].color)
     if (SUPPLIES[type]?.oring) return createORings(SUPPLIES[type].color)
     if (type === 'urgo') {

@@ -91,14 +91,23 @@ const alpha40 = (v: Variant): Item[][] => [
         ['Alt', 1.25, 'AltRight'],
         ['Ctrl', 1.5, 'ControlRight'],
       ]
-    : [
-        ['Ctrl', 1.25, 'ControlLeft'],
-        ['Win', 1.25, 'MetaLeft'],
-        ['Alt', 1.25, 'AltLeft'],
-        ['', 6.25, 'Space'],
-        ['Alt', 1.25, 'AltRight'],
-        ['Ctrl', 1.5, 'ControlRight'],
-      ],
+    : v.space === '7u'
+      ? // space 7u (stab dây 7u): bỏ Win, Ctrl / Alt to hơn, cùng bề ngang 12.75u
+        [
+          ['Ctrl', 1.5, 'ControlLeft'],
+          ['Alt', 1.5, 'AltLeft'],
+          ['', 7, 'Space'],
+          ['Alt', 1.25, 'AltRight'],
+          ['Ctrl', 1.5, 'ControlRight'],
+        ]
+      : [
+          ['Ctrl', 1.25, 'ControlLeft'],
+          ['Win', 1.25, 'MetaLeft'],
+          ['Alt', 1.25, 'AltLeft'],
+          ['', 6.25, 'Space'],
+          ['Alt', 1.25, 'AltRight'],
+          ['Ctrl', 1.5, 'ControlRight'],
+        ],
 ]
 
 const hhkbTop: Item[][] = [
@@ -357,7 +366,7 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
   '40': {
     name: '40%',
     ff: '40',
-    variants: { space: ['6.25u', 'split'] },
+    variants: { space: ['6.25u', '7u', 'split'] },
     rows: (v) => stack(alpha40(v)),
   },
   '60': {
@@ -480,8 +489,14 @@ const VARIANT_INFO: Record<VariantKey, Record<string, string>> = {
   backspace: { '2u': 'Backspace 2u', split: 'Split backspace (1u + 1u)' },
   bottom: { wk: 'Hàng dưới WK (có phím Win)', wkl: 'Hàng dưới WKL (không Win, space 7u)' },
   rshift: { '2.75u': 'Shift phải 2.75u', split: 'Split shift phải (1.75u + Fn)' },
-  space: { '6.25u': 'Space liền 6.25u', split: 'Split space (2.25u + 1.25u + 2.75u)' },
+  space: {
+    '6.25u': 'Space liền 6.25u',
+    '7u': 'Space liền 7u (không Win)',
+    split: 'Split space (2.25u + 1.25u + 2.75u)',
+  },
 }
+/** tên 1 kiểu layout (vd "Split space (2.25u + 1.25u + 2.75u)") */
+export const variantLabel = (k: VariantKey, val: string) => VARIANT_INFO[k][val] ?? val
 
 export const variantText = (v: Variant) =>
   (Object.entries(v) as [VariantKey, string][]).map(([k, val]) => VARIANT_INFO[k][val])

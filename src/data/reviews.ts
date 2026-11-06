@@ -43,6 +43,10 @@ const TEXTS = {
     'Hỏi đơn mà bị từ chối thẳng, hơi mất thiện cảm',
   ],
   cancel: ['Ôm đơn rồi để đó, quá hạn cả tuần. Huỷ!', 'Thợ không có tâm, nhận đơn xong bỏ xó'],
+  ruin: [
+    'Gửi phím cho shop build mà shop vặn tuôn ren hết lỗ ốc, phải đền case. Né!',
+    'Tay nghề non quá, lỗ ren toét không lắp nổi, trả đồ đền tiền rồi đi',
+  ],
   sold: [
     'Gửi đồ cho shop build mà shop đem lên chợ bán. Huỷ kèo, né gấp!',
     'Lướt Hội Phím Cơ thấy đúng món mình gửi đang được bán. Shop lừa đảo!',
@@ -90,6 +94,15 @@ export const soldReview = (order: Order, day: number, rep: number): Review => ({
   ...base(order, day),
   stars: 1,
   text: pick(TEXTS.sold),
+  kind: 'cancel',
+  rep,
+})
+
+/** Khách huỷ đơn vì shop tuôn ren lỗ case / tray / top mount, không lắp tiếp được (đã đền) */
+export const ruinReview = (order: Order, day: number, rep: number): Review => ({
+  ...base(order, day),
+  stars: 1,
+  text: pick(TEXTS.ruin),
   kind: 'cancel',
   rep,
 })

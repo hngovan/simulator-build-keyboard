@@ -13,6 +13,26 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.31',
+    date: '2026-11-06',
+    commits: [],
+    title: 'Tiếng switch thật, tuôn ren phải đền, foam đáy case, trụ đỡ O-ring, case nhôm gộp',
+    items: [
+      'Mỗi switch gõ bằng tiếng thật của nó (bộ tiếng kbsim, MIT): theo hàng phím, Space / Enter / Backspace riêng, tiếng nhả riêng; plate / case / lube / foam chỉnh nhẹ quanh tiếng gốc',
+      'Thêm 5 switch: Holy Panda, Turquoise Tealios, Gateron Black Ink, Kailh Box Navy, NovelKeys Cream; Kailh Box có stem box',
+      'Tiếng trượt ren / tuôn ren theo loại lỗ, nứt case; tuôn ren từ 2 lỗ cùng loại (case / tray / top mount) là hỏng hẳn, khoá bàn build, phải đền khách giá case',
+      'Case nhôm viền mỏng lắp O-ring / top mount: gõ phím góc kêu "bong" + sóng vàng ở góc case; foam bớt vang',
+      'Foam đáy case (Shopii, bước lót tuỳ chọn): khoét lỗ trụ tray / DTB / trụ O-ring, lót xong tự sang bước',
+      'Case 1 mảnh O-ring / OG: trụ tròn đúc liền vách thay gờ, PCB khoét rãnh mép theo trụ',
+      'Case nhôm mỗi cỡ đủ anod + E-coat, 1 mảnh và 2 mảnh; thêm case 40% nhôm anod O-ring; bảng chọn case gộp 1 dòng nhôm, chọn bề mặt + số mảnh',
+      'Layout 40% thêm space 7u; bảng chọn case chọn được kiểu layout (space, backspace, hàng dưới...)',
+      'Lắp daughterboard: lỗ ren để trống, đặt DTB rồi siết 2 vít trên khay; vít DTB có hoạt cảnh tua vít',
+      'Dây JST lúc board còn dựng không xuyên qua DTB; tiếng mở thùng / dán băng keo không kêu lố sang bước sau',
+      'Free build: đứng dậy ngồi lại bàn trống được, bảng chọn case chỉ mở khi ngồi vào bàn; tab Dev có lại "Build thử" trong ván sự nghiệp, có lưu',
+      'Stab screw-in không đi với O-ring mount (đơn khách, chọn mount); dây O-ring 70A màu cam; bỏ nút "Bỏ qua lube" trong bảng lube',
+    ],
+  },
+  {
     version: '0.1.30',
     date: '2026-11-05',
     commits: ['f1f01aa'],

@@ -2,7 +2,13 @@ import { useEffect, useMemo } from 'react'
 import { CanvasTexture, DoubleSide, Path, SRGBColorSpace, Vector2 } from 'three'
 import { TRAY_HOLE, Y, stabHoles } from '@/data/steps'
 import type { Key, Point } from '@/types'
-import { boardOutline, outlinePlane, outlineSlab, pointInPolygon } from './boardOutline'
+import {
+  boardOutline,
+  notchShapes,
+  outlinePlane,
+  outlineSlab,
+  pointInPolygon,
+} from './boardOutline'
 
 interface PcbSurfaceProps {
   width: number
@@ -13,11 +19,14 @@ interface PcbSurfaceProps {
   screwHoles: Point[]
   /** lỗ vít tray mount xuyên PCB (khoét thật + vòng đồng) */
   mountHoles: Point[]
+  /** rãnh tròn khoét vào mép PCB chỗ trụ đỡ trong case lấn vào gầm board (O-ring / OG, `ringPosts`) */
+  notches?: { x: number; z: number; r: number }[]
   type: string
   hover: boolean
 }
 
 const SCALE = 96
+const NO_NOTCHES: { x: number; z: number; r: number }[] = []
 
 export function makePcbTexture(
   width: number,
@@ -157,6 +166,7 @@ export function PcbSurface({
   keys,
   screwHoles,
   mountHoles,
+  notches = NO_NOTCHES,
   type,
   hover,
 }: PcbSurfaceProps) {
@@ -168,7 +178,8 @@ export function PcbSurface({
   useEffect(() => () => texture.dispose(), [texture])
   // thân + 2 mặt PCB theo đường viền layout (Alice: 2 nửa xoay), texture phủ khung width × depth
   const { body, face } = useMemo(() => {
-    const { shapes } = boardOutline(keys, width, depth, 0, outline)
+    // khoét rãnh tròn ở mép chỗ trụ đỡ trong case (không thì cấn khi thả board vào case)
+    const shapes = notchShapes(boardOutline(keys, width, depth, 0, outline).shapes, notches)
     // Khoét 2 lỗ chân housing mỗi bên stab qua cả thân PCB và 2 mặt (lỗ nhỏ cũng là lỗ vít screw-in).
     // Lỗ phải nằm trọn trong viền PCB (không thì vỡ tam giác): lỗ sát mép (hàng dưới cùng) lùi dần về
     // phía lỗ còn lại của cùng housing tối đa 1.5mm, vẫn không lọt thì bỏ.
@@ -207,7 +218,7 @@ export function PcbSurface({
       body: outlineSlab(shapes, Y.pcbBot, Y.pcbTop),
       face: outlinePlane(shapes, width, depth),
     }
-  }, [keys, width, depth, outline, mountHoles])
+  }, [keys, width, depth, outline, mountHoles, notches])
 
   return (
     <group>

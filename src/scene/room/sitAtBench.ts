@@ -22,7 +22,9 @@ export function sitAtBench() {
       ),
       look: [0, 0, 0],
       then: () => {
-        useGame.setState({ walk: false })
+        const g = useGame.getState()
+        // Free build bàn trống: ngồi xuống là mở bảng chọn case
+        useGame.setState({ walk: false, ...(g.free && !g.benchBox ? { freePick: true } : {}) })
         useGame.getState().resetCam()
       },
     },

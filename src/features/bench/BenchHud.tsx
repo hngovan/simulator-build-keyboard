@@ -10,8 +10,11 @@ import {
   stepTitle,
   stepBit,
   stepProgress,
+  ruinedBy,
+  RUIN_HOLES,
 } from '@/data/steps'
-import { SCREW_FULL, SWITCHES, TOOLS, screwLevel } from '@/data/parts'
+import { CASES, SCREW_FULL, SWITCHES, TOOLS, screwLevel } from '@/data/parts'
+import { CANCEL_REP } from '@/store/shopSlice'
 import { SUPPLIES } from '@/data/supplies'
 import { FlipVertical2, Hand, PackageCheck, Undo2 } from 'lucide-react'
 import { Alert, BackButton, Button, HudCard, HudPanel, IconButton, useOpen } from '@/components/ui'
@@ -23,6 +26,7 @@ import { StepList } from './StepList'
 import {
   FeetPanel,
   FoamPanel,
+  CaseFoamPanel,
   InstallPanel,
   LubePanel,
   RingPanel,
@@ -206,6 +210,49 @@ function ConfirmDeliver({
               Làm tiếp
             </Button>
           )}
+        </div>
+      </HudCard>
+    </div>
+  )
+}
+
+/**
+ * Tuôn ren đủ `RUIN_HOLES` lỗ cùng loại (case / tray / top mount): bàn phím hỏng hẳn, không lắp tiếp được, khoá bàn build
+ * (không tắt được) tới khi đền khách (`forfeitOrder`); vẫn đứng dậy đi chỗ khác được
+ */
+function RuinDialog() {
+  const ruin = useGame((s) => (s.build ? ruinedBy(s.build.stripped) : null))
+  const order = useGame((s) => s.order)
+  const caseId = useGame((s) => s.inventory.case?.id)
+  if (!ruin || !order) return null
+  const refund = caseId ? (CASES[caseId]?.price ?? 0) : 0
+  return (
+    <div className="fixed inset-0 z-[30] grid animate-fade-in place-items-center bg-black/65 p-4">
+      <HudCard className="flex w-[min(460px,100%)] flex-col gap-3">
+        <h3 className="font-head text-xl font-extrabold text-[#ff8a8a]">
+          💀 Tuôn ren {ruin.holes} lỗ {ruin.name}
+        </h3>
+        <Alert title="Không lắp tiếp được nữa">
+          Lỗ ren toét không giữ được vít: từ {RUIN_HOLES} lỗ {ruin.name} trở lên là bàn phím hỏng
+          hẳn, không thể assem tiếp.
+        </Alert>
+        {order.free ? (
+          <div className="text-sm text-muted">
+            Free build: bỏ con này, chọn case khác build lại.
+          </div>
+        ) : (
+          <div className="text-sm">
+            Phải đền khách <b>{order.customer}</b> giá case{' '}
+            <b className="text-[#ff8a8a]">−{refund}k</b>, khách huỷ kèo{' '}
+            <b className="text-[#ff8a8a]">−{CANCEL_REP} uy tín</b> và để lại đánh giá 1★. Case hỏng
+            trả lại khách, đồ shop mua còn lại hết ngày cất vào kho chung.
+          </div>
+        )}
+        <div className="flex justify-end gap-2">
+          <Button onClick={() => useGame.getState().standUp('bench')}>Đứng dậy</Button>
+          <Button tone="red" onClick={() => useGame.getState().forfeitOrder()}>
+            {order.free ? 'Bỏ, chọn case khác' : `Đền khách ${refund}k`}
+          </Button>
         </div>
       </HudCard>
     </div>
@@ -488,6 +535,8 @@ export function BenchHud() {
       <FeetPanel />
     ) : step === 'foam' ? (
       <FoamPanel />
+    ) : step === 'caseFoam' ? (
+      <CaseFoamPanel />
     ) : step === 'ring' ? (
       <RingPanel />
     ) : step === 'test' ? (
@@ -520,6 +569,7 @@ export function BenchHud() {
       )}
       <Objective step={step} canFlip={canFlip} />
       <TestDone />
+      <RuinDialog />
     </>
   )
 }

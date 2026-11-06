@@ -5,6 +5,7 @@ import {
   FEET_IDS,
   ORING_IDS,
   FOAM_ID,
+  CASE_FOAM_ID,
   JOINTS_PER_KEY,
   LUBE_IDS,
   SOLDER_IDS,
@@ -220,8 +221,6 @@ export function LubePanel() {
   // save cũ: switch của đơn đang build bị bán mất cả loại (null) → coi như hết switch, không vỡ bảng
   const swType = useGame((s) => s.inventory.switch?.type)
   const pref = useGame((s) => s.order!.lubePref)
-  const finishOptional = useGame((s) => s.finishOptional)
-  const busy = useGame((s) => !!s.lubeAnim)
   const sw = swType ? SWITCHES[swType] : undefined
   const total = ctx.keys.length
   const opened = build.opened ?? build.lubed
@@ -230,15 +229,7 @@ export function LubePanel() {
   const springsIn = Math.max(build.springsIn ?? 0, closed)
   if (!sw)
     return (
-      <HudPanel
-        id="switchLube"
-        title="🧴 Lube switch"
-        footer={
-          <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
-            Bỏ qua lube →
-          </Button>
-        }
-      >
+      <HudPanel id="switchLube" title="🧴 Lube switch">
         <Alert title="Hết switch">
           Switch của đơn đã bán hết, mua thêm để lube
           {/* mở Shopii đúng mục switch (như nút mua dụng cụ ở ToolWarn) */}
@@ -249,25 +240,15 @@ export function LubePanel() {
       </HudPanel>
     )
   return (
-    <HudPanel
-      id="switchLube"
-      title="🧴 Lube switch"
-      // chỉ còn nút bỏ qua khi chưa mở con nào; đã mở thì đi tiếp bằng nút bước tiếp dưới đáy
-      footer={
-        !opened && (
-          <Button tone="green" className="w-full" onClick={finishOptional} disabled={busy}>
-            Bỏ qua lube →
-          </Button>
-        )
-      }
-    >
+    // không lube thì bấm "Bỏ qua" ở nút bước dưới đáy
+    <HudPanel id="switchLube" title="🧴 Lube switch">
       {/* thông tin switch lên đầu, các khung cảnh báo xếp liền nhau bên dưới */}
       <Muted>
         {sw.name} ({sw.feel}){sw.prelubed ? ' · đã lube sẵn từ nhà máy' : ' · chưa lube'}
       </Muted>
       {/* khách dặn không lube: đưa vào khung cảnh báo cho khỏi bỏ sót */}
       {pref === 'none' ? (
-        <Alert title={PREF_TEXT[pref]}>Lube vào sẽ bị trừ điểm, bấm "Bỏ qua lube" để đi tiếp</Alert>
+        <Alert title={PREF_TEXT[pref]}>Lube vào sẽ bị trừ điểm, bấm "Bỏ qua" để đi tiếp</Alert>
       ) : (
         <div className={cn('text-xs font-bold', pref === 'want' ? 'text-green' : 'text-muted')}>
           {PREF_TEXT[pref]}
@@ -602,7 +583,7 @@ export function FeetPanel() {
   )
 }
 
-/** Bảng bước cuốn O-ring: chọn độ cứng dây (trắng 30A / đen 50A / đỏ 70A, số còn trong kho), khách đòi thì nhắc */
+/** Bảng bước cuốn O-ring: chọn độ cứng dây (trắng 30A / đen 50A / cam 70A, số còn trong kho), khách đòi thì nhắc */
 export function RingPanel() {
   const build = useBuild()
   const supplies = useGame((s) => s.supplies)
@@ -668,6 +649,31 @@ export function FoamPanel() {
       </Muted>
       {!build.foam && have < 1 && (
         <Alert tone="yellow" title="Hết foam Poron">
+          <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
+            Mua foam ở Shopii
+          </Button>
+        </Alert>
+      )}
+    </HudPanel>
+  )
+}
+
+/** Bảng bước lót foam đáy case (tuỳ chọn): còn bao nhiêu tấm, thiếu thì mua ở Shopii */
+export function CaseFoamPanel() {
+  const build = useBuild()
+  const have = useGame((s) => s.supplies[CASE_FOAM_ID] ?? 0)
+  const openShop = useGame((s) => s.openShop)
+  return (
+    <HudPanel id="caseFoam" title="🧽 Foam lót đáy case">
+      <div className="text-xs">
+        {build.caseFoam ? 'Đã lót foam đáy case' : `Còn ${have} tấm foam đáy (1 tấm / bàn phím)`}
+      </div>
+      <Muted>
+        Tấm Poron đen nằm dưới đáy case, khoét sẵn lỗ trụ tray mount + chỗ daughterboard: bớt tiếng
+        rỗng, đỡ vang góc. Không cần thì bấm "Bỏ qua".
+      </Muted>
+      {!build.caseFoam && have < 1 && (
+        <Alert tone="yellow" title="Hết foam đáy case">
           <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
             Mua foam ở Shopii
           </Button>

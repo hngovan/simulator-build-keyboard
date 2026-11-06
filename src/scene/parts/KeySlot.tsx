@@ -1,11 +1,12 @@
 import type { ThreeEvent } from '@react-three/fiber'
 import { create } from 'zustand'
-import { useGame, useStep, currentSound } from '@/store'
+import { useGame, useStep } from '@/store'
 import { Y } from '@/data/steps'
 import { STABS, TOOLS } from '@/data/parts'
 import { SPELL_ASSEM, SPELL_KEYCAP, installTargets, spellBonus, spellRun } from '@/data/supplies'
 import type { Key } from '@/types'
-import { playClick, playKey } from '@/sound'
+import { playClick } from '@/sound'
+import { testKeySound } from '../common/keySound'
 import { Drop } from '../common/anim'
 import { useHover } from '../common/useHover'
 import { SwitchMesh } from '../models/Switch'
@@ -71,7 +72,7 @@ export function KeySlot({ k }: { k: Key }) {
     const s = useGame.getState()
     if (step === 'test') {
       e.stopPropagation()
-      if (s.press(k.id, true)) playKey(currentSound(s), true)
+      if (s.press(k.id, true)) testKeySound(k.id, true)
       return
     }
     if (!canAct) return
@@ -87,7 +88,7 @@ export function KeySlot({ k }: { k: Key }) {
     const s = useGame.getState()
     if (step === 'test' && s.pressed[k.id]) {
       s.press(k.id, false)
-      playKey(currentSound(s), false)
+      testKeySound(k.id, false)
     }
   }
 

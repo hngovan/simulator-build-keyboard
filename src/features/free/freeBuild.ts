@@ -1,36 +1,51 @@
 import { useGame } from '@/store'
-import { freshSession } from '@/store/shopSlice'
+import { freshSession, stashActive } from '@/store/shopSlice'
 import { LAYOUTS, getLayout } from '@/data/layouts'
 import {
   CASES,
-  KEYCAP_COLORS,
   KEYCAP_KITS,
   SOUND_WISH,
   SWITCHES,
   caseFits,
+  mountStabIssue,
   stabNeed,
   stabStock,
+  TOOLS,
   type StabCount,
 } from '@/data/parts'
+import { SUPPLIES } from '@/data/supplies'
+import { topUpSpells } from '@/features/apps/settings/devMoney'
 import { avatarSrc } from '@/data/avatars'
-import type { LayoutId, Order, SoundWish } from '@/types'
+import type { LayoutId, Order, SoundWish, ToolKind, Variant } from '@/types'
 
-// Free build: chọn case (+ màu, layout, mount, PCB, plate, stab) ở bảng `FreeBuildDialog` rồi vào bàn build luôn với đủ linh kiện,
-// không mua gì. Dụng cụ / vật tư đã bơm đủ lúc vào chế độ (`startFree`)
+// Free build: chọn case (+ màu, layout, mount, PCB, plate, stab, switch, keycap; feet / thiếc / O-ring = vật tư đang chọn) ở bảng `FreeBuildDialog` rồi vào bàn build luôn với đủ linh kiện,
+// không mua gì. Dụng cụ / vật tư đã bơm đủ lúc vào chế độ (`startFree`).
+// Dev (Cài đặt → Dev → "Build thử"): cùng bảng + đơn `order.free` nhưng ngay trong ván sự nghiệp, có lưu save (`devBuild`)
 
 export interface FreeBuildOpts {
   caseId: string
   color: string
   layout: LayoutId
+  /** kiểu layout (space / backspace / hàng dưới / shift phải); thiếu thì lấy kiểu đầu */
+  variant?: Variant
   mount: string
   pcb: string
   plate: string
   stab: string
+  switchType: string
+  keycapKit: string
+  keycapColor: string
 }
 
 /** layout lắp vừa case (case CAD / cắt sẵn chỉ hợp vài layout) */
 export const freeLayouts = (caseId: string) =>
   (Object.keys(LAYOUTS) as LayoutId[]).filter((l) => caseFits(CASES[caseId], l))
+
+/** bộ keycap lắp được layout (bỏ bộ ẩn) */
+export const freeKits = (layout: LayoutId) =>
+  Object.keys(KEYCAP_KITS).filter(
+    (id) => !KEYCAP_KITS[id].hidden && KEYCAP_KITS[id].layouts.includes(layout),
+  )
 
 const double = (c: StabCount): StabCount => ({
   short: c.short * 2,
@@ -41,19 +56,58 @@ const double = (c: StabCount): StabCount => ({
 /** switch dư mỗi đơn (thay / lube chết) */
 const SPARE_SWITCHES = 20
 
-/** Dựng đơn Free build đủ linh kiện theo lựa chọn, đặt thùng lên bàn rồi vào build */
+/**
+ * Build thử trong ván sự nghiệp (dev): mọi dụng cụ (trừ chứng chỉ) lên bậc cao nhất (bút / trạm hàn có cả 2), vật tư ≥ 999
+ * (ghi vào save), sách phép theo công tắc dev; dụng cụ không hao mòn khi build đơn `order.free` (`wearTool`)
+ */
+function devTopUp() {
+  const s = useGame.getState()
+  const tools = { ...s.tools }
+  for (const kind of Object.keys(TOOLS) as ToolKind[])
+    if (kind !== 'cert' && TOOLS[kind].length > 1) tools[kind] = TOOLS[kind].length - 1
+  const solderOwned = { ...s.solderOwned }
+  TOOLS.solder.forEach(
+    (t, lv) =>
+      !t.none && lv !== tools.solder && solderOwned[lv] === undefined && (solderOwned[lv] = 0),
+  )
+  const supplies = { ...s.supplies }
+  for (const id of Object.keys(SUPPLIES))
+    if (!SUPPLIES[id].spell) supplies[id] = Math.max(supplies[id] ?? 0, 999)
+  useGame.setState({ tools, solderOwned, supplies })
+  topUpSpells()
+}
+
+/**
+ * Dựng đơn Free build đủ linh kiện theo lựa chọn, đặt thùng lên bàn rồi vào build. Trong ván sự nghiệp (build thử dev): đơn đang
+ * làm cất vào `jobs` (thùng phải không nằm trên bàn), đơn build thử cũ thì bỏ, có lưu save
+ */
 export function startFreeBuild(o: FreeBuildOpts) {
   const s = useGame.getState()
-  if (!s.free || s.stabAnim || s.lubeAnim) return
+  if (s.stabAnim || s.lubeAnim) return
+  const issue = mountStabIssue(o.mount, o.stab)
+  if (issue) return s.toast(issue, 'bad')
+  // đơn build thử cũ chưa đóng gói đang trên bàn: thay luôn
+  const oldDev = !s.free && s.order?.free && !s.result ? s.order : null
+  // thùng đã đóng gói còn trên bàn / trên tay: đặt lên kệ giao hàng trước
+  if ((s.benchBox && s.benchBox !== oldDev?.id) || s.held)
+    return s.toast(
+      s.free || s.packed.some((p) => p.order.id === s.benchBox || p.order.id === s.held)
+        ? 'Đặt thùng đã đóng gói lên kệ giao hàng trước đã'
+        : 'Bàn build đang có thùng đơn: cầm thùng lên cất lại kệ cuối hành lang trước đã',
+      'bad',
+    )
+  if (!s.free) devTopUp()
   const variant = Object.fromEntries(
-    Object.entries(LAYOUTS[o.layout].variants).map(([k, opts]) => [k, opts[0]]),
+    Object.entries(LAYOUTS[o.layout].variants).map(([k, opts]) => {
+      const want = o.variant?.[k as keyof Variant]
+      return [k, want && opts.includes(want) ? want : opts[0]]
+    }),
   )
   const { keys } = getLayout(o.layout, variant)
-  const switchType = Object.keys(SWITCHES)[0]
-  const keycapKit = Object.keys(KEYCAP_KITS).find(
-    (id) => !KEYCAP_KITS[id].hidden && KEYCAP_KITS[id].layouts.includes(o.layout),
-  )!
-  const keycapColor = Object.keys(KEYCAP_COLORS)[0]
+  const { switchType, keycapColor } = o
+  const keycapKit = KEYCAP_KITS[o.keycapKit]?.layouts.includes(o.layout)
+    ? o.keycapKit
+    : freeKits(o.layout)[0]
   const order: Order = {
     id: `free${Date.now().toString(36)}`,
     free: true,
@@ -93,8 +147,12 @@ export function startFreeBuild(o: FreeBuildOpts) {
     },
     keycap: { kit: keycapKit, color: keycapColor },
   }
+  const boxes = { ...s.boxes }
+  if (oldDev) delete boxes[oldDev.id]
   useGame.setState({
-    jobs: [],
+    // Free build: không có đơn khác; ván sự nghiệp: cất đơn đang làm (đơn build thử cũ thì bỏ)
+    jobs: s.free ? [] : oldDev ? s.jobs : stashActive(s),
+    boxes,
     order,
     ...session,
     inventory,

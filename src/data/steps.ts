@@ -73,13 +73,17 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     title: 'Dán feet cao su',
     hint: 'Case đã lật úp: click từng hốc tròn dưới đáy để dán feet (mỗi hốc 1 cái, chọn feet đen / trắng ở bảng bên)',
   },
+  caseFoam: {
+    title: 'Lót foam đáy case (tuỳ chọn)',
+    hint: 'Click vào lòng case để lót tấm foam Poron đen xuống đáy (khoét sẵn lỗ trụ tray mount, chỗ daughterboard): bớt tiếng rỗng, đỡ vang góc. Không cần thì bấm "Bỏ qua"',
+  },
   coverOff: {
     title: 'Tháo tạ che DTB',
     hint: 'Tấm tạ đè lên chỗ lắp daughterboard: click từng ốc trên tạ để tháo, rồi click tấm tạ để nhấc ra',
   },
   dtb: {
     title: 'Lắp daughterboard',
-    hint: 'Click 2 vít M2 bắt sẵn trong lỗ ren sàn case để tháo ra, click hốc vách sau đặt daughterboard (cổng USB-C quay ra lỗ), nhấn giữ 2 lỗ vít canh lực siết lại, rồi click đầu dây cắm vào cổng JST trên DTB',
+    hint: 'Click hốc vách sau đặt daughterboard (cổng USB-C quay ra lỗ), nhấn giữ 2 lỗ vít canh lực siết 2 vít M2 trên khay vào lỗ ren sàn case, rồi click đầu dây cắm vào cổng JST trên DTB',
   },
   coverOn: {
     title: 'Lắp lại tạ',
@@ -152,6 +156,28 @@ const BRITTLE = ['pc', 'acrylic', 'mica']
 export const STRIP_TRIES = 3
 /** tuôn ren vít bắt vào case giòn: tỉ lệ nứt luôn case */
 export const CRACK_CHANCE = 0.35
+/** loại lỗ ren theo id vít: case (open-i = close-i cùng 1 lỗ ngàm case), top mount, tray mount, stab; còn lại (DTB, ốc tạ) = other */
+export function holeKind(id: string): 'case' | 'top' | 'tray' | 'stab' | 'other' {
+  const pre = id.split('-')[0]
+  if (pre === 'open' || pre === 'close') return 'case'
+  if (pre === 'top' || pre === 'tray' || pre === 'stab') return pre
+  return 'other'
+}
+/** tuôn ren từ chừng này lỗ trở lên trong cùng 1 loại (case / tray / top mount) thì hỏng hẳn: không lắp tiếp được, đền khách */
+export const RUIN_HOLES = 2
+const RUIN_NAME = { case: 'ren case', top: 'ren top mount', tray: 'ren tray mount' } as const
+/** đã tuôn ren đủ `RUIN_HOLES` lỗ cùng loại chưa (null = chưa), kèm số lỗ hỏng + tên loại lỗ */
+export function ruinedBy(stripped: Record<string, true> | undefined) {
+  const holes = { case: new Set<string>(), top: new Set<string>(), tray: new Set<string>() }
+  for (const id of Object.keys(stripped ?? {})) {
+    const k = holeKind(id)
+    if (k in holes) holes[k as keyof typeof holes].add(id.replace(/^(open|close)-/, 'case-'))
+  }
+  for (const kind of ['case', 'top', 'tray'] as const)
+    if (holes[kind].size >= RUIN_HOLES)
+      return { kind, holes: holes[kind].size, name: RUIN_NAME[kind] }
+  return null
+}
 /** case hỏng (nứt / tuôn ren vít case bị phát hiện): đền khách phần giá case */
 export const CASE_REFUND = 0.8
 /** case hỏng: trừ thêm uy tín */
@@ -180,7 +206,7 @@ export const BIT_LABELS: Record<ScrewBit, string> = {
   torx: 'Torx',
   flat: 'Dẹt',
 }
-export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'foam', 'switchLube', 'test']
+export const OPTIONAL_STEPS: StepId[] = ['stabMod', 'foam', 'caseFoam', 'switchLube', 'test']
 /** bước build thật (tính tiến độ / chấm điểm / hỏi lại khi giao sớm): bỏ bước đóng gói cuối */
 export const isBuildStep = (step: StepId) => step !== 'pack'
 /**
@@ -369,6 +395,8 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   const topMount = mount === 'top' && caseDef.pieces === 2
   // dán feet vào đáy case trước khi lắp board vào case
   steps.push('feet')
+  // foam đáy case: chỉ case dựng bằng code (case CAD lòng case có tạ / rãnh dây / bệ riêng, tấm phẳng không khớp)
+  if (!caseDef.model) steps.push('caseFoam')
   // daughterboard: bắt vào case dưới khi case còn trống, cắm dây vào PCB ngay trước lúc thả board
   const spot = dtbSpot(
     caseModelOf(caseDef, order.layout, order.variant),
@@ -1063,14 +1091,13 @@ export function stepProgress(
       return [b.ring ? 1 : 0, 1]
     case 'feet':
       return [count(b.feet ?? {}), ctx.feet.length]
+    case 'caseFoam':
+      return [b.caseFoam ? 1 : 0, 1]
     case 'dtb':
-      // tháo 2 vít bắt sẵn trong lỗ ren case → đặt DTB → siết lại 2 vít → cắm dây
+      // đặt DTB (lỗ ren trên sàn để trống, 2 vít M2 nằm sẵn trên khay) → siết 2 vít → cắm dây
       return [
-        (b.dtb?.placed ? DTB_MM.holes.length : count(b.dtb?.out ?? {})) +
-          (b.dtb?.placed ? 1 : 0) +
-          count(b.dtb?.screws ?? {}) +
-          (b.dtb?.plugged ? 1 : 0),
-        2 + 2 * DTB_MM.holes.length,
+        (b.dtb?.placed ? 1 : 0) + count(b.dtb?.screws ?? {}) + (b.dtb?.plugged ? 1 : 0),
+        2 + DTB_MM.holes.length,
       ]
     case 'coverOff':
       return [count(b.cover?.out ?? {}) + (b.cover?.off ? 1 : 0), coverScrews(ctx) + 1]
@@ -1096,6 +1123,7 @@ export const NO_FLIP_STEPS: StepId[] = [
   'unbox',
   'pack',
   'stabMod',
+  'caseFoam',
   'switchLube',
   'coverOff',
   'dtb',

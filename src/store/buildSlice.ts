@@ -16,8 +16,11 @@ import {
   isOptionalStep,
   stabUnits,
   stepProgress,
+  holeKind,
+  ruinedBy,
 } from '@/data/steps'
 import {
+  CASES,
   SCREW_FULL,
   STABS,
   SWITCHES,
@@ -56,12 +59,14 @@ import {
   type StabAnim,
   type StabModKind,
 } from '@/data/mods'
-import { FOAM_ID, GASKET_ID, SUPPLIES } from '@/data/supplies'
+import { CASE_FOAM_ID, FOAM_ID, GASKET_ID, SUPPLIES } from '@/data/supplies'
 import type { BuildContext, BuildState, ScrewBit, ScrewStep, StepId, ToolKind } from '@/types'
 import { deadKey, noPower, scoreDelivery } from './scoring'
 import type { SkillResult } from '@/data/skillCheck'
 import type { GameState } from '.'
-import { emptyInventory } from './shopSlice'
+import { CANCEL_REP, emptyInventory, stashActive } from './shopSlice'
+import { ruinReview } from '@/data/reviews'
+import { playCrack, playRuin, playStrip } from '@/sound'
 
 export type { StabModKind }
 
@@ -122,6 +127,8 @@ export interface BuildSlice {
   placePlate: () => void
   /** lót foam Poron lên PCB (bước tuỳ chọn `foam`), trừ 1 tấm */
   placeFoam: () => void
+  /** lót foam đáy case (bước `caseFoam`): trừ 1 tấm `CASE_FOAM_ID` */
+  placeCaseFoam: () => void
   modStab: (kind: StabModKind, unit?: number) => boolean
   /** tách switch bằng đồ mở: mỗi lần bậc thợ + phép mở con */
   openSwitch: () => boolean
@@ -162,8 +169,6 @@ export interface BuildSlice {
    * vít vẫn tháo ra được
    */
   slipBit: (id: string, what: string) => boolean
-  /** tháo vít M2 bắt sẵn trong lỗ ren case (trước khi đặt DTB) */
-  unscrewDtb: (i: number) => void
   placeDtb: () => void
   screwDtb: (i: number, result: SkillResult) => void
   plugDtb: () => void
@@ -176,6 +181,11 @@ export interface BuildSlice {
   placeTopCase: () => void
   press: (id: string, down: boolean) => boolean
   deliver: () => void
+  /**
+   * tuôn ren đủ `RUIN_HOLES` lỗ case / tray / top mount: đền khách giá case, khách huỷ kèo (`cancel: 'ruined'`, −`CANCEL_REP` uy tín,
+   * đánh giá 1★), case hỏng trả khách; Free build thì chỉ dọn bàn chọn case khác
+   */
+  forfeitOrder: () => void
 }
 
 export const newBuild = (): BuildState => ({
@@ -254,7 +264,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
   // Chỉ cho thao tác khi đang ở đúng bước; trả về state đã chắc chắn có build
   const at = (step: StepId) => {
     const s = get()
-    return s.build && s.ctx && s.step() === step
+    // tuôn ren hỏng hẳn: khoá mọi thao tác, chỉ còn đền khách (`forfeitOrder`)
+    return s.build && s.ctx && s.step() === step && !ruinedBy(s.build.stripped)
       ? (s as GameState & { build: BuildState; ctx: BuildContext })
       : null
   }
@@ -338,6 +349,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     const n = (s.build.slips?.[id] ?? 0) + 1
     if (n < STRIP_TRIES) {
       s.patchBuild({ ...patch, slips: { ...s.build.slips, [id]: n } })
+      playStrip(holeKind(id))
       const why = under
         ? 'Siết chưa tới, ren bị mòn'
         : `Trượt ren (${s.screwBit !== SCREW_BITS[step] ? 'sai đầu vít' : 'quá tay'})`
@@ -349,11 +361,23 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       CASE_SCREW_STEPS.includes(step) &&
       brittleCase(s.inventory.case?.id) &&
       Math.random() < CRACK_CHANCE
+    const stripped = { ...s.build.stripped, [id]: true as const }
     s.patchBuild({
       screws: { ...s.build.screws, [id]: SCREW_FULL },
-      stripped: { ...s.build.stripped, [id]: true },
+      stripped,
       ...(crack ? { cracked: true } : {}),
     })
+    // tuôn ren đủ RUIN_HOLES lỗ cùng loại (case / tray / top mount): hỏng hẳn, khoá bàn build chờ đền khách (RuinDialog)
+    const ruin = ruinedBy(stripped)
+    if (ruin && !ruinedBy(s.build.stripped)) {
+      playRuin(ruin.kind)
+      return s.toast(
+        `💀 Tuôn ren ${ruin.holes} lỗ ${ruin.name}: không lắp tiếp được nữa, phải đền khách!`,
+        'bad',
+      )
+    }
+    playStrip(holeKind(id), true)
+    if (crack) playCrack()
     if (crack) s.toast('💥 Vặn quá tay, nứt luôn case! Giao đi là phải đền khách', 'bad')
     else if (step === 'stabScrew')
       s.toast('🔩 Tuôn ren vít stab, stab hỏng! Có stab dư cùng cỡ thì bấm vít đỏ để thay', 'bad')
@@ -468,7 +492,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     // Bước tuỳ chọn (mod stab / lube switch) bấm là bỏ qua phần chưa làm
     nextStep: () => {
       const s = get()
-      if (!s.build || !s.ctx || s.stabAnim || s.lubeAnim) return
+      if (!s.build || !s.ctx || s.stabAnim || s.lubeAnim || ruinedBy(s.build.stripped)) return
       const step = s.ctx.steps[s.build.stepIdx]
       if (s.build.stepIdx >= s.ctx.steps.length - 1) return
       // đang ở bước cũ (đã quay lại, chưa làm gì mới): đi tiếp theo nhánh đã làm
@@ -500,6 +524,16 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (!s.useSupply(FOAM_ID, 1)) return
       commit(snap)
       get().patchBuild({ foam: true })
+    },
+    placeCaseFoam: () => {
+      const s = at('caseFoam')
+      if (!s || s.build.caseFoam) return
+      const snap = snapshot()
+      if (!s.useSupply(CASE_FOAM_ID, 1)) return
+      commit(snap)
+      // lót xong tự sang bước kế (lắp DTB...), không phải bấm "Bước tiếp theo"
+      const b = get().build!
+      set({ build: { ...b, caseFoam: true, stepIdx: b.stepIdx + 1 } })
     },
     // cuốn O-ring: trừ 1 vòng dây đang chọn (độ cứng quyết định độ nhún / tiếng), hoàn tác trả lại
     wrapRing: () => {
@@ -547,6 +581,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (
         !s.build ||
         !s.ctx ||
+        ruinedBy(s.build.stripped) ||
         !SCREW_STEPS[step] ||
         !s.ctx.screws[step].some((sc) => sc.id === id)
       )
@@ -569,6 +604,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       if (
         !s.build ||
         !s.ctx ||
+        ruinedBy(s.build.stripped) ||
         SCREW_STEPS[step] !== 'tighten' ||
         !s.ctx.screws[step].some((sc) => sc.id === id)
       )
@@ -951,8 +987,8 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     wearTool: (kind) => {
       const s = get()
       const tool = TOOLS[kind][s.tools[kind]]
-      // đơn build thử (dev): đồ vô hạn, không hao mòn
-      if (!tool.life || s.free) return
+      // Free build / đơn build thử (dev, `order.free`): đồ vô hạn, không hao mòn
+      if (!tool.life || s.free || s.order?.free) return
       const used = (s.wear[kind] ?? 0) + 1
       if (kind === 'solder') {
         const solderOwned = { ...s.solderOwned }
@@ -1183,12 +1219,14 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         const n = (s.build.slips?.[id] ?? 0) + 1
         if (n < STRIP_TRIES) {
           s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
+          playStrip('other')
           return s.toast(
             `⚠️ Trượt ren ốc tạ (${badBit ? 'sai đầu vít' : 'quá tay'}) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
             'bad',
           )
         }
         patch.stripped = { ...s.build.stripped, [id]: true }
+        playStrip('other', true)
         s.toast('🔩 Tuôn ren lỗ ốc tạ: ốc lỏng, tạ hơi lắc', 'bad')
       } else if (result === 'perfect') patch.perfect = { ...s.build.perfect, [id]: true }
       const build = get().build!
@@ -1205,6 +1243,7 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const n = (s.build.slips?.[id] ?? 0) + 1
       if (n < STRIP_TRIES) {
         s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
+        playStrip('other')
         s.toast(
           `⚠️ Trượt ren ${what} (sai đầu vít) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
           'bad',
@@ -1215,27 +1254,13 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         slips: { ...s.build.slips, [id]: n },
         stripped: { ...s.build.stripped, [id]: true },
       })
+      playStrip('other', true)
       s.toast(`🔩 Tuôn ren ${what} (sai đầu vít)`, 'bad')
       return true
-    },
-    unscrewDtb: (i) => {
-      const s = at('dtb')
-      const d = s?.build.dtb ?? {}
-      if (!s || d.placed || d.out?.[i] || i < 0 || i >= DTB_MM.holes.length) return
-      commit(snapshot())
-      wearScrew()
-      // sai đầu vít: trượt ren, chưa ra; tới STRIP_TRIES lần thì tuôn ren (vít vẫn ra được nhưng ghi hỏng)
-      if (s.screwBit !== stepBit('dtb') && !get().slipBit(`dtb-${i}`, 'vít DTB')) return
-      get().patchBuild({ dtb: { ...d, out: { ...d.out, [i]: true } } })
     },
     placeDtb: () => {
       const s = at('dtb')
       if (!s || s.build.dtb?.placed) return
-      if (Object.keys(s.build.dtb?.out ?? {}).length < DTB_MM.holes.length)
-        return s.toast(
-          'Tháo 2 vít M2 đang bắt sẵn trong lỗ ren case ra trước rồi mới đặt DTB',
-          'bad',
-        )
       commit(snapshot())
       s.patchBuild({ dtb: { ...s.build.dtb, placed: true } })
     },
@@ -1254,12 +1279,14 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         const n = (s.build.slips?.[id] ?? 0) + 1
         if (n < STRIP_TRIES) {
           s.patchBuild({ slips: { ...s.build.slips, [id]: n } })
+          playStrip('other')
           return s.toast(
             `⚠️ Trượt ren vít DTB (${badBit ? 'sai đầu vít' : 'quá tay'}) ${n}/${STRIP_TRIES}, tới ${STRIP_TRIES} lần là tuôn ren!`,
             'bad',
           )
         }
         s.patchBuild({ ...done, stripped: { ...s.build.stripped, [id]: true } })
+        playStrip('other', true)
         return s.toast('🔩 Tuôn ren lỗ vít DTB: vít lỏng, daughterboard hơi lắc', 'bad')
       }
       s.patchBuild({
@@ -1333,27 +1360,6 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
     deliver: () => {
       const s = get()
       if (!s.order || !s.build || !s.ctx) return
-      // Free build: không chấm điểm, dọn bàn, mở lại bảng chọn case để build con tiếp theo
-      if (s.order.free) {
-        set({
-          order: null,
-          result: null,
-          inventory: emptyInventory(),
-          provided: {},
-          spent: 0,
-          posts: [],
-          mount: null,
-          screen: 'bench',
-          build: null,
-          ctx: null,
-          benchBox: null,
-          history: [],
-          future: [],
-          supplyUsed: {},
-          freePick: true,
-        })
-        return s.toast('🎉 Build xong! Chọn case để build con tiếp theo', 'good')
-      }
       if (!s.inventory.switch)
         return s.toast('Đơn này đang thiếu switch, mua thêm rồi hãy giao', 'bad')
       const result = scoreDelivery({
@@ -1406,8 +1412,56 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         supplyUsed: {},
       })
       s.toast(
-        `📦 Đã đóng gói đơn ${s.order.customer}: bấm thùng trên bàn để cầm lên, đặt vào kệ giao hàng trong phòng`,
+        // Free build: đặt thùng lên kệ giao hàng = xác nhận build xong (`shipOrder`), rồi chọn case khác
+        s.order.free
+          ? '📦 Đóng gói xong: bấm thùng cầm lên, đặt vào kệ giao hàng trong phòng là build xong'
+          : `📦 Đã đóng gói đơn ${s.order.customer}: bấm thùng trên bàn để cầm lên, đặt vào kệ giao hàng trong phòng`,
         'good',
+      )
+      get().save()
+    },
+    forfeitOrder: () => {
+      const s = get()
+      const ruin = s.build && ruinedBy(s.build.stripped)
+      if (!s.order || !ruin) return
+      const order = s.order
+      const clear = {
+        order: null,
+        result: null,
+        inventory: emptyInventory(),
+        provided: {},
+        spent: 0,
+        posts: [],
+        mount: null,
+        build: null,
+        ctx: null,
+        history: [],
+        future: [],
+        supplyUsed: {},
+        pressed: {},
+      }
+      // Free build: không tiền / uy tín, dọn bàn rồi chọn case khác
+      if (order.free) {
+        const boxes = { ...s.boxes }
+        delete boxes[order.id]
+        set({ ...clear, boxes, benchBox: null, freePick: true })
+        return s.toast('Bỏ bàn phím tuôn ren, chọn case để build con khác', 'info')
+      }
+      const refund = s.inventory.case ? (CASES[s.inventory.case.id]?.price ?? 0) : 0
+      // case tuôn ren trả khách (không vào kho chung); đồ shop mua còn lại hết ngày cất kho chung như đơn bị huỷ
+      const jobs = stashActive(s).map((j) =>
+        j.order.id === order.id
+          ? {
+              order: { ...j.order, cancel: 'ruined' as const },
+              session: { ...j.session, inventory: { ...j.session.inventory, case: null } },
+            }
+          : j,
+      )
+      set({ ...clear, jobs, money: s.money - refund, rep: s.rep - CANCEL_REP })
+      s.addReviews([ruinReview(order, s.day, -CANCEL_REP)])
+      s.notify(
+        '💸 Đền khách',
+        `Tuôn ren ${ruin.holes} lỗ ${ruin.name}, phím của ${order.customer} không lắp tiếp được: đền ${refund}k (giá case), −${CANCEL_REP} uy tín`,
       )
       get().save()
     },

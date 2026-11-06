@@ -4,12 +4,15 @@ import { Clone, Html, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { create } from 'zustand'
 import { useGame, useBuild, useCtx, useStep } from '@/store'
-import { DTB_MM, USB_PORT_MM, Y, torqueSpec } from '@/data/steps'
+import { DTB_MM, SPIN_MS, USB_PORT_MM, Y, torqueSpec } from '@/data/steps'
 import { screwLevel } from '@/data/parts'
 import { SkillBar } from '@/components/game/SkillBar'
 import { SKILL_PORTAL } from '@/components/game/skillPortal'
 import { skillBusy, startSkill, useSkill } from '../common/skill'
-import { playClick, playScrew } from '@/sound'
+import { playClick, playDrill, playScrew } from '@/sound'
+import { markScrewSpin } from '../common/screwSpin'
+import { CurrentDriver } from './Screw'
+import { CASE_FOAM_T } from './Foam'
 import { useHover } from '../common/useHover'
 import { HINT_COLOR, HINT_HOVER } from '../common/hoverOutline'
 import { HintArrow } from '../stations/StationKit'
@@ -55,8 +58,6 @@ function shortScrew(src: THREE.Object3D) {
 }
 useGLTF.preload(DTB_GLB)
 
-/** khe chừa trên gờ đỡ trong lòng case cho DTB (u) */
-export const DTB_GAP = (DTB_MM.w + 2) * MM
 /** lỗ cổng USB-C khoét xuyên vách sau case (tâm ngang tâm cổng USB-C của DTB nằm trên sàn) */
 export const usbPort = (x: number): WallPort => ({
   x,
@@ -129,9 +130,6 @@ export const boardGroup: { current: THREE.Group | null } = { current: null }
 const POST_R = 2.2
 /** bạc ren đồng M2 chìm trong sàn / đầu trụ (mm): bán kính ngoài, lỗ ren */
 const INSERT = { r: 1.7, hole: 1 }
-/** vít tháo ra: trồi lên khỏi lỗ rồi biến mất (vào khay ốc `ScrewTray`) trong `FLY_MS` */
-const FLY_MS = 500
-const FLY_UP = 0.6
 const insertMat = new THREE.MeshStandardMaterial({
   color: '#c9a646',
   metalness: 0.85,
@@ -244,6 +242,14 @@ function wireGeometries(
     if (dist > 0.15) pts.push(under)
     // dựng lên: 1 điểm lưng chừng sát đường thẳng đứng cho khúc cua gọn
     pts.push(under.clone().setY((floor + ends[0].y) / 2))
+  } else if (ends[0].z < pts[1].z) {
+    // jack nằm sau đầu cắm DTB (board đang dựng / nhấc trên case): dây vòng lên trước rồi vắt qua phía trên mạch DTB,
+    // không chạy ngược ra sau xuyên qua mạch
+    const hump = pts[1].clone().add(new THREE.Vector3(0, 0.25, 0.12))
+    pts.push(hump)
+    const over = hump.clone().lerp(ends[0], 0.5)
+    over.y = Math.max(hump.y + 0.05, over.y)
+    pts.push(over)
   } else {
     // dây dài, chùng xuống giữa 2 đầu khi 2 đầu gần nhau (nằm dưới PCB)
     const mid = pts[1].clone().lerp(ends[0], 0.5)
@@ -327,8 +333,11 @@ function JstCable({ at }: { at: DtbSpot }) {
   )
   // miệng cổng JST trên PCB (hệ board): cổng treo ngược dưới mặt PCB, miệng quay ra sau
   const pcbLocal = useMemo(() => new THREE.Vector3(at.jack.x, PCB_MOUTH_Y, at.jack.z), [at])
-  // sàn case (hệ DTB): dây đã cắm nằm sát sàn, thấp hơn socket hotswap + chân switch dưới PCB nên không đè lên
-  const floorY = at.floor - at.y + WIRE_R * MM
+  // sàn case (hệ DTB): dây đã cắm nằm sát sàn, thấp hơn socket hotswap + chân switch dưới PCB nên không đè lên.
+  // Chỉ khi board đã thả vào case: board còn dựng / nhấc (bước jst, lắp lại tạ) thì dây vắt lên không
+  // lót foam đáy case: dây / đầu dây chờ cắm nằm trên mặt foam
+  const foamUp = b.caseFoam ? CASE_FOAM_T : 0
+  const floorY = at.floor - at.y + WIRE_R * MM + foamUp
   // hướng jack trên PCB (xoay quanh trục đứng của board, né socket / chân switch: `DtbSpot.jack`)
   const jackQ = useMemo(
     () => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), at.jack.ry),
@@ -357,16 +366,19 @@ function JstCable({ at }: { at: DtbSpot }) {
     last.current = key
     const tailB = end.clone().addScaledVector(back, (PLUG.l - PLUG.in) * MM)
     // chưa cắm: dây nằm dọc hết rãnh rồi dựng lên đầu cắm ở cuối rãnh
-    wireGeometries(tailA, tailB, back, via, plugged ? floorY : undefined).forEach((g, i) => {
-      const m = meshes.current[i]
-      if (!m) return g.dispose()
-      m.geometry.dispose()
-      m.geometry = g
-    })
+    wireGeometries(tailA, tailB, back, via, plugged && b.inCase ? floorY : undefined).forEach(
+      (g, i) => {
+        const m = meshes.current[i]
+        if (!m) return g.dispose()
+        m.geometry.dispose()
+        m.geometry = g
+      },
+    )
   })
+  // cắm / thả board vào case: đổi kiểu đi dây (vắt lên không / nằm sàn) thì dựng lại
   useEffect(() => {
     last.current = ''
-  }, [plugged])
+  }, [plugged, b.inCase])
   const active = step === 'jst' && !plugged
   const picked = useJstPick((p) => p.picked)
   // rời bước / cắm xong thì bỏ cầm
@@ -472,43 +484,133 @@ function Insert() {
   )
 }
 
-/** vít M2 bắt sẵn trong lỗ ren (đầu tựa mặt sàn / đầu trụ) */
-function HoleScrew({ at, model }: { at: [number, number, number]; model: THREE.Object3D }) {
-  return (
-    <group position={at} scale={MM}>
-      <Clone object={model} castShadow />
-    </group>
-  )
-}
-
-/** vít vừa tháo: trồi lên rồi ẩn (đã vào khay ốc) */
-function FlyScrew({ at, model }: { at: [number, number, number]; model: THREE.Object3D }) {
-  const ref = useRef<THREE.Group>(null)
-  const start = useRef(0)
-  useFrame(() => {
-    const g = ref.current
-    if (!g) return
-    start.current ||= performance.now()
-    const t = (performance.now() - start.current) / FLY_MS
-    g.position.y = at[1] + Math.min(1, t) * FLY_UP
-    g.visible = t < 1
-  })
-  return (
-    <group ref={ref} position={at} scale={MM}>
-      <Clone object={model} castShadow />
-    </group>
-  )
-}
+/** vít M2 DTB nằm chờ trên miệng lỗ lúc siết (u) */
+const DTB_RISE = 0.08
 
 /**
- * Daughterboard trong case dưới. Lỗ ren (bạc đồng) + 2 vít M2 bắt sẵn trong case từ đầu; bước `dtb`: tháo 2 vít ra (đặt cạnh lỗ)
- * → đặt mạch → siết lại 2 vít qua lỗ DTB → cắm dây JST; từ đó trở đi nằm cố định trong case
+ * 1 lỗ vít M2 của DTB (vít lấy từ khay ốc, lỗ ren trên sàn case để trống tới lúc đặt DTB), có hoạt cảnh tua vít như vít
+ * assem (`Screw.tsx`): rê chuột hiện tua vít trên đầu vít. `tighten` = DTB đã đặt, nhấn giữ chạy thanh lực (vít + tua vít quay trên miệng lỗ), đạt thì vít lún xuống;
+ * `done` = vít đã siết (vẽ tĩnh)
+ */
+function DtbHole({
+  i,
+  mode,
+  pos,
+  model,
+  hint,
+}: {
+  i: number
+  mode: 'tighten' | 'done'
+  /** vị trí vít đã bắt chặt (u, hệ DTB) */
+  pos: [number, number, number]
+  model: THREE.Object3D
+  hint: boolean
+}) {
+  const toolLv = useGame((s) => screwLevel(s.tools, s.screwPick))
+  const spinMs = toolLv ? SPIN_MS.electric : SPIN_MS.manual
+  const skill = useSkill((k) => (k.active?.id === `dtb-${i}` ? k.active : null))
+  const { hover, bind } = useHover(mode !== 'done')
+  // nhịp quay tua vít: mỗi thao tác + mỗi nhịp lúc giữ thanh lực
+  const [kick, setKick] = useState(0)
+  const [tick, setTick] = useState(0)
+  // hoạt cảnh siết xong (cục bộ): vít lún xuống theo nhịp tua vít
+  const [anim, setAnim] = useState<{ at: number } | null>(null)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  useEffect(() => {
+    if (!anim) return
+    markScrewSpin(spinMs)
+    timer.current = setTimeout(() => setAnim(null), spinMs)
+  }, [anim, spinMs])
+  const screw = useRef<THREE.Group>(null)
+  const tool = useRef<THREE.Group>(null)
+  useFrame((_, dt) => {
+    const now = performance.now()
+    if (skill) {
+      const n = Math.floor((now - skill.check.at) / spinMs)
+      if (n !== tick) setTick(n)
+    }
+    const k = anim ? Math.min(1, (now - anim.at) / spinMs) : 0
+    const rise = anim ? (1 - k) * DTB_RISE : mode === 'tighten' ? DTB_RISE : 0
+    const turning = !!skill || (anim !== null && k < 1)
+    if (screw.current) {
+      screw.current.position.y = pos[1] + rise
+      if (turning) screw.current.rotation.y -= dt * 8
+    }
+    tool.current?.position.setY(pos[1] + rise + 0.02)
+  })
+  const onDown = () => {
+    // nhấn giữ: thanh lực chạy như vặn vít assem, nhả chuột thì chấm
+    if (mode !== 'tighten' || skillBusy()) return
+    if (toolLv) playDrill()
+    else playScrew()
+    startSkill(`dtb-${i}`, torqueSpec(toolLv), (r) => {
+      if (r !== 'low') playClick(r === 'high' ? 300 : 1100)
+      useGame.getState().screwDtb(i, r)
+      // siết vào (kể cả tuôn ren): vít lún xuống theo nhịp tua vít rồi mới vẽ tĩnh
+      if (useGame.getState().build?.dtb?.screws?.[i]) {
+        setAnim({ at: performance.now() })
+        setKick((k) => k + 1)
+      }
+    })
+  }
+  // vít hiện: đã siết hoặc đang tra trên miệng lỗ lúc siết
+  const showScrew = mode === 'done' || !!skill
+  const showTool = (mode !== 'done' && hover) || !!skill || anim !== null
+  const ringY = pos[1] - 2 * MM + 0.004
+  return (
+    <>
+      {showScrew && (
+        <group ref={screw} position={pos} scale={MM}>
+          <Clone object={model} castShadow />
+        </group>
+      )}
+      {mode !== 'done' && (
+        <group
+          onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+            e.stopPropagation()
+            onDown()
+          }}
+          {...bind}
+        >
+          {/* vùng bấm vô hình quanh đầu vít (vòng xanh ẩn khi rê / đang vặn không làm mất hover) */}
+          <mesh position={[pos[0], pos[1] + DTB_RISE / 2, pos[2]]} visible={false}>
+            <cylinderGeometry args={[3 * MM, 3 * MM, DTB_RISE + 0.05, 12]} />
+          </mesh>
+          {!showTool && (
+            <mesh position={[pos[0], ringY, pos[2]]} rotation-x={-Math.PI / 2} raycast={noHit}>
+              <circleGeometry args={[2.4 * MM, 24]} />
+              {ghostMat(hint)}
+            </mesh>
+          )}
+        </group>
+      )}
+      {hint && !showTool && <HintArrow at={[pos[0], 0.12, pos[2]]} size={0.6} />}
+      {showTool && (
+        <group ref={tool} position={pos} rotation={[0.35, 0, -0.3]} scale={1.6}>
+          <CurrentDriver spinKey={kick * 1000 + tick} dir={-1} />
+        </group>
+      )}
+      {skill && (
+        <Html center position={[pos[0], 0.35, pos[2]]} zIndexRange={[6, 6]} portal={SKILL_PORTAL}>
+          <SkillBar check={skill.check} />
+        </Html>
+      )}
+    </>
+  )
+}
+
+/** raycast rỗng: vòng chỉ dẫn không nhận chuột */
+const noHit = () => {}
+
+/**
+ * Daughterboard trong case dưới. Lỗ ren (bạc đồng) trên sàn case để trống, 2 vít M2 nằm sẵn trên khay ốc; bước `dtb`: đặt mạch
+ * → siết 2 vít qua lỗ DTB → cắm dây JST; từ đó trở đi nằm cố định trong case
  */
 export function Daughterboard({ at }: { at: DtbSpot }) {
   const step = useStep()
   const d = useBuild().dtb ?? {}
-  const { unscrewDtb, placeDtb, screwDtb, plugDtb } = useGame.getState()
-  const toolLv = useGame((s) => screwLevel(s.tools, s.screwPick))
+  const { placeDtb, plugDtb } = useGame.getState()
   // thanh lực đang chạy ở lỗ vít DTB nào
   const skill = useSkill((k) => (k.active?.id.startsWith('dtb-') ? k.active : null))
   const active = step === 'dtb'
@@ -520,17 +622,6 @@ export function Daughterboard({ at }: { at: DtbSpot }) {
   const screwModel = useMemo(() => shortScrew(screwSrc), [screwSrc])
   // kê trụ: mặt dưới mạch cao hơn sàn (case CAD lỗ USB nằm cao)
   const post = at.y - at.floor
-  const out = d.out ?? {}
-  // vít chưa tháo khỏi lỗ ren (đầu tựa mặt sàn / đầu trụ); đã tháo mà chưa siết lại thì nằm cạnh, phía trước DTB
-  const inHole = (i: number): [number, number, number] => [
-    DTB_MM.holes[i][0] * MM,
-    2 * MM,
-    DTB_MM.holes[i][1] * MM,
-  ]
-  // vít đã tháo lúc vào bàn (tải lại): nằm trong khay rồi, không bay lại
-  const [outAtMount] = useState(() => new Set(Object.keys(out).map(Number)))
-  const nextOut = !d.placed ? DTB_MM.holes.findIndex((_, i) => !out[i]) : -1
-  const allOut = nextOut < 0
   return (
     <group position={[at.x, at.y, at.z]} rotation-x={at.tilt}>
       {post > 0.01 &&
@@ -547,43 +638,9 @@ export function Daughterboard({ at }: { at: DtbSpot }) {
             <Insert />
           </group>
         ))}
-      {/* vít M2: bắt sẵn trong lỗ ren (bước DTB bấm để tháo) → tháo ra bay vào khay ốc → siết lại thì vẽ ở dưới (qua lỗ DTB) */}
-      {DTB_MM.holes.map((_, i) =>
-        screws[i] ? null : !out[i] && !d.placed ? (
-          active ? (
-            <Target
-              key={i}
-              onPick={() => {
-                unscrewDtb(i)
-                playScrew()
-              }}
-            >
-              {(hover) => (
-                <>
-                  <HoleScrew at={inHole(i)} model={screwModel} />
-                  <mesh position={inHole(i)} rotation-x={-Math.PI / 2}>
-                    <circleGeometry args={[2.4 * MM, 24]} />
-                    {ghostMat(hover || i === nextOut)}
-                  </mesh>
-                </>
-              )}
-            </Target>
-          ) : (
-            <HoleScrew key={i} at={inHole(i)} model={screwModel} />
-          )
-        ) : (
-          active &&
-          !d.placed &&
-          !outAtMount.has(i) && <FlyScrew key={i} at={inHole(i)} model={screwModel} />
-        ),
-      )}
-      {active && !d.placed && nextOut >= 0 && (
-        <HintArrow at={[inHole(nextOut)[0], 0.12, inHole(nextOut)[2]]} size={0.6} />
-      )}
       {d.placed ? (
         <DtbModel />
       ) : (
-        allOut &&
         active && (
           <>
             <Target
@@ -604,56 +661,17 @@ export function Daughterboard({ at }: { at: DtbSpot }) {
       )}
       {d.placed &&
         DTB_MM.holes.map(([hx, hz], i) =>
-          screws[i] ? (
-            <group key={i} position={[hx * MM, headY, hz * MM]} scale={MM}>
-              <Clone object={screwModel} castShadow />
-            </group>
-          ) : (
-            active && (
-              <Target
-                key={i}
-                onPick={() => {
-                  // nhấn giữ: thanh lực chạy như vặn vít assem, nhả chuột thì chấm
-                  if (skillBusy()) return
-                  startSkill(`dtb-${i}`, torqueSpec(toolLv), (r) => {
-                    if (r !== 'low') playClick(r === 'high' ? 300 : 1100)
-                    screwDtb(i, r)
-                  })
-                }}
-              >
-                {(hover) => (
-                  <mesh
-                    position={[hx * MM, DTB_MM.t * MM + 0.004, hz * MM]}
-                    rotation-x={-Math.PI / 2}
-                  >
-                    <circleGeometry args={[2.4 * MM, 24]} />
-                    {ghostMat(hover || i === nextHole)}
-                  </mesh>
-                )}
-              </Target>
-            )
-          ),
+          screws[i] || active ? (
+            <DtbHole
+              key={i}
+              i={i}
+              mode={screws[i] ? 'done' : 'tighten'}
+              pos={[hx * MM, headY, hz * MM]}
+              model={screwModel}
+              hint={i === nextHole && !skill}
+            />
+          ) : null,
         )}
-      {skill && (
-        <Html
-          center
-          position={[
-            DTB_MM.holes[Number(skill.id.slice(4))][0] * MM,
-            0.35,
-            DTB_MM.holes[Number(skill.id.slice(4))][1] * MM,
-          ]}
-          zIndexRange={[6, 6]}
-          portal={SKILL_PORTAL}
-        >
-          <SkillBar check={skill.check} />
-        </Html>
-      )}
-      {active && nextHole >= 0 && !skill && (
-        <HintArrow
-          at={[DTB_MM.holes[nextHole][0] * MM, 0.12, DTB_MM.holes[nextHole][1] * MM]}
-          size={0.6}
-        />
-      )}
       {/* bắt đủ vít: đầu dây JST chờ cắm trước miệng cổng */}
       {active && d.placed && nextHole < 0 && !d.plugged && (
         <>

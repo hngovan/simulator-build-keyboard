@@ -167,10 +167,13 @@ export interface SaveData extends Profile {
 // 8: thêm bước lắp daughterboard (`dtb`) + cắm dây JST (`jst`) → dời stepIdx theo tên bước, đã qua thì coi như đã lắp (addDtbSteps)
 // 9: case dây JST luồn qua tạ (`CaseDef.jstUp`, Duality): đổi thứ tự bước (case trên bắt vào plate trước, lắp tạ trước khi cắm
 //    dây) → tìm lại bước đang làm theo tên (reorderJstUp)
-const SAVE_REV = 9
+// 10: thêm bước tuỳ chọn lót foam đáy case (`caseFoam`, sau `feet`) → tìm lại bước đang làm theo tên (addCaseFoamStep)
+const SAVE_REV = 10
 
+/** danh sách bước của bản lưu trước rev 10 (chưa có bước foam đáy case): các bước nâng cấp cũ tính trên danh sách này */
+const noCaseFoam = (steps: StepId[]): StepId[] => steps.filter((s) => s !== 'caseFoam')
 /** danh sách bước của bản lưu trước rev 8 (chưa có bước daughterboard) */
-const noDtb = (steps: StepId[]) => steps.filter((s) => s !== 'dtb' && s !== 'jst')
+const noDtb = (steps: StepId[]) => noCaseFoam(steps).filter((s) => s !== 'dtb' && s !== 'jst')
 
 /**
  * Build làm dở từ bản cũ (chưa có bước `feet`): đã tới / qua chỗ chèn bước thì dời stepIdx lên 1 và coi như
@@ -237,7 +240,7 @@ function addDtbSteps<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' 
 ): S {
   const b = sess.build
   if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
-  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  const steps = noCaseFoam(buildContext(order, sess.inventory, sess.mount).steps)
   if (!steps.includes('dtb')) return sess
   const cur = noDtb(steps)[b.stepIdx]
   const stepIdx = steps.indexOf(cur)
@@ -265,7 +268,7 @@ function reorderJstUp<S extends Pick<JobSession, 'inventory' | 'mount' | 'build'
   const b = sess.build
   if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
   const ctx = buildContext(order, sess.inventory, sess.mount)
-  const steps = ctx.steps
+  const steps = noCaseFoam(ctx.steps)
   if (!coverBeforeJst(steps)) return sess
   const moved: StepId[] = ['topCase', 'topScrew', 'coverOff', 'dtb', 'coverOn', 'jst']
   const rest = steps.filter((s) => !moved.includes(s))
@@ -288,6 +291,20 @@ function reorderJstUp<S extends Pick<JobSession, 'inventory' | 'mount' | 'build'
     return i < stepIdx && d < t
   })
   if (todo >= 0) stepIdx = steps.indexOf(top[todo])
+  if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
+  return { ...sess, build: { ...b, stepIdx }, history: [] }
+}
+
+/** Build làm dở từ bản cũ (chưa có bước `caseFoam`): tìm lại đúng bước đang làm trong danh sách mới */
+function addCaseFoamStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
+  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  if (!steps.includes('caseFoam')) return sess
+  const stepIdx = steps.indexOf(noCaseFoam(steps)[b.stepIdx])
   if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
   return { ...sess, build: { ...b, stepIdx }, history: [] }
 }
@@ -568,6 +585,15 @@ export function loadSave(): SaveData | null {
         jobs: session.jobs?.map((j) => ({ ...j, session: reorderJstUp(j.order, j.session) })),
         packed: session.packed?.map((p) =>
           p.session ? { ...p, session: reorderJstUp(p.order, p.session) } : p,
+        ),
+      }
+    }
+    if ((save.rev ?? 0) < 10 && session) {
+      session = {
+        ...addCaseFoamStep(session.order, { ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: addCaseFoamStep(j.order, j.session) })),
+        packed: session.packed?.map((p) =>
+          p.session ? { ...p, session: addCaseFoamStep(p.order, p.session) } : p,
         ),
       }
     }

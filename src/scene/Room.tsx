@@ -580,7 +580,7 @@ function ShelfDiploma(props: JSX.IntrinsicElements['group']) {
 }
 
 /** bàn build đang thế nào (khi đi lại trỏ vào bàn): quyết định viền sáng, chữ gợi ý, bấm trái / phải làm gì */
-type BenchMode = 'empty' | 'place' | 'heldPacked' | 'busy' | 'sit' | 'closed' | 'packed'
+type BenchMode = 'empty' | 'place' | 'heldPacked' | 'busy' | 'sit' | 'closed' | 'packed' | 'pick'
 function benchMode(s: ReturnType<typeof useGame.getState>): BenchMode {
   if (s.benchBox) {
     if (s.held) return 'busy'
@@ -589,7 +589,8 @@ function benchMode(s: ReturnType<typeof useGame.getState>): BenchMode {
     const opened = s.order?.id === s.benchBox && !!s.build?.unboxed
     return opened ? 'sit' : 'closed'
   }
-  if (!s.held) return 'empty'
+  // Free build không có thùng ở kệ: bàn trống vẫn ngồi vào được (chọn case ở bảng Free build)
+  if (!s.held) return s.free ? 'pick' : 'empty'
   return isPackedBox(s, s.held) ? 'heldPacked' : 'place'
 }
 /** chữ gợi ý theo trạng thái bàn: [chuột trái, dòng chữ không bấm được] */
@@ -599,6 +600,7 @@ const BENCH_HINT: Record<BenchMode, [string | null, string | null]> = {
   heldPacked: [null, 'Thùng đã đóng gói: đặt lên kệ giao hàng trong phòng'],
   busy: [null, 'Bàn build đang có thùng khác: cất thùng đang cầm lại kệ cuối hành lang trước'],
   sit: ['để vào bàn build', null],
+  pick: ['để vào bàn build chọn case', null],
   closed: ['để vào bàn build', null],
   packed: ['để cầm thùng đã đóng gói lên', null],
 }

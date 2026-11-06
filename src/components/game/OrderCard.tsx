@@ -86,7 +86,7 @@ export function OrderCard({
   const [open, setOpen] = useState(defaultOpen)
   const { order, kind, session } = c
   const active = kind === 'active'
-  const cancelled = order.cancel === 'sold'
+  const cancelled = !!order.cancel
   const parts = partCount(c)
   const mount = session?.mount ?? order.mount
   const sub = [
@@ -130,7 +130,9 @@ export function OrderCard({
           </div>
           {cancelled ? (
             <span className="truncate text-xs font-bold text-red">
-              Khách huỷ kèo vì phát hiện bạn bán đồ của khách
+              {order.cancel === 'ruined'
+                ? 'Tuôn ren lỗ ốc không lắp tiếp được, đã đền khách'
+                : 'Khách huỷ kèo vì phát hiện bạn bán đồ của khách'}
             </span>
           ) : open ? (
             <span className="truncate text-xs font-bold text-muted">{sub}</span>

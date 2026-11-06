@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type * as THREE from 'three'
 import { useGame, useBuild, useCtx } from '@/store'
 import { SCREW_FULL, screwLevel } from '@/data/parts'
-import { Y, caseScrewShaft } from '@/data/steps'
+import { DTB_MM, Y, caseScrewShaft } from '@/data/steps'
 import { playClick } from '@/sound'
 import { Clickable } from '../stations/StationKit'
 import { bowlY, createScrewTray } from '../models/screwTrayModel'
@@ -80,9 +80,10 @@ export function ScrewTray() {
   const coverOut = Object.keys(b.cover?.out ?? {}).length
   const coverBack = Object.keys(b.cover?.tight ?? {}).length
   const coverN = Math.max(0, coverOut - coverBack)
-  // vít M2 bắt sẵn trong lỗ ren DTB đã tháo (đặt DTB rồi coi như tháo hết) mà chưa siết lại qua lỗ DTB
-  const dtbOut = b.dtb?.placed ? (ctx.dtb ? 2 : 0) : Object.keys(b.dtb?.out ?? {}).length
-  const dtbN = Math.max(0, dtbOut - Object.keys(b.dtb?.screws ?? {}).length)
+  // 2 vít M2 bắt DTB: nằm sẵn trên khay (lỗ ren sàn case để trống) tới khi siết qua lỗ DTB
+  const dtbN = ctx.dtb
+    ? Math.max(0, DTB_MM.holes.length - Object.keys(b.dtb?.screws ?? {}).length)
+    : 0
   const total = n + trayLeft + topLeft + stabLeft + coverN + dtbN
   // thứ tự ốc trong khay: case tháo ra → tray → top → stab → ốc tạ → vít DTB
   const kindOf = (i: number) =>

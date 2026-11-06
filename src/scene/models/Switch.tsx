@@ -20,8 +20,19 @@ export const SWITCH_CAD = {
 }
 
 // Màu housing [trên, dưới, độ trong housing trên, kim tuyến]
-// kim tuyến: true = chỉ housing trên; 'full' = cả housing dưới cũng trong suốt (cùng độ trong) + kim tuyến
-const HOUSING: Record<string, [string, string, number, (true | 'full')?]> = {
+// kim tuyến: true = chỉ housing trên; 'full' = cả housing dưới cũng trong suốt (cùng độ trong) + kim tuyến;
+// 'clear' = cả housing dưới cũng trong suốt, không kim tuyến
+const HOUSING: Record<string, [string, string, number, (true | 'full' | 'clear')?]> = {
+  // trên PC trong, dưới trắng đục (stem box xanh navy)
+  kailhBoxNavy: ['#eef3f6', '#f4f4f2', 0.35],
+  // trên đen khói trong, dưới đen
+  gateronBlackInk: ['#1a1a1e', '#1a1a1e', 0.6],
+  // toàn thân kem đục (cả stem)
+  nkCream: ['#ecdfc0', '#ecdfc0', 1],
+  // housing full xanh Tiffany trong, stem Tiffany đục
+  zealTealios: ['#3fd0c0', '#3fd0c0', 0.45, 'clear'],
+  // housing kem đục, stem cam nhạt
+  holyPanda: ['#efe3c8', '#efe3c8', 1],
   cherryBlack: ['#2a2a2e', '#2a2a2e', 1],
   cherryBrown: ['#2a2a2e', '#2a2a2e', 1],
   cherryBlue: ['#2a2a2e', '#2a2a2e', 1],
@@ -128,13 +139,13 @@ export function switchMaterials(type: string): SwitchMats {
         opacity: op,
         clearcoat: 0.4,
       })
-      if (glitter) addGlitter(m)
+      if (glitter && glitter !== 'clear') addGlitter(m)
       return m
     }
     const topMat = clearMat(top)
     // 'full': housing dưới cũng trong suốt + kim tuyến như housing trên
     const bottomMat =
-      glitter === 'full'
+      glitter === 'full' || glitter === 'clear'
         ? clearMat(bottom)
         : new THREE.MeshStandardMaterial({ color: bottom, roughness: 0.5 })
     matCache.set(type, {
@@ -165,6 +176,20 @@ const legGeo = new THREE.BoxGeometry(1.1, body.bottom - legs.bottom, 0.8).transl
   0,
 )
 const postGeo = new THREE.CylinderGeometry(1.4, 1.4, 3, 16).translate(0, body.bottom - 1.5, 0)
+/** stem box Kailh (mm): khung vuông bao quanh đầu chữ thập, mép trên thấp hơn đỉnh chữ thập chút */
+const BOX_STEM = { outer: 5.6, wall: 0.55, bottom: 6.1, top: 9.6 }
+const boxStemGeos = (() => {
+  const { outer, wall, bottom, top } = BOX_STEM
+  const h = top - bottom
+  const y = (top + bottom) / 2
+  const off = (outer - wall) / 2
+  return [
+    new THREE.BoxGeometry(outer, h, wall).translate(0, y, off),
+    new THREE.BoxGeometry(outer, h, wall).translate(0, y, -off),
+    new THREE.BoxGeometry(wall, h, outer - 2 * wall).translate(off, y, 0),
+    new THREE.BoxGeometry(wall, h, outer - 2 * wall).translate(-off, y, 0),
+  ]
+})()
 
 /** Housing trên (mm) */
 export function SwitchTop({ type }: { type: string }) {
@@ -198,6 +223,8 @@ export function SwitchStem({ type, lubed = false }: { type: string; lubed?: bool
         <mesh key={x} geometry={legGeo} material={mat} position={[x, 0, legs.z]} />
       ))}
       <mesh geometry={postGeo} material={mat} />
+      {SWITCHES[type]?.box &&
+        boxStemGeos.map((g, i) => <mesh key={i} geometry={g} material={mat} castShadow />)}
     </group>
   )
 }

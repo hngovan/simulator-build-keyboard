@@ -268,7 +268,7 @@ export function DevTab() {
   return (
     <Section
       title="Dev"
-      info="Chỉ có khi dev: tiền vô hạn (tắt thì trả lại tiền cũ), sách phép vô hạn (tắt = làm từng con, trả lại lượt cũ), Shopii mở khoá mọi món, thông số hiệu năng (kéo khung sang góc khác), xem thử màn thua game"
+      info="Chỉ có khi dev: tiền vô hạn (tắt thì trả lại tiền cũ), sách phép vô hạn (tắt = làm từng con, trả lại lượt cũ), Shopii mở khoá mọi món, build thử mọi case ngay trong ván (có lưu), thông số hiệu năng (kéo khung sang góc khác), xem thử màn thua game"
     >
       <Row>
         <span className="flex-1 font-bold">Tiền vô hạn</span>
@@ -285,6 +285,17 @@ export function DevTab() {
       <Row>
         <span className="flex-1 font-bold">Hiện FPS, CPU, GPU, RAM</span>
         <Toggle checked={perf} onChange={setPerfHud} label="Hiện thông số hiệu năng" />
+      </Row>
+      <Row>
+        <span className="flex-1 font-bold">Build thử (chọn case, đủ linh kiện, có lưu)</span>
+        <Button
+          size="sm"
+          tone="green"
+          title="Mở bảng chọn case như Free build; đơn đang làm được cất lại, tiến độ build thử lưu vào save"
+          onClick={() => useGame.setState({ freePick: true })}
+        >
+          Chọn case
+        </Button>
       </Row>
       <Row>
         <span className="flex-1 font-bold">Xem thử màn thua game</span>

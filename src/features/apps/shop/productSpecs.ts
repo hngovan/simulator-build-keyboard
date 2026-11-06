@@ -86,6 +86,7 @@ export function productSpecs(p: Product, o: ProductOption): SpecRow[] {
         ['Số mảnh', def.pieces === 2 ? '2 mảnh (trên + dưới)' : '1 mảnh'],
         ['Tương thích PCB / plate', layoutNames(p) ?? def.ff],
         ['Kiểu lắp', def.mounts.map((m) => MOUNTS[m].name).join(', ')],
+        ...(def.thinBezel ? [['Viền', 'Mỏng: O-ring / top mount dễ vang góc'] as SpecRow] : []),
       ]
     }
     case 'pcb': {

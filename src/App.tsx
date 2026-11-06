@@ -43,8 +43,9 @@ export default function App() {
   const loading = useSceneLoading((s) => !s.settled) && (screen === 'pc' || screen === 'bench')
   // fast bid ở Hội Phím Cơ: bot ghé bid / bình luận, hết giờ thì chốt bán (kể cả khi không mở tab chợ)
   const hasBid = useGame((s) => s.listings.some((l) => l.bid))
-  // Free build: bảng chọn case (lúc vào chế độ / build xong / bấm "Chọn case" ở bàn trống), chờ phòng tải xong mới hiện
-  const freePick = useGame((s) => s.freePick) && !loading
+  // Free build: bảng chọn case (lúc vào chế độ / ngồi vào bàn trống / bấm "Chọn case" ở bàn trống), chỉ khi đang ngồi ở bàn
+  // build (đi lại trong phòng thì ẩn), chờ phòng tải xong mới hiện
+  const freePick = useGame((s) => s.freePick && !s.walk) && !loading
   useEffect(() => {
     if (!hasBid) return
     const t = setInterval(() => {

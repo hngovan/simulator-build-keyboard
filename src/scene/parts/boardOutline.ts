@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import polygonClipping, { type MultiPolygon, type Polygon } from 'polygon-clipping'
 import type { Key } from '@/types'
 
 // Đường viền PCB / plate theo layout. Layout thường: 1 hình chữ nhật width × depth (như trước).
@@ -126,4 +127,35 @@ export function outlineSlab(shapes: THREE.Shape[], y0: number, y1: number) {
   return new THREE.ExtrudeGeometry(shapes, { depth: y1 - y0, bevelEnabled: false })
     .rotateX(-Math.PI / 2)
     .translate(0, y0, 0)
+}
+
+/**
+ * Khoét rãnh tròn vào mép đường viền (trụ đỡ trong case lấn vào gầm mép board): trừ các hình tròn `notches` (u, toạ độ cảnh x, z)
+ * khỏi các mảnh viền; không có rãnh nào thì trả lại nguyên `shapes`
+ */
+export function notchShapes(shapes: THREE.Shape[], notches: { x: number; z: number; r: number }[]) {
+  if (!notches.length) return shapes
+  const ring = (pts: P[]): P[] => [...pts, pts[0]]
+  const circles = notches.map(({ x, z, r }) => [
+    ring(
+      Array.from({ length: 24 }, (_, i): P => {
+        const a = (i / 24) * Math.PI * 2
+        return [x + Math.cos(a) * r, -z + Math.sin(a) * r]
+      }),
+    ),
+  ])
+  const polys = shapes.map((sh) => {
+    const { shape, holes } = sh.extractPoints(24)
+    return [
+      ring(shape.map((v): P => [v.x, v.y])),
+      ...holes.map((h) => ring(h.map((v): P => [v.x, v.y]))),
+    ]
+  })
+  const cut = polygonClipping.difference(polys as MultiPolygon, ...(circles as Polygon[]))
+  return cut.map(([outer, ...inner]) => {
+    const shape = new THREE.Shape(outer.slice(0, -1).map(([x, y]) => new THREE.Vector2(x, y)))
+    for (const h of inner)
+      shape.holes.push(new THREE.Path(h.slice(0, -1).map(([x, y]) => new THREE.Vector2(x, y))))
+    return shape
+  })
 }

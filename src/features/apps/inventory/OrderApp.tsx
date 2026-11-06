@@ -29,6 +29,7 @@ import {
   stabText,
   switchOk,
   switchWant,
+  mountStabIssue,
 } from '@/data/parts'
 import { Badge, Button, OptionSelect, StepDot, TabChip, Toggle } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
@@ -231,7 +232,11 @@ function OrderDetail({ c }: { c: OrderEntry }) {
               value={Math.max(0, mounts.indexOf(mount ?? ''))}
               options={mounts.map((m) => ({
                 label: MOUNTS[m].name,
-                note: order.mount === m ? 'khách cần' : undefined,
+                note: mountStabIssue(m, inventory.stab?.type)
+                  ? 'cấn stab screw-in'
+                  : order.mount === m
+                    ? 'khách cần'
+                    : undefined,
               }))}
               onChange={(i) => s.setMount(mounts[i])}
             />

@@ -9,6 +9,7 @@ import {
   CATS,
   PLATELESS,
   PLATELESS_MOUNTS,
+  mountStabIssue,
   SWITCHES,
   TOOLS,
   switchOk,
@@ -55,7 +56,7 @@ import type {
 } from '@/types'
 import type { GameState } from '.'
 import { onBench } from './carrySlice'
-import { freeSlot } from '@/data/boxes'
+import { SHIP_SLOTS, freeSlot } from '@/data/boxes'
 import { newBuild } from './buildSlice'
 import {
   DECLINE_FREE,
@@ -234,6 +235,8 @@ const firstMount = (mounts: string[], inv: Inventory, want?: string | null) =>
   // khách đòi mount (vd O-ring) mà case làm được thì chọn luôn mount đó
   (want && mounts.includes(want) && want) ||
   (isPlateless(inv.plate) && mounts.find((m) => PLATELESS_MOUNTS.includes(m))) ||
+  // stab screw-in thì bỏ qua O-ring mount
+  mounts.find((m) => !mountStabIssue(m, inv.stab?.type)) ||
   mounts[0]
 
 /** Cất đơn đang làm (nếu có) thành 1 job */
@@ -643,6 +646,20 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     const s = get()
     const p = s.packed.find((x) => x.order.id === id && !x.shipped)
     if (!p) return
+    // Free build: không chấm điểm / tiền / uy tín; kệ chỉ giữ vài thùng mới nhất (bỏ thùng cũ cho khỏi đầy); bảng chọn case
+    // chỉ mở khi ngồi lại vào bàn build (`sitAtBench`)
+    if (p.order.free) {
+      const old = s.packed.filter((x) => x.shipped && x.order.free).slice(0, -(SHIP_SLOTS - 2))
+      const boxes = { ...s.boxes }
+      for (const x of old) delete boxes[x.order.id]
+      set({
+        packed: s.packed
+          .filter((x) => !old.includes(x))
+          .map((x) => (x === p ? { ...x, shipped: true, paid: true, session: undefined } : x)),
+        boxes,
+      })
+      return s.toast('🎉 Build xong! Ngồi vào bàn build để chọn case build con tiếp theo', 'good')
+    }
     // khách nhận hàng: uy tín + đánh giá tính luôn, thù lao chờ shop vào Mezzenger bấm "Thu tiền" (`collectPay`);
     // switch / stab thừa của đơn vào kho chung, bỏ dữ liệu đơn trong thùng (không mở lại được nữa)
     set({
@@ -682,7 +699,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     let repGain = 0
     // gửi rồi mà chưa vào Mezzenger thu thù lao: qua ngày tự thu
     for (const p of s.packed.filter((x) => x.shipped && x.paid === false)) money += payout(p.result)
-    const unsent = s.packed.filter((p) => !p.shipped)
+    // đơn build thử (dev, `order.free`) chưa đặt lên kệ: bỏ luôn, không tiền / uy tín / đồ thừa
+    const unsent = s.packed.filter((p) => !p.shipped && !p.order.free)
     for (const p of unsent) {
       money += payout(p.result)
       repGain += shipRep(p.result)
@@ -1159,6 +1177,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
     if (s.build) return
     if (isPlateless(s.inventory.plate) && !PLATELESS_MOUNTS.includes(mount))
       return s.toast('Plateless chỉ lắp kiểu Tray mount (mount khác đều cần plate)', 'bad')
+    const issue = mountStabIssue(mount, s.inventory.stab?.type)
+    if (issue) return s.toast(issue, 'bad')
     set({ mount })
   },
   setPlateless: (on) => {
@@ -1228,6 +1248,8 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
       return s.toast('Chưa đủ linh kiện!', 'bad')
     if (isPlateless(s.inventory.plate) && !PLATELESS_MOUNTS.includes(s.mount))
       return s.toast('Plateless chỉ lắp kiểu Tray mount', 'bad')
+    const stabIssue = mountStabIssue(s.mount, s.inventory.stab?.type)
+    if (stabIssue) return s.toast(stabIssue, 'bad')
     set({
       build: newBuild(),
       ctx: buildContext(s.order, s.inventory, s.mount),

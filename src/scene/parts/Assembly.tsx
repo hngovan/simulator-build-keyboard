@@ -1,12 +1,45 @@
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type * as THREE from 'three'
-import { useCtx, useStep, useStepIdx } from '@/store'
+import { useBuild, useCtx, useGame, useStep, useStepIdx } from '@/store'
 import { coverBeforeJst } from '@/data/steps'
 import { lerpTo } from '../common/anim'
 import { Board } from './Board'
 import { Case } from './Case'
 import { useAssemblyFlipped } from './caseSplit'
+import { CaseFoam } from './Foam'
+import { Drop } from '../common/anim'
+import { useHover } from '../common/useHover'
+import { playClick } from '@/sound'
+import { HintArrow } from '../stations/StationKit'
+
+/** foam đáy case: bước `caseFoam` = tấm mờ lơ lửng trên lòng case, bấm để lót (rơi xuống đáy); đã lót thì nằm yên dưới đáy */
+function CaseFoamSlot({ step }: { step: string }) {
+  const laid = !!useBuild().caseFoam
+  const ctx = useCtx()
+  const active = step === 'caseFoam' && !laid
+  const { hover, bind } = useHover(active)
+  if (!laid && !active) return null
+  return laid ? (
+    <Drop y={0} from={0.6}>
+      <CaseFoam />
+    </Drop>
+  ) : (
+    <>
+      <group
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          useGame.getState().placeCaseFoam()
+          playClick(700)
+        }}
+        {...bind}
+      >
+        <CaseFoam ghost hover={hover} />
+      </group>
+      <HintArrow at={[0, (ctx.dtb?.floor ?? -0.6) + 1.4, 0]} size={0.8} />
+    </>
+  )
+}
 
 /** Bàn phím (case + board) — tự lật khi cần thao tác mặt đáy, hoặc khi người chơi bấm "Lật xem đáy" */
 export function Assembly() {
@@ -19,6 +52,7 @@ export function Assembly() {
   const caseOnly =
     step === 'caseOpen' ||
     step === 'feet' ||
+    step === 'caseFoam' ||
     step === 'coverOff' ||
     step === 'dtb' ||
     (step === 'coverOn' && coverBeforeJst(ctx.steps))
@@ -44,6 +78,7 @@ export function Assembly() {
         // top mount: case trên úp lên plate (bắt vít) trước khi có case dưới
         topEarly && <Case topOnly />
       )}
+      {showCase && <CaseFoamSlot step={step} />}
       {!caseOnly && <Board />}
     </group>
   )

@@ -50,6 +50,10 @@ export interface SoundProfile {
   loud: number
   pitch: number
   kind: SwitchKind
+  /** bộ tiếng thật của switch (`SWITCH_SOUNDS`) + độ lệch to / cao so với switch gốc (plate, case, mount, lube, foam...) */
+  sound?: string
+  dl?: number
+  dp?: number
 }
 
 /** Tuỳ chọn âm thanh của người chơi, lưu cùng tiến trình. */
@@ -295,8 +299,11 @@ export interface Order {
   dueDay?: number
   /** đơn Free build (chế độ Free build, chọn case ở `FreeBuildDialog`): không khách / không chấm điểm, đủ linh kiện, giao = dọn bàn, chọn case khác */
   free?: true
-  /** khách huỷ kèo giữa chừng: 'sold' = phát hiện shop đem đồ khách gửi đi bán ở chợ (đơn còn hiện tới hết ngày) */
-  cancel?: 'sold'
+  /**
+   * khách huỷ kèo giữa chừng (đơn còn hiện tới hết ngày): 'sold' = phát hiện shop đem đồ khách gửi đi bán ở chợ,
+   * 'ruined' = tuôn ren lỗ case / tray / top mount không lắp tiếp được, shop đền khách (`forfeitOrder`)
+   */
+  cancel?: 'sold' | 'ruined'
   /** đơn kit theo thiết kế bàn phím mở (Bakeneko 60, Planck...) */
   featured?: string
   customer: string
@@ -350,6 +357,8 @@ export type StepId =
   | 'ring'
   /** dán 4 feet cao su vào hốc CNC dưới đáy case (trước khi lắp board vào case) */
   | 'feet'
+  /** lót foam đáy case (tuỳ chọn, case dựng bằng code): tấm Poron đen khoét lỗ trụ tray / chỗ DTB, bớt tiếng rỗng + vang */
+  | 'caseFoam'
   /** case CAD có tấm tạ đè lên chỗ DTB: tháo ốc tạ, nhấc tạ ra (trước `dtb`) */
   | 'coverOff'
   /** đặt daughterboard (DTB) vào hốc cổng USB vách sau case, bắt 2 vít M2, cắm dây JST vào DTB */
@@ -398,6 +407,8 @@ export interface BuildState {
   plate: boolean
   /** đã lót foam PCB (bước tuỳ chọn `foam`); bản lưu cũ không có */
   foam?: boolean
+  /** đã lót foam đáy case (bước `caseFoam`) */
+  caseFoam?: boolean
   switches: Record<string, true>
   /** mối hàn từng phím: loại thiếc + đạt / cháy xém (bản lưu cũ: true = đạt, thiếc thường) */
   solder: Record<string, SolderJoint | true>
@@ -412,8 +423,8 @@ export interface BuildState {
   feet?: Record<number, string>
   /** daughterboard: đã đặt vào case, vít M2 đã bắt (số lỗ), đã cắm dây JST vào DTB; bản lưu cũ không có */
   /**
-   * daughterboard: `out` = vít M2 bắt sẵn trong lỗ ren case đã tháo ra (đặt DTB rồi thì coi như đã tháo hết), `placed` = đã đặt mạch,
-   * `screws` = vít đã siết lại qua lỗ DTB, `plugged` = đã cắm dây vào cổng JST trên DTB
+   * daughterboard: `out` = bản lưu cũ (vít bắt sẵn trong lỗ ren đã tháo ra, giờ bỏ: lỗ để trống, không còn dùng), `placed` = đã đặt mạch,
+   * `screws` = vít M2 (từ khay ốc) đã siết qua lỗ DTB, `plugged` = đã cắm dây vào cổng JST trên DTB
    */
   dtb?: { out?: Record<number, true>; placed?: true; screws?: Record<number, true>; plugged?: true }
   /** tấm tạ che DTB: `out` = ốc tạ đã tháo, `off` = đã nhấc tạ ra, `on` = đã đặt lại, `tight` = ốc đã siết lại */
@@ -595,6 +606,8 @@ export interface CaseDef {
    * tai xiên như đoạn chữ V của Alice) thay các dải 20mm chia đều mép trước / sau
    */
   gaskets?: [number, number, number, number][]
+  /** viền case mỏng (nhôm): O-ring / top mount gõ phím ở góc case bị vang "bong" (`cornerPing`) */
+  thinBezel?: true
 }
 
 export interface ScoreCheck {

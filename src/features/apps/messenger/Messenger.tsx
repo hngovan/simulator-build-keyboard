@@ -118,6 +118,7 @@ const MSG = {
       : 'Shop gửi hàng rồi nhé, để ý điện thoại nha 🚚',
   thanks: 'Đã nhận, cảm ơn shop nhiều! 🥰',
   sold: 'Shop đem đồ mình gửi lên chợ bán à? Huỷ kèo, khỏi làm nữa 😡',
+  ruined: 'Vặn tuôn ren hết lỗ ốc vậy thì lắp sao nổi nữa? Đền tiền case cho mình, huỷ kèo 😤',
 }
 
 /** Chấm đỏ góc phải trên thẻ: đơn mới chưa mở xem (bấm vào hội thoại thì mất), như chấm trên icon app */
@@ -426,7 +427,9 @@ function ThreadRow({
           top
           title={
             dropped(t)
-              ? 'Khách huỷ kèo vì phát hiện bạn bán đồ của khách'
+              ? t.order.cancel === 'ruined'
+                ? 'Tuôn ren lỗ ốc không lắp tiếp được: đã đền khách'
+                : 'Khách huỷ kèo vì phát hiện bạn bán đồ của khách'
               : t.kind === 'rejected' && t.angry
                 ? 'Từ chối quá số đơn miễn phí: −1 uy tín'
                 : 'Đã từ chối'
@@ -560,7 +563,9 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
         {accepted && <ChatBubble from="in">{MSG.accepted(order)}</ChatBubble>}
         {t.kind === 'rejected' && <ChatBubble from="out">{MSG.decline}</ChatBubble>}
         {t.kind === 'rejected' && <ChatBubble from="in">{MSG.declined(t.angry)}</ChatBubble>}
-        {dropped(t) && <ChatBubble from="in">{MSG.sold}</ChatBubble>}
+        {dropped(t) && (
+          <ChatBubble from="in">{t.order.cancel === 'ruined' ? MSG.ruined : MSG.sold}</ChatBubble>
+        )}
         {packed && (
           <>
             <ChatBubble from="out">
@@ -693,7 +698,8 @@ export function Messenger() {
       .filter((p) => p.shipped)
       .map((p) => ({ kind: 'shipped' as const, order: p.order, packed: p })),
     ...rejected.map((o, i) => ({ kind: 'rejected' as const, order: o, angry: i >= DECLINE_FREE })),
-  ]
+    // đơn build thử (dev, `order.free`) không phải khách: không có hội thoại
+  ].filter((t) => !t.order.free)
   const [filter, setFilter] = useState<Filter>('all')
   const shown = threads.filter((t) => inFilter(t, filter))
   // hội thoại đang mở lưu ở store: đóng gói đơn xong thì bàn build mở thẳng hội thoại đơn đó

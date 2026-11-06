@@ -42,7 +42,29 @@ export interface SwitchDef {
   pitch: number
   price10: number
   desc: string
+  /** bộ tiếng gõ thật (`SWITCH_SOUNDS`, public/audio/sfx/switch/<id>/) */
+  sound: SwitchSound
+  /** stem box của Kailh: khung vuông bao quanh chữ thập */
+  box?: true
 }
+
+/**
+ * Bộ tiếng switch chân MX lấy từ kbsim (tplai/kbsim, MIT; public/audio/sfx/switch/LICENSE.md): mỗi switch trong game dùng 1 bộ.
+ * `special` = có tiếng riêng Space / Enter / Backspace (mxblue không có: phím to dùng tiếng thường hạ trầm)
+ */
+export const SWITCH_SOUNDS = {
+  mxblack: { name: 'Cherry MX Black', special: true },
+  mxbrown: { name: 'Cherry MX Brown', special: true },
+  mxblue: { name: 'Cherry MX Blue', special: false },
+  boxnavy: { name: 'Kailh Box Navy', special: true },
+  alpaca: { name: 'Alpaca', special: true },
+  blackink: { name: 'Gateron Black Ink', special: true },
+  redink: { name: 'Gateron Red Ink', special: true },
+  cream: { name: 'NovelKeys Cream', special: true },
+  holypanda: { name: 'Holy Panda', special: true },
+  turquoise: { name: 'Turquoise Tealios', special: true },
+} as const
+export type SwitchSound = keyof typeof SWITCH_SOUNDS
 interface SoundMod {
   name: string
   dl: number
@@ -116,6 +138,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.35,
     price10: 70,
     desc: 'Linear nặng, chưa lube, có tiếng sạn đặc trưng',
+    sound: 'mxblack',
   },
   cherryBrown: {
     name: 'Cherry Nâu',
@@ -128,6 +151,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.5,
     price10: 70,
     desc: 'Tactile nhẹ, chưa lube',
+    sound: 'mxbrown',
   },
   cherryOrange: {
     name: 'Cherry Cam',
@@ -140,6 +164,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.45,
     price10: 70,
     desc: 'Linear mượt: stem cam, housing full đen, chưa lube',
+    sound: 'mxblack',
   },
   cherryPurple: {
     name: 'Cherry Tím',
@@ -152,6 +177,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.45,
     price10: 75,
     desc: 'Tactile khấc rõ hơn Cherry Nâu: stem tím, housing full đen, chưa lube',
+    sound: 'mxbrown',
   },
   cherryBlue: {
     name: 'Cherry Xanh',
@@ -164,6 +190,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.85,
     price10: 70,
     desc: 'Clicky kêu lách cách to',
+    sound: 'mxblue',
   },
   // Kailh Box: stem có hộp bao quanh (chống bụi / nước), lắc ít, tiếng gọn hơn MX thường
   kailhBoxRed: {
@@ -177,6 +204,8 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.5,
     price10: 60,
     desc: 'Linear nhẹ, stem hộp ít lắc, tiếng gọn',
+    sound: 'redink',
+    box: true,
   },
   kailhBoxBrown: {
     name: 'Kailh Box Nâu',
@@ -189,6 +218,8 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.55,
     price10: 60,
     desc: 'Tactile nhẹ, stem hộp ít lắc',
+    sound: 'mxbrown',
+    box: true,
   },
   kailhBoxWhite: {
     name: 'Kailh Box Trắng',
@@ -201,6 +232,8 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.95,
     price10: 65,
     desc: 'Clicky thanh click (click bar): tiếng tách giòn, sắc hơn Cherry Xanh',
+    sound: 'boxnavy',
+    box: true,
   },
   kailhBoxJade: {
     name: 'Kailh Box Jade',
@@ -213,6 +246,22 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.8,
     price10: 75,
     desc: 'Clicky thanh click dày: tiếng to, chắc, lực nặng hơn Box Trắng',
+    sound: 'boxnavy',
+    box: true,
+  },
+  kailhBoxNavy: {
+    name: 'Kailh Box Navy',
+    brand: 'Kailh',
+    kind: 'Clicky',
+    feel: 'clicky',
+    prelubed: false,
+    color: '#1f2f5c',
+    loud: 1,
+    pitch: 0.7,
+    price10: 90,
+    desc: 'Clicky thanh click dày, lò xo nặng: click to, trầm, chắc tay. Stem box chống lắc',
+    sound: 'boxnavy',
+    box: true,
   },
   gateronYellow: {
     name: 'Gateron Vàng',
@@ -225,6 +274,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.45,
     price10: 45,
     desc: 'Linear phổ thông, đã lube sẵn từ nhà máy',
+    sound: 'redink',
   },
   gateronMilky: {
     name: 'Gateron Milky Vàng',
@@ -237,6 +287,20 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.4,
     price10: 50,
     desc: 'Linear: housing full trắng sữa hơi trong, stem vàng nhạt, tiếng đục êm. Đã lube sẵn',
+    sound: 'blackink',
+  },
+  gateronBlackInk: {
+    name: 'Gateron Black Ink',
+    brand: 'Gateron',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: false,
+    color: '#1d1d21',
+    loud: 0.55,
+    pitch: 0.35,
+    price10: 160,
+    desc: 'Linear nặng, housing đen khói trong: tiếng trầm, đầm, ít sạn',
+    sound: 'blackink',
   },
   rubenBumblebee: {
     name: 'Ruben Bumblebee',
@@ -249,6 +313,33 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.35,
     price10: 75,
     desc: 'Linear: housing full xám tro, stem vàng đậm. Đã lube sẵn',
+    sound: 'cream',
+  },
+  nkCream: {
+    name: 'NovelKeys Cream',
+    brand: 'NovelKeys',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: false,
+    color: '#ecdfc0',
+    loud: 0.55,
+    pitch: 0.3,
+    price10: 200,
+    desc: 'Toàn thân POM màu kem tự bôi trơn: thock trầm, càng gõ càng mượt',
+    sound: 'cream',
+  },
+  zealTealios: {
+    name: 'Turquoise Tealios',
+    brand: 'Zeal',
+    kind: 'Linear',
+    feel: 'linear',
+    prelubed: true,
+    color: '#5fd3c6',
+    loud: 0.5,
+    pitch: 0.55,
+    price10: 300,
+    desc: 'Linear cao cấp, housing xanh Tiffany trong: mượt, tiếng sáng gọn',
+    sound: 'turquoise',
   },
   hmxWhite: {
     name: 'HMX Snow',
@@ -261,6 +352,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.8,
     price10: 60,
     desc: 'Linear trắng tuyết, tiếng "clack" giòn, cao. Đã lube sẵn',
+    sound: 'turquoise',
   },
   hmxSnowfall: {
     name: 'HMX Snowfall',
@@ -273,6 +365,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.6,
     price10: 80,
     desc: 'Tactile: housing trên trong suốt đính kim tuyến, dưới + stem trắng đục. Đã lube sẵn',
+    sound: 'holypanda',
   },
   hmxV2u: {
     name: 'HMX V2U',
@@ -285,6 +378,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.5,
     price10: 70,
     desc: 'Linear full tím: housing + stem tím. Đã lube sẵn',
+    sound: 'alpaca',
   },
   hmxWaverider: {
     name: 'HMX Waverider',
@@ -297,6 +391,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.5,
     price10: 85,
     desc: 'Tactile: housing trên xanh trong đính kim tuyến, dưới xanh navy, stem trắng. Đã lube sẵn',
+    sound: 'holypanda',
   },
   hmxSuColor: {
     name: 'HMX Su Color',
@@ -309,6 +404,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.55,
     price10: 80,
     desc: 'Linear: housing full trong suốt hồng đính kim tuyến, stem hồng nhạt. Đã lube sẵn',
+    sound: 'turquoise',
   },
   hmxXinhai: {
     name: 'HMX Xinhai',
@@ -321,6 +417,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.45,
     price10: 70,
     desc: 'Linear: housing trên trắng, dưới + stem xanh navy. Đã lube sẵn',
+    sound: 'alpaca',
   },
   hmxKd200: {
     name: 'HMX KD200',
@@ -333,6 +430,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.55,
     price10: 65,
     desc: 'Linear: housing trên vàng đậm, dưới đen, stem đen. Đã lube sẵn',
+    sound: 'redink',
   },
   wingtreeSmoke: {
     name: 'Wingtree Camellia',
@@ -345,6 +443,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.2,
     price10: 85,
     desc: 'Stem đỏ, housing full trắng đục dày, "thock" trầm. Đã lube sẵn',
+    sound: 'cream',
   },
   wingtreeTorrero: {
     name: 'Wingtree Torrero',
@@ -357,6 +456,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.25,
     price10: 90,
     desc: 'Tactile đầm: housing nâu coffee, stem vàng đậm. Đã lube sẵn',
+    sound: 'holypanda',
   },
   gateronTypeR: {
     name: 'Gateron Type R',
@@ -369,6 +469,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.4,
     price10: 80,
     desc: 'Tactile đỏ rực: stem đỏ, housing full đỏ đục. Đã lube sẵn',
+    sound: 'mxbrown',
   },
   wingtreeTactile: {
     name: 'Wingtree Tactile',
@@ -381,6 +482,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.3,
     price10: 85,
     desc: 'Stem cam nhạt, housing trắng đục dày, khấc đầm. Đã lube sẵn',
+    sound: 'holypanda',
   },
   keygeekTactile: {
     name: 'Keygeek Tactile',
@@ -393,6 +495,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.3,
     price10: 90,
     desc: 'Khấc rõ, tiếng đầm. Đã lube sẵn',
+    sound: 'holypanda',
   },
   pandaTactile: {
     name: 'Tactile Panda',
@@ -405,6 +508,20 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.3,
     price10: 120,
     desc: 'Khấc mạnh, chưa lube',
+    sound: 'holypanda',
+  },
+  holyPanda: {
+    name: 'Holy Panda',
+    brand: 'Drop',
+    kind: 'Tactile',
+    feel: 'tactile',
+    prelubed: false,
+    color: '#f2b27a',
+    loud: 0.6,
+    pitch: 0.35,
+    price10: 250,
+    desc: 'Tactile khấc to, tròn ngay đầu hành trình; housing kem, tiếng tộc trầm',
+    sound: 'holypanda',
   },
   gateronSilent: {
     name: 'Gateron Silent Hồng',
@@ -417,6 +534,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.3,
     price10: 90,
     desc: 'Silent linear, đã lube sẵn',
+    sound: 'redink',
   },
   otemuSilent: {
     name: 'Otemu Silent V1',
@@ -429,6 +547,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.35,
     price10: 40,
     desc: 'Silent linear giá rẻ: stem vàng, housing full hồng, chưa lube',
+    sound: 'redink',
   },
   otemuSilentV2: {
     name: 'Otemu Silent V2',
@@ -441,6 +560,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.32,
     price10: 45,
     desc: 'Bản V2 êm hơn V1: stem xanh ngà lá chuối non, housing full xanh lá chuối, chưa lube',
+    sound: 'redink',
   },
   gateronSilentTactile: {
     name: 'Gateron Silent Tactile',
@@ -453,6 +573,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.35,
     price10: 95,
     desc: 'Khấc nhẹ, không tiếng: stem nâu, housing trên trong suốt, dưới trắng đục. Đã lube sẵn',
+    sound: 'mxbrown',
   },
   hmxVolume0T: {
     name: 'HMX Volume 0 T',
@@ -465,6 +586,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.3,
     price10: 90,
     desc: 'Silent tactile: housing trên nâu đậm, dưới coffee sữa, stem cream. Đã lube sẵn',
+    sound: 'mxbrown',
   },
   silentTactile: {
     name: 'Silent Tactile Tím',
@@ -477,6 +599,7 @@ export const SWITCHES: Record<string, SwitchDef> = {
     pitch: 0.35,
     price10: 95,
     desc: 'Khấc nhẹ, không tiếng, chưa lube',
+    sound: 'mxbrown',
   },
 }
 
@@ -484,6 +607,14 @@ export const SWITCHES: Record<string, SwitchDef> = {
 export const PLATELESS = 'none'
 /** plateless chỉ lắp được kiểu tray (các mount khác đều kẹp / bắt vít vào plate) */
 export const PLATELESS_MOUNTS = ['tray']
+/** mount không dùng được stab screw-in: vòng O-ring kẹp giữa PCB và plate, đầu vít stab dưới PCB bị cấn */
+export const NO_SCREW_STAB_MOUNTS = ['oring']
+/** stab screw-in mà mount không cho (O-ring) thì trả lý do, hợp thì null */
+export function mountStabIssue(mount: string | null | undefined, stab: string | null | undefined) {
+  if (!mount || !stab || STABS[stab]?.mount !== 'screw' || !NO_SCREW_STAB_MOUNTS.includes(mount))
+    return null
+  return `${MOUNTS[mount].name} không dùng được stab screw-in (vít stab cấn vòng O-ring), dùng stab clip-in / plate-mount`
+}
 export const isPlateless = (p?: { material: string } | null) => p?.material === PLATELESS
 /** chất liệu plate bán / khách đòi được (trừ plateless) */
 export const plateIds = () => Object.keys(PLATES).filter((id) => id !== PLATELESS)
@@ -643,7 +774,10 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
       ['wood60', 'Gỗ'],
       ['mica60', 'Mica xếp lớp'],
       ['pc60', 'PC 2 mảnh'],
-      ['gasket60', 'Nhôm 2 mảnh'],
+      ['tofu60redux', 'Nhôm anod 1 mảnh (Tofu60 Redux)'],
+      ['alu60Ecoat1', 'Nhôm E-coat 1 mảnh'],
+      ['gasket60', 'Nhôm anod 2 mảnh'],
+      ['gasket60Ecoat', 'Nhôm E-coat 2 mảnh'],
       ['gasket60Duo', 'Nắp PC · đáy nhôm'],
     ],
   },
@@ -652,7 +786,10 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
     variants: [
       ['plastic40', 'Nhựa ABS'],
       ['mica40', 'Mica xếp lớp'],
-      ['alu40', 'Nhôm E-coat'],
+      ['alu40Anod', 'Nhôm anod 1 mảnh'],
+      ['alu40Ecoat1', 'Nhôm E-coat 1 mảnh'],
+      ['alu40Anod2', 'Nhôm anod 2 mảnh'],
+      ['alu40', 'Nhôm E-coat 2 mảnh'],
     ],
   },
   {
@@ -660,16 +797,21 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
     variants: [
       ['case75Plastic', 'Nhựa ABS'],
       ['case75Mica', 'Mica xếp lớp'],
-      ['case75Alu', 'Nhôm gasket'],
+      ['case75Alu', 'Nhôm anod 1 mảnh'],
+      ['case75AluEcoat', 'Nhôm E-coat 1 mảnh'],
+      ['gasket75Anod', 'Nhôm anod 2 mảnh'],
+      ['gasket75Ecoat', 'Nhôm E-coat 2 mảnh'],
     ],
   },
   {
     name: 'Case TKL',
     variants: [
       ['tklTray', 'Nhựa ABS'],
-      ['tklAlu', 'Nhôm 1 mảnh'],
+      ['tklAlu', 'Nhôm anod 1 mảnh'],
+      ['tklAluEcoat', 'Nhôm E-coat 1 mảnh'],
       ['tklAcrylic', 'Acrylic 2 mảnh'],
-      ['tklGasket', 'Nhôm 2 mảnh'],
+      ['tklGasket', 'Nhôm anod 2 mảnh'],
+      ['tklGasketEcoat', 'Nhôm E-coat 2 mảnh'],
     ],
   },
   {
@@ -684,7 +826,8 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
     variants: [
       ['fullTray', 'Nhựa ABS'],
       ['fullMica', 'Mica xếp lớp'],
-      ['fullGasket', 'Nhôm E-coat'],
+      ['fullGasketAnod', 'Nhôm anod 2 mảnh'],
+      ['fullGasket', 'Nhôm E-coat 2 mảnh'],
     ],
   },
   {
@@ -730,6 +873,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: '60',
     pieces: 1,
     material: 'anod',
+    thinBezel: true,
     mounts: ['tray', 'oring', 'og'],
     price: 1600,
     colors: [
@@ -745,6 +889,28 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Nhôm CNC anod 1 mảnh',
+  },
+  alu60Ecoat1: {
+    name: 'Case 60% nhôm E-coat 1 mảnh',
+    ff: '60',
+    pieces: 1,
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['tray', 'oring', 'og'],
+    price: 1600,
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
+    desc: 'Nhôm E-coat sần 1 mảnh: tray / O-ring / OG',
   },
   plastic60: {
     name: 'Case 60% nhựa',
@@ -767,15 +933,52 @@ export const CASES: Record<string, CaseDef> = {
     desc: 'Gỗ nguyên khối, tiếng ấm',
   },
   gasket60: {
-    name: 'Case 60% nhôm 2 mảnh',
+    name: 'Case 60% nhôm anod 2 mảnh',
     ff: '60',
     pieces: 2,
     screwSide: 'bottom',
     material: 'anod',
+    thinBezel: true,
     mounts: ['gasket', 'top'],
     price: 2100,
     colors: ['silver', 'navy', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Top + bottom anod, vít ở đáy',
+  },
+  gasket60Ecoat: {
+    name: 'Case 60% nhôm E-coat 2 mảnh',
+    ff: '60',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['gasket', 'top'],
+    price: 2100,
+    colors: ['silver', 'navy', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Top + bottom E-coat sần, vít ở đáy',
+  },
+  gasket75Anod: {
+    name: 'Case 75% nhôm anod 2 mảnh',
+    ff: '75',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'anod',
+    thinBezel: true,
+    mounts: ['gasket', 'top'],
+    price: 2300,
+    colors: ['silver', 'navy', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Top + bottom anod, vít ở đáy',
+  },
+  gasket75Ecoat: {
+    name: 'Case 75% nhôm E-coat 2 mảnh',
+    ff: '75',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['gasket', 'top'],
+    price: 2300,
+    colors: ['silver', 'navy', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Top + bottom E-coat sần, vít ở đáy',
   },
   pc60: {
     name: 'Case 60% PC 2 mảnh',
@@ -809,16 +1012,73 @@ export const CASES: Record<string, CaseDef> = {
     colors: ['white', 'pink', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhỏ gọn',
   },
+  alu40Anod: {
+    name: 'Case 40% nhôm anod 1 mảnh',
+    ff: '40',
+    pieces: 1,
+    material: 'anod',
+    thinBezel: true,
+    mounts: ['tray', 'oring', 'og'],
+    price: 1150,
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
+    desc: 'Nhôm CNC anod 1 mảnh: tray / O-ring / OG, O-ring đỡ trên trụ liền vách',
+  },
+  alu40Ecoat1: {
+    name: 'Case 40% nhôm E-coat 1 mảnh',
+    ff: '40',
+    pieces: 1,
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['tray', 'oring', 'og'],
+    price: 1150,
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
+    desc: 'Nhôm E-coat sần 1 mảnh: tray / O-ring / OG, O-ring đỡ trên trụ liền vách',
+  },
   alu40: {
-    name: 'Case 40% nhôm E-coat',
+    name: 'Case 40% nhôm E-coat 2 mảnh',
     ff: '40',
     pieces: 2,
     screwSide: 'bottom',
     material: 'ecoat',
+    thinBezel: true,
     mounts: ['gasket', 'top'],
     price: 1400,
     colors: ['silver', 'black', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm phủ E-coat sần, vít ở đáy',
+  },
+  alu40Anod2: {
+    name: 'Case 40% nhôm anod 2 mảnh',
+    ff: '40',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'anod',
+    thinBezel: true,
+    mounts: ['gasket', 'top'],
+    price: 1400,
+    colors: ['silver', 'black', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Nhôm anod, vít ở đáy',
   },
   mica40: {
     name: 'Case 40% mica xếp lớp',
@@ -842,25 +1102,50 @@ export const CASES: Record<string, CaseDef> = {
     desc: 'Phổ thông',
   },
   tklAlu: {
-    name: 'Case TKL nhôm 1 mảnh',
+    name: 'Case TKL nhôm anod 1 mảnh',
     ff: 'tkl',
     pieces: 1,
     material: 'anod',
+    thinBezel: true,
     mounts: ['tray', 'oring', 'og'],
     price: 1800,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm CNC 1 mảnh, chơi được tray / O-ring / OG mount',
   },
+  tklAluEcoat: {
+    name: 'Case TKL nhôm E-coat 1 mảnh',
+    ff: 'tkl',
+    pieces: 1,
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['tray', 'oring', 'og'],
+    price: 1800,
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Nhôm E-coat sần 1 mảnh, chơi được tray / O-ring / OG mount',
+  },
   tklGasket: {
-    name: 'Case TKL nhôm 2 mảnh',
+    name: 'Case TKL nhôm anod 2 mảnh',
     ff: 'tkl',
     pieces: 2,
     screwSide: 'bottom',
     material: 'anod',
+    thinBezel: true,
     mounts: ['gasket', 'top'],
     price: 2700,
     colors: ['silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm anod, vít ở đáy',
+  },
+  tklGasketEcoat: {
+    name: 'Case TKL nhôm E-coat 2 mảnh',
+    ff: 'tkl',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['gasket', 'top'],
+    price: 2700,
+    colors: ['silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Nhôm E-coat sần, vít ở đáy',
   },
   gasket60Duo: {
     name: 'Case 60% nắp PC · đáy nhôm',
@@ -896,15 +1181,28 @@ export const CASES: Record<string, CaseDef> = {
     desc: 'Phổ thông',
   },
   fullGasket: {
-    name: 'Case Full nhôm E-coat',
+    name: 'Case Full nhôm E-coat 2 mảnh',
     ff: 'full',
     pieces: 2,
     screwSide: 'bottom',
     material: 'ecoat',
+    thinBezel: true,
     mounts: ['gasket', 'top'],
     price: 3100,
     colors: ['silver', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhôm E-coat sần, vít ở đáy',
+  },
+  fullGasketAnod: {
+    name: 'Case Full nhôm anod 2 mảnh',
+    ff: 'full',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'anod',
+    thinBezel: true,
+    mounts: ['gasket', 'top'],
+    price: 3200,
+    colors: ['silver', 'black', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
+    desc: 'Nhôm anod, vít ở đáy',
   },
   fullMica: {
     name: 'Case Full mica xếp lớp',
@@ -1210,6 +1508,7 @@ export const CASES: Record<string, CaseDef> = {
     screwSide: 'top',
     material: 'anod',
     // người dùng: chỉ top mount (plate bắt vít qua tai vào case trên) + O-ring
+    thinBezel: true,
     mounts: ['top', 'oring'],
     price: 3000,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
@@ -1261,14 +1560,26 @@ export const CASES: Record<string, CaseDef> = {
   },
   // ---------- 75% ----------
   case75Alu: {
-    name: 'Case 75% nhôm gasket',
+    name: 'Case 75% nhôm anod 1 mảnh',
     ff: '75',
     pieces: 1,
     material: 'anod',
+    thinBezel: true,
     mounts: ['gasket', 'tray', 'oring', 'og'],
     price: 1500,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm CNC 1 mảnh kiểu Q1, gasket mount êm',
+  },
+  case75AluEcoat: {
+    name: 'Case 75% nhôm E-coat 1 mảnh',
+    ff: '75',
+    pieces: 1,
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['gasket', 'tray', 'oring', 'og'],
+    price: 1500,
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Nhôm E-coat sần 1 mảnh kiểu Q1, gasket mount êm',
   },
   case75Plastic: {
     name: 'Case 75% nhựa',
@@ -1297,6 +1608,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: 'frl',
     pieces: 1,
     material: 'anod',
+    thinBezel: true,
     mounts: ['gasket', 'tray', 'oring', 'og'],
     price: 1700,
     colors: [
@@ -1342,6 +1654,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: '60',
     pieces: 1,
     material: 'anod',
+    thinBezel: true,
     mounts: ['oring'],
     price: 1900,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
@@ -1845,12 +2158,15 @@ function soundProfile(
     lubeFrac = 0,
     lubeType,
     foam = false,
+    caseFoam = false,
     ring,
   }: {
     caseId?: string
     lubeFrac?: number
     lubeType?: string | null
     foam?: boolean
+    /** foam lót đáy case */
+    caseFoam?: boolean
     /** dây O-ring đã cuốn (O-ring / OG mount) */
     ring?: string
   } = {},
@@ -1866,6 +2182,11 @@ function soundProfile(
   if (foam) {
     loud -= 0.05
     pitch -= 0.08
+  }
+  // foam đáy case: lòng case hết rỗng, bớt tiếng vọng → nhỏ + trầm hơn chút
+  if (caseFoam) {
+    loud -= 0.04
+    pitch -= 0.04
   }
   // dây O-ring: mềm (30A) board nhún sâu → êm + trầm hơn; cứng (70A) ít nhún → chắc, cao hơn chút (50A làm chuẩn)
   const shore = ring ? SUPPLIES[ring]?.oring?.shore : undefined
@@ -1885,7 +2206,14 @@ function soundProfile(
     loud -= 0.06 * lubeFrac * thick
     pitch -= 0.06 * lubeFrac * thick
   }
-  return { loud: clamp(loud), pitch: clamp(pitch), kind: sw.kind }
+  return {
+    loud: clamp(loud),
+    pitch: clamp(pitch),
+    kind: sw.kind,
+    sound: sw.sound,
+    dl: loud - sw.loud,
+    dp: pitch - sw.pitch,
+  }
 }
 
 // Âm thanh của bàn phím đang build (kể cả case và lube)
@@ -1900,6 +2228,7 @@ export function buildSound(
     lubeFrac: build && nKeys ? build.lubed / nKeys : 0,
     lubeType: build?.lubeType,
     foam: !!build?.foam,
+    caseFoam: !!build?.caseFoam,
     ring: typeof build?.ring === 'string' ? build.ring : undefined,
   })
 }
@@ -2408,15 +2737,18 @@ function checkParts(inv: Inventory, order: Order, installedSwitches: number): In
               ? `Chưa có plate ${PLATES[order.plateMaterial]?.name ?? order.plateMaterial}`
               : 'OK',
     },
-    // khách đòi đúng loại stab thì phải đúng loại đó
-    order.stabType && needStab && inv.stab && inv.stab.type !== order.stabType
-      ? {
-          cat: 'stab',
-          ok: false,
-          wrong: true,
-          msg: `Chưa có stab ${STABS[order.stabType]?.name ?? order.stabType}`,
-        }
-      : stabCheck(inv.stab, stabNeed(keys), needStab),
+    // khách đòi O-ring mount thì stab screw-in không lắp được
+    needStab && inv.stab && mountStabIssue(order.mount, inv.stab.type)
+      ? { cat: 'stab', ok: false, wrong: true, msg: mountStabIssue(order.mount, inv.stab.type)! }
+      : // khách đòi đúng loại stab thì phải đúng loại đó
+        order.stabType && needStab && inv.stab && inv.stab.type !== order.stabType
+        ? {
+            cat: 'stab',
+            ok: false,
+            wrong: true,
+            msg: `Chưa có stab ${STABS[order.stabType]?.name ?? order.stabType}`,
+          }
+        : stabCheck(inv.stab, stabNeed(keys), needStab),
     {
       cat: 'switch',
       // khách đòi loại switch nào thì phải đúng loại đó

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { useGame, currentSound } from '@/store'
-import { playKey } from '@/sound'
+import { useGame } from '@/store'
+import { testKeySound } from '@/scene/common/keySound'
 
 /**
  * Bắt phím thật khi đang ở bước test: phím 3D lún xuống + phát tiếng (click chuột vào phím 3D cũng được).
@@ -25,7 +25,7 @@ export function useKeyboardTest() {
     }
     const press = (id: string, down: boolean) => {
       const s = useGame.getState()
-      if (s.press(id, down)) playKey(currentSound(s), down)
+      if (s.press(id, down)) testKeySound(id, down)
     }
     const onDown = (e: KeyboardEvent) => {
       if (!testing()) return
