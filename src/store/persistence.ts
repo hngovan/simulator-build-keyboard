@@ -168,7 +168,9 @@ export interface SaveData extends Profile {
 // 9: case dây JST luồn qua tạ (`CaseDef.jstUp`, Duality): đổi thứ tự bước (case trên bắt vào plate trước, lắp tạ trước khi cắm
 //    dây) → tìm lại bước đang làm theo tên (reorderJstUp)
 // 10: thêm bước tuỳ chọn lót foam đáy case (`caseFoam`, sau `feet`) → tìm lại bước đang làm theo tên (addCaseFoamStep)
-const SAVE_REV = 10
+// 11: bỏ OG mount (thay bằng bottom mount): đơn / build OG đổi sang gasket mount, bỏ bước `ring` của build OG làm dở
+//     (ogSession), đơn OG thôi dặn dây O-ring (ogOrder)
+const SAVE_REV = 11
 
 /** danh sách bước của bản lưu trước rev 10 (chưa có bước foam đáy case): các bước nâng cấp cũ tính trên danh sách này */
 const noCaseFoam = (steps: StepId[]): StepId[] => steps.filter((s) => s !== 'caseFoam')
@@ -307,6 +309,30 @@ function addCaseFoamStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'bui
   const stepIdx = steps.indexOf(noCaseFoam(steps)[b.stepIdx])
   if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
   return { ...sess, build: { ...b, stepIdx }, history: [] }
+}
+
+/** đơn OG mount (đã bỏ OG): đổi sang gasket mount (OG cũ = gasket mini, các case OG đều có gasket), thôi dặn dây O-ring */
+function ogOrder<O extends Order | null | undefined>(order: O): O {
+  if (!order || order.mount !== 'og') return order
+  const rest = { ...order, mount: 'gasket' }
+  delete rest.oring
+  return rest
+}
+
+/** Build OG từ bản cũ (bước `ring` sau `gasket`) → gasket mount: bỏ bước gá vòng, tìm lại bước đang làm theo tên */
+function ogSession<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  if (sess.mount !== 'og') return sess
+  const b = sess.build
+  if (!order || !b || !sess.inventory.case || !sess.inventory.pcb)
+    return { ...sess, mount: 'gasket' }
+  const steps = buildContext(order, sess.inventory, 'gasket').steps
+  const old = [...steps]
+  old.splice(old.indexOf('gasket') + 1, 0, 'ring')
+  const stepIdx = remapStepIdx(old, steps, b.stepIdx)
+  return { ...sess, mount: 'gasket', build: { ...b, stepIdx, ring: undefined }, history: [] }
 }
 
 /**
@@ -595,6 +621,17 @@ export function loadSave(): SaveData | null {
         packed: session.packed?.map((p) =>
           p.session ? { ...p, session: addCaseFoamStep(p.order, p.session) } : p,
         ),
+      }
+    }
+    if ((save.rev ?? 0) < 11 && session) {
+      const order = ogOrder(session.order)
+      session = {
+        ...ogSession(order, { ...session, order, history: session.history ?? [] }),
+        offers: session.offers?.map(ogOrder),
+        jobs: session.jobs?.map((j) => {
+          const o = ogOrder(j.order)
+          return { order: o, session: ogSession(o, j.session) }
+        }),
       }
     }
     if (session) {

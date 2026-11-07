@@ -1,5 +1,118 @@
 # Cảnh 3D & model
 
+## 2026-11-07
+
+### Duality Horns: thêm hàng dưới WK
+
+- Yêu cầu: "case duality thêm option WK bình thường, xoá 2 block window thử xem".
+- `layouts.ts` `tklf13`: `bottom: ['wkl', 'wk']` (WKL vẫn mặc định).
+- `scripts/gen-duality-wk.ts` (`bun run gen:duality-wk`, CSG three-bvh-csg trên GLB): nắp `case-wk.glb` = `case.glb` khoét 2 hộp ôm khối chặn chỗ
+  Win (dò từ model: x −144,7…−126,7 / 64,8…82,8, z 40,9 → mặt trong vách trước ~59,2, y 18,8…25,3; hộp dừng ở z 59,1 nên mặt cắt
+  thành mặt vách mới); plate `plate-wk.glb` = `plate.glb` (multi-layout có lỗ Win 1.25u nhưng chỉ lỗ space 7u) khoét thêm lỗ switch 14 × 14
+  - 2 lỗ stab ±50mm (7 × 15, lệch lên 1,5mm như lỗ stab 7u). Đã kiểm: chỉ còn mặt vách mới trong hộp; lưới lỗ plate đúng chỗ.
+- `CaseDef.modelFor.wk` + `plateModelFor.wk`, `caseModelOf` (bottom ≠ wkl → bản wk) / `plateModelOf` (Board). `caseFeet.json` /
+  `caseUsb.json` chép entry `duality-horns/case-wk` = bản gốc (đáy giống hệt).
+- Sửa: vẫn thấy "tấm kệ" chỗ khối Win. Lưới CAD không kín nên CSG đoán sai trong / ngoài, giữ lại mặt đáy hộp (y 18,5) lơ lửng + mặt
+  z 59,1; chân khối còn gờ bo y 17,4 sát vách. Giờ `carve(..., { bare, patches })`: hộp y 17 … 26, z 40,5 … 60,4 (ăn nhẹ vào vách), bỏ
+  mọi tam giác nằm trên mặt hộp, vá 1 tấm đúng mặt trong vách (z 59,85 ở y 17 → 60,45 ở y 24,2, pháp tuyến −z). Kiểm: vùng z 30 … 58
+  không còn tam giác nào. Plate vẫn giữ mặt hộp (thành lỗ).
+- Sửa tiếp: còn "ba via" 2 bên (gờ bo nối khối – vách lan ~0,9mm ra ngoài khối) + tấm vá sáng bệch không cùng màu case (thứ tự góc
+  thuận chiều kim đồng hồ nhìn từ lòng case → vật liệu 2 mặt coi là mặt sau, lật pháp tuyến). Hộp rộng hơn khối 1,2mm mỗi bên
+  (x −145,9 … −125,5 / 63,6 … 84), tấm vá theo độ nghiêng vách `z = 59,8 + 0,08·(y − 17)` tới y 23,9, góc ngược chiều kim đồng hồ nhìn
+  từ trong, pháp tuyến (0, 0,08, −1). Kiểm: không còn tam giác nào nhô khỏi vách (z < 59,7) trong vùng 2 khối.
+- Sửa tiếp: tấm vá phẳng vẫn lệch / gãy với mặt vách thật (vách có rãnh, bo mép trên), nhìn như cắt bằng máy cắt chứ không phải phay CNC.
+  Bỏ tấm vá; `carve(..., { bare, fills })`: khoét hộp y 14 … 26, z 40,5 … 61,5 (hết bề dày mặt trong vách), rồi lấp bằng đoạn vách trơn
+  cùng cỡ chép từ lưới gốc (`INTERSECTION` với hộp cùng cỡ ở chỗ vách không có chi tiết: x −110 / −40, dò mặt trong vách trước không có
+  đỉnh ở −112,4 … −83,2 / −61,3 … 19,6), bỏ mặt hộp, dời `dx` sang chỗ khoét → mặt vách, rãnh, bo mép trên liền với 2 bên.
+  Kiểm: vùng 2 khối giờ chỉ còn tam giác vách z ≈ 60 giống đoạn vách mẫu.
+- Sửa tiếp: vẫn lồi 1 xíu. Dưới y ~16,5 sát 2 bên khối vách có hốc / rãnh riêng (vd x −129 … −119: hốc sâu tới z 65 ở y 11 … 16),
+  hộp từ y 14 lấp vách trơn đè lên mép hốc. Hộp giờ từ y 17 (từ đó lên mặt vách mọi chỗ như nhau, chân khối thấp nhất y 17,4).
+  Kiểm bằng tia dò mặt vách (x lưới 0,25mm, y 9,5 … 25,5): ngoài vùng khoét giống hệt `case.glb`, trong vùng khoét giống hệt đoạn vách mẫu.
+- Sửa tiếp: hình học đã khớp (tia dò từ trước + từ trên đều trùng) nhưng còn vệt sáng ở đường nối = nứt chân chim: lưới 2 bên vách cắt
+  ở x khác nhau nên đỉnh trên đường nối không trùng (đường chéo tam giác dài cắt mặt phẳng ở y khác). Đoạn lấp giờ chờm `LAP` 0,3mm
+  qua mép khoét (2 bên x, dưới y, mép trên vách z) phủ lên mặt trùng hệt → không còn khe.
+- Sửa tiếp (đã tự chụp ảnh model bằng Chrome ngầm để soi): vết nối vẫn lộ vì vách sát khối không y hệt đoạn vách mẫu (bo mép trên lệch
+  ~0,1mm) + pháp tuyến lưới gốc sát khối nghiêng ±0,3 theo x. Bỏ cách chép đoạn mẫu; `carve(..., { bare, lofts })`: cắt lát lưới gốc
+  ở 2 mép khoét (`sliceAt`: mỗi tam giác cắt qua mặt phẳng x cho 1 đoạn, cắt gọn vào vùng, nối đoạn thành profile chân vách → bo → mặt
+  trên), `loft` nội suy mặt giữa 2 profile (chia khúc ở mép gãy, hợp tham số độ dài cung) → 2 mép trùng đúng đường cắt lưới còn lại;
+  pháp tuyến tấm lấp + lưới gốc trong ±3mm quanh chỗ lấp bỏ thành phần x (|nx| < 0,5, thành lỗ / trụ giữ nguyên). Ảnh chụp: vách
+  liền mạch, không vệt, không bậc ở cả 2 khối.
+- Sửa tiếp: trong game (nhôm phản chiếu) vẫn thấy đường mờ ở mép vùng sửa pháp tuyến: mặt vách dưới chân chỗ lấp (y < 17) còn pháp tuyến
+  nghiêng theo x, và mép vùng sửa ±3mm cắt cụt. Giờ sửa cả đỉnh mặt vách dưới chân (ny ≈ 0,08, nz < −0,7) từ y 10, thành phần x giảm dần
+  trong `BLEND` 4mm ra ngoài chỗ lấp (không tạo mép mới). Chụp lại với vật liệu kim loại + môi trường phản chiếu ở góc sát vách như trong
+  game: không còn vết; vệt ngang mảnh y ≈ 17,4 là gờ 0,07mm có sẵn chạy dọc cả vách gốc.
+- Hoạ tiết tạ / đáy: người dùng hỏi sao mất. STEP gốc (`inspect-step.mjs`) chỉ có SOLID / BOTTOM / WEIGHT (2980 tam giác, tấm trơn) /
+  BADGE / ACCENT_V2 + 26 đệm nhỏ + 4 plate, không có thân hoạ tiết nào; node đáy / tạ của `case.glb` và `case-wk.glb` giống hệt (không đụng).
+
+### Case mica xếp lớp thêm top mount
+
+- Yêu cầu: "bổ xung topmount cho case mica xếp lớp".
+- `mounts: ['sandwich', 'top']` cho mọi case mica (60 / 40 / 75 / FRL / full / Alice, parts.ts). Luồng bước dùng chung top mount case 2 mảnh
+  (`topCase` → `topScrew` → `caseIn` → `caseScrew`, không `caseClose`); vít ghép case vẫn xuyên mọi lớp từ trên (ở giữa vách, không chạm plate).
+- Plate: như top mount case dựng bằng code (`topFull` trong Board.tsx: phủ kín lòng case + tai có lỗ M2).
+- Case trên mica (Case.tsx, nhánh `mica && topMount`) chia 2 chồng: `Y.split → 0` (tấm viền dưới mặt plate) khoét hốc tai `topNotches` để vặn
+  vít từ dưới lên, `0 → Y.caseTop` (tấm khung khoét vùng phím) làm trần hốc giữ ren. `micaLayerGeometry` thêm tham số `notches` (khoét CSG
+  `carve` chung với rãnh cổng USB), `Layers` nhận `notches`.
+- Đã chụp kiểm tra bằng Chrome ngầm (Free build mica60 vàng, bước `topScrew` đã lật): hốc vuông trong vách đúng chỗ vít, lệch lỗ vít case.
+
+### Top mount case CAD (Duality): nắp hở khỏi plate lúc nhấc board
+
+- Yêu cầu: Duality top mount, tới bước thả board vào case thì case trên (đã bắt vít vào plate) hở hẳn khỏi plate.
+- Nguyên nhân: board lúc nhấc chờ thả (`caseIn` chưa `inCase`) / dựng cắm JST nằm phẳng, không theo `seat` (Duality rise 0.19, tilt 0.079);
+  nắp CAD chỉ bỏ `seat` khi `topOnly` nên lúc đó vẫn đặt theo `seat` → lệch lên + nghiêng so với plate.
+- `Case.tsx`: `unseated = topOnly || (topMount && ((caseIn && !inCase) || stand))` → nắp dùng phép ngược `seat` như lúc bắt vít.
+  Lúc thả vào case nắp chuyển về hệ có `seat` (board cũng lerp vào `seat`).
+- Tiếp: thả board vào case thì case trên rơi trước, board + plate theo sau. Nguyên nhân: group case trên có `position-y={topY}` nên đổi
+  `topY` là React gán thẳng (nhảy ngay), `lerpTo` trong useFrame thành vô dụng. Giờ prop chỉ lấy giá trị lúc dựng (`topY0`), sau đó lerp
+  cùng tốc 6 như board; mức bỏ `seat` của nắp (`unseatK`, ref `seatTilt` / `seatShift`) cũng lerp tốc 6 → nắp + plate đi cùng 1 lúc
+  (áp cả đậy case / tách case 2 mảnh: giờ trượt thay vì nhảy).
+
+### Bottom mount chỉ cho case 2 mảnh
+
+- Yêu cầu: "bottom mount chỉ có trên case 2 mảnh thôi, 1 mảnh không có" (sửa mục bên dưới).
+- `parts.ts`: case 1 mảnh dựng bằng code về `['tray', 'gasket', 'oring']` (+ case 75 / FRL nhôm `['gasket', 'tray', 'oring']`); case 2 mảnh
+  dựng bằng code `['gasket', 'top']` → `['gasket', 'top', 'bottom']` (13 case, không mica).
+- `buildContext`: `bottomScrew` chỉ khi case 2 mảnh, thứ tự `caseIn` → `bottomScrew` → `caseClose` → `caseScrew`; vít `bot-*` =
+  `topScrewPoints(width, depth, caseScrews)` (lệch vít case như top mount).
+- Case.tsx: `BottomPads` = vấu case dưới từ `Y.split` lên `Y.plateBot` (tai plate tì lên, đĩa tối = miệng lỗ ren); case trên khoét hốc vách
+  `topNotches(bottomScrew)` trần `BOTTOM_NOTCH_TOP` 0.14 (chừa đầu ốc trên plate). Bỏ rãnh lõm vách case 1 mảnh (`WallNotch.from`, `BoreEnds up`).
+
+### Foam PCB: split space khoét kiểu spacebar
+
+- Yêu cầu: foam layout 40% (split space) hàng cuối sai.
+- `Foam.tsx` `foamGeometry`: trước chỉ phím rộng ≥ 4u mới khoét kiểu spacebar (lỗ switch + 2 khe stab), split space 2.25u / 2.75u
+  bị khoét 1 lỗ to như Shift. Giờ mọi phím stab không nhãn (spacebar: dài, split 40%, Alice, Planck) khoét kiểu spacebar; phím dài có nhãn
+  (Shift / Enter / Backspace / numpad) vẫn 1 lỗ liền.
+
+### Bỏ OG mount, thêm bottom mount; gasket cho mọi case 1 mảnh dựng bằng code
+
+- Yêu cầu: bỏ OG mount ở mọi case, thay bằng bottom mount (như top mount nhưng plate bắt vào case dưới, case dưới có rãnh lõm để bắt
+  plate, theo hình minh hoạ "Bottom mount"); thêm gasket mount cho case 40 / 60 / 75 / TKL / full.
+- `parts.ts`: case 1 mảnh dựng bằng code `['tray', 'oring', 'og']` → `['tray', 'gasket', 'oring', 'bottom']` (cả 65% nhựa cho đồng bộ);
+  case 75 / FRL nhôm đã có gasket thì `og` → `bottom`. `MOUNTS.og` bỏ, `MOUNTS.bottom` (dl 0, dp 0.02: mềm hơn top 0.05). `MOUNT_LV.bottom` 2.
+- Bước `bottomScrew` (types `StepId` + `ScrewStep`): sau `caseIn` (+ `trayScrew`), vít `bot-*` = `topScrewPoints(width, depth, [])`
+  (mép trước / sau, cùng chỗ tai plate top mount), đầu `hex`, ốc socket M2 rút 6/8, tính vào `CASE_SCREW_STEPS`, `holeKind('bot-*') = 'top'`
+  (tuôn ren 2 lỗ = hỏng "ren bắt plate"), chấm điểm gộp `['top', 'bot']`. Khay ốc đếm chung với ốc top mount.
+- Board: plate phủ kín lòng case + tai (`topFull` cho cả bottom), `ScrewSet step="bottomScrew" y={0}` khi `inCase`.
+- Case: `WallNotch.from` (rãnh mở từ `from` lên quá mép trên vách, caseShell.ts), `bottomNotches` (đáy rãnh = `Y.plateBot`), lỗ ren khoan
+  xuống từ đáy rãnh (`botBores`, sâu `TOP_TAP_DEPTH`) + `BoreEnds up`.
+- Trụ đỡ `ringPosts` / rãnh mép PCB chỉ còn O-ring. Save rev 11 đổi lại: đơn / build OG → gasket mount (`ogOrder` / `ogSession`, bỏ bước `ring`).
+
+### OG mount: chỉ gasket, bỏ vòng silicon
+
+- Yêu cầu: "OG mount sao lại có cả oring bên trong" → người dùng chọn OG = chỉ gasket mini, không vòng, không dây O-ring.
+- `buildContext`: bước `ring` chỉ cho mount `oring` (OG: ... → `gasket` → feet). `ringFrame()` / `SiliconeRing` bỏ nhánh OG (`between`);
+  Board chỉ vẽ vòng khi `mount === 'oring'`; Case vẫn giữ trụ đỡ (`RingPosts`) cho OG để đỡ mép board.
+- Đơn: `Order.oring` chỉ khi mount O-ring (orders.ts); Free build chỉ hỏi dây O-ring với O-ring; `MOUNTS.og.desc` + mô tả dây O-ring sửa theo.
+- Save rev 11 (`dropOgRing` / `dropOgOring` persistence.ts): build OG làm dở bỏ bước `ring` (tìm lại bước theo tên, xoá `build.ring`),
+  đơn OG bỏ `oring`.
+
+### Bàn mod stab: stab dài không đè băng Urgo
+
+- Yêu cầu: chỉ có 1 wire 7u / 6.25u thì housing trái đè lên băng Urgo.
+- `StabModStation.tsx` `layoutSets`: tâm stab dài `cx = max(LONG_CX, BAND_RIGHT + 0.9 + half)` (`BAND_RIGHT` = mép phải băng,
+  0.9 = nửa housing ~0.6 + khe 0.3) thay cho `LONG_CX` cố định; bàn / hũ / cọ tự nới theo mép phải.
+
 ## 2026-10-24
 
 ### Sửa lật gương case

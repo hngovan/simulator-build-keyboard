@@ -48,6 +48,7 @@ const STEP_TOOL: Partial<Record<StepId, ToolKind>> = {
   caseOpen: 'screw',
   stabScrew: 'screw',
   topScrew: 'screw',
+  bottomScrew: 'screw',
   trayScrew: 'screw',
   caseScrew: 'screw',
   solder: 'solder',

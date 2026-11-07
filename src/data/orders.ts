@@ -310,14 +310,11 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
   const want = { caseId, stabType, plateMaterial }
   // ~25% khách muốn lót foam Poron PCB (tiền 1 tấm foam tính vào budget)
   const foam = lv >= 2 && Math.random() < 0.25
-  // dây O-ring: đơn kit gửi case O-ring / OG mount → 60% khách dặn độ cứng dây; đơn mua đủ (không đòi đích danh case)
+  // dây O-ring: đơn kit gửi case O-ring mount → 60% khách dặn độ cứng dây; đơn mua đủ (không đòi đích danh case)
   // ~12% đòi luôn O-ring mount + đúng độ cứng dây (shop chọn case có O-ring mount)
   // (khách đòi stab screw-in thì không đòi O-ring mount: vít stab cấn vòng)
   if (!kit && !caseId && !mountStabIssue('oring', stabType) && Math.random() < 0.12) mount = 'oring'
-  const oring =
-    (mount === 'oring' || mount === 'og') && (!kit || Math.random() < 0.6)
-      ? pick(ORING_IDS)
-      : undefined
+  const oring = mount === 'oring' && (!kit || Math.random() < 0.6) ? pick(ORING_IDS) : undefined
   const budget = round100(
     (estimateCost(layout, kit, keycapKit, switchType, want) + (foam ? 60 : 0) + (oring ? 30 : 0)) *
       (1.25 + Math.random() * 0.4),

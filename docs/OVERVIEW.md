@@ -150,32 +150,33 @@ Danh sách thực tế do `buildContext()` sinh theo case / stab / PCB / mount. 
 tự thường gặp; `stabScrew` nằm trước `plate` với stab screw-in, còn stab plate-mount được lắp sau
 `plate`.
 
-| Bước         | Việc cần làm                                                                           | Khi nào                                                                           |
-| ------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `unbox`      | Click thùng hàng để mở                                                                 | Luôn có                                                                           |
-| `caseOpen`   | Tháo vít, nhấc nắp case trên                                                           | Case 2 mảnh                                                                       |
-| `stabMod`    | Clip chân stem, Holee mod, lube housing/slider/wire, lắp slider + wire                 | Có phím cần stab; tuỳ chọn                                                        |
-| `stab`       | Click vị trí phím dài (≥ 2u) để lắp stab                                               | Layout có stab                                                                    |
-| `stabScrew`  | Vặn 2 vít cho mỗi stab                                                                 | Stab screw-in                                                                     |
-| `plate`      | Click board để đặt plate lên                                                           | Luôn có                                                                           |
-| `switchLube` | Mở từng switch, lube theo mẻ, lube lò xo, rồi đóng switch lại                          | Tuỳ chọn                                                                          |
-| `switch`     | Click lỗ trên plate để cắm switch                                                      | Luôn có                                                                           |
-| `solder`     | Bấm chân cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (vàng = hoàn hảo)        | PCB hàn (không phải hotswap)                                                      |
-| `gasket`     | Click các vị trí quanh plate để dán gasket                                             | Mount gasket / OG                                                                 |
-| `ring`       | Click board cuốn vòng O-ring (sau lắp switch / hàn, kẹp giữa PCB và plate)             | Mount O-ring / OG                                                                 |
-| `feet`       | Case tự lật úp, click 4 hốc dưới đáy để dán feet cao su (đen / trắng)                  | Luôn có, trước khi lắp case                                                       |
-| `coverOff`   | Tháo ốc trên tạ rồi nhấc tạ che chỗ DTB ra                                             | Case CAD có tạ đè chỗ DTB                                                         |
-| `dtb`        | Đặt daughterboard ai03 vào hốc vách sau (cổng USB-C ra lỗ), bắt 2 vít M2, cắm dây JST  | Case dựng bằng code (không mica)                                                  |
-| `coverOn`    | Đặt tạ lại, siết ốc canh lực (dây JST trong rãnh dưới tạ)                              | Có `coverOff`: sau `jst`; case `jstUp` (Duality, dây lòi lên qua tạ): trước `jst` |
-| `jst`        | Board nhấc trên case: cắm đầu dây JST còn lại vào cổng mặt dưới PCB                    | Có `dtb`, trước `caseIn` (sau `coverOn` nếu case `jstUp`)                         |
-| `caseIn`     | Click case để thả board vào (top mount: ghép case trên đã bắt vào plate với case dưới) | Luôn có                                                                           |
-| `topCase`    | Úp case trên xuống plate                                                               | Top mount (case 2 mảnh)                                                           |
-| `topScrew`   | Board tự lật, vặn vít từ dưới giữ plate vào case trên                                  | Top mount (case 2 mảnh); case `jstUp`: ngay sau `feet`, trước `coverOff`          |
-| `trayScrew`  | Vặn vít giữ PCB vào standoff đáy case                                                  | Mount tray                                                                        |
-| `caseClose`  | Click nắp case để đậy lại                                                              | Case 2 mảnh (trừ top mount)                                                       |
-| `caseScrew`  | Vặn vít khoá 2 mảnh case                                                               | Case 2 mảnh                                                                       |
-| `keycap`     | Click switch để cắm keycap                                                             | Luôn có                                                                           |
-| `test`       | Gõ bàn phím thật hoặc click phím 3D; phím đã test có chấm xanh                         | Luôn có, tính điểm riêng                                                          |
+| Bước          | Việc cần làm                                                                           | Khi nào                                                                           |
+| ------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `unbox`       | Click thùng hàng để mở                                                                 | Luôn có                                                                           |
+| `caseOpen`    | Tháo vít, nhấc nắp case trên                                                           | Case 2 mảnh                                                                       |
+| `stabMod`     | Clip chân stem, Holee mod, lube housing/slider/wire, lắp slider + wire                 | Có phím cần stab; tuỳ chọn                                                        |
+| `stab`        | Click vị trí phím dài (≥ 2u) để lắp stab                                               | Layout có stab                                                                    |
+| `stabScrew`   | Vặn 2 vít cho mỗi stab                                                                 | Stab screw-in                                                                     |
+| `plate`       | Click board để đặt plate lên                                                           | Luôn có                                                                           |
+| `switchLube`  | Mở từng switch, lube theo mẻ, lube lò xo, rồi đóng switch lại                          | Tuỳ chọn                                                                          |
+| `switch`      | Click lỗ trên plate để cắm switch                                                      | Luôn có                                                                           |
+| `solder`      | Bấm chân cho kim nhiệt chạy, bấm lần nữa dừng trong vùng xanh (vàng = hoàn hảo)        | PCB hàn (không phải hotswap)                                                      |
+| `gasket`      | Click các vị trí quanh plate để dán gasket                                             | Mount gasket                                                                      |
+| `ring`        | Click board cuốn vòng O-ring (sau lắp switch / hàn, kẹp giữa PCB và plate)             | Mount O-ring                                                                      |
+| `feet`        | Case tự lật úp, click 4 hốc dưới đáy để dán feet cao su (đen / trắng)                  | Luôn có, trước khi lắp case                                                       |
+| `coverOff`    | Tháo ốc trên tạ rồi nhấc tạ che chỗ DTB ra                                             | Case CAD có tạ đè chỗ DTB                                                         |
+| `dtb`         | Đặt daughterboard ai03 vào hốc vách sau (cổng USB-C ra lỗ), bắt 2 vít M2, cắm dây JST  | Case dựng bằng code (không mica)                                                  |
+| `coverOn`     | Đặt tạ lại, siết ốc canh lực (dây JST trong rãnh dưới tạ)                              | Có `coverOff`: sau `jst`; case `jstUp` (Duality, dây lòi lên qua tạ): trước `jst` |
+| `jst`         | Board nhấc trên case: cắm đầu dây JST còn lại vào cổng mặt dưới PCB                    | Có `dtb`, trước `caseIn` (sau `coverOn` nếu case `jstUp`)                         |
+| `caseIn`      | Click case để thả board vào (top mount: ghép case trên đã bắt vào plate với case dưới) | Luôn có                                                                           |
+| `topCase`     | Úp case trên xuống plate                                                               | Top mount (case 2 mảnh)                                                           |
+| `topScrew`    | Board tự lật, vặn vít từ dưới giữ plate vào case trên                                  | Top mount (case 2 mảnh); case `jstUp`: ngay sau `feet`, trước `coverOff`          |
+| `bottomScrew` | Vặn ốc M2 từ trên xuyên tai plate xuống lỗ ren vấu case dưới                           | Bottom mount (case 2 mảnh dựng bằng code), sau `caseIn`, trước `caseClose`        |
+| `trayScrew`   | Vặn vít giữ PCB vào standoff đáy case                                                  | Mount tray                                                                        |
+| `caseClose`   | Click nắp case để đậy lại                                                              | Case 2 mảnh (trừ top mount)                                                       |
+| `caseScrew`   | Vặn vít khoá 2 mảnh case                                                               | Case 2 mảnh                                                                       |
+| `keycap`      | Click switch để cắm keycap                                                             | Luôn có                                                                           |
+| `test`        | Gõ bàn phím thật hoặc click phím 3D; phím đã test có chấm xanh                         | Luôn có, tính điểm riêng                                                          |
 
 `OPTIONAL_STEPS` gồm `stabMod`, `switchLube`, `test`: không tính vào độ hoàn thiện khi chấm điểm,
 nhưng bỏ mod stab / lube sẽ mất điểm chất lượng tương ứng, còn test có 5 điểm riêng.
@@ -270,7 +271,7 @@ Món chưa mở hiện ở Shopii thành thẻ "?" (ẩn tên / ảnh / giá, n�
 
 - Mua case xong, chọn **kiểu mount** trong app Danh sách đơn trước khi bắt đầu build. Nếu khách gửi
   case thì khách đã dặn mount; làm đúng mount được 10 điểm.
-- Mount quyết định các bước phụ: `gasket` (gasket / OG), `ring` (O-ring: sau lắp switch / hàn, case 1 mảnh; OG: sau gasket), `trayScrew`
+- Mount quyết định các bước phụ: `gasket` (gasket), `ring` (chỉ O-ring: sau lắp switch / hàn, case 1 mảnh), `bottomScrew` (bottom mount, case 2 mảnh: sau `caseIn`, trước `caseClose`, vặn ốc tai plate xuống vấu case dưới), `trayScrew`
   (tray), `topCase` + `topScrew` (top mount: plate bắt vít vào case trên rồi cả cụm thả vào case dưới, không có `caseClose`).
   Mount cũng ảnh hưởng âm thanh và điểm khớp tiếng.
 - Khi kho đã đủ và tương thích, đứng dậy (nút quay lại) rồi đi tới bàn build để vào cảnh 3D. Làm theo

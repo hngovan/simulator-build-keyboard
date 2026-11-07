@@ -1,5 +1,13 @@
 # Giao diện
 
+## 2026-11-07
+
+### Màn tiêu đề: mục con menu to hơn
+
+- Yêu cầu: chữ "Tiếp tục" ở menu màn bắt đầu nhỏ quá, to lên chút.
+- `TitleScreen.tsx` `menuItem`: mục con `sub` (Tiếp tục / Chơi mới) `text-xl` → `text-2xl` (mục lớn vẫn 30px).
+- Bỏ dòng phụ dưới "Tiếp tục" (tên · ngày · tiền / "Chưa có bản lưu"): chỉ còn chữ, chưa có bản lưu thì mờ. Bỏ field `MenuItem.note`.
+
 ## 2026-11-05
 
 ### Màn tiêu đề làm lại: logo mới, menu giữa màn, nhạc + âm thanh menu; Keeb-chan chỉ còn trong tour

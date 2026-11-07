@@ -3,7 +3,6 @@ import { Music } from 'lucide-react'
 import { useGame } from '@/store'
 import { playUiHover, playUiSelect } from '@/sound'
 import { Button } from '@/components/ui'
-import { fmt } from '@/lib/format'
 import { WORKSPACE_ART } from '@/components/art/workspace'
 import { GameLogo } from '@/components/art/GameLogo'
 import { Changelog } from './Changelog'
@@ -76,7 +75,6 @@ function NewGameForm({
 type MenuItem = {
   id: string
   label: string
-  note?: string
   sub?: boolean
   off?: boolean
   run: () => void
@@ -95,9 +93,6 @@ export function TitleScreen() {
     {
       id: 'continue',
       label: 'Tiếp tục',
-      note: saveInfo
-        ? `${saveInfo.name} · Ngày ${saveInfo.day} · ${fmt(saveInfo.money)}`
-        : 'Chưa có bản lưu',
       sub: true,
       off: !saveInfo,
       run: continueGame,
@@ -158,18 +153,11 @@ export function TitleScreen() {
       onPointerEnter={() => !it.off && hover(i)}
       onFocus={() => setSel(i)}
       onClick={() => choose(it)}
-      className={`flex items-baseline gap-2 text-center font-head leading-tight font-extrabold transition-colors duration-150 [text-shadow:0_3px_0_#0008] ${it.sub ? 'text-xl' : 'text-[30px]'} ${it.off ? 'cursor-default text-ink/35' : i === cur ? 'text-yellow' : 'text-ink'}`}
+      className={`flex items-baseline gap-2 text-center font-head leading-tight font-extrabold transition-colors duration-150 [text-shadow:0_3px_0_#0008] ${it.sub ? 'text-2xl' : 'text-[30px]'} ${it.off ? 'cursor-default text-ink/35' : i === cur ? 'text-yellow' : 'text-ink'}`}
     >
       {/* dấu chọn 2 bên (bên phải lật ngược) để chữ vẫn đúng giữa */}
       <span className={`w-3 ${i === cur ? '' : 'opacity-0'}`}>›</span>
-      <span>
-        {it.label}
-        {it.note && (
-          <span className="block font-sans text-xs font-bold text-muted [text-shadow:none]">
-            {it.note}
-          </span>
-        )}
-      </span>
+      <span>{it.label}</span>
       <span className={`w-3 ${i === cur ? '' : 'opacity-0'}`}>‹</span>
     </button>
   )

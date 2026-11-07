@@ -1,5 +1,15 @@
 # Đơn hàng
 
+## 2026-11-07
+
+### Layout 40% thêm kiểu "Split space + mũi tên"
+
+- Yêu cầu: "case 40% ko có split space ??" kèm ảnh 40% split space (2.25u + Fn + 2.75u) và 40% có cụm mũi tên.
+- Split space (2.25u + Fn 1.25u + 2.75u) đã có sẵn (`space: 'split'`, chọn ở dòng "Kiểu layout" bảng Free build), không sửa.
+- Thêm variant `space: 'arrow'` (`alpha40` trong layouts.ts): hàng 3 `Shift 1.75 + Z…. + ↑ + /`, hàng dưới
+  `Ctrl Win Alt 1.25 + space 2.25u + 2.75u + Fn + ← ↓ →` (vẫn 12.75u, ↓ thẳng cột ↑). Stab tự gắn theo bề rộng ≥ 2u;
+  case 40% đều dựng bằng code nên tự khớp, đơn ngẫu nhiên cũng có thể ra kiểu này (`randomVariant`).
+
 ## 2026-11-05
 
 ### Chế độ Free build (menu tiêu đề)

@@ -17,7 +17,7 @@ const COLOR = '#25262b'
 
 /**
  * Tấm foam Poron đen giữa PCB và plate, kiểu tấm cắt sẵn theo layout: mỗi phím 1 lỗ vuông gần bằng phím,
- * phím dài (Shift, Enter, Backspace...) 1 lỗ dài liền; spacebar để liền tấm, chỉ khoét lỗ switch giữa
+ * phím dài (Shift, Enter, Backspace...) 1 lỗ dài liền; spacebar (kể cả split space) để liền tấm, chỉ khoét lỗ switch giữa
  * + 2 khe stab, lỗ tròn cho vít tray mount lọt xuống PCB; khe trống của layout (WKL chỗ phím Win, khe hàng...) cũng khoét: plate đa layout
  * (Duality) có lỗ ở đó, foam liền thì nhìn qua lỗ thấy ô đen thay vì PCB; plate dựng bằng code liền chỗ đó nên vẫn che kín.
  * Hình 2D trên mặt xz rồi đùn lên theo y (như plate)
@@ -43,7 +43,9 @@ function foamGeometry(
     holes.push([ring([pt(-hx, -hz), pt(hx, -hz), pt(hx, hz), pt(-hx, hz)])])
   }
   for (const k of keys) {
-    if (k.w < 4) {
+    // spacebar (phím stab không nhãn: space dài, split space 2.25u / 2.75u 40%, space Alice / Planck) khoét kiểu spacebar,
+    // phím dài có nhãn (Shift, Enter, Backspace...) 1 lỗ liền
+    if (!(k.stab && !k.label.trim())) {
       rect(k.cx, k.cz, (k.w - WEB) / 2, (k.h - WEB) / 2, k.rot)
       continue
     }

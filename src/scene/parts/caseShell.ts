@@ -239,6 +239,8 @@ export function micaLayerGeometry(
   cutouts: [number, number][][] = [],
   /** rãnh xuyên vách sau hết bề dày tấm (lớp nằm ngang tầm cổng USB daughterboard): tâm x + bề ngang (u) */
   slots: { x: number; w: number }[] = [],
+  /** hốc tai plate top mount khoét từ mặt trong vách ra (tấm viền của case trên nằm dưới mặt plate) */
+  notches: WallNotch[] = [],
 ) {
   const shape = punch(roundedRect(new THREE.Shape(), W, D, OUTER_R) as THREE.Shape, [
     ...pockets,
@@ -257,13 +259,20 @@ export function micaLayerGeometry(
   })
   // đùn theo +z → xoay cho nằm ngang, bề dày theo +y
   g.rotateX(-Math.PI / 2)
-  if (slots.length)
-    return carve(
-      g,
-      slots.map((o) =>
+  if (slots.length || notches.length)
+    return carve(g, [
+      ...slots.map((o) =>
         new THREE.BoxGeometry(o.w, h + 0.04, wall + 0.1).translate(o.x, h / 2, -D / 2 + wall / 2),
       ),
-    )
+      // hốc lấn vào lòng case 0.02 cho CSG cắt sạch mặt trong vách
+      ...notches.map((n) =>
+        new THREE.BoxGeometry(n.w, h + 0.04, n.d + 0.02).translate(
+          n.x,
+          h / 2,
+          n.side * (D / 2 - wall + n.d / 2 - 0.01),
+        ),
+      ),
+    ])
   if (!pockets.length) return g
   // trần hốc trong tấm đáy: hốc chỉ sâu p.depth như case liền khối (không lõm xuyên cả tấm, feet lồi ra được)
   const parts = [g, ...pocketCeilings(pockets, 0, h)]

@@ -370,6 +370,7 @@ export type StepId =
   /** top mount: úp case trên lên plate rồi vặn vít plate vào case trên */
   | 'topCase'
   | 'topScrew'
+  | 'bottomScrew'
   | 'caseIn'
   | 'trayScrew'
   | 'caseClose'
@@ -378,7 +379,8 @@ export type StepId =
   | 'test'
   /** đóng gói phím vào thùng (bước cuối, bấm thùng = `deliver`); không tính là bước build chưa làm */
   | 'pack'
-export type ScrewStep = 'caseOpen' | 'stabScrew' | 'topScrew' | 'trayScrew' | 'caseScrew'
+export type ScrewStep =
+  'caseOpen' | 'stabScrew' | 'topScrew' | 'bottomScrew' | 'trayScrew' | 'caseScrew'
 
 export interface StabMods {
   clip: boolean
@@ -564,7 +566,9 @@ export interface CaseDef {
   /** chỉ hợp các layout này (case cắt sẵn cho HHKB...); không có = mọi layout cùng cỡ */
   layouts?: LayoutId[]
   /** nắp case CAD riêng cho layout HHKB / hàng dưới WKL (vd Exodus60) */
-  modelFor?: { hhkb?: string; wkl?: string }
+  modelFor?: { hhkb?: string; wkl?: string; wk?: string }
+  /** plate riêng theo hàng dưới (Duality: model gốc WKL, bản WK khoét thêm lỗ space 6.25u) */
+  plateModelFor?: { wk?: string }
   /**
    * case CAD có mặt plate nghiêng (góc gõ làm sẵn, như Alice): board thả vào case thì nâng lên rise (u)
    * và nghiêng tilt (rad, dương = mép sau cao)

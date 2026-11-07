@@ -58,7 +58,11 @@ const HEAD_R: Record<ScrewStyle, number> = { countersunk: 3, socket: 1.9, button
 /** kiểu đầu ốc theo bước (dùng chung với lỗ khoét trên case: `SCREW_HEADS` trong steps.ts) */
 const SCREW_STYLES = SCREW_HEADS
 /** rút ngắn ốc theo bước (tỉ lệ cả chiều dài, giữ đầu ốc): vít stab M3×8 → 2/3; vít top mount M2×6 → M2×4 */
-const SCREW_SHORT: Partial<Record<ScrewStep, number>> = { stabScrew: 2 / 3, topScrew: 6 / 8 }
+const SCREW_SHORT: Partial<Record<ScrewStep, number>> = {
+  stabScrew: 2 / 3,
+  topScrew: 6 / 8,
+  bottomScrew: 6 / 8,
+}
 
 /**
  * Ren xoắn của model ốc (đo từ GLB bằng gltf-transform, đơn vị mm, đỉnh đầu ốc ở y = 0): đường kính ngoài / chân ren, bước ren,

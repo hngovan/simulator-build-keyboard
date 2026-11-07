@@ -50,6 +50,8 @@ const FEET_RAISE = 1.8 * U
 const STEM_TOP_Y = TABLE + (CAD.stem.top + 1.65) * U // đỉnh slider khi còn chân
 const BAND = v(-4.9, TABLE + 0.03, -4) // băng Urgo đầu tiên, các băng sau xếp về phía trước
 const BAND_STEP = 0.7
+/** mép phải băng Urgo (gạc giữa + 2 đầu dính) */
+const BAND_RIGHT = BAND.x + URGO.padLen / 2 + URGO.endLen
 const PAD_AWAY = v(-6.3, TABLE + 0.03, -1.2) // phần gạc bỏ đi: để cạnh kéo (góc trái)
 /**
  * phóng to kìm / kéo so với cỡ cũ cho gần tỉ lệ thật với stab (stab trên bàn đã phóng B lần; người dùng: "kìm cắt và
@@ -102,8 +104,9 @@ function layoutSets(sets: StabSet[]) {
   const list: SetLayout[] = sets.map((s, g) => {
     const row = s.long ? shortRows + li++ : Math.floor(si / cols)
     const hz = ROW0 + ROW_STEP * row
-    const cx = s.long ? LONG_CX : SHORT_CX[si++ % cols]
     const half = s.spanMm * U
+    // stab dài 6.25u / 7u: housing trái lấn lên cột băng Urgo → dời sang phải cho housing (rộng ~0.6 mỗi bên) né mép băng
+    const cx = s.long ? Math.max(LONG_CX, BAND_RIGHT + 0.9 + half) : SHORT_CX[si++ % cols]
     const hx: [number, number] = [cx - half, cx + half]
     // stab ngắn: 2 slider đứng chồng bên trái housing · stab dài: mỗi slider đứng cạnh housing của nó (phía trong)
     const stand = s.long

@@ -13,6 +13,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.32',
+    date: '2026-11-08',
+    commits: [],
+    title: 'Bottom mount, Duality hàng dưới WK, bỏ OG mount, gasket cho case 1 mảnh',
+    items: [
+      'Bỏ OG mount ở mọi case (bản lưu cũ tự đổi sang gasket mount); case 1 mảnh dựng bằng code chơi được thêm gasket mount',
+      'Thêm bottom mount cho case 2 mảnh: tai plate tì lên vấu case dưới, bắt vít M2 từ trên xuống rồi mới đậy case trên',
+      'Case mica xếp lớp thêm top mount',
+      'Duality Horns thêm hàng dưới WK (space 6.25u): nắp bỏ 2 khối chặn chỗ phím Win, plate khoét thêm lỗ space',
+      'Duality top mount: case trên không còn hở khỏi plate lúc nhấc board, đi xuống cùng lúc với board khi thả vào case',
+      'Layout 40% thêm kiểu split space + cụm mũi tên; foam PCB khoét split space đúng kiểu spacebar',
+      'Bàn mod stab: stab dài 6.25u / 7u không đè lên băng Urgo',
+      'Màn tiêu đề: chữ menu to hơn, "Tiếp tục" bỏ dòng ngày / tiền',
+    ],
+  },
+  {
     version: '0.1.31',
     date: '2026-11-06',
     commits: ['4dc9b20'],

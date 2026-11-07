@@ -3,7 +3,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
-import { PLATES } from '@/data/parts'
+import { PLATES, plateModelOf } from '@/data/parts'
 import {
   CASE_MARGIN,
   CASE_WALL,
@@ -319,7 +319,7 @@ export function Board() {
   // tray: plate CAD Alice không có lỗ vít tray → dựng plate theo phím (như sandwich) để khoét lỗ
   const aliceCAD = ctx.layout === 'alice' && !sandwich && ctx.mount !== 'tray'
   // plate riêng của case (Duality Horns: plate TKL F13 thật, có tai top mount + rãnh flex)
-  const modelPlate = !sandwich ? ctx.caseDef.plateModel : undefined
+  const modelPlate = !sandwich ? plateModelOf(ctx.caseDef, ctx.variant) : undefined
   const standard60CAD =
     ctx.layout === '60' &&
     (ctx.variant.backspace ?? '2u') === '2u' &&
@@ -327,12 +327,13 @@ export function Board() {
     (ctx.variant.rshift ?? '2.75u') === '2.75u'
   // tray mount: vít xuyên plate + PCB bắt vào trụ đồng đáy case (vị trí đã dò không chạm lỗ switch / stab)
   const trayHoles = ctx.mount === 'tray' ? ctx.screws.trayScrew : NO_HOLES
-  // rãnh tròn mép PCB chỗ trụ đỡ O-ring / OG trong case (r + khe 0,02u), cố định theo case nên PCB lúc nào cũng khoét sẵn
+  // rãnh tròn mép PCB chỗ trụ đỡ O-ring trong case (r + khe 0,02u), cố định theo case nên PCB lúc nào cũng khoét sẵn
   const pcbNotches = useMemo(
     () => ringPosts(ctx).map((p) => ({ x: p.x, z: p.z, r: p.r + 0.02 })),
     [ctx],
   )
-  const topFull = ctx.mount === 'top' && !ctx.caseDef.model
+  // top / bottom mount (case dựng bằng code): plate phủ kín lòng case, tai thò vào hốc / rãnh vách
+  const topFull = (ctx.mount === 'top' || ctx.mount === 'bottom') && !ctx.caseDef.model
   const plateGeo = useMemo(
     () =>
       plateGeometry(
@@ -358,7 +359,11 @@ export function Board() {
               )
             : undefined,
         trayHoles,
-        ctx.mount === 'top' ? ctx.screws.topScrew : NO_HOLES,
+        ctx.mount === 'top'
+          ? ctx.screws.topScrew
+          : ctx.mount === 'bottom'
+            ? ctx.screws.bottomScrew
+            : NO_HOLES,
         ctx.mount === 'gasket' && gasketTabbed(ctx.caseDef) ? ctx.gaskets : NO_HOLES,
       ),
     [ctx, standard60CAD, sandwich, topFull, trayHoles],
@@ -447,6 +452,8 @@ export function Board() {
       {at('stabScrew') >= 0 && stepIdx >= at('stabScrew') && (
         <ScrewSet step="stabScrew" y={Y.pcbBot} flip />
       )}
+      {/* bottom mount: ốc M2 từ trên xuyên tai plate bắt xuống lỗ ren đáy rãnh vách case */}
+      {at('bottomScrew') >= 0 && b.inCase && <ScrewSet step="bottomScrew" y={0} />}
       {at('trayScrew') >= 0 && b.inCase && (
         // đầu ốc chìm trong lỗ plate, tì mặt PCB; khung nét đứt / vòng xanh ở miệng lỗ trên mặt plate (plateless: mặt PCB)
         <ScrewSet
@@ -456,11 +463,10 @@ export function Board() {
         />
       )}
       <Gaskets />
-      {(b.ring || step === 'ring') && (
+      {ctx.mount === 'oring' && (b.ring || step === 'ring') && (
         <group onPointerDown={onRing} {...ringHover.bind}>
           <SiliconeRing
             ghost={!b.ring}
-            between={ctx.mount === 'oring'}
             color={SUPPLIES[typeof b.ring === 'string' ? b.ring : 'oring50']?.color}
           />
         </group>

@@ -312,7 +312,7 @@ export function FreeBuildDialog() {
                 />
               ))}
             </Line>
-            {(mount === 'oring' || mount === 'og') && (
+            {mount === 'oring' && (
               <Line label="Dây O-ring">
                 {ORING_IDS.map((id) => (
                   <Swatch

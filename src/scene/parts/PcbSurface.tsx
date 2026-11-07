@@ -19,7 +19,7 @@ interface PcbSurfaceProps {
   screwHoles: Point[]
   /** lỗ vít tray mount xuyên PCB (khoét thật + vòng đồng) */
   mountHoles: Point[]
-  /** rãnh tròn khoét vào mép PCB chỗ trụ đỡ trong case lấn vào gầm board (O-ring / OG, `ringPosts`) */
+  /** rãnh tròn khoét vào mép PCB chỗ trụ đỡ trong case lấn vào gầm board (O-ring, `ringPosts`) */
   notches?: { x: number; z: number; r: number }[]
   type: string
   hover: boolean

@@ -119,20 +119,17 @@ export function Gaskets() {
 /** bề rộng dải bắt chuột quanh mép lúc chờ gá vòng silicon (u) */
 const RING_HIT = 0.6
 
-/** Vòng silicon quanh board. O-ring mount: cuốn quanh viền, kẹp trong khe giữa PCB và plate, lòi ra tì vách + gờ case.
- * OG mount: ôm cả mép PCB + plate. ghost = bản xem trước chưa lắp */
+/** Vòng silicon O-ring mount: cuốn quanh viền, kẹp trong khe giữa PCB và plate, lòi ra tì vách. ghost = bản xem trước chưa lắp */
 export function SiliconeRing({
   ghost,
-  between,
   color = '#3d3f46',
 }: {
   ghost: boolean
-  between: boolean
   /** màu dây O-ring đã cuốn (trắng 30A / đen 50A / cam 70A) */
   color?: string
 }) {
   const ctx = useCtx()
-  const { t, h, y, off } = ringFrame(between)
+  const { t, h, y, off } = ringFrame()
   const W = ctx.width + 2 * off
   const D = ctx.depth + 2 * off
   const sides: [number, number, number, number][] = [

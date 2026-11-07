@@ -28,7 +28,6 @@ import {
   caseBores,
   caseScrewHoles,
   caseScrewY,
-  ringFrame,
   torqueSpec,
   coverBeforeJst,
   stepBit,
@@ -169,6 +168,7 @@ function Layers({
   holes,
   cutouts,
   ports = [],
+  notches = [],
 }: ShellProps & {
   floor?: boolean
   pockets?: FootPocket[]
@@ -178,14 +178,18 @@ function Layers({
   cutouts?: [number, number][][]
   /** cổng USB daughterboard: tấm viền nằm ngang tầm cổng khoét rãnh xuyên vách sau (mica cắt laser) */
   ports?: WallPort[]
+  /** hốc tai plate top mount ở tấm viền (case trên, dưới mặt plate) */
+  notches?: WallNotch[]
 }) {
   const { n, step, h: layerH } = micaStackPlan(y0, y1)
   const portKey = JSON.stringify(ports)
+  const notchKey = JSON.stringify(notches)
   const geo = useMemo(() => {
     const { h } = micaStackPlan(y0, y1)
     const slots = (JSON.parse(portKey) as WallPort[]).map((o) => ({ x: o.x, w: o.w }))
-    const slot = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes, [], slots)
-    const ring = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes)
+    const nt = JSON.parse(notchKey) as WallNotch[]
+    const slot = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes, [], slots, nt)
+    const ring = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes, [], [], nt)
     const solid = micaLayerGeometry(W, D, h, CASE_WALL, true, [], holes)
     const base = micaLayerGeometry(W, D, h, CASE_WALL, true, pockets, holes)
     const frame = micaLayerGeometry(W, D, h, CASE_WALL, false, [], holes, cutouts)
@@ -202,7 +206,7 @@ function Layers({
       baseEdges: new EdgesGeometry(solid, 30),
       frameEdges: new EdgesGeometry(frame, 30),
     }
-  }, [W, D, y0, y1, pockets, holes, cutouts, portKey])
+  }, [W, D, y0, y1, pockets, holes, cutouts, portKey, notchKey])
   useEffect(
     () => () => {
       for (const g of Object.values(geo)) g.dispose()
@@ -342,7 +346,7 @@ function RubberFeet({ pockets }: { pockets: FootPocket[] }) {
 }
 
 /**
- * O-ring / OG case 1 mảnh dựng bằng code: trụ tròn đúc liền vách trước / sau mọc từ sàn lên (`ringPosts`), đỉnh sát mặt dưới
+ * O-ring case 1 mảnh dựng bằng code: trụ tròn đúc liền vách trước / sau mọc từ sàn lên (`ringPosts`), đỉnh sát mặt dưới
  * mép board; gộp 1 lưới
  */
 function RingPosts({ mat }: { mat: ReactNode }) {
@@ -386,6 +390,38 @@ const topNotches = (screws: { x: number; z: number }[]): WallNotch[] =>
     w: TOP_TAB + 2 * TOP_NOTCH.gap,
     d: TOP_NOTCH.d,
   }))
+
+/** bottom mount: trần hốc vách case trên chừa trên mặt plate cho đầu ốc M2 (đầu trụ cao 2mm) vặn từ trên xuống */
+const BOTTOM_NOTCH_TOP = 0.14
+
+/**
+ * Bottom mount (case 2 mảnh dựng bằng code): vấu case dưới nhô từ mép ghép lên tới mặt dưới plate trong hốc vách case trên,
+ * tai plate tì lên vấu, ốc M2 từ trên xuyên tai bắt xuống lỗ ren giữa vấu (đĩa tối = miệng lỗ ren)
+ */
+function BottomPads({ mat }: { mat: ReactNode }) {
+  const ctx = useCtx()
+  const h = Y.plateBot - Y.split
+  const w = TOP_TAB + 2 * TOP_NOTCH.gap - 0.02
+  // từ sát mép PCB (không chạm) qua khe board – vách tới gần đáy hốc
+  const z0 = ctx.depth / 2 + 0.01
+  const z1 = ctx.depth / 2 + CASE_MARGIN + TOP_NOTCH.d - 0.01
+  const d = z1 - z0
+  return ctx.screws.bottomScrew.map((p) => {
+    const s = p.z > 0 ? 1 : -1
+    return (
+      <group key={p.id}>
+        <mesh position={[p.x, Y.split + h / 2, s * (z0 + d / 2)]} castShadow receiveShadow>
+          <boxGeometry args={[w, h, d]} />
+          {mat}
+        </mesh>
+        <mesh position={[p.x, Y.plateBot + 0.002, p.z]} rotation-x={-Math.PI / 2}>
+          <circleGeometry args={[TOP_HOLE.tap, 24]} />
+          <meshBasicMaterial color="#060607" />
+        </mesh>
+      </group>
+    )
+  })
+}
 
 /** tab gasket: hốc trong vách case trên đúng chỗ tai plate, từ mép ghép lên trần ngang mặt trên dải gasket trên */
 const gasketNotches = (gaskets: { x: number; z: number }[]): WallNotch[] =>
@@ -1052,6 +1088,9 @@ export function Case({
   const split = useCaseSplit()
   const topY =
     placing || split || (topMount && ((step === 'caseIn' && !inCase) || step === 'jst')) ? 2.6 : 0
+  // cao độ case trên lúc mới dựng; sau đó chỉ `lerpTo` trong useFrame (gán thẳng prop thì đổi `topY` là nhảy ngay về chỗ:
+  // top mount thả board vào case thì case trên rơi xuống trước, board + plate lerp theo sau)
+  const [topY0] = useState(topY)
   const bottom = useHover(step === 'caseIn')
   // top mount đã úp case trên, chưa lật cụm lên: bấm case trên (hoặc Q) để lật, vít ở mặt dưới
   const viewFlip = useGame((s) => s.viewFlip)
@@ -1066,7 +1105,23 @@ export function Case({
   const coverFirst = coverBeforeJst(ctx.steps)
   const stand =
     topMount && (step === 'jst' || (step === 'coverOn' && !coverFirst)) ? jstStand(ctx.depth) : null
+  // top mount: board chưa nằm trong case (còn phẳng ngoài bàn / nhấc chờ thả / dựng cắm JST, không có `seat`) → nắp CAD đi cùng
+  // board phải bỏ `seat` (phép ngược), không thì nắp lệch / hở khỏi plate theo độ nâng + góc nghiêng
+  const unseated = topOnly || (topMount && ((step === 'caseIn' && !inCase) || !!stand))
+  // mức bỏ `seat` của nắp (1 = bỏ hẳn, 0 = theo `seat`): lerp cùng nhịp board lerp vào `seat` lúc thả → nắp đi cùng plate, không giật
+  const unseatK = useRef(unseated ? 1 : 0)
+  const seatTilt = useRef<THREE.Group>(null)
+  const seatShift = useRef<THREE.Group>(null)
   useFrame((_, dt) => {
+    unseatK.current += ((unseated ? 1 : 0) - unseatK.current) * Math.min(1, dt * 6)
+    const k = unseatK.current
+    const seat = caseDef.seat
+    if (seatTilt.current) seatTilt.current.rotation.x = -(seat?.tilt ?? 0) * k
+    seatShift.current?.position.set(
+      -(seat?.dx ?? 0) * k,
+      -(seat?.rise ?? 0) * k,
+      -(seat?.dz ?? 0) * k,
+    )
     lerpTo(topRef, 'y', stand?.y ?? topY, dt, 6)
     lerpTo(topRef, 'z', stand?.z ?? 0, dt, 6)
     const tr = topRef.current?.rotation
@@ -1101,7 +1156,6 @@ export function Case({
   const frontZ = ctx.depth / 2 + CASE_MARGIN + CASE_WALL / 2
   // gờ / vấu chỉ dựng cho case dựng bằng code (case CAD theo model), mica kẹp plate giữa các lớp nên không cần
   const coded = !model && !mica
-  const ring = ctx.mount === 'oring' || ctx.mount === 'og' ? ringFrame(ctx.mount === 'oring') : null
   const gasket = coded && two && ctx.mount === 'gasket'
   const screwY = caseScrewY(caseDef)
   const onClick = (target: StepId, action: () => void) => (e: ThreeEvent<PointerEvent>) => {
@@ -1168,13 +1222,16 @@ export function Case({
           {step === 'caseIn' && !inCase && (
             <HintArrow at={[0, (model ? BLOCKER_TOP : wallTop) + 0.05, frontZ]} size={1.6} />
           )}
-          {coded && !two && ring && (
-            // O-ring / OG: trụ đúc liền vách mọc từ sàn (phay từ trên xuống được) đỡ vòng silicon, không lọt xuống đáy
+          {coded && !two && ctx.mount === 'oring' && (
+            // O-ring: trụ đúc liền vách mọc từ sàn (phay từ trên xuống được) đỡ mép board, không lọt xuống đáy
             <RingPosts mat={bottomMat(bottom.hover)} />
           )}
           {gasket && (
             // tab gasket: vấu case dưới trong hốc vách đỡ dải gasket dưới tai plate
             <GasketPads mat={bottomMat(bottom.hover)} />
+          )}
+          {coded && two && ctx.screws.bottomScrew.length > 0 && (
+            <BottomPads mat={bottomMat(bottom.hover)} />
           )}
           {ctx.mount === 'tray' &&
             (model ? (
@@ -1205,7 +1262,7 @@ export function Case({
       {showTop && (
         <group
           ref={topRef}
-          position-y={topY}
+          position-y={topY0}
           onPointerDown={
             topMount
               ? needFlip
@@ -1225,20 +1282,10 @@ export function Case({
               {model ? (
                 // case CAD 2 mảnh: nắp (node "case") + khung chặn, đi cùng case trên
                 <>
-                  {/* top mount, board còn nằm phẳng ngoài case (topOnly): đặt nắp theo phép ngược của `seat` (dời rồi xoay
+                  {/* top mount, board còn nằm phẳng ngoài case (topOnly / nhấc chờ thả / dựng cắm JST): đặt nắp theo phép ngược của `seat` (dời rồi xoay
                       ngược góc nghiêng) cho mặt đỡ plate trong nắp nằm phẳng trên plate — không thì nắp có góc gõ hở 1 đầu */}
-                  <group rotation-x={topOnly ? -(caseDef.seat?.tilt ?? 0) : 0}>
-                    <group
-                      position={
-                        topOnly
-                          ? [
-                              -(caseDef.seat?.dx ?? 0),
-                              -(caseDef.seat?.rise ?? 0),
-                              -(caseDef.seat?.dz ?? 0),
-                            ]
-                          : [0, 0, 0]
-                      }
-                    >
+                  <group ref={seatTilt}>
+                    <group ref={seatShift}>
                       <CaseModel
                         model={model}
                         origin={ctx.origin}
@@ -1290,6 +1337,31 @@ export function Case({
                     cutouts={cutouts}
                   />
                 </>
+              ) : mica && topMount ? (
+                // top mount: tấm viền dưới mặt plate khoét hốc cho tai plate (vặn vít từ dưới lên), tấm ngay trên mặt plate
+                // là trần hốc giữ ren vít
+                <>
+                  <Layers
+                    W={W}
+                    D={D}
+                    y0={Y.split}
+                    y1={0}
+                    mat={mat(top.hover)}
+                    holes={screwHoles}
+                    ports={ports}
+                    notches={topNotches(ctx.screws.topScrew)}
+                  />
+                  <Layers
+                    W={W}
+                    D={D}
+                    y0={0}
+                    y1={Y.caseTop}
+                    mat={mat(top.hover)}
+                    holes={screwHoles}
+                    ports={ports}
+                    cutouts={cutouts}
+                  />
+                </>
               ) : mica ? (
                 <Layers
                   W={W}
@@ -1313,12 +1385,16 @@ export function Case({
                     notches={
                       topMount
                         ? topNotches(ctx.screws.topScrew)
-                        : gasket
-                          ? gasketNotches(ctx.gaskets)
-                          : undefined
+                        : ctx.screws.bottomScrew.length
+                          ? topNotches(ctx.screws.bottomScrew)
+                          : gasket
+                            ? gasketNotches(ctx.gaskets)
+                            : undefined
                     }
-                    // top mount: trần hốc ngang mặt plate; tab gasket: ngang mặt trên dải gasket trên
-                    notchTop={topMount ? 0 : GASKET.t}
+                    // top mount: trần hốc ngang mặt plate; bottom mount: chừa đầu ốc trên plate; tab gasket: ngang mặt trên dải gasket trên
+                    notchTop={
+                      topMount ? 0 : ctx.screws.bottomScrew.length ? BOTTOM_NOTCH_TOP : GASKET.t
+                    }
                     bores={topBores}
                   />
                   <BoreEnds holes={topBores.map((b) => ({ ...b, y: b.y1 }))} />

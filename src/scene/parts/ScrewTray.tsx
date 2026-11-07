@@ -65,9 +65,11 @@ export function ScrewTray() {
   const trayLeft =
     ctx.mount === 'tray' ? ctx.screws.trayScrew.filter((s) => !b.screws[s.id]).length : 0
   // ốc M2 top mount kèm case chưa bắt: nằm sẵn trên khay tới bước bắt plate vào case trên
-  const topLeft = ctx.steps.includes('topScrew')
-    ? ctx.screws.topScrew.filter((s) => !b.screws[s.id]).length
-    : 0
+  // (bottom mount: cùng ốc M2, bắt tai plate xuống case dưới)
+  const topLeft = [...ctx.screws.topScrew, ...ctx.screws.bottomScrew].filter(
+    (s) =>
+      ctx.steps.includes(s.id.startsWith('bot') ? 'bottomScrew' : 'topScrew') && !b.screws[s.id],
+  ).length
   // ốc stab screw-in chưa bắt: nằm sẵn từ đầu (khách / shop có đủ ốc theo bộ stab), bắt con nào bớt con đó
   const stabLeft = ctx.steps.includes('stabScrew')
     ? ctx.screws.stabScrew.filter((s) => !b.screws[s.id]).length

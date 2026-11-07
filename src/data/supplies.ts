@@ -37,7 +37,7 @@ export interface SupplyDef {
   spell?: number
   /** feet cao su dán đáy case (bước `feet`): 1 vỉ 4 cái */
   feet?: true
-  /** dây O-ring silicon cuốn quanh board (bước `ring`, O-ring / OG mount): độ cứng Shore A (30 mềm → 70 cứng) */
+  /** dây O-ring silicon cuốn quanh board (bước `ring`, O-ring mount): độ cứng Shore A (30 mềm → 70 cứng) */
   oring?: { shore: number }
   /** tấm foam Poron lót giữa PCB và plate (bước `foam`): bán tấm nguyên, lót thì cắt theo layout */
   pcbFoam?: true
@@ -89,7 +89,7 @@ function oringDefs(): Record<string, SupplyDef> {
           [1, 30],
           [5, 120],
         ],
-        desc: `Dây O-ring silicon cuốn quanh viền board (O-ring / OG mount), 1 vòng / bàn phím. ${desc}`,
+        desc: `Dây O-ring silicon cuốn quanh viền board (O-ring mount), 1 vòng / bàn phím. ${desc}`,
         oring: { shore },
       },
     ]),

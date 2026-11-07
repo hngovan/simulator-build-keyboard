@@ -45,6 +45,8 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 - `bun run gen:plate-duality`: plate riêng Duality Horns (TKL F13 multi-layout): căn lỗ switch từ DWG người dùng đưa
   (`assets/keyboards/duality-horns/plate/duality-tkl.dwg`, đọc bằng `@mlightcad/libredwg-web`) theo layout `tklf13`, hình lấy lưới
   `PLATE_STANDARD` trong STEP lắp ráp → `public/models/keyboards/duality-horns/plate.glb` (Board vẽ khi `CaseDef.plateModel`).
+- `bun run gen:duality-wk`: Duality bản hàng dưới WK: khoét bằng CSG 2 khối chặn chỗ Win khỏi nắp (`case-wk.glb`) + lỗ space 6.25u
+  vào plate (`plate-wk.glb`); `CaseDef.modelFor.wk` / `plateModelFor.wk` (`caseModelOf` / `plateModelOf`). Chạy lại sau khi convert lại case / plate Duality.
 - `bun run gen:plates-universal`: plate universal 60 / 75 / TKL / full bằng lõi ai03 Plate Generator (kbplate.ai03.com,
   AGPL — clone ngoài repo, đặt `YAKB_DIR`): layout game gộp mọi variant → KLE + DXF trong `assets/plates/universal/`
   → `src/data/generated/plateUniversal.ts` (Board.tsx dùng, trừ 60 chuẩn giữ plate CAD typ60).
@@ -256,8 +258,8 @@ vào `window.__r3f` để debug trong console.
   PCB / plate theo đường viền `boardOutline` (layout xoay: đa giác lồi mỗi nửa). Chỗ trống hàng dưới
   (HHKB, WKL) có khối chặn liền case (`blockerGaps`).
 - Khe board – vách case dựng bằng code `CASE_MARGIN` = 0,03u (~0,6mm, case khít); 0,15 rồi 0,06 nhìn từ trên vẫn thấy hở. Plate = PCB (lùi 0,01u),
-  hở là do khe này; vòng OG dày theo khe (`ringFrame`). Đổi khe thì soát tai top mount / tab gasket / O-ring / DTB (đều tính theo hằng này).
-- Gờ trong lòng case (case dựng bằng code, `Ledge` / `TopBosses` trong Case.tsx): O-ring / OG có gờ đỡ vòng, gasket 2 mảnh = tab gasket
+  hở là do khe này; vòng O-ring tính theo khe (`ringFrame`). Đổi khe thì soát tai top mount / tab gasket / O-ring / DTB (đều tính theo hằng này).
+- Gờ trong lòng case (case dựng bằng code, `Ledge` / `TopBosses` trong Case.tsx): O-ring có trụ đỡ mép board, gasket 2 mảnh = tab gasket
   (plate có tai mỗi điểm gasket `gasketTabbed` / `GASKET_NOTCH`, hốc phay vách case trên `gasketNotches`, vấu case dưới `GasketPads` đỡ dải dưới;
   tai chỉ dài ≈ bề ngang dải 4mm + khe (`GASKET_NOTCH.tab`), dải chỉ nằm trên phần tai trong hốc vách (`gaskets[].d`): tai dài thì lộ tai trần,
   dải phủ cả đoạn ở khe thì lộ vệt đen → nhìn từ trên mép trước / sau trông hở hơn trái / phải dù khe 4 phía bằng nhau),
@@ -265,8 +267,10 @@ vào `window.__r3f` để debug trong console.
 - Duality Horns (case CAD 2 mảnh, chỉ `tklf13`, mount top / O-ring): 8 vít ghép bắt chéo (đầu vít quay vào trong, chéo xuống ra ngoài) (`CaseDef.angledScrews` [đầu vít mm + hướng],
   `ScrewPoint.y / dir`, `ScrewSet` xoay vít theo hướng), vít top mount theo 6 tai plate thật (`CaseDef.topScrews`), `ownBlocks` (nắp có sẵn khối chặn), ốc cố định trên tạ / badge (`CaseDef.weightScrews` / `badgeScrews`, `FixedScrews` trong `CaseModel`, thân rút ngắn không xuyên case), badge chữ thập = node `badge` đi cùng nắp;
   số liệu in từ `convert-user-cases.mjs` (`screwHeads` / `marks`; trục + đáy hốc đầu vít dò bằng `scripts/probe-screw-axis.mjs`).
-- Case 1 mảnh dựng bằng code chơi được tray / O-ring / OG; case 2 mảnh có lỗ vít ở giữa thành case: nhôm / PC / acrylic bắt từ đáy
-  (`caseBores` khoét CSG: hốc chìm + lỗ xuyên thành case dưới, lỗ ren case trên; tháo hết vít thì tách 2 mảnh `useCaseSplit`), mica xuyên mọi tấm
+- Case 1 mảnh dựng bằng code chơi được tray / gasket / O-ring (không còn OG); case 2 mảnh dựng bằng code: gasket / top / bottom mount
+  (bottom: tai plate tì lên vấu case dưới `BottomPads` trong hốc vách case trên, trần hốc chừa đầu ốc `BOTTOM_NOTCH_TOP`; bước `bottomScrew`
+  sau `caseIn`, trước `caseClose`, vặn ốc M2 từ trên xuống, id vít `bot-*`); case 2 mảnh có lỗ vít ở giữa thành case: nhôm / PC / acrylic bắt từ đáy
+  (`caseBores` khoét CSG: hốc chìm + lỗ xuyên thành case dưới, lỗ ren case trên; tháo hết vít thì tách 2 mảnh `useCaseSplit`), mica xuyên mọi tấm (mica: sandwich hoặc top mount, top mount case trên chia 2 chồng: tấm dưới mặt plate khoét hốc tai `topNotches` qua `micaLayerGeometry` `notches`, tấm trên làm trần hốc)
   (`caseScrewHoles`). Vỏ khoét bằng `three-bvh-csg` (`caseShellGeometry` notches / bores). Top mount: plate phủ kín lòng case, không bỏ qua bước plate. Mica: tấm trên mặt plate khoét theo `keyRegions` (khung chặn liền tấm, không `Blockers` rời).
 - Shopii gộp case cùng dòng (`CASE_LINES`): 1 sản phẩm, chọn chất liệu (`ProductOption.group`) rồi màu; id case giữ riêng.
 - Shopii: hàng trên cùng = banner sự kiện sale (`SaleBanner`, ngày sale; ngày thường `ShopBanner` đếm ngày tới sale); cột trái: mục hàng cuộn, đáy ghim nút Giỏ hàng (badge số món);

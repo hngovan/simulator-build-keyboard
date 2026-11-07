@@ -1,4 +1,4 @@
-// Trụ đỡ O-ring / OG trong case 1 mảnh dựng bằng code: trụ tròn đúc liền vách, mọc từ sàn lên (phay từ trên xuống được, không có
+// Trụ đỡ O-ring trong case 1 mảnh dựng bằng code: trụ tròn đúc liền vách, mọc từ sàn lên (phay từ trên xuống được, không có
 // gờ lơ lửng kiểu undercut): vách trước / sau mỗi bên 4 trụ, vách trái / phải mỗi bên 1 trụ lệch về phía sau
 import { CASE_MARGIN, DTB_MM, Y } from '@/data/steps'
 import type { BuildContext } from '@/types'
@@ -26,9 +26,9 @@ export interface PostCyl {
   y1: number
 }
 
-/** case có trụ đỡ vòng: case 1 mảnh dựng bằng code (không CAD, không mica) lắp O-ring / OG */
+/** case có trụ đỡ vòng: case 1 mảnh dựng bằng code (không CAD, không mica) lắp O-ring */
 export const hasRingPosts = (ctx: BuildContext) =>
-  (ctx.mount === 'oring' || ctx.mount === 'og') &&
+  ctx.mount === 'oring' &&
   !ctx.caseDef.model &&
   ctx.caseDef.pieces === 1 &&
   ctx.caseDef.material !== 'mica'

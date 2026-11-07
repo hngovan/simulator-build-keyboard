@@ -51,7 +51,7 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 |  |  | 🏆 Bảng xếp hạng | Server riêng (`bun run server`), gồm lượt chơi đã kết thúc của mọi người, xếp theo tiền; tiền gọn k → m → B. |
 |  |  | 🦶 Feet cao su | Bước mới trước khi lắp case: case tự lật úp, dán feet đen / trắng vào 4 hốc CNC; Shopii bán vỉ 4 cái. |
 |  |  | 🧩 Case theo cụm phím | Khối chặn liền case tách theo cụm (TKL / full / FRL / 75 / 65); tấm mica trên plate khoét theo cụm. |
-|  |  | 🔩 Case & mount | Case 2 mảnh có lỗ vít (nhôm / PC / acrylic ở đáy, mica xuyên mọi tấm); case 1 mảnh chơi tray / O-ring / OG; thêm Case TKL nhôm 1 mảnh. |
+|  |  | 🔩 Case & mount | Case 2 mảnh có lỗ vít (nhôm / PC / acrylic ở đáy, mica xuyên mọi tấm); case 1 mảnh chơi tray / gasket / O-ring, case 2 mảnh thêm bottom mount; thêm Case TKL nhôm 1 mảnh. |
 |  |  | 🛒 Shopii | Case cùng dòng gộp 1 sản phẩm (chọn chất liệu rồi màu), ghi cỡ layout; ô nhập số lượng khi mua. |
 |  |  | 📦 Đơn hàng | Có đơn đòi đích danh 1 loại switch; switch phải hợp kiểu âm thanh khách muốn. |
 |  |  | 🎨 Switch & màu case | Otemu Silent, Cherry Tím / Cam, Gateron Type R / Milky / Silent Tactile, HMX, Wingtree, Ruben Bumblebee..., housing kim tuyến; case thêm tím, coffee sữa, nâu đậm, đỏ + navy. |

@@ -79,35 +79,51 @@ const alpha60 = (v: Variant): Item[][] => [
 const alpha40 = (v: Variant): Item[][] => [
   [['Esc', 1, 'Escape'], ...chars('qwertyuiop'), ['Back', 1.75, 'Backspace']],
   [['Tab', 1.25, 'Tab'], ...chars('asdfghjkl;'), ['Enter', 1.5, 'Enter']],
-  [['Shift', 1.75, 'ShiftLeft'], ...chars('zxcvbnm,./'), ['Shift', 1, 'ShiftRight']],
-  v.space === 'split'
-    ? [
+  v.space === 'arrow'
+    ? // mũi tên: ↑ thế chỗ phím trước '/', ← ↓ → góc phải hàng dưới
+      [['Shift', 1.75, 'ShiftLeft'], ...chars('zxcvbnm,.'), ['↑', 1, 'ArrowUp'], ['/', 1, 'Slash']]
+    : [['Shift', 1.75, 'ShiftLeft'], ...chars('zxcvbnm,./'), ['Shift', 1, 'ShiftRight']],
+  v.space === 'arrow'
+    ? // split space 2.25u + 2.75u, Fn + cụm mũi tên (cùng bề ngang 12.75u)
+      [
         ['Ctrl', 1.25, 'ControlLeft'],
         ['Win', 1.25, 'MetaLeft'],
         ['Alt', 1.25, 'AltLeft'],
         ['', 2.25, 'Space'],
-        ['Fn', 1.25],
         ['', 2.75],
-        ['Alt', 1.25, 'AltRight'],
-        ['Ctrl', 1.5, 'ControlRight'],
+        ['Fn', 1],
+        ['←', 1, 'ArrowLeft'],
+        ['↓', 1, 'ArrowDown'],
+        ['→', 1, 'ArrowRight'],
       ]
-    : v.space === '7u'
-      ? // space 7u (stab dây 7u): bỏ Win, Ctrl / Alt to hơn, cùng bề ngang 12.75u
-        [
-          ['Ctrl', 1.5, 'ControlLeft'],
-          ['Alt', 1.5, 'AltLeft'],
-          ['', 7, 'Space'],
-          ['Alt', 1.25, 'AltRight'],
-          ['Ctrl', 1.5, 'ControlRight'],
-        ]
-      : [
+    : v.space === 'split'
+      ? [
           ['Ctrl', 1.25, 'ControlLeft'],
           ['Win', 1.25, 'MetaLeft'],
           ['Alt', 1.25, 'AltLeft'],
-          ['', 6.25, 'Space'],
+          ['', 2.25, 'Space'],
+          ['Fn', 1.25],
+          ['', 2.75],
           ['Alt', 1.25, 'AltRight'],
           ['Ctrl', 1.5, 'ControlRight'],
-        ],
+        ]
+      : v.space === '7u'
+        ? // space 7u (stab dây 7u): bỏ Win, Ctrl / Alt to hơn, cùng bề ngang 12.75u
+          [
+            ['Ctrl', 1.5, 'ControlLeft'],
+            ['Alt', 1.5, 'AltLeft'],
+            ['', 7, 'Space'],
+            ['Alt', 1.25, 'AltRight'],
+            ['Ctrl', 1.5, 'ControlRight'],
+          ]
+        : [
+            ['Ctrl', 1.25, 'ControlLeft'],
+            ['Win', 1.25, 'MetaLeft'],
+            ['Alt', 1.25, 'AltLeft'],
+            ['', 6.25, 'Space'],
+            ['Alt', 1.25, 'AltRight'],
+            ['Ctrl', 1.5, 'ControlRight'],
+          ],
 ]
 
 const hhkbTop: Item[][] = [
@@ -366,7 +382,7 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
   '40': {
     name: '40%',
     ff: '40',
-    variants: { space: ['6.25u', '7u', 'split'] },
+    variants: { space: ['6.25u', '7u', 'split', 'arrow'] },
     rows: (v) => stack(alpha40(v)),
   },
   '60': {
@@ -419,8 +435,8 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     name: 'TKL F13',
     ff: 'tkl',
     strict: true,
-    // Duality Horns (case duy nhất dùng F13) chỉ có hàng dưới WKL
-    variants: { backspace: ['2u', 'split'], bottom: ['wkl'] },
+    // Duality Horns (case duy nhất dùng F13): nắp gốc WKL, bản WK khoét bỏ khối chặn chỗ Win (`bun run gen:duality-wk`)
+    variants: { backspace: ['2u', 'split'], bottom: ['wkl', 'wk'] },
     rows: tklF13Rows,
   },
   full: {
@@ -493,6 +509,7 @@ const VARIANT_INFO: Record<VariantKey, Record<string, string>> = {
     '6.25u': 'Space liền 6.25u',
     '7u': 'Space liền 7u (không Win)',
     split: 'Split space (2.25u + 1.25u + 2.75u)',
+    arrow: 'Split space + mũi tên (2.25u + 2.75u)',
   },
 }
 /** tên 1 kiểu layout (vd "Split space (2.25u + 1.25u + 2.75u)") */

@@ -218,7 +218,7 @@ export function scoreDelivery({
   // tỉ lệ lỗ hỏng cao nhất trong từng loại lỗ: hỏng ít (≤ 1/3) khách khó để ý hơn
   const ratio = Math.max(
     0,
-    ...[['open', 'close'], ['top'], ['tray']].map((pre) => {
+    ...[['open', 'close'], ['top', 'bot'], ['tray']].map((pre) => {
       const all = holes(
         CASE_SCREW_STEPS.flatMap((st) => ctx.screws[st].map((sc) => sc.id)).filter((id) =>
           pre.includes(id.split('-')[0]),

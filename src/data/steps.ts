@@ -69,6 +69,10 @@ export const STEP_INFO: Record<StepId, { title: string; hint: string }> = {
     title: 'Bắt vít plate vào case trên',
     hint: 'Đã lật: giữ chuột lên ốc M2 cho thanh lực chạy, nhả trong vùng xanh để bắt tai plate vào lỗ ren case trên',
   },
+  bottomScrew: {
+    title: 'Bắt vít plate vào case dưới',
+    hint: 'Bottom mount: tai plate tì lên vấu case dưới, giữ chuột lên ốc M2 cho thanh lực chạy, nhả trong vùng xanh để bắt xuống lỗ ren (xong mới đậy case trên)',
+  },
   feet: {
     title: 'Dán feet cao su',
     hint: 'Case đã lật úp: click từng hốc tròn dưới đáy để dán feet (mỗi hốc 1 cái, chọn feet đen / trắng ở bảng bên)',
@@ -124,6 +128,7 @@ export const SCREW_STEPS: Record<ScrewStep, 'remove' | 'tighten'> = {
   caseOpen: 'remove',
   stabScrew: 'tighten',
   topScrew: 'tighten',
+  bottomScrew: 'tighten',
   trayScrew: 'tighten',
   caseScrew: 'tighten',
 }
@@ -133,6 +138,7 @@ export const SCREW_BITS: Record<ScrewStep, ScrewBit> = {
   stabScrew: 'phillips',
   // ốc top mount đầu trụ phẳng lục giác chìm (mặt tì phẳng lên tai plate, không dùng đầu côn)
   topScrew: 'hex',
+  bottomScrew: 'hex',
   trayScrew: 'torx',
   caseScrew: 'hex',
 }
@@ -149,23 +155,31 @@ export const stepBit = (step: StepId | null | undefined): ScrewBit | undefined =
   step ? (SCREW_BITS[step as ScrewStep] ?? EXTRA_BITS[step]) : undefined
 
 /** bước vặn vít ăn vào vỏ case (case nhựa giòn thì tuôn ren có thể nứt luôn case) */
-export const CASE_SCREW_STEPS: ScrewStep[] = ['caseOpen', 'topScrew', 'trayScrew', 'caseScrew']
+export const CASE_SCREW_STEPS: ScrewStep[] = [
+  'caseOpen',
+  'topScrew',
+  'bottomScrew',
+  'trayScrew',
+  'caseScrew',
+]
 /** chất liệu case giòn: PC, mica, acrylic */
 const BRITTLE = ['pc', 'acrylic', 'mica']
 /** số lần trượt ren (sai đầu vít / quá lực) trên 1 vít thì tuôn ren hẳn; các lần trước chỉ cảnh báo */
 export const STRIP_TRIES = 3
 /** tuôn ren vít bắt vào case giòn: tỉ lệ nứt luôn case */
 export const CRACK_CHANCE = 0.35
-/** loại lỗ ren theo id vít: case (open-i = close-i cùng 1 lỗ ngàm case), top mount, tray mount, stab; còn lại (DTB, ốc tạ) = other */
+/** loại lỗ ren theo id vít: case (open-i = close-i cùng 1 lỗ ngàm case), top / bottom mount (lỗ bắt tai plate), tray mount, stab;
+ * còn lại (DTB, ốc tạ) = other */
 export function holeKind(id: string): 'case' | 'top' | 'tray' | 'stab' | 'other' {
   const pre = id.split('-')[0]
   if (pre === 'open' || pre === 'close') return 'case'
+  if (pre === 'bot') return 'top'
   if (pre === 'top' || pre === 'tray' || pre === 'stab') return pre
   return 'other'
 }
 /** tuôn ren từ chừng này lỗ trở lên trong cùng 1 loại (case / tray / top mount) thì hỏng hẳn: không lắp tiếp được, đền khách */
 export const RUIN_HOLES = 2
-const RUIN_NAME = { case: 'ren case', top: 'ren top mount', tray: 'ren tray mount' } as const
+const RUIN_NAME = { case: 'ren case', top: 'ren bắt plate', tray: 'ren tray mount' } as const
 /** đã tuôn ren đủ `RUIN_HOLES` lỗ cùng loại chưa (null = chưa), kèm số lỗ hỏng + tên loại lỗ */
 export function ruinedBy(stripped: Record<string, true> | undefined) {
   const holes = { case: new Set<string>(), top: new Set<string>(), tray: new Set<string>() }
@@ -260,7 +274,7 @@ export const CASE_WALL = 0.45
  */
 export const CASE_MARGIN = 0.03
 /** khe từ mép board tới mép trong gờ đỡ trong lòng case (gờ không chạm PCB / plate) */
-// khe board – vách chỉ 0,03 → chừa 0,01 cho gờ còn lộ ra đỡ vòng O-ring / OG
+// khe board – vách chỉ 0,03 → chừa 0,01 cho gờ còn lộ ra đỡ vòng O-ring
 export const LEDGE_GAP = 0.01
 /**
  * Dải gasket Poron 20 × 4mm dày 2mm (u): dán 1 miếng mặt trên + 1 miếng mặt dưới tai / mép plate, `w` dọc mép, `d` vuông góc mép
@@ -305,14 +319,13 @@ export const Y = {
 }
 
 /**
- * Khung vòng silicon (u): O-ring mount nằm trong khe PCB – plate, từ trong mép board 0.04 ra sát mặt vách case
- * (nằm trên gờ trong lòng case); OG ôm ngoài mép cả PCB + plate. `bottom` = mặt dưới vòng (gờ đỡ đặt tới đây)
+ * Khung vòng silicon O-ring mount (u): nằm trong khe PCB – plate, từ trong mép board 0.04 ra sát mặt vách case.
+ * `bottom` = mặt dưới vòng
  */
-export function ringFrame(between: boolean) {
-  // OG: dải ôm mép nằm gọn trong khe board – vách (chạm vách, không lún vào)
-  const t = between ? CASE_MARGIN + 0.04 : CASE_MARGIN - 0.005
-  const h = between ? Y.plateBot - Y.pcbTop - 0.01 : 0.3
-  const y = between ? (Y.pcbTop + Y.plateBot) / 2 : -0.17
+export function ringFrame() {
+  const t = CASE_MARGIN + 0.04
+  const h = Y.plateBot - Y.pcbTop - 0.01
+  const y = (Y.pcbTop + Y.plateBot) / 2
   // tâm dây cách mép board (mặt ngoài dây sát mặt vách)
   const off = CASE_MARGIN - t / 2
   return { t, h, y, off, bottom: y - h / 2 }
@@ -388,9 +401,9 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   if (stabKeys.length && stabType === 'plate' && !plateless) steps.push('stabMod', 'stab')
   steps.push('switchLube', 'switch')
   if (inv.pcb!.type === 'solder') steps.push('solder')
-  if (['gasket', 'og'].includes(mount)) steps.push('gasket')
-  // O-ring / OG: switch (+ hàn) giữ chặt plate vào PCB rồi mới cuốn vòng silicon quanh viền
-  if (mount === 'oring' || mount === 'og') steps.push('ring')
+  if (mount === 'gasket') steps.push('gasket')
+  // O-ring: switch (+ hàn) giữ chặt plate vào PCB rồi mới cuốn vòng silicon quanh viền
+  if (mount === 'oring') steps.push('ring')
   // top mount (case 2 mảnh): plate bắt vít vào case trên trước, rồi cả cụm thả vào case dưới (khỏi bước đậy case)
   const topMount = mount === 'top' && caseDef.pieces === 2
   // dán feet vào đáy case trước khi lắp board vào case
@@ -421,6 +434,8 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   }
   steps.push('caseIn')
   if (mount === 'tray') steps.push('trayScrew')
+  // bottom mount (case 2 mảnh dựng bằng code): thả board vào, tai plate tì lên vấu case dưới → bắt vít từ trên xuống, rồi đậy case trên
+  if (mount === 'bottom' && caseDef.pieces === 2) steps.push('bottomScrew')
   if (caseDef.pieces === 2) steps.push(...(topMount ? [] : (['caseClose'] as const)), 'caseScrew')
   steps.push('keycap', 'test', 'pack')
 
@@ -475,6 +490,11 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
       caseDef.topScrews
         ? caseDef.topScrews.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
         : topScrewPoints(width, depth, caseScrews),
+    ),
+    // bottom mount: vít M2 từ trên xuyên lỗ tai plate bắt xuống lỗ ren vấu case dưới (lệch vít case như top mount)
+    bottomScrew: name(
+      'bot',
+      mount === 'bottom' && caseDef.pieces === 2 ? topScrewPoints(width, depth, caseScrews) : [],
     ),
     trayScrew: name('tray', trayScrews),
     stabScrew: name('stab', stabScrews),
@@ -760,6 +780,7 @@ export const SCREW_HEADS: Record<ScrewStep, ScrewHead> = {
   stabScrew: 'button',
   // top mount: ốc M2 ngắn bắt tai plate vào case trên (model M2×6 rút còn M2×4)
   topScrew: 'socket',
+  bottomScrew: 'socket',
   trayScrew: 'socket',
   // cùng bộ ốc lúc tháo case (caseOpen) vặn lại: cùng kiểu đầu ốc
   caseScrew: 'countersunk',
@@ -1059,6 +1080,7 @@ export function stepProgress(
     case 'caseOpen':
     case 'stabScrew':
     case 'topScrew':
+    case 'bottomScrew':
     case 'trayScrew':
     case 'caseScrew': {
       const list = ctx.screws[step]

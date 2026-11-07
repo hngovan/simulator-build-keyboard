@@ -137,7 +137,7 @@ export const LAYOUT_LV: Record<LayoutId, number> = {
 export const MOUNT_LV: Record<string, number> = {
   tray: 1,
   oring: 1,
-  og: 1,
+  bottom: 2,
   sandwich: 2,
   gasket: 3,
   top: 3,
