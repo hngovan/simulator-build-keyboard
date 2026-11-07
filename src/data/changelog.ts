@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.32',
     date: '2026-11-08',
-    commits: [],
+    commits: ['cec09ba'],
     title: 'Bottom mount, Duality hàng dưới WK, bỏ OG mount, gasket cho case 1 mảnh',
     items: [
       'Bỏ OG mount ở mọi case (bản lưu cũ tự đổi sang gasket mount); case 1 mảnh dựng bằng code chơi được thêm gasket mount',
