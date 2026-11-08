@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.33',
     date: '2026-11-08',
-    commits: [],
+    commits: ['3880202'],
     title: 'Pin Li-Po cho bàn phím không dây, case nhựa PC, case nhựa 2 mảnh',
     items: [
       'Shopii bán pin Li-Po 1000 → 5000mAh; case nhựa / nhôm ≤ 60% có sẵn hốc pin trên sàn (né daughterboard, cổng USB-C, trụ tray)',
