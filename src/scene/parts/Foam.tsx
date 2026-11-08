@@ -1,16 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import polygonClipping, { type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping'
-import {
-  ABS_BOSS,
-  CASE_MARGIN,
-  DTB_MM,
-  TRAY_HOLE,
-  Y,
-  absTwo,
-  caseFloorTop,
-  stabSpan,
-} from '@/data/steps'
+import { CASE_MARGIN, DTB_MM, TRAY_HOLE, Y, caseFloorTop, stabSpan } from '@/data/steps'
 import { MM as MM_U } from '../models/Switch'
 import { useCtx } from '@/store'
 import { blockerGaps } from '@/data/layouts'
@@ -196,12 +187,6 @@ export function CaseFoam({ ghost = false, hover = false }: { ghost?: boolean; ho
     if (ctx.battery)
       for (const [x0, x1, z0, z1] of batteryKeepout(ctx.battery))
         box(x0 - 0.02, x1 + 0.02, z0 - 0.02, z1 + 0.02)
-    // case nhựa 2 mảnh: nửa dưới trụ vít ghép mọc từ sàn
-    if (absTwo(ctx.caseDef))
-      for (const p of ctx.screws.caseOpen) {
-        const r = ABS_BOSS.r + 0.02
-        box(p.x - r, p.x + r, p.z - r, p.z + r)
-      }
     // trụ đỡ O-ring liền vách (case 1 mảnh): khoét chân trụ (khối chạm sàn)
     for (const p of ringPosts(ctx)) {
       const r = p.r + 0.02

@@ -18,6 +18,7 @@ import { createSolderSpool, createSpoolHolder } from '@/scene/models/solderSpool
 import { createScrewTray } from '@/scene/models/screwTrayModel'
 import { DIPLOMA_URL, createDiploma } from '@/scene/models/diplomaModel'
 import { createScroll } from '@/scene/models/scrollModel'
+import { createBatteryPack } from '@/scene/models/batteryModel'
 import { createManualScrewdriver } from '@/scene/models/HandTools'
 import baked from '@/data/generated/thumbs.json'
 
@@ -231,6 +232,7 @@ export async function buildScene(kind: ThumbKind, type: string) {
       return createFoamSheet(SUPPLIES[type].color)
     if (SUPPLIES[type]?.gasketStrip) return createGasketStrips(SUPPLIES[type].color)
     if (SUPPLIES[type]?.oring) return createORings(SUPPLIES[type].color)
+    if (SUPPLIES[type]?.battery) return createBatteryPack(type)
     if (type === 'urgo') {
       // hộp băng cá nhân "Band Aid Box" (Logansryche, Sketchfab, CC BY 4.0): model lệch xa gốc, căn tâm về 0
       const box = (await glbScene('/models/supplies/band-aid-box.glb')).clone(true)

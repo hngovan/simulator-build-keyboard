@@ -57,6 +57,13 @@ export const CREDITS: CreditGroup[] = [
         licenseFile: 'bakeneko-60-MIT.txt',
       },
       {
+        what: 'Bakeneko 65 (case)',
+        author: '© 2020 kkatano',
+        license: 'MIT',
+        url: 'https://github.com/kkatano/bakeneko-65',
+        licenseFile: 'bakeneko-65-MIT.txt',
+      },
+      {
         what: 'Blossom (case + PCB layout Alice)',
         author: '© 2021 DoughnutTheGuy',
         license: 'MIT',

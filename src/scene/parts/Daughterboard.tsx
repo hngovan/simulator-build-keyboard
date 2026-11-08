@@ -624,17 +624,20 @@ export function Daughterboard({ at }: { at: DtbSpot }) {
   const mouth: [number, number, number] = [0, DTB_MM.jst.y * MM, DTB_MM.jst.z * MM]
   const headY = (DTB_MM.t + 2) * MM
   const screwSrc = useGLTF(SCREW_GLB).scene
-  // case nhựa sàn mỏng: vít ngắn hơn
-  const thin = at.floor < Y.floorTop - 1e-6 && at.tilt === 0
+  // kê trụ: mặt dưới mạch cao hơn sàn (case CAD lỗ USB nằm cao / case nhựa trụ nhựa đúc liền sàn)
+  const post = at.y - at.floor
+  // case nhựa (sàn mỏng): trụ kê là trụ nhựa liền sàn (Case.tsx `DtbPosts`), không vẽ trụ kim loại
+  const plastic = at.floor < Y.floorTop - 1e-6 && at.tilt === 0
+  // sàn mỏng không trụ: vít ngắn hơn cho khỏi lòi mặt đáy
+  const thin = plastic && post < 0.01
   const screwModel = useMemo(
     () => shortScrew(screwSrc, thin ? SCREW_LEN_THIN : SCREW_LEN),
     [screwSrc, thin],
   )
-  // kê trụ: mặt dưới mạch cao hơn sàn (case CAD lỗ USB nằm cao)
-  const post = at.y - at.floor
   return (
     <group position={[at.x, at.y, at.z]} rotation-x={at.tilt}>
       {post > 0.01 &&
+        !plastic &&
         DTB_MM.holes.map(([hx, hz], i) => (
           <mesh key={i} position={[hx * MM, -post / 2, hz * MM]} castShadow receiveShadow>
             <cylinderGeometry args={[POST_R * MM, POST_R * MM, post, 16]} />

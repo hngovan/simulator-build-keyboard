@@ -72,7 +72,7 @@ const FEET_COLORS: [id: string, name: string, color: string][] = [
 export const FEET_IDS = FEET_COLORS.map(([id]) => id)
 
 /**
- * Pin Li-Po 3,7V dẹt cho bàn phím không dây: dày cố định 5mm (vừa khe sàn → đáy socket hotswap khi nằm trong hốc), dung lượng lớn thì
+ * Pin Li-Po 3,7V dẹt cho bàn phím không dây: dày cố định 3mm (pin túi mỏng, nằm dưới jack pin trên PCB), dung lượng lớn thì
  * mặt pin rộng / dài ra; 1000 → 5000mAh. Shopii gộp 1 sản phẩm, chọn dung lượng
  */
 const BATTERY_DEFS: [mah: number, w: number, l: number, price: number][] = [
@@ -83,7 +83,7 @@ const BATTERY_DEFS: [mah: number, w: number, l: number, price: number][] = [
   [5000, 60, 115, 290],
 ]
 /** độ dày pin (mm) */
-export const BATTERY_T = 5
+export const BATTERY_T = 3
 export const BATTERY_IDS = BATTERY_DEFS.map(([mah]) => `bat${mah}`)
 
 function batteryDefs(): Record<string, SupplyDef> {

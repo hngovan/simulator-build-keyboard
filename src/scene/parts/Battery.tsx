@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { create } from 'zustand'
 import { useBuild, useCtx, useGame, useStep } from '@/store'
 import { Y, batteryFits, batterySize } from '@/data/steps'
+import { batteryLabel as labelTexture } from '../models/batteryModel'
 import type { BatterySpot } from '@/types'
 import { playClick } from '@/sound'
 import { useHover } from '../common/useHover'
@@ -31,13 +32,15 @@ const LOOSE = { out: 0.3, rise: 0.4 }
 /** bước lắp pin: đã cầm đầu dây (chờ bấm jack pin trên PCB) */
 export const useBatPick = create<{ picked: boolean }>(() => ({ picked: false }))
 
-const bodyMat = new THREE.MeshStandardMaterial({
-  color: '#c3c7cc',
-  metalness: 0.55,
-  roughness: 0.4,
+/** băng keo Kapton vàng bọc quanh viên pin (thân pin nhìn thấy ở viền + mép) */
+const kaptonMat = new THREE.MeshPhysicalMaterial({
+  color: '#e0a92a',
+  roughness: 0.28,
+  clearcoat: 0.6,
+  clearcoatRoughness: 0.25,
 })
-const labelMat = new THREE.MeshStandardMaterial({ color: '#3d6fb8', roughness: 0.6 })
-const tapeMat = new THREE.MeshStandardMaterial({ color: '#d9a21e', roughness: 0.5 })
+/** bó mạch bảo vệ ở đầu ra dây (băng keo vàng dày hơn, sẫm hơn chút) */
+const tapeMat = new THREE.MeshPhysicalMaterial({ color: '#d39a1c', roughness: 0.3, clearcoat: 0.5 })
 const housingMat = new THREE.MeshStandardMaterial({ color: '#efe9dc', roughness: 0.6 })
 const holeMat = new THREE.MeshBasicMaterial({ color: '#141414' })
 const wireMats = WIRES.map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.45 }))
@@ -74,29 +77,42 @@ function Target({
 }
 
 /** viên pin (u): gốc = tâm mặt đáy, cạnh dài theo x, dây ra ở cạnh `side` */
+/** nhãn trắng in thông số dán mặt trên pin (canvas, cache theo loại): mã cỡ TTWWLL, 3.7V, mAh / Wh, mã QR, ký hiệu thùng rác gạch,
+ * +/− ở phía đầu dây (`side`) — kiểu pin Li-Po bán lẻ */
+
+/**
+ * viên pin Li-Po (u): gốc = tâm mặt đáy, cạnh dài theo x, dây ra ở cạnh `side`. Như pin bán lẻ: túi pin bọc băng keo Kapton vàng
+ * (lộ ở viền + 4 mép), mặt trên dán nhãn trắng in thông số chừa viền vàng, đầu dây có bó mạch bảo vệ gập lại bọc băng keo
+ */
 function Pack({ id, side, ghost }: { id: string; side: 1 | -1; ghost?: ReactNode }) {
   const b = batterySize(id)!
+  // bó mạch bảo vệ ở đầu dây (~4mm), nhãn chừa viền vàng ~1,5mm
+  const pcm = 4 * MM
+  const rim = 1.5 * MM
+  const tex = useMemo(() => (ghost ? null : labelTexture(id, side)), [id, side, ghost])
   return (
     <group>
       <RoundedBox
-        args={[b.l, b.t, b.w]}
-        radius={Math.min(b.t / 2 - 0.001, 0.04)}
-        position-y={b.t / 2}
-        material={ghost ? undefined : bodyMat}
+        args={[b.l - (ghost ? 0 : pcm), b.t, b.w]}
+        radius={Math.min(b.t / 2 - 0.001, 0.025)}
+        smoothness={3}
+        position={[ghost ? 0 : (-side * pcm) / 2, b.t / 2, 0]}
+        material={ghost ? undefined : kaptonMat}
         castShadow={!ghost}
         receiveShadow
       >
         {ghost}
       </RoundedBox>
-      {!ghost && (
+      {!ghost && tex && (
         <>
-          {/* nhãn xanh mặt trên */}
-          <mesh position={[0, b.t + 0.001, 0]} rotation-x={-Math.PI / 2} material={labelMat}>
-            <planeGeometry args={[b.l * 0.7, b.w * 0.75]} />
+          {/* nhãn trắng mặt trên */}
+          <mesh position={[(-side * pcm) / 2, b.t + 0.0015, 0]} rotation-x={-Math.PI / 2}>
+            <planeGeometry args={[b.l - pcm - 2 * rim, b.w - 2 * rim]} />
+            <meshStandardMaterial map={tex} roughness={0.55} metalness={0.05} />
           </mesh>
-          {/* băng keo vàng bọc mạch bảo vệ ở đầu ra dây */}
-          <mesh position={[side * (b.l / 2 - 0.12), b.t / 2, 0]} material={tapeMat} castShadow>
-            <boxGeometry args={[0.22, b.t + 0.01, b.w + 0.01]} />
+          {/* bó mạch bảo vệ: mỏng hơn thân pin, gập ở đầu ra dây */}
+          <mesh position={[side * (b.l / 2 - pcm / 2), b.t * 0.4, 0]} material={tapeMat} castShadow>
+            <boxGeometry args={[pcm, b.t * 0.8, b.w * 0.92]} />
           </mesh>
         </>
       )}
@@ -125,24 +141,29 @@ function wireGeometries(
   b: THREE.Vector3,
   outB: THREE.Vector3,
 ) {
+  // giữa 2 đầu: 2 đầu gần cùng cao độ (board đã thả vào case) thì võng xuống; chênh nhiều (board dựng) thì đi thẳng, không bẻ ngược
+  // về sát pin (khúc gập gắt làm 2 sợi xoắn chéo nhau)
+  const mid = a.clone().lerp(b, 0.5)
+  if (Math.abs(a.y - b.y) < 0.3) mid.setY(Math.min(a.y, b.y) + 0.04)
   const pts = [
     a.clone(),
     a.clone().addScaledVector(outA, 0.12),
-    a
-      .clone()
-      .lerp(b, 0.5)
-      .setY(Math.min(a.y, b.y) + 0.04),
+    mid,
     b.clone().addScaledVector(outB, 0.12),
     b.clone(),
   ]
   const center = new THREE.CatmullRomCurve3(pts, false, 'centripetal')
-  const n = 40
-  const up = new THREE.Vector3(0, 1, 0)
-  let side = new THREE.Vector3(0, 0, 1)
+  const n = 48
+  // 2 sợi nằm dẹt cạnh nhau: hướng tách lấy vuông góc hướng dây ra khỏi pin (nằm ngang), rồi chuyển dọc dây theo kiểu khung song song
+  // (chiếu bỏ thành phần theo tiếp tuyến) → không lật dấu giữa chừng, 2 sợi không bắt chéo
+  let side = new THREE.Vector3().crossVectors(outA, new THREE.Vector3(0, 1, 0))
+  if (side.lengthSq() < 1e-6) side.set(0, 0, 1)
+  side.normalize()
   const samples = Array.from({ length: n + 1 }, (_, k) => {
     const t = k / n
-    const s = new THREE.Vector3().crossVectors(center.getTangentAt(t), up)
-    if (s.lengthSq() > 0.04) side = s.normalize().multiplyScalar(Math.sign(s.dot(side)) || 1)
+    const tan = center.getTangentAt(t)
+    const s2 = side.clone().addScaledVector(tan, -side.dot(tan))
+    if (s2.lengthSq() > 1e-6) side = s2.normalize()
     return { p: center.getPointAt(t), side: side.clone() }
   })
   return WIRES.map((_, i) => {

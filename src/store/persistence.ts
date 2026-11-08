@@ -171,7 +171,9 @@ export interface SaveData extends Profile {
 // 11: bỏ OG mount (thay bằng bottom mount): đơn / build OG đổi sang gasket mount, bỏ bước `ring` của build OG làm dở
 //     (ogSession), đơn OG thôi dặn dây O-ring (ogOrder)
 // 12: thêm bước tuỳ chọn lắp pin (`battery`, sau `jst`, case dựng bằng code ≤ 60%) → tìm lại bước đang làm theo tên (addBatteryStep)
-const SAVE_REV = 12
+// 13: top mount (không phải case dây JST luồn qua tạ): úp case trên + bắt vít plate dời lên trước tháo tạ / lắp DTB
+//     → tìm lại bước đang làm theo tên (topBeforeDtb)
+const SAVE_REV = 13
 
 /** danh sách bước của bản lưu trước rev 12 (chưa có bước lắp pin) */
 const noBattery = (steps: StepId[]): StepId[] => steps.filter((s) => s !== 'battery')
@@ -325,6 +327,25 @@ function addBatteryStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'buil
   const steps = buildContext(order, sess.inventory, sess.mount).steps
   if (!steps.includes('battery')) return sess
   const stepIdx = steps.indexOf(noBattery(steps)[b.stepIdx])
+  if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
+  return { ...sess, build: { ...b, stepIdx }, history: [] }
+}
+
+/** Build top mount làm dở từ bản cũ (thứ tự cũ: (coverOff) → dtb → topCase → topScrew → jst): tìm lại bước đang làm theo tên */
+function topBeforeDtb<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
+  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  const dtbAt = steps.indexOf('dtb')
+  const topAt = steps.indexOf('topCase')
+  // chỉ build có top mount + DTB, và top mount đang đứng trước (thứ tự mới)
+  if (dtbAt < 0 || topAt < 0 || topAt > dtbAt) return sess
+  const old: StepId[] = steps.filter((s) => s !== 'topCase' && s !== 'topScrew')
+  old.splice(old.indexOf('dtb') + 1, 0, 'topCase', 'topScrew')
+  const stepIdx = steps.indexOf(old[b.stepIdx])
   if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
   return { ...sess, build: { ...b, stepIdx }, history: [] }
 }
@@ -657,6 +678,13 @@ export function loadSave(): SaveData | null {
         ...session,
         ...addBatteryStep(session.order, { ...session, history: session.history ?? [] }),
         jobs: session.jobs?.map((j) => ({ ...j, session: addBatteryStep(j.order, j.session) })),
+      }
+    }
+    if ((save.rev ?? 0) < 13 && session) {
+      session = {
+        ...session,
+        ...topBeforeDtb(session.order, { ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: topBeforeDtb(j.order, j.session) })),
       }
     }
     if (session) {

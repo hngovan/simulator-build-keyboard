@@ -1,5 +1,103 @@
 # Cảnh 3D & model
 
+## 2026-11-08 (tối)
+
+### Case nhựa 2 mảnh: hốc vách kín (không thủng sang rãnh rỗng)
+
+- Yêu cầu (ảnh mặt dưới case trên lật ngửa): "ở phần khoét rãnh lõm vào để bắt case đang bị render trong suốt?". Không phải lỗi vật liệu:
+  hốc tai plate top mount (`ABS_TOP.d` 0,12u) / hốc vấu bottom mount (0,09u) sâu hơn lớp da trong (`ABS_SHELL.skin` 0,08u) nên khoét
+  thủng sang rãnh rỗng của thành → nhìn xuyên qua.
+- `notchPockets` (caseShell.ts, chỉ case trên `absTwoShellGeometry`): hốc nào sâu hơn lớp da thì dựng vách sau + 2 vách bên + trần dày
+  `POCKET_T` 0,05u trong rãnh (hốc kín như case đúc), miệng hốc vẫn mở xuống từ mép ghép; gân rãnh né thêm bề dày vách bọc.
+- Vẫn thấy xuyên ("sao vẫn thấy bị xuyên qua?", ảnh khe xanh mảnh dọc mép hốc): khe nứt CSG (three-bvh-csg) dọc cạnh hốc, nhìn qua khe
+  vào trong khối vách (mặt trong không vẽ). Vách bọc trước chỉ bắt đầu sau lớp da nên không che. Giờ lót mọi hốc (cả hốc nông):
+  vách bên + trần phủ từ ngay mặt trong vách (0,002u), mặt lót lấn vào trong hốc `POCKET_LAP` 0,004u → sau mọi khe đều có mặt đặc.
+
+### Case nhựa nâng đáy (gân xương cá thấp theo), pin Li-Po 3mm
+
+- Yêu cầu: "vẫn cao cho hạ thêm vì xương cá bottom quá cao"; khi hỏi về giới hạn pin: "pin lipo mỏng dẹp lo gì ? hạ xương cá => hạ case
+  bot => hạ case top".
+- `BATTERY_T` 5 → 3mm (supplies.ts, pin túi mỏng). Đáy case nhựa nâng `ABS_RAISE` 0,1u: `caseFloorBot(c)` (= `Y.floorBot` + 0,1 cho nhựa),
+  `caseFloorTop` nhựa = `caseFloorBot` + `ABS_FLOOR` (−0,7, ngang sàn nhôm) → gân xương cá (cao theo sàn → dưới socket) thấp còn
+  ~4,7mm; DTB trên trụ ngang chỗ DTB case nhôm; pin 3mm nằm thẳng trên sàn dưới jack pin.
+- Dùng `caseFloorBot` ở: vỏ 1 mảnh (`Walls` y0), `AbsTwoShell`, `RubberFeet`, độ lệch lật case trên đã tách, `caseScrewY`, `caseBores`,
+  orderThumb. Cả cụm không dời xuống: đáy nhựa cao hơn thảm ~1,4mm, feet dán xong chạm thảm.
+- Xem bằng Chrome ngầm Free build case nhựa 60 2 mảnh bottom mount (script tạm, đã xoá). Chụp lại ảnh Shopii case nhựa + pin (`ONLY=bat`).
+
+### Case nhựa thấp hơn: hạ mép trên
+
+- Yêu cầu: "tổng thể case vẫn cao nên cần hạ thấp 1 xíu" (trước đó hỏi có phải do khung xương cá: không, gân mọc theo khoảng trống
+  dưới PCB; cao độ case dựng bằng code dùng chung `Y`, tổng ~24mm).
+- Không nâng đáy được: sàn nhựa mỏng là để pin Li-Po 5mm nằm thẳng trên sàn dưới jack pin (`BAT_TOP`, chỉ dư ~0,1mm).
+- Hạ mép trên mọi case nhựa (1 + 2 mảnh): `ABS_CASE_TOP` 0,26u (~5mm trên mặt plate, trước 0,36 = `Y.caseTop`), `caseTopOf(c)`;
+  Case.tsx dùng `caseTop` thay `Y.caseTop` (vỏ, khối chặn, mũi tên, lật case trên), `AbsTwoShell` / trụ vít case trên, orderThumb.
+  Chụp lại ảnh Shopii mọi case nhựa.
+
+### Case nhựa 2 mảnh bottom mount: vấu mọc từ sàn
+
+- Yêu cầu (ảnh bàn build, khoanh 3 trụ trong lòng case dưới): "trụ gì đây?" — vấu bottom mount (`BottomPads` nhánh `absTwo`) chỉ dựng từ
+  mép ghép `Y.split` lên mặt dưới plate, ngồi trên mép da trong, nửa thân chìa vào lòng case không gì đỡ → trông như lơ lửng.
+- Vấu giờ là trụ từ sàn khay (`caseFloorTop`) lên mặt dưới plate, đúc liền da trong (như trụ case nhựa đúc thật).
+  steps.ts: điểm vấu `bottomPts` tính trước DTB / pin; DTB né vấu như vít ghép (`dtbSpot` nhận thêm `floorBosses`, khoảng tránh theo
+  `ABS_BOSS.r`), pin né như trụ tray (`batterySpot` posts); Foam.tsx khoét foam đáy quanh vấu.
+
+### Case nhựa 2 mảnh: case trên trùm case dưới, thành rỗng có gân + trụ vít nhỏ, trụ kê DTB
+
+- Yêu cầu (ảnh case Transition Lite PC): "lỗ ốc ở case nhựa 2 mảnh hơi sai => phải thiết kế top trùm bot… phần top vẫn có khung xương
+  (bên trong rỗng, có trụ ốc rất nhỏ để cấy vào)… vị trí gắn dtb cũng có trụ". Trước: trụ vít Ø4,6mm cao từ sàn tới dưới plate đứng
+  trong lòng case (PCB + foam phải khoét rãnh né), mép ghép lộ ở giữa vách.
+- Tham khảo: case nhựa đúc (Transition Lite, nguyên tắc rib / boss ép phun): trụ vít đặt trong thành, nối vách bằng gân, ren đồng cấy;
+  vít bắt từ đáy sát mép.
+- `ABS_WALL_2` 0,14 → 0,36u (~6,9mm), `ABS_SHELL` (da 0,08, mặt trên 0,1, gân 0,03 cách ~0,8u, trụ r 0,09, khe khay 0,006).
+  `absTwoShellGeometry` (caseShell.ts, CSG): top = vành bo mép từ mặt đáy lên mặt trên − phần trong da ngoài dưới mép ghép − rãnh giữa
+  2 lớp da (`Y.split` → dưới mặt trên) + gân `channelRibs` (né trụ / cổng USB / hốc vách); bottom = khay lọt trong da ngoài + da trong
+  tới mép ghép, rãnh ngoài da trong có gân. Case.tsx `AbsTwoShell` thay `Walls` cho `absTwo`, orderThumb dựng cùng hàm (kèm trụ).
+- Vít `caseScrewPoints` mọi case tâm giữa thành (nhựa = giữa rãnh); `caseBores` nhựa: lỗ côn + lỗ xuyên chỉ qua khay, không khoan ren vào
+  vỏ trên (ren trong trụ). Bỏ rãnh né trụ vít ghép ở PCB (Board.tsx, còn vấu bottom mount) và foam (Foam.tsx); bỏ `dodgeStabs` cho vít ghép,
+  `batterySpot` bỏ tham số `bosses`.
+- DTB case nhựa: `dtbSpot(..., post)` = `ABS_DTB_POST` 0,1u → `y = floor + post`, `DtbPosts` (Case.tsx) 2 trụ nhựa liền sàn đúng lỗ
+  vít DTB; Daughterboard không vẽ trụ kim loại cho case nhựa, vít dài thường; lỗ cổng USB theo `dtb.y`.
+- Chụp lại ảnh Shopii: `ONLY=Two` / `Pc` / `pc60` / `pc40`.
+
+### Mở case 2 mảnh: lật úp sau khi tách thì case trên không chìm xuống bàn
+
+- Yêu cầu: "khi lật úp case lại ở step tháo vít case với case 2 mảnh thì phần top đang bị ẩn xuống bàn".
+- Nguyên nhân: tháo hết vít đáy (`useCaseSplit`) thì case trên nhấc `topY = 2.6` theo toạ độ cụm; Q lật cụm 180° thì khoảng nhấc đó quay xuống dưới bàn.
+- `Case.tsx`: đã tách + cụm đang lật (`useAssemblyFlipped() && split`) thì `topY = -(Y.caseTop - Y.floorBot) - 1.2` (nhấc về phía đáy case dưới)
+  → sau khi lật case trên vẫn lơ lửng phía trên, hở ~1.2u, thấy mặt trong.
+
+### Top mount: úp case trên + bắt vít plate trước khi lắp DTB
+
+- Yêu cầu (ảnh danh sách bước case PC 2 mảnh top mount): "move step xuống dưới như tôi vẽ, không là bị sai" — đang lắp daughterboard thì
+  bước "Úp case trên" ở dưới đã tích ✓.
+- `buildContext` (nhánh case không phải `jstUp`): `topCase` → `topScrew` dời lên trước `coverOff` / `dtb`; thứ tự giờ … feet → caseFoam →
+  topCase → topScrew → (coverOff) → dtb → jst → (battery) → (coverOn) → caseIn (giống case `jstUp`: board + case trên để riêng lúc lắp DTB).
+- Save rev 13 (`topBeforeDtb` persistence.ts): build top mount làm dở theo thứ tự cũ tìm lại bước đang làm theo tên.
+
+### Ảnh / khung 3D Shopii pin Li-Po
+
+- Yêu cầu: "model pin trong Shopii kì vậy?" (hiện cuộn dây). `buildScene` nhánh `supply` không có pin → rơi về `createSolderSpool`.
+- `scene/models/batteryModel.ts`: `batteryLabel` (nhãn canvas, chuyển từ Battery.tsx, bàn build import lại) + `createBatteryPack(id)` (túi Kapton
+  vàng + nhãn trắng + bó mạch bảo vệ + 2 dây đỏ / đen + đầu cắm JST PH trắng, theo cỡ pin); `modelThumb` gọi khi `SUPPLIES[type].battery`.
+  Chụp lại ảnh Shopii `ONLY=bat`.
+
+### Case nhựa 2 mảnh chơi lại top mount
+
+- Yêu cầu: "case nhựa ABS cũng chơi top mount được mà, mắc gì không được?" (trước bỏ vì vấu treo trên plate sợ vướng keycap).
+- `ABS_TOP` {d 0,12, bossR 0,09, bossH 0,2} (steps.ts): vít M2 tâm ngay mặt trong vách (`topScrewPoints(…, absTop)`), tai plate thò vào
+  hốc nông vách case trên sâu 0,12u (vách 0,14u còn da ngoài; `plateGeometry` tham số `tabDepth`, Case `topNotches` d = 0,12), ren nằm
+  trong trụ nhựa nhỏ r 0,09u cao 0,2u đúc liền vách ngay trên mặt plate (`AbsBoss r`, ren đồng cấy miệng dưới), không khoan ren vào
+  vách mỏng (`topBores` bỏ với `absTwo`). Trụ lấn vào lòng case 0,06u < khe tới thân switch hàng mép, thấp hơn chân keycap.
+- `mounts` 5 case nhựa 2 mảnh: `['gasket', 'top', 'bottom']`. Chụp kiểm tra plastic60Two bước úp case trên + vặn vít từ đáy (8 vít).
+
+### Case Bakeneko 65
+
+- Yêu cầu: "tải thêm 2 model case mới: kkatano/bakeneko-60 và kkatano/bakeneko-65" — Bakeneko 60 đã có (`bakeneko60`), chỉ thêm 65.
+- Clone repo → `assets/keyboards/bakeneko65/case/case.step` (+ plate DXF, viền PCB, layout, LICENSE); `scripts/convert-cases.mjs` thêm
+  `bakeneko65/case` (`turn` như Bakeneko 60) → `public/models/keyboards/bakeneko65/case.glb` (314,8 × 110,2 × 29,4mm; Planck GLB tái tạo
+  khác byte nên trả lại bản cũ). Dò hốc feet (`probe-case-feet.mjs`) + lỗ USB / sàn / trụ DTB (`probe-case-usb.mjs`) → `caseFeet.json` /
+  `caseUsb.json`. `CASES.bakeneko65` (65%, nhôm anod 1 mảnh, O-ring, 2.000k). Chụp kiểm tra Free build: board 65% vừa lòng case.
+
 ## 2026-11-08
 
 ### Case nhựa 2 mảnh, khung xương cá, nhựa trong nhuộm màu
@@ -1861,3 +1959,75 @@
     `absRibs` bỏ gân trong hốc + dải dây (`batteryKeepout`, dùng chung foam đáy), `BatteryPanel` (ModPanels) chọn dung lượng.
   - Kèm: vá `caseFloorTop` / `absTwo` / `gasketTabbed` dùng `isPlasticCase` (case PC dựng y như ABS).
   - Chụp kiểm plastic60 + gasket60 gasket mount: đặt pin 5000mAh, cắm dây, thả board vào case.
+
+## 2026-11-08 — Q lật được sau khi case 2 mảnh tách (bước mở case)
+
+- Yêu cầu: tháo hết vít đáy, case tách 2 mảnh thì bấm Q không lật được (nút HUD vẫn bật nhưng bấm không có tác dụng).
+- Nguyên nhân: `useAssemblyFlipped` (caseSplit.ts) ép `false` khi `useCaseSplit()` → bỏ qua `viewFlip`.
+- Sửa: lúc tách (`useCaseSplit`, cả khi tải lại đã tách) đặt `viewFlip = autoFlip('caseOpen', ctx)` để cụm ngửa lại, bỏ ép `split` trong
+  `useAssemblyFlipped` → Q lật / lật lại bình thường. `Objective` (BenchHud) không nhắc "Đang xem mặt trên — bấm Lật xem đáy" khi bước đã xong.
+  Chụp kiểm pc60 gasket: tách → ngửa, Q → thấy đáy.
+
+## 2026-11-08 — Pin: model giống pin bán lẻ, jack sát pin, dây không xoắn
+
+- Yêu cầu: model pin sai + thiếu nhãn dán (ảnh mẫu pin Li-Po 606090: viền băng keo vàng, nhãn trắng in thông số); jack pin phải gần pin nhất,
+  không nằm xa cạnh jack DTB; 2 sợi dây pin đè chéo lên nhau.
+- Đã làm:
+  - `Battery.tsx` `Pack`: thân bọc Kapton vàng (`kaptonMat`, clearcoat), nhãn trắng mặt trên chừa viền vàng 1,5mm, vẽ canvas (`labelTexture`,
+    cache theo loại + phía dây): mã TTWWLL, mAh, số lô, 3.7V, Wh, QR giả, thùng rác gạch, +/− cạnh QR; khối chữ dồn về phía đầu dây, cỡ chữ theo
+    bề rộng (không tràn). Bó mạch bảo vệ 4mm ở đầu dây.
+  - Jack: hạ pin (`BAT_TOP` = dưới đáy jack `BAT_JACK_H` 3,2mm) để jack nằm ngay trên pin → nhôm khoét hốc sâu hơn (đáy hốc −0,794, sàn còn ~2mm);
+    `batterySpot` dây ra cạnh ngắn phía xa DTB, jack muốn ở trên pin cách đầu dây 0,45u, miệng quay ra đầu dây; `placeJack` thêm `softCost`
+    (jack pin 0,02: chạm khung footprint gần như không phạt, vẫn né socket / chân switch / lỗ stab) — trước phạt 1,2 / điểm nên jack chạy xa ~2u.
+  - Dây: bỏ điểm võng sát pin khi 2 đầu chênh cao (board dựng), hướng tách 2 sợi chuyển dọc dây kiểu khung song song (không lật dấu).
+  - Chụp kiểm pc60One gasket (pin 2000 / 4000mAh): nhãn đủ chữ, jack ngay trên pin, 2 sợi song song.
+
+## 2026-11-08 — Vỏ case dưới liền 1 khối: lỗ ốc nhựa 2 mảnh, bỏ đường kẻ quanh đáy
+
+- Yêu cầu: lỗ ốc ở case ABS 2 mảnh bị lỗi (mặt đáy chỉ thấy nửa lỗ); bỏ đường kẻ quanh mặt đáy case nhựa.
+- Nguyên nhân: `caseShellGeometry` dựng vành (ring) + sàn (floor / skin hốc feet) là các khối riêng rồi `mergeGeometries` → mối ghép thành đường kẻ
+  quanh đáy; lỗ khoan (`bores`) chỉ khoét vào vành — trụ vít nhựa 2 mảnh sát mặt trong vách nên lỗ lấn sang sàn, sàn không khoét → che nửa lỗ.
+- Sửa (`caseShell.ts`): có sàn thì dựng 1 khối đặc bo mép (`ringShape(..., solid)`), trừ lòng case (từ mặt sàn lên), rồi khoét mọi thứ trên khối
+  đó bằng 1 lần CSG: hốc tai, lỗ khoan, lỗ USB, hốc feet (trụ tròn từ mặt đáy, thay tấm `skin` đục lỗ), hốc pin (`tubCut`, thay `carveTub`).
+  Áp cho mọi case dựng bằng code có sàn (nhựa / nhôm / PC / acrylic / gỗ), case trên không sàn giữ vành như cũ. Mép trong miệng lòng case giờ vuông
+  (trước bo theo bevel vành). Chụp kiểm plastic40Two (đáy liền, lỗ ốc tròn đủ) + gasket60 (lòng case, hốc pin, đáy).
+
+## 2026-11-08 — Plate bottom mount case nhựa 2 mảnh bị khuyết nửa tròn ở mép
+
+- Yêu cầu: plate (40% bottom mount, nhựa 2 mảnh) có các vết khuyết nửa tròn dọc mép trước / sau, trông như lỗi.
+- Nguyên nhân: tâm vấu cách mép board chỉ 0,02u nhưng lỗ plate dùng cỡ lỗ tray (Ø4,8mm, `TRAY_HOLE.plate`) → lỗ ăn ra ngoài mép plate.
+- Sửa: `ABS_BOSS.inset` 0,05 → 0,12 (tâm vấu cách mép board 0,09u, vấu vừa chạm mặt trong vách, bỏ hốc vách `absPadNotches`); lỗ plate cỡ lỗ
+  xuyên M2 (`ABS_SCREW.thru`, `plateGeometry` nhận `r` riêng từng lỗ); `bossSpot` (steps.ts) dò x riêng từng cạnh trước / sau cho đầu ốc
+  (Ø3,8mm) lọt khe giữa 2 lỗ switch / stab (`clearOfCutouts`) + né lỗ chân stab PCB. Kiểm số liệu 40 / 60 / TKL / full: mọi vít không chạm lỗ cắt;
+  chụp plastic40Two bottom mount: lỗ tròn kín trong mép plate, thấy vấu bên dưới.
+- Người dùng chỉnh lại: plate bottom mount phải y như plate top mount (có tai), chỉ khác vít bắt xuống case dưới. Đổi: điểm vít `bottomPts` case nhựa
+  2 mảnh = `topScrewPoints(..., absTop)` (tâm ngay mặt trong vách, vẫn `bossSpot` né lỗ stab / switch), plate dùng tai top mount sâu `ABS_TOP.d`,
+  vách case trên khoét hốc như top mount (trần chừa đầu ốc `BOTTOM_NOTCH_TOP`), vấu = trụ nhỏ `ABS_TOP.bossR` từ sàn lên mặt dưới tai (PCB / foam khoét
+  rãnh theo bán kính này); `ABS_BOSS.inset` về 0,05. Khoảng né vít ghép khi `absTop` = nửa tai + khe + trụ vít ghép (hốc tai không lấn trụ vít ghép, áp cả top mount).
+- Tiếp: người dùng khoanh khối nhựa chắn cạnh tai plate (bước top mount) + báo tai quá ngắn, đầu ốc cấn PCB. Nguyên nhân: tâm vít ngay mặt trong
+  vách → nửa trụ ren (`ABS_TOP.bossR`) thò vào lòng case trên mặt plate, đầu ốc Ø3,8 lấn mép PCB. Sửa: `ABS_TOP` = { d 0,2, z 0,1 }: hốc + tai sâu
+  0,2u (qua da trong vào rãnh thành), tâm vít cách mặt trong vách 0,1u (đầu ốc cách mép PCB ~0,4mm) → trụ ren top mount / vấu bottom mount nằm
+  gọn trong rãnh thành, không lấn lòng case; bỏ rãnh né trên PCB + foam đáy. Áp cả top mount lẫn bottom mount case nhựa 2 mảnh.
+
+## 2026-11-08 — Gasket case nhựa 2 mảnh có tai + vấu khối lược
+
+- Yêu cầu: gasket mount case nhựa 2 mảnh không có tai / vấu kẹp, dải gasket chỉ dán quanh mép plate trông vô lý; làm theo case nhựa M0110
+  (khối lược nhựa từ case dưới nhô lên đỡ mép plate + gasket).
+- Đã làm: `gasketTabbed` bỏ loại trừ case nhựa (mọi case 2 mảnh dựng bằng code trừ mica) → plate có tai gasket, dải trên + dưới tai, hốc vách
+  case trên `gasketNotches` (qua da trong vào rãnh thành, lót hốc như top mount); vấu đỡ case nhựa = `combPadGeometry` (Case.tsx: 2 thanh dọc vách +
+  gân ngang ~0,11u, mọc từ sàn case dưới trong rãnh thành, nhô qua mép ghép tới mặt dưới dải dưới). Điểm gasket case nhựa né trụ vít ghép trong rãnh
+  thành (steps.ts). Kiểm 40 / 60 / 75 / TKL / full: hốc tai không chạm trụ vít ghép / lỗ USB; chụp plastic60Two gasket (khối lược + tai kẹp 2 dải).
+- Tiếp: bỏ thanh dọc mặt trong khối lược (gân hở về phía lòng case như M0110); gân làm bậc: đoạn trong thấp tới mặt dưới dải gasket dưới
+  (tai plate gá vào), đoạn ngoài cao thành gờ chặn đầu tai (`COMB.lip` 0,05u, đỉnh `COMB.lipTop` −0,02) + 1 thanh dọc mặt ngoài; hốc vách case trên
+  sâu thêm `COMB.lip` cho gờ. Khối lược dựng theo trục z cục bộ (trong → ngoài), cạnh sau xoay 180°.
+- Tiếp: thêm 2 thành bên khối lược (`COMB.side` 0,022u, cao bằng gờ, suốt chiều sâu) ôm 2 cạnh tai plate (khe ~0,1mm) cho plate không trôi ngang;
+  khối rộng gần bằng hốc vách case trên (`GASKET.w` + 2 × khe hốc − 0,004), gân thấp chỉ ở giữa 2 thành.
+
+## 2026-11-08 — Hạ thấp case nhựa thêm
+
+- Yêu cầu: "sao case lại cao vậy ?? giảm thấp lại" (ảnh case PC 40% 2 mảnh nhìn ngang).
+- Đã làm: mép trên `ABS_CASE_TOP` 0,26 → 0,18 (~3,4mm trên plate), đáy `ABS_RAISE` 0,1 → 0,15, trụ kê DTB `ABS_DTB_POST` 0,1 → 0,05 (DTB giữ
+  nguyên cao độ: miệng USB-C vừa sát mặt dưới PCB nên sàn không nâng thêm được nữa nếu không hạ trụ); trụ ren top mount `ABS_TOP.bossH` 0,2 → 0,13,
+  trần hốc bottom mount case nhựa `ABS_BOTTOM_NOTCH_TOP` 0,1 (đầu ốc M2 ~1,3mm) để lót hốc không lòi mặt trên. Tổng cao giảm ~0,11u (~2mm), áp mọi
+  case nhựa (1 / 2 mảnh), mọi kiểu mount cùng cao (vỏ chỉ theo `caseFloorBot` / `caseTopOf`, không theo mount). Gân xương cá còn ~3,7mm, pin 3mm vẫn dưới
+  đáy socket. Chụp lại ảnh Shopii case nhựa.

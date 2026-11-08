@@ -285,25 +285,54 @@ export const CASE_WALL = 0.45
 /** thành case nhựa ABS 1 mảnh dựng bằng code (u, ~1,9mm): vỏ nhựa đúc mỏng (đỡ cứng bằng khung xương cá bên trong); 1 mảnh
  * không có lỗ vít ghép / hốc tai plate trong thành; trụ O-ring lùi vào lòng case cho khỏi lòi ra ngoài (`ringPosts`) */
 export const ABS_WALL = 0.1
-/** thành case nhựa ABS 2 mảnh (u, ~2,7mm): nhựa đúc mỏng như 1 mảnh, dày hơn chút; vít ghép không nằm trong thành mà bắt vào
- * trụ nhựa đúc liền vách trong lòng case (`ABS_BOSS`), bottom mount tì lên vấu nhựa (PCB khoét rãnh né) */
-export const ABS_WALL_2 = 0.14
+/** thành case nhựa 2 mảnh (u, ~6,9mm): thành rỗng 2 lớp da (`ABS_SHELL`), vít ghép bắt vào trụ nhỏ trong rãnh giữa 2 lớp da
+ * (không lấn vào lòng case); bottom mount tì lên vấu nhựa (PCB khoét rãnh né) */
+export const ABS_WALL_2 = 0.36
+/**
+ * Case nhựa 2 mảnh kiểu đúc (Transition Lite PC...), u: case trên trùm case dưới — da ngoài `skin` phủ từ mặt trên xuống tận mặt đáy,
+ * case dưới chỉ là khay đáy lọt trong da ngoài + da trong lên tới mép ghép `Y.split`. Giữa 2 lớp da là rãnh rỗng, mặt trên `deck`,
+ * gân ngang `rib` cách nhau ~`ribGap` nối 2 lớp da; vít M2 từ đáy xuyên trụ nhỏ case dưới ăn lên trụ case trên (ren đồng cấy ở miệng
+ * dưới), trụ bán kính `bossR` vừa khít rãnh. Khay hở `gap` với da ngoài
+ */
+export const ABS_SHELL = { skin: 0.08, deck: 0.1, rib: 0.03, ribGap: 0.8, bossR: 0.09, gap: 0.006 }
+/** mép trên case nhựa (u, trên mặt plate ~3,4mm): thấp hơn case khác (`Y.caseTop` ~6,9mm) cho dáng gọn (đáy cũng nâng: `ABS_RAISE`) */
+export const ABS_CASE_TOP = 0.18
+/** mép trên case dựng bằng code theo chất liệu */
+export const caseTopOf = (c?: { material: string; model?: string; bottom?: unknown }) =>
+  isPlasticCase(c) ? ABS_CASE_TOP : Y.caseTop
+/** trụ nhựa kê DTB đúc liền sàn case nhựa (u, ~1mm): mặt dưới mạch cao hơn sàn, đầu trụ cấy ren đồng; sàn nâng thì trụ thấp theo
+ * (miệng cổng USB-C trên DTB vừa sát mặt dưới PCB) */
+export const ABS_DTB_POST = 0.05
 /** case nhựa (ABS / PC) 2 mảnh dựng bằng code */
 export const absTwo = (c: { material: string; model?: string; bottom?: unknown; pieces: 1 | 2 }) =>
   isPlasticCase(c) && c.pieces === 2
 /**
  * Trụ nhựa đúc liền vách (case nhựa 2 mảnh, u): bán kính `r`, tâm lùi vào trong mặt trong vách `inset` (nửa ngoài chìm trong vách,
  * không lòi ra ngoài vỏ); trụ vít ghép case: nửa dưới (case dưới, sàn → mép ghép, lỗ xuyên) + nửa trên (case trên, mép ghép → dưới
- * plate, ren đồng cấy). Vấu bottom mount cùng cỡ (mép ghép → mặt dưới plate)
+ * plate, ren đồng cấy). Vấu bottom mount: trụ nhỏ `ABS_TOP.bossR` từ sàn lên mặt dưới tai plate (như trụ top mount lật ngược)
  */
 export const ABS_BOSS = { r: 0.12, inset: 0.05 }
+/**
+ * Top / bottom mount case nhựa 2 mảnh (u): tai plate thò vào hốc vách case trên sâu `d` (qua da trong vào rãnh thành rỗng),
+ * vít M2 tâm cách mặt trong vách `z` (đầu ốc Ø3,8 không cấn mép PCB); ren nằm trong trụ nhựa nhỏ (bán kính `bossR`) trong rãnh thành:
+ * top mount trên mặt plate (cao `bossH`), bottom mount từ sàn lên mặt dưới tai; ren đồng cấy ở miệng trụ
+ */
+export const ABS_TOP = { d: 0.2, z: 0.1, bossR: 0.09, bossH: 0.13 }
 /** vít ghép case nhựa M2 đầu bằng (mm): đầu Ø3,8, lỗ xuyên Ø2,2, lỗ ren đồng cấy Ø1,6; `scale` = cỡ model ốc so với ốc M3 Ø6 */
 export const ABS_SCREW = { headR: 1.9, thru: 1.1 / 19.05, tap: 0.8 / 19.05, scale: 3.8 / 6 }
-/** sàn case nhựa ABS dựng bằng code dày (u, ~1,9mm): mặt đáy ngoài giữ nguyên, mặt sàn trong hạ xuống (lòng case sâu hơn) */
+/** sàn case nhựa ABS dựng bằng code dày (u, ~1,9mm) */
 export const ABS_FLOOR = 0.1
-/** mặt sàn trong lòng case (DTB, gân, trụ, foam đáy đứng trên đây): case nhựa mỏng hơn */
+/**
+ * case nhựa: mặt đáy nâng lên so với case khác (u, ~2,9mm) → case thấp hơn, gân xương cá thấp theo; sàn trong (`caseFloorTop`)
+ * cao hơn sàn case nhôm ~1mm (trụ DTB thấp theo `ABS_DTB_POST`), pin Li-Po dẹt 3mm nằm thẳng trên sàn dưới jack pin
+ */
+export const ABS_RAISE = 0.15
+/** mặt đáy ngoài case dựng bằng code (case nhựa cao hơn `Y.floorBot`) */
+export const caseFloorBot = (c?: { material: string; model?: string; bottom?: unknown }) =>
+  isPlasticCase(c) ? Y.floorBot + ABS_RAISE : Y.floorBot
+/** mặt sàn trong lòng case (DTB, gân, trụ, foam đáy đứng trên đây): case nhựa = đáy nâng + sàn mỏng */
 export const caseFloorTop = (c?: { material: string; model?: string; bottom?: unknown }) =>
-  isPlasticCase(c) ? Y.floorBot + ABS_FLOOR : Y.floorTop
+  isPlasticCase(c) ? caseFloorBot(c) + ABS_FLOOR : Y.floorTop
 /** bề dày thành case dựng bằng code theo chất liệu */
 export const caseWall = (c?: { material: string; model?: string; pieces?: 1 | 2 }) =>
   isPlasticCase(c) ? (c?.pieces === 2 ? ABS_WALL_2 : ABS_WALL) : CASE_WALL
@@ -329,7 +358,7 @@ export const GASKET = { w: 20 / 19.05, d: 4 / 19.05, t: 2 / 19.05 }
 const GASKET_TAB = GASKET.d + 0.04
 export const GASKET_NOTCH = { tab: GASKET_TAB, d: GASKET_TAB - CASE_MARGIN, gap: 0.03 }
 export const gasketTabbed = (c: Pick<CaseDef, 'model' | 'material' | 'pieces' | 'bottom'>) =>
-  !c.model && c.material !== 'mica' && !isPlasticCase(c) && c.pieces === 2
+  !c.model && c.material !== 'mica' && c.pieces === 2
 
 /** số dải 20mm cho 1 điểm gasket: mỗi mặt (trên + dưới) nối đủ dải phủ hết chiều dài tai */
 export const gasketStrips = (g: { w?: number }) =>
@@ -436,7 +465,7 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     : caseDef.screws
       ? caseDef.screws.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
       : boss2
-        ? absCaseScrews(width, depth, keys)
+        ? absCaseScrews(width, depth)
         : caseScrewPoints(width, depth, screwSide, caseWall(caseDef))
 
   const steps: StepId[] = ['unbox']
@@ -459,29 +488,46 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   steps.push('feet')
   // foam đáy case: chỉ case dựng bằng code (case CAD lòng case có tạ / rãnh dây / bệ riêng, tấm phẳng không khớp)
   if (!caseDef.model) steps.push('caseFoam')
+  // bottom mount case 2 mảnh: vấu case dưới (vít M2 từ trên xuyên plate bắt xuống), lệch vít case như top mount
+  const bottomPts =
+    mount === 'bottom' && caseDef.pieces === 2
+      ? topScrewPoints(
+          width,
+          depth,
+          caseScrews,
+          boss2 ? { keys, cuts: plateCutoutsFor(order.layout, keys, outline) } : undefined,
+          // case nhựa 2 mảnh: y như top mount (tai plate vào hốc nông, tâm vít ngay mặt trong vách), vấu nằm dưới tai
+          boss2,
+        )
+      : []
+  // case nhựa 2 mảnh: vấu bottom mount là trụ mọc từ sàn → DTB / pin / foam đáy phải né
+  const floorBosses = boss2 ? bottomPts : []
   // daughterboard: bắt vào case dưới khi case còn trống, cắm dây vào PCB ngay trước lúc thả board
   const spot = dtbSpot(
     caseModelOf(caseDef, order.layout, order.variant),
     width,
     depth,
     origin,
-    caseDef.pieces === 2 ? caseScrews : [],
-    // trụ nhựa trong lòng case: DTB phải né cả thân trụ, không chỉ lỗ vít
+    caseDef.pieces === 2 ? [...caseScrews, ...floorBosses] : [],
+    // trụ vít trong rãnh thành rỗng (lỗ cổng USB xuyên thành) / vấu bottom mount mọc từ sàn: né cả thân trụ
     boss2 ? (DTB_MM.w / 2) * MM_U + ABS_BOSS.r + 0.06 : undefined,
     caseFloorTop(caseDef),
+    // case nhựa: DTB kê trên trụ nhựa đúc liền sàn
+    isPlasticCase(caseDef) ? ABS_DTB_POST : 0,
   )
   // PCB có cổng USB-C hàn sẵn: không daughterboard (không bước `dtb` / `jst`)
   const dtb = !caseDef.pcbUsb && spot ? { ...spot, jack: jackSpot(spot, keys) } : null
-  // hốc pin Li-Po: case dựng bằng code nhựa / nhôm ≤ 60%, né DTB + dây JST, trụ tray, trụ vít nhựa, cổng USB-C trên PCB
+  // hốc pin Li-Po: case dựng bằng code nhựa / nhôm ≤ 60%, né DTB + dây JST, trụ tray, cổng USB-C trên PCB
   const battery = batteryCase(caseDef)
     ? batterySpot(
         width,
         depth,
         keys,
         dtb,
-        // trụ tray chỉ có ở tray mount (mount khác hốc rộng hơn)
-        mount === 'tray' ? trayPoints(keys, width, depth, mount, order.layout, outline) : [],
-        boss2 ? caseScrews : [],
+        // trụ tray chỉ có ở tray mount; case nhựa 2 mảnh bottom mount: vấu mọc từ sàn
+        mount === 'tray'
+          ? trayPoints(keys, width, depth, mount, order.layout, outline)
+          : floorBosses,
         caseFloorTop(caseDef),
         // PCB hàn sẵn cổng USB-C (bản "C", cổng bên trái): né thân cổng sát mép sau
         caseDef.pcbUsb ? pcbUsbSpot(width, depth) : undefined,
@@ -493,10 +539,11 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
     if (topMount) steps.push('topCase', 'topScrew')
     steps.push('coverOff', 'dtb', 'coverOn', 'jst')
   } else {
+    // top mount: úp case trên + bắt vít plate trước (board để riêng), rồi mới lắp DTB vào case dưới → cắm dây vào PCB
     // tạ che chỗ DTB: tháo tạ → lắp DTB → cắm dây vào PCB → lắp lại tạ (dây nằm trong rãnh dưới tạ) → thả board vào case
+    if (topMount) steps.push('topCase', 'topScrew')
     if (dtb?.cover) steps.push('coverOff')
     if (dtb) steps.push('dtb')
-    if (topMount) steps.push('topCase', 'topScrew')
     if (dtb) steps.push('jst')
     // pin: board vẫn dựng như lúc cắm JST (case bản "C" không DTB thì dựng riêng cho bước pin)
     if (battery) steps.push('battery')
@@ -528,15 +575,10 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
       'top',
       caseDef.topScrews
         ? caseDef.topScrews.map(([x, z]) => ({ x: x * MM_U - origin[0], z: z * MM_U - origin[1] }))
-        : topScrewPoints(width, depth, caseScrews),
+        : topScrewPoints(width, depth, caseScrews, undefined, boss2),
     ),
     // bottom mount: vít M2 từ trên xuyên lỗ tai plate bắt xuống lỗ ren vấu case dưới (lệch vít case như top mount)
-    bottomScrew: name(
-      'bot',
-      mount === 'bottom' && caseDef.pieces === 2
-        ? topScrewPoints(width, depth, caseScrews, boss2 ? keys : undefined)
-        : [],
-    ),
+    bottomScrew: name('bot', bottomPts),
     trayScrew: name('tray', trayScrews),
     stabScrew: name('stab', stabScrews),
   }
@@ -558,10 +600,19 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
         // góc trục dài trên mặt xz (z tới trước) → quay quanh trục y của three là −góc
         rot: -angle,
       }))
-    : [-0.375, -0.125, 0.125, 0.375].flatMap((f) => [
-        { x: f * width, z: -gz, d: gd },
-        { x: f * width, z: gz, d: gd },
-      ])
+    : [-0.375, -0.125, 0.125, 0.375].flatMap((f) => {
+        // case nhựa 2 mảnh: hốc tai trong thành rỗng không lấn trụ vít ghép (trụ trong rãnh thành)
+        let x = f * width
+        if (boss2)
+          for (const c of caseScrews) {
+            const clear = GASKET.w / 2 + GASKET_NOTCH.gap + ABS_SHELL.bossR + 0.06
+            if (Math.abs(x - c.x) < clear) x = c.x + Math.sign(x - c.x || f) * clear
+          }
+        return [
+          { x, z: -gz, d: gd },
+          { x, z: gz, d: gd },
+        ]
+      })
 
   const feet = feetPockets(
     caseModelOf(caseDef, order.layout, order.variant),
@@ -652,10 +703,8 @@ export function caseScrewPoints(
   boss = false,
 ): Point[] {
   // vít ăn vào giữa thành case (bắt từ đáy: xuyên thành case dưới, ăn lên thành case trên; mica: xuyên mọi lớp);
-  // case nhựa 2 mảnh (`boss`): vít bắt vào trụ nhựa trong lòng case sát vách, cỡ 40% chỉ 4 vít (2 mỗi bên)
-  const outerZ = boss
-    ? depth / 2 + CASE_MARGIN - ABS_BOSS.inset
-    : depth / 2 + CASE_MARGIN + wall / 2
+  // case nhựa 2 mảnh (`boss`): vít bắt vào trụ nhỏ trong rãnh thành rỗng (giữa thành), cỡ 40% chỉ 4 vít (2 mỗi bên)
+  const outerZ = depth / 2 + CASE_MARGIN + wall / 2
   const n = boss && width < 13 ? 2 : width > 16 ? 5 : 3
   const out: Point[] = []
   for (let i = 0; i < n; i++) {
@@ -678,13 +727,23 @@ function dodgeStabs(x: number, z: number, keys: Key[]) {
   return x
 }
 
-/** vít ghép case nhựa 2 mảnh: trụ nhựa sát vách trước / sau (40%: 4 vít), né lỗ chân stab */
-function absCaseScrews(width: number, depth: number, keys: Key[]): Point[] {
-  return caseScrewPoints(width, depth, 'bottom', ABS_WALL_2, true).map((p) => ({
-    ...p,
-    x: dodgeStabs(p.x, p.z, keys),
-  }))
+/** đầu ốc M2 bottom mount nằm trên mặt plate: không chồm lên lỗ switch / stab (u) */
+const BOSS_HEAD_CLEAR = ABS_SCREW.headR / 19.05 + 0.01
+
+/** vấu bottom mount case nhựa 2 mảnh: dò x gần nhất (lệch dần 2 phía) lọt khe giữa 2 lỗ switch + né lỗ chân stab PCB */
+function bossSpot(x0: number, z: number, keys: Key[], cuts: [number, number][][]) {
+  const ok = (x: number) =>
+    dodgeStabs(x, z, keys) === x && clearOfCutouts(cuts, x, z, BOSS_HEAD_CLEAR)
+  for (let i = 0; i <= 200; i++) {
+    const x = x0 + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * 0.01
+    if (ok(x)) return x
+  }
+  return dodgeStabs(x0, z, keys)
 }
+
+/** vít ghép case nhựa 2 mảnh: trụ nhỏ trong rãnh thành rỗng trước / sau (40%: 4 vít), không lấn vào lòng case */
+const absCaseScrews = (width: number, depth: number) =>
+  caseScrewPoints(width, depth, 'bottom', ABS_WALL_2, true)
 
 /**
  * Vít top mount (u): mỗi cạnh trước / sau 1 vít nhiều hơn vít case, rải đều, lệch khỏi vít case (hốc tai plate
@@ -694,23 +753,33 @@ function topScrewPoints(
   width: number,
   depth: number,
   caseScrews: Point[],
-  /** case nhựa 2 mảnh: vấu nhựa trong lòng case (tâm sát vách), né cả lỗ chân stab */
-  bossKeys?: Key[],
+  /** case nhựa 2 mảnh bottom mount: né lỗ switch / stab plate + lỗ chân stab PCB */
+  boss?: { keys: Key[]; cuts: [number, number][][] },
+  /** case nhựa 2 mảnh (top / bottom mount): tâm vít trong hốc vách cách mặt trong vách `ABS_TOP.z` */
+  absTop = false,
 ): Point[] {
   const n = (width > 16 ? 5 : 3) + 1
-  const clear = bossKeys ? 2 * ABS_BOSS.r + 0.1 : TOP_TAB / 2 + TOP_NOTCH.gap + CASE_BORE.tap + 0.1
-  const z = bossKeys ? depth / 2 + CASE_MARGIN - ABS_BOSS.inset : depth / 2 + TOP_HOLE.z
+  // case nhựa 2 mảnh: hốc tai không lấn vào trụ vít ghép trong rãnh thành
+  const clear = absTop
+    ? TOP_TAB / 2 + TOP_NOTCH.gap + ABS_SHELL.bossR + 0.05
+    : boss
+      ? 2 * ABS_BOSS.r + 0.1
+      : TOP_TAB / 2 + TOP_NOTCH.gap + CASE_BORE.tap + 0.1
+  const z = absTop
+    ? depth / 2 + CASE_MARGIN + ABS_TOP.z
+    : boss
+      ? depth / 2 + CASE_MARGIN - ABS_BOSS.inset
+      : depth / 2 + TOP_HOLE.z
   const xs = Array.from({ length: n }, (_, i) => {
     let x = (i / (n - 1) - 0.5) * (width - 3.2)
     for (const c of caseScrews)
       if (Math.abs(x - c.x) < clear) x = c.x + Math.sign(x - c.x || 1) * clear
-    if (bossKeys) x = dodgeStabs(x, z, bossKeys)
     return x
   })
-  return xs.flatMap((x) => [
-    { x, z: -z },
-    { x, z },
-  ])
+  // case nhựa 2 mảnh: hàng phím trước / sau lệch khe nhau → mỗi bên dò x riêng
+  return xs.flatMap((x) =>
+    [-z, z].map((zz) => ({ x: boss ? bossSpot(x, zz, boss.keys, boss.cuts) : x, z: zz })),
+  )
 }
 
 /**
@@ -772,6 +841,8 @@ export function dtbSpot(
   screwClear?: number,
   /** mặt sàn trong (case nhựa sàn mỏng thấp hơn) */
   floorTop: number = Y.floorTop,
+  /** trụ kê DTB (case nhựa): mặt dưới mạch cao hơn sàn */
+  post = 0,
 ): Omit<DtbSpot, 'jack'> | null {
   if (model) {
     const usb = (CASE_USB as Record<string, CaseUsb>)[model]
@@ -818,7 +889,7 @@ export function dtbSpot(
   const back = caseScrews.filter((p) => p.z < 0)
   let x = 0
   for (let i = 0; i < 40 && back.some((p) => Math.abs(p.x - x) < clear); i++) x += 0.25
-  return x < width / 2 - 1 ? { x, z, y: floorTop, tilt: 0, floor: floorTop } : null
+  return x < width / 2 - 1 ? { x, z, y: floorTop + post, tilt: 0, floor: floorTop } : null
 }
 
 /** jack JST trên PCB lệch so với DTB khi case không có rãnh dây (u): sang phải + tới trước */
@@ -857,6 +928,8 @@ function placeJack(
   toward: { x: number; z: number },
   keys: Key[],
   block?: (x: number, z: number) => boolean,
+  /** phạt mỗi điểm mẫu chạm khung footprint (u đi xa tương đương): DTB 1,2 (tránh hẳn), jack pin nhỏ (ưu tiên sát pin) */
+  softCost = 1.2,
 ): DtbSpot['jack'] {
   const dtb = toward
   const x0 = Math.min(...keys.map((k) => k.cx - k.w / 2)) + 0.05
@@ -910,7 +983,7 @@ function placeJack(
         const c = cost(x, z, ry)
         if (c < 0) continue
         // chạm khung footprint nặng hơn hẳn đi xa thêm 1u
-        const score = c * 1.2 + t * 0.15 + r
+        const score = c * softCost + t * 0.15 + r
         if (!pick.best || score < pick.best.score) pick.best = { x, z, ry, score }
       }
     }
@@ -976,7 +1049,7 @@ const m2HeadHole = () => {
 export const caseScrewY = (c: Parameters<typeof boredCase>[0]) => {
   if (c.screwSide === 'top') return Y.caseTop
   const hole = caseHeadHole()
-  return Y.floorBot + (boredCase(c) && !hole.sink ? hole.depth : 0)
+  return caseFloorBot(c) + (boredCase(c) && !hole.sink ? hole.depth : 0)
 }
 /** thân ren dài thêm của vít case (u): mica xuyên mọi lớp tới gần tấm đáy; bắt từ đáy xuyên thành case dưới ăn lên case trên */
 export const caseScrewShaft = (c: Parameters<typeof boredCase>[0]) =>
@@ -995,16 +1068,19 @@ export function caseBores(c: Parameters<typeof boredCase>[0], screws: Point[]) {
   const m2 = absTwo(c as { material: string; model?: string; pieces: 1 | 2 })
   const B = m2 ? { ...CASE_BORE, thru: ABS_SCREW.thru, tap: ABS_SCREW.tap } : CASE_BORE
   const hole = m2 ? m2HeadHole() : caseHeadHole()
-  const y0 = Y.floorBot - 0.02
+  const fb = caseFloorBot(c)
+  const y0 = fb - 0.02
   return {
     bottom: screws.flatMap(({ x, z }) => [
-      { x, z, r: B.thru, y0, y1: Y.split + 0.02 },
+      // nhựa: lỗ xuyên khay đáy, phía trên là trụ nhựa có lỗ sẵn
+      { x, z, r: B.thru, y0, y1: m2 ? fb + ABS_FLOOR + 0.02 : Y.split + 0.02 },
       hole.sink
         ? // côn 90°: lùi xuống dưới mặt đáy 0.02 thì bán kính cũng nở thêm 0.02
-          { x, z, r: hole.r + 0.02, r1: B.thru, y0, y1: Y.floorBot + hole.depth }
-        : { x, z, r: hole.r, y0, y1: Y.floorBot + hole.depth },
+          { x, z, r: hole.r + 0.02, r1: B.thru, y0, y1: fb + hole.depth }
+        : { x, z, r: hole.r, y0, y1: fb + hole.depth },
     ]),
-    top: screws.map(({ x, z }) => ({
+    // nhựa: ren nằm trong trụ case trên (ren đồng cấy), không khoan vào vỏ
+    top: (m2 ? [] : screws).map(({ x, z }) => ({
       x,
       z,
       r: B.tap,
@@ -1339,8 +1415,10 @@ export const batteryCase = (c: CaseDef) =>
 const BAT_PAD = 0.05
 /** hốc pin cách mép board (≈ mặt trong vách, u): chừa trụ O-ring / vấu gasket / trụ vít nhựa sát vách */
 const BAT_WALL = 0.3
-/** mặt trên pin thấp hơn đáy socket hotswap (u): socket 0,09u dưới mặt dưới PCB + khe 0,03 */
-const BAT_TOP = Y.pcbBot - 0.09 - 0.03
+/** jack JST PH pin treo dưới PCB cao (u, 3,2mm, khớp `JACK` trong Battery.tsx) */
+export const BAT_JACK_H = 3.2 * MM_U
+/** mặt trên pin (u): thấp hơn đáy jack pin (jack nằm ngay trên pin, sát đầu dây) + khe 0,02 — cũng dưới đáy socket hotswap */
+const BAT_TOP = Y.pcbBot - BAT_JACK_H - 0.02
 
 /** cỡ pin (u): cạnh dài theo x `l`, cạnh ngắn theo z `w` */
 export const batterySize = (id: string) => {
@@ -1355,7 +1433,7 @@ export const batteryFits = (id: string, spot: Pick<BatterySpot, 'w' | 'd'> | nul
 
 /**
  * Hốc pin trên sàn case (u): thử từ pin to nhất (5000mAh) xuống, mỗi cỡ quét lưới tìm chỗ gần giữa case nhất mà
- * nằm trong lòng case (chừa `BAT_WALL`), không đè DTB + dây JST + jack DTB, trụ tray (mọi mount), trụ vít ghép trong lòng case.
+ * nằm trong lòng case (chừa `BAT_WALL`), không đè DTB + dây JST + jack DTB, trụ tray (mọi mount).
  * Đáy hốc: mặt trên pin dưới đáy socket hotswap (case nhôm sàn dày khoét xuống; case nhựa sàn mỏng nằm thẳng trên sàn, bỏ gân).
  * Dây pin ra ở cạnh ngắn phía giữa case (gần DTB), jack JST PH trên PCB ngay ngoài cạnh đó
  */
@@ -1365,7 +1443,6 @@ function batterySpot(
   keys: Key[],
   dtb: DtbSpot | null,
   posts: Point[],
-  bosses: Point[],
   floorTop: number,
   usb?: { x: number; z: number },
 ): BatterySpot | null {
@@ -1384,7 +1461,7 @@ function batterySpot(
     const near = (p: Point, r: number) =>
       p.x > x0 - r && p.x < x1 + r && p.z > z0 - r && p.z < z1 + r
     if (usb && x0 < usb.x + 0.45 && x1 > usb.x - 0.45 && z0 < usb.z + 0.6) return true
-    return posts.some((p) => near(p, 0.2)) || bosses.some((p) => near(p, 0.25))
+    return posts.some((p) => near(p, 0.2))
   }
   const top = floorTop
   const y = Math.min(floorTop, BAT_TOP - BATTERY_T * MM_U)
@@ -1402,21 +1479,19 @@ function batterySpot(
       }
     if (!best) continue
     const { x, z } = best
-    // dây ra ở cạnh ngắn phía giữa case (x = 0); pin nằm giữa thì ra phía DTB
-    const side: 1 | -1 = Math.abs(x) < 0.05 ? (dtb && dtb.x > x ? 1 : -1) : x > 0 ? -1 : 1
+    // dây ra ở cạnh ngắn phía xa DTB (giữa case để trống cho dây JST); jack pin nằm ngay trên pin sát đầu dây,
+    // miệng quay ra cạnh pin (đón dây) — gần nhất có thể như PCB không dây thật
+    const side: 1 | -1 = x >= (dtb?.x ?? 0) ? 1 : -1
     const edge = x + (side * w) / 2
-    const onBat = (px: number, pz: number) =>
-      px > x - w / 2 - 0.05 &&
-      px < x + w / 2 + 0.05 &&
-      pz > z - d / 2 - 0.05 &&
-      pz < z + d / 2 + 0.05
+    const tz = z - d / 4
     const nearDtb = (px: number, pz: number) =>
       !!dtb && Math.hypot(px - dtb.jack.x, pz - dtb.jack.z) < 0.5
     const jack = placeJack(
-      { x: edge + side * 0.35, z: z - d / 4 },
-      { x: edge, z: z - d / 4 },
+      { x: edge - side * 0.45, z: tz },
+      { x: edge + side, z: tz },
       keys,
-      (px, pz) => onBat(px, pz) || nearDtb(px, pz),
+      nearDtb,
+      0.02,
     )
     return { x, z, w, d, y, top, side, jack }
   }

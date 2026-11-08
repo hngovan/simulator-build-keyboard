@@ -22,6 +22,7 @@ trong thư mục [`licenses/`](licenses/). Danh sách này cũng hiện trong ga
 | Model                                   | Bản quyền                        | Nguồn                                                                                 | Giấy phép                                 |
 | --------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------- |
 | Case Bakeneko 60                        | © 2020 kkatano                   | [kkatano/bakeneko-60](https://github.com/kkatano/bakeneko-60)                         | [MIT](licenses/bakeneko-60-MIT.txt)       |
+| Case Bakeneko 65                        | © 2020 kkatano                   | [kkatano/bakeneko-65](https://github.com/kkatano/bakeneko-65)                         | [MIT](licenses/bakeneko-65-MIT.txt)       |
 | Case Blossom + layout Alice (PCB KiCad) | © 2021 DoughnutTheGuy            | [doughnut923/Blossom](https://github.com/doughnut923/Blossom)                         | [MIT](licenses/blossom-MIT.txt)           |
 | Case Planck (thiết kế OLKB)             | © 2016 MajorKoos / KBDParts      | [MajorKoos/KBDParts](https://github.com/MajorKoos/KBDParts)                           | [MIT](licenses/kbdparts-planck-MIT.txt)   |
 | Keycap Cherry 1u (R1–R4)                | © 2017 Constantino Schillebeeckx | [cherry-mx-keycaps](https://github.com/ConstantinoSchillebeeckx/cherry-mx-keycaps)    | [MIT](licenses/cherry-mx-keycaps-MIT.txt) |

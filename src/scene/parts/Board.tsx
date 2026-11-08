@@ -18,7 +18,7 @@ import {
   keyCutouts,
   coverBeforeJst,
   gasketTabbed,
-  ABS_BOSS,
+  ABS_TOP,
   absTwo,
 } from '@/data/steps'
 import type { Key, Point, StepId } from '@/types'
@@ -71,11 +71,13 @@ function plateGeometry(
   /** sandwich mount: viền ngoài tấm liền theo case mica (thay viền layout) */
   sandwich?: THREE.Shape,
   /** tray mount: lỗ to hơn đầu ốc để vít lọt xuống PCB (đã dò không chạm lỗ switch / stab) */
-  trayHoles: Point[] = [],
+  trayHoles: (Point & { r?: number })[] = [],
   /** top mount: tai plate lòi ra khe board – vách ở chỗ vít, nằm dưới vấu case trên */
   tabs: Point[] = [],
   /** tab gasket: tai rộng bằng dải gasket, thò vào hốc vách case (không lỗ vít) */
   gasketTabs: Point[] = [],
+  /** độ sâu hốc vách cho tai top mount (case nhựa 2 mảnh vách mỏng: hốc nông) */
+  tabDepth = TOP_NOTCH.d,
 ) {
   // viền plate theo layout (Alice: 2 nửa xoay), nhỏ hơn PCB 0.01u mỗi cạnh
   const { shapes, shapeOf } = sandwich
@@ -114,11 +116,11 @@ function plateGeometry(
       for (const loop of keyCutouts(k)) shape.holes.push(loopHole(loop))
     }
   // lỗ vít tray: vào mảnh plate chứa tâm lỗ
-  for (const { x, z } of trayHoles) {
+  for (const { x, z, r } of trayHoles) {
     const target = shapes.find((c) => pointInPolygon(new THREE.Vector2(x, -z), c.getPoints()))
     if (!target) continue
     const hole = new THREE.Path()
-    hole.absarc(x, -z, TRAY_HOLE.plate, 0, Math.PI * 2, false)
+    hole.absarc(x, -z, r ?? TRAY_HOLE.plate, 0, Math.PI * 2, false)
     target.holes.push(hole)
   }
   // tai liền mép plate (viền plate lùi 0.01u), thò qua khe board – vách vào hốc vách case trên (chừa khe 0.01u)
@@ -126,7 +128,7 @@ function plateGeometry(
     const s = Math.sign(z)
     // plate phủ kín lòng case (top mount dựng bằng code): tai nối từ sát mép plate, không chồng lên plate
     const z0 = s * (sandwich ? depth / 2 + CASE_MARGIN - TOP_PLATE_GAP - 0.005 : depth / 2 - 0.01)
-    const z1 = s * (depth / 2 + CASE_MARGIN + TOP_NOTCH.d - 0.01)
+    const z1 = s * (depth / 2 + CASE_MARGIN + tabDepth - 0.01)
     const tab = new THREE.Shape([
       new THREE.Vector2(x - TOP_TAB / 2, -z0),
       new THREE.Vector2(x + TOP_TAB / 2, -z0),
@@ -332,27 +334,11 @@ export function Board() {
   // tray mount: vít xuyên plate + PCB bắt vào trụ đồng đáy case (vị trí đã dò không chạm lỗ switch / stab)
   const trayHoles = ctx.mount === 'tray' ? ctx.screws.trayScrew : NO_HOLES
   // rãnh tròn mép PCB chỗ trụ đỡ O-ring trong case (r + khe 0,02u), cố định theo case nên PCB lúc nào cũng khoét sẵn
-  // case nhựa 2 mảnh: trụ vít ghép + vấu bottom mount đúc liền vách lấn vào lòng case → PCB khoét rãnh né (r + khe 0,02u)
+  // case nhựa 2 mảnh: trụ vít ghép + vấu top / bottom mount nằm trong rãnh thành rỗng, không lấn vào lòng case
   const boss2 = absTwo(ctx.caseDef)
-  const bossHoles = useMemo(
-    () =>
-      boss2
-        ? [...ctx.screws.caseOpen, ...ctx.screws.bottomScrew].map((p) => ({
-            x: p.x,
-            z: p.z,
-            r: ABS_BOSS.r + 0.02,
-          }))
-        : [],
-    [ctx, boss2],
-  )
   const pcbNotches = useMemo(
-    () => [...ringPosts(ctx).map((p) => ({ x: p.x, z: p.z, r: p.r + 0.02 })), ...bossHoles],
-    [ctx, bossHoles],
-  )
-  // bottom mount case nhựa 2 mảnh: không tai plate, vít xuyên lỗ plate sát mép xuống vấu
-  const plateHoles = useMemo(
-    () => (boss2 && ctx.mount === 'bottom' ? [...trayHoles, ...ctx.screws.bottomScrew] : trayHoles),
-    [ctx, boss2, trayHoles],
+    () => ringPosts(ctx).map((p) => ({ x: p.x, z: p.z, r: p.r + 0.02 })),
+    [ctx],
   )
   // top / bottom mount (case dựng bằng code): plate phủ kín lòng case, tai thò vào hốc / rãnh vách
   const topFull = (ctx.mount === 'top' || ctx.mount === 'bottom') && !ctx.caseDef.model
@@ -380,15 +366,17 @@ export function Board() {
                 [],
               )
             : undefined,
-        plateHoles,
+        trayHoles,
+        // bottom mount: plate y như top mount (tai vào hốc vách case trên), chỉ khác vít bắt xuống vấu case dưới
         ctx.mount === 'top'
           ? ctx.screws.topScrew
-          : ctx.mount === 'bottom' && !boss2
+          : ctx.mount === 'bottom'
             ? ctx.screws.bottomScrew
             : NO_HOLES,
         ctx.mount === 'gasket' && gasketTabbed(ctx.caseDef) ? ctx.gaskets : NO_HOLES,
+        boss2 ? ABS_TOP.d : TOP_NOTCH.d,
       ),
-    [ctx, standard60CAD, sandwich, topFull, plateHoles, boss2],
+    [ctx, standard60CAD, sandwich, topFull, trayHoles, boss2],
   )
   const at = (name: StepId) => ctx.steps.indexOf(name)
   return (
@@ -421,7 +409,6 @@ export function Board() {
               depth={ctx.depth}
               outline={ctx.outline}
               trayHoles={trayHoles}
-              bossHoles={bossHoles}
               ghost={!b.foam}
             />
           </group>

@@ -17,7 +17,7 @@ const SOCKET_H = 0.09
 const RIB_TOP = Y.pcbBot - SOCKET_H - 0.02
 /** đỉnh gân sàn cao (u): không đi dưới linh kiện, cách mặt dưới PCB 0,03u */
 const RIB_TOP_TALL = Y.pcbBot - 0.03
-/** cao gân thấp tính từ sàn case dựng bằng code thường (`Y.floorTop`; case nhựa sàn mỏng thì gân cao hơn theo sàn) */
+/** cao gân thấp tính từ sàn case dựng bằng code thường (`Y.floorTop`; case nhựa tính theo `caseFloorTop`) */
 export const RIB_H = RIB_TOP - Y.floorTop
 /** chừa quanh vùng linh kiện dưới PCB khi khoét thấp gân (u) */
 const PART_PAD = 0.04

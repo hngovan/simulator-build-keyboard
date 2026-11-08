@@ -96,22 +96,16 @@ export interface ShellTub {
   d: number
   y: number
 }
-/** khoét hốc pin vào khối sàn (bo góc 1mm như dao phay) */
-const carveTub = (floor: THREE.BufferGeometry, tub: ShellTub | undefined, top: number) => {
-  if (!tub) return floor
-  const r = 0.05
+/** khối khoét hốc pin (bo góc 1mm như dao phay): từ đáy hốc `tub.y` lên quá mặt sàn `top` */
+const tubCut = (tub: ShellTub, top: number) => {
   const g = new THREE.ExtrudeGeometry(
-    roundedRect(new THREE.Shape(), tub.w, tub.d, r) as THREE.Shape,
-    {
-      depth: top - tub.y + 0.05,
-      bevelEnabled: false,
-      curveSegments: 6,
-    },
+    roundedRect(new THREE.Shape(), tub.w, tub.d, 0.05) as THREE.Shape,
+    { depth: top - tub.y + 0.05, bevelEnabled: false, curveSegments: 6 },
   )
   // shape nằm XY (y = −z sau khi xoay) → đùn theo +z rồi xoay nằm ngang, đáy ở tub.y
   g.rotateX(-Math.PI / 2)
   g.translate(tub.x, tub.y, tub.z)
-  return carve(floor, [g])
+  return g
 }
 
 /** hốc tròn CNC lõm dưới đáy (dán feet): tâm x, z (u, toạ độ cảnh), bán kính, độ sâu từ mặt đáy */
@@ -182,7 +176,6 @@ export function caseShellGeometry(
     g.translate(0, bottom + b, 0)
     return g
   }
-  const shell = extrude(ringShape(W, D, wall, false, b), y1 - y0, y0)
   // khoét bằng CSG trên vỏ liền khối (như phay CNC): hốc tai plate từ đáy lên trần `notchTop`, lỗ vít / lỗ ren
   const cuts = [
     ...notches.map((n) =>
@@ -212,46 +205,30 @@ export function caseShellGeometry(
       return g.translate(o.x, o.y, -D / 2 - 0.05)
     }),
   ]
-  const ring = cuts.length ? carve(shell, cuts) : shell
-  if (floorTop === undefined) return ring
-  // sàn nằm lọt trong ruột vành, cùng mặt đáy → nhìn ngoài là 1 khối
-  // góc sàn bo theo góc ruột (INNER_R) cho khít, không hở 4 góc
-  const fw = W - 2 * wall + 0.02 - 2 * b
-  const fd = D - 2 * wall + 0.02 - 2 * b
-  if (!pockets.length) {
-    const floor = carveTub(
-      extrude(roundedRect(new THREE.Shape(), fw, fd, INNER_R) as THREE.Shape, floorTop - y0, y0),
-      tub,
-      floorTop,
-    )
-    const parts = [ring, floor]
-    const merged = mergeGeometries(parts)
-    for (const g of parts) g.dispose()
-    return merged
+  if (floorTop === undefined) {
+    // vành không sàn (case trên): đùn vành rồi khoét
+    const ring = extrude(ringShape(W, D, wall, false, b), y1 - y0, y0)
+    return cuts.length ? carve(ring, cuts) : ring
   }
-  // có hốc feet: sàn 2 lớp — tấm mỏng dưới cùng (dày = độ sâu hốc) khoét lỗ tròn làm thành hốc, tấm trên liền làm
-  // trần hốc → mặt trong case phẳng, không lộ vết lỗ
-  const depth = Math.max(...pockets.map((p) => p.depth))
-  const skin = new THREE.ExtrudeGeometry(
-    punch(roundedRect(new THREE.Shape(), fw + 2 * b, fd + 2 * b, INNER_R) as THREE.Shape, pockets),
-    // chia cung mịn cho lỗ tròn đều (ít đoạn thì lỗ thành đa giác)
-    { depth, bevelEnabled: false, curveSegments: 32 },
+  // có sàn: 1 khối liền (khối đặc bo mép − lòng case từ mặt sàn lên) rồi khoét mọi thứ trên khối đó — không còn đường ghép vành / sàn
+  // dưới đáy, lỗ vít sát vách (trụ nhựa 2 mảnh) khoét xuyên cả sàn, không bị sàn che nửa lỗ
+  const solid = extrude(ringShape(W, D, wall, true, b), y1 - y0, y0)
+  const cavity = new THREE.ExtrudeGeometry(
+    roundedRect(new THREE.Shape(), W - 2 * wall, D - 2 * wall, INNER_R) as THREE.Shape,
+    { depth: y1 - floorTop + 0.1, bevelEnabled: false, curveSegments: 8 },
   )
-  skin.rotateX(-Math.PI / 2)
-  skin.translate(0, y0, 0)
-  const floor = carveTub(
-    extrude(
-      roundedRect(new THREE.Shape(), fw, fd, INNER_R) as THREE.Shape,
-      floorTop - y0 - depth,
-      y0 + depth,
+  // shape nằm XY → đùn theo +z, xoay nằm ngang, đáy ở mặt sàn
+  cavity.rotateX(-Math.PI / 2)
+  cavity.translate(0, floorTop, 0)
+  // hốc feet CNC lõm ở mặt đáy
+  const feet = pockets.map((p) =>
+    new THREE.CylinderGeometry(p.r, p.r, p.depth + 0.02, 32).translate(
+      p.x,
+      y0 + (p.depth - 0.02) / 2,
+      p.z,
     ),
-    tub,
-    floorTop,
   )
-  const parts = [ring, skin, floor]
-  const merged = mergeGeometries(parts)
-  for (const g of parts) g.dispose()
-  return merged
+  return carve(solid, [cavity, ...cuts, ...feet, ...(tub ? [tubCut(tub, floorTop)] : [])])
 }
 
 export function micaLayerGeometry(
@@ -380,4 +357,297 @@ export function micaStack(
     group.add(layer)
   }
   return group
+}
+
+/** đùn shape phẳng (không bo) nằm ngang từ y0 lên y1 (shape XY → sau khi xoay z = −y) */
+const slab = (shape: THREE.Shape, y0: number, y1: number, segs = 8) =>
+  new THREE.ExtrudeGeometry(shape, { depth: y1 - y0, bevelEnabled: false, curveSegments: segs })
+    .rotateX(-Math.PI / 2)
+    .translate(0, y0, 0)
+
+/** vành chữ nhật bo góc: ngoài w × d (bo r), trong wi × di (bo ri) */
+const ringRect = (w: number, d: number, r: number, wi: number, di: number, ri: number) => {
+  const shape = roundedRect(new THREE.Shape(), w, d, r) as THREE.Shape
+  shape.holes.push(roundedRect(new THREE.Path(), wi, di, ri))
+  return shape
+}
+
+/** ống tròn đứng (trụ vít): bán kính ngoài `r`, lỗ `hole`, tâm (x, z), y0 → y1 */
+export const tubeGeometry = (
+  x: number,
+  z: number,
+  r: number,
+  hole: number,
+  y0: number,
+  y1: number,
+) => {
+  const shape = new THREE.Shape().absarc(0, 0, r, 0, Math.PI * 2, false)
+  shape.holes.push(new THREE.Path().absarc(0, 0, hole, 0, Math.PI * 2, true))
+  return slab(shape, y0, y1, 20).translate(x, 0, z)
+}
+
+/** thông số thành rỗng case nhựa 2 mảnh (khớp `ABS_SHELL` trong steps.ts) */
+export interface AbsShellDims {
+  skin: number
+  deck: number
+  rib: number
+  ribGap: number
+  bossR: number
+  gap: number
+}
+
+/** cao độ case nhựa 2 mảnh: mặt đáy, mặt sàn trong, mép ghép, mặt trên */
+export interface AbsShellYs {
+  bot: number
+  floor: number
+  split: number
+  top: number
+}
+
+/**
+ * Gân ngang trong rãnh thành rỗng (nối da ngoài – da trong), rải đều ~`ribGap` dọc 4 cạnh, né trụ vít / cổng USB / hốc vách
+ * (`avoid`: tâm x + nửa bề rộng cần chừa, theo cạnh trước `side` 1 / sau −1)
+ */
+function channelRibs(
+  W: number,
+  D: number,
+  wall: number,
+  s: AbsShellDims,
+  y0: number,
+  y1: number,
+  avoid: { x: number; side: 1 | -1; half: number }[],
+  /** đầu ngoài gân cách mặt ngoài case (case trên: lấn vào da ngoài; case dưới: dừng trong mép khay) */
+  outer: number,
+) {
+  // gân từ trong da trong (lấn 0,01) ra tới `outer`
+  const zIn = wall - s.skin + 0.01
+  const span = zIn - outer
+  const mid = (zIn + outer) / 2
+  const out: THREE.BufferGeometry[] = []
+  const line = (len: number) => {
+    // bỏ 2 đầu (góc bo của rãnh): gân đầu tiên cách góc ~0,3u
+    const L = len - 2 * wall - 0.6
+    const n = Math.max(1, Math.round(L / s.ribGap))
+    return Array.from({ length: n + 1 }, (_, i) => (n ? (i / n - 0.5) * L : 0))
+  }
+  for (const side of [1, -1] as const) {
+    for (const x of line(W)) {
+      if (avoid.some((a) => a.side === side && Math.abs(a.x - x) < a.half + s.rib)) continue
+      out.push(
+        new THREE.BoxGeometry(s.rib, y1 - y0, span).translate(
+          x,
+          (y0 + y1) / 2,
+          side * (D / 2 - mid),
+        ),
+      )
+    }
+    for (const z of line(D))
+      out.push(
+        new THREE.BoxGeometry(span, y1 - y0, s.rib).translate(
+          side * (W / 2 - mid),
+          (y0 + y1) / 2,
+          z,
+        ),
+      )
+  }
+  return out
+}
+
+/** bề dày vách bọc hốc trong rãnh thành rỗng (u, ~1mm) */
+const POCKET_T = 0.05
+/** mặt lót hốc lấn vào trong hốc (u, ~0,08mm): che khe nứt CSG dọc mép hốc */
+const POCKET_LAP = 0.004
+
+/**
+ * Lót hốc khoét mặt trong vách case trên (tai plate top mount, vấu bottom mount): hốc sâu hơn lớp da trong thì thủng sang rãnh rỗng,
+ * và CSG hay để khe nứt mảnh dọc mép hốc (nhìn qua khe vào trong khối → mặt trong không vẽ → thấy xuyên ra ngoài). Dựng vách sau +
+ * 2 vách bên + trần bọc hốc (như hốc kín của case đúc), mặt lót lấn vào trong hốc `POCKET_LAP` và phủ từ ngay mặt trong vách → mọi
+ * khe dọc mép đều có mặt đặc phía sau. Miệng hốc vẫn mở xuống từ mép ghép
+ */
+function notchPockets(notches: WallNotch[], D: number, wall: number, y0: number, top: number) {
+  const t = POCKET_T
+  const e = POCKET_LAP
+  const out: THREE.BufferGeometry[] = []
+  for (const n of notches) {
+    // độ sâu tính từ mặt trong vách: từ sát mặt trong (chừa 0,002 cho khỏi lòi vào lòng case) tới hết vách sau
+    const z0 = 0.002
+    const z1 = n.d + t - e
+    const zc = (d: number) => n.side * (D / 2 - wall + d)
+    const h = top - y0
+    out.push(
+      // vách sau
+      new THREE.BoxGeometry(n.w + 2 * t, h + t, t).translate(
+        n.x,
+        y0 + (h + t) / 2,
+        zc(n.d + t / 2 - e),
+      ),
+      // 2 vách bên
+      ...[-1, 1].map((sx) =>
+        new THREE.BoxGeometry(t, h + t, z1 - z0).translate(
+          n.x + sx * (n.w / 2 + t / 2 - e),
+          y0 + (h + t) / 2,
+          zc((z0 + z1) / 2),
+        ),
+      ),
+      // trần
+      new THREE.BoxGeometry(n.w + 2 * t, t, z1 - z0).translate(
+        n.x,
+        top + t / 2 - e,
+        zc((z0 + z1) / 2),
+      ),
+    )
+  }
+  return out
+}
+
+/** gộp hình (CSG + gân + trụ) thành 1 geometry không index */
+const mergeAll = (parts: THREE.BufferGeometry[]) => {
+  const flat = parts.map((g) => (g.index ? g.toNonIndexed() : g))
+  const merged = mergeGeometries(flat)
+  for (const g of [...parts, ...flat]) g.dispose()
+  return merged
+}
+
+/**
+ * Case nhựa 2 mảnh kiểu đúc (case trên trùm case dưới, Transition Lite PC): `top` = da ngoài từ mặt trên phủ xuống tận mặt đáy +
+ * mặt trên + da trong từ mép ghép lên, giữa 2 lớp da là rãnh rỗng có gân ngang + trụ vít nhỏ (ren ở miệng dưới);
+ * `bottom` = khay đáy lọt trong da ngoài (hốc feet, lỗ vít côn) + da trong từ sàn lên mép ghép, rãnh ngoài da trong có gân + trụ vít
+ * (lỗ xuyên). `screws` = tâm trụ (giữa rãnh); `bosses` = có dựng trụ trong hình không (bàn build vẽ trụ riêng kèm ren đồng)
+ */
+export function absTwoShellGeometry(
+  part: 'top' | 'bottom',
+  W: number,
+  D: number,
+  wall: number,
+  ys: AbsShellYs,
+  s: AbsShellDims,
+  o: {
+    screws: { x: number; z: number }[]
+    bosses?: boolean
+    /** bán kính lỗ trụ (case trên: lỗ ren, case dưới: lỗ xuyên) */
+    hole: number
+    ports?: WallPort[]
+    /** hốc mặt trong da trong case trên (tai plate top mount / vấu bottom mount), từ mép ghép lên `notchTop` */
+    notches?: WallNotch[]
+    notchTop?: number
+    pockets?: Pocket[]
+    bores?: WallBore[]
+  },
+) {
+  const { skin, deck } = s
+  const ports = o.ports ?? []
+  const notches = o.notches ?? []
+  // da trong: mặt trong = mặt trong vách (lòng case), dày `skin`
+  const innerW = W - 2 * wall
+  const innerD = D - 2 * wall
+  const avoid = [
+    ...o.screws.map((p) => ({ x: p.x, side: (p.z > 0 ? 1 : -1) as 1 | -1, half: s.bossR + 0.04 })),
+    ...ports.map((p) => ({ x: p.x, side: -1 as const, half: p.w / 2 + 0.06 })),
+    ...notches.map((n) => ({ x: n.x, side: n.side, half: n.w / 2 + POCKET_T + 0.04 })),
+  ]
+  const portCuts = ports.map((p) =>
+    new THREE.ExtrudeGeometry(roundedRect(new THREE.Shape(), p.w, p.h, p.r) as THREE.Shape, {
+      depth: wall + 0.1,
+      bevelEnabled: false,
+      curveSegments: 8,
+    }).translate(p.x, p.y, -D / 2 - 0.05),
+  )
+  const outerR = Math.max(0.02, OUTER_R - skin)
+  if (part === 'top') {
+    const b = SHELL_BEVEL
+    // khối vành liền (bo mép như vỏ 1 mảnh) từ mặt đáy lên mặt trên
+    const ring = new THREE.ExtrudeGeometry(ringShape(W, D, wall, false, b), {
+      depth: Math.max(0.001, ys.top - ys.bot - 2 * b),
+      bevelEnabled: true,
+      bevelThickness: b,
+      bevelSize: b,
+      bevelSegments: 2,
+      curveSegments: 6,
+    })
+      .rotateX(-Math.PI / 2)
+      .translate(0, ys.bot + b, 0)
+    const cuts = [
+      // dưới mép ghép: chỉ còn da ngoài (khay case dưới lọt vào trong)
+      slab(
+        roundedRect(new THREE.Shape(), W - 2 * skin, D - 2 * skin, outerR) as THREE.Shape,
+        ys.bot - 0.05,
+        ys.split,
+      ),
+      // rãnh rỗng giữa 2 lớp da, từ mép ghép lên tới dưới mặt trên
+      slab(
+        ringRect(
+          W - 2 * skin,
+          D - 2 * skin,
+          outerR,
+          innerW + 2 * skin,
+          innerD + 2 * skin,
+          INNER_R + skin,
+        ),
+        ys.split - 0.01,
+        ys.top - deck,
+      ),
+      ...notches.map((n) =>
+        new THREE.BoxGeometry(n.w, (o.notchTop ?? ys.top) - ys.split + 0.02, n.d + 0.02).translate(
+          n.x,
+          (ys.split - 0.02 + (o.notchTop ?? ys.top)) / 2,
+          n.side * (D / 2 - wall + n.d / 2 - 0.01),
+        ),
+      ),
+      ...portCuts,
+    ]
+    const shell = carve(ring, cuts)
+    const y1 = ys.top - deck + 0.005
+    return mergeAll([
+      shell,
+      ...notchPockets(notches, D, wall, ys.split, o.notchTop ?? ys.top),
+      ...channelRibs(W, D, wall, s, ys.split, y1, avoid, skin - 0.01),
+      ...(o.bosses
+        ? o.screws.map((p) => tubeGeometry(p.x, p.z, s.bossR, o.hole, ys.split, y1))
+        : []),
+    ])
+  }
+  // khay đáy: lọt trong da ngoài case trên (hở `gap`), khối đặc tới mép ghép rồi khoét lòng case + rãnh ngoài da trong
+  const tw = W - 2 * (skin + s.gap)
+  const td = D - 2 * (skin + s.gap)
+  const tr = Math.max(0.02, outerR - s.gap)
+  const solid = slab(
+    roundedRect(new THREE.Shape(), tw, td, tr) as THREE.Shape,
+    ys.bot,
+    ys.split,
+    10,
+  )
+  const cuts = [
+    slab(
+      roundedRect(new THREE.Shape(), innerW, innerD, INNER_R) as THREE.Shape,
+      ys.floor,
+      ys.split + 0.1,
+    ),
+    slab(
+      ringRect(tw + 0.1, td + 0.1, tr, innerW + 2 * skin, innerD + 2 * skin, INNER_R + skin),
+      ys.floor,
+      ys.split + 0.1,
+    ),
+    ...(o.pockets ?? []).map((p) =>
+      new THREE.CylinderGeometry(p.r, p.r, p.depth + 0.02, 32).translate(
+        p.x,
+        ys.bot + (p.depth - 0.02) / 2,
+        p.z,
+      ),
+    ),
+    ...(o.bores ?? []).map((h) =>
+      new THREE.CylinderGeometry(h.r1 ?? h.r, h.r, h.y1 - h.y0, 28).translate(
+        h.x,
+        (h.y0 + h.y1) / 2,
+        h.z,
+      ),
+    ),
+    ...portCuts,
+  ]
+  const shell = carve(solid, cuts)
+  const y0 = ys.floor - 0.005
+  return mergeAll([
+    shell,
+    ...channelRibs(W, D, wall, s, y0, ys.split, avoid, skin + s.gap + 0.01),
+    ...(o.bosses ? o.screws.map((p) => tubeGeometry(p.x, p.z, s.bossR, o.hole, y0, ys.split)) : []),
+  ])
 }

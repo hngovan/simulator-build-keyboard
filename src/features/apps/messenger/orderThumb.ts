@@ -6,7 +6,11 @@ import {
   CASE_MARGIN,
   CASE_WALL,
   caseWall,
+  ABS_SCREW,
+  ABS_SHELL,
   absTwo,
+  caseFloorBot,
+  caseTopOf,
   caseFloorTop,
   Y,
   caseBores,
@@ -15,7 +19,12 @@ import {
   feetPockets,
 } from '@/data/steps'
 import { MM } from '@/scene/models/Switch'
-import { caseShellGeometry, micaStack, type WallBore } from '@/scene/parts/caseShell'
+import {
+  absTwoShellGeometry,
+  caseShellGeometry,
+  micaStack,
+  type WallBore,
+} from '@/scene/parts/caseShell'
 import { WEIGHT_METALS, WOOD_TEX, prepWood, woodTexFor, woodUV } from '@/scene/materials'
 import { boardOutline, outlineSlab } from '@/scene/parts/boardOutline'
 import { capGeometry, keycapModel, keycapShape, stretchCap } from '@/scene/models/keycapShape'
@@ -269,10 +278,45 @@ export async function buildKeyboardModel(
         )
         group.add(new THREE.Mesh(def.material === 'wood' ? woodUV(g) : g, mat))
       }
-      if (def.pieces === 2) {
+      if (absTwo(def)) {
+        // nhựa 2 mảnh: case trên trùm case dưới, thành rỗng có gân + trụ vít (như bàn build)
+        const screws = caseScrewPoints(width, depth, 'bottom', wall, true)
+        const ys = {
+          bot: caseFloorBot(def),
+          floor: caseFloorTop(def),
+          split: Y.split,
+          top: caseTopOf(def),
+        }
+        group.add(
+          new THREE.Mesh(
+            absTwoShellGeometry('bottom', W, D, wall, ys, ABS_SHELL, {
+              screws,
+              bosses: true,
+              hole: ABS_SCREW.thru,
+              pockets,
+              bores: bores.bottom,
+            }),
+            bottomMat,
+          ),
+          new THREE.Mesh(
+            absTwoShellGeometry('top', W, D, wall, ys, ABS_SHELL, {
+              screws,
+              bosses: true,
+              hole: ABS_SCREW.tap,
+            }),
+            caseMat,
+          ),
+        )
+      } else if (def.pieces === 2) {
         shell(Y.floorBot, Y.split, bottomMat, caseFloorTop(def), bores.bottom)
-        shell(Y.split, Y.caseTop, caseMat, undefined, bores.top)
-      } else shell(Y.floorBot, Y.caseTop, def.bottom ? bottomMat : caseMat, caseFloorTop(def))
+        shell(Y.split, caseTopOf(def), caseMat, undefined, bores.top)
+      } else
+        shell(
+          caseFloorBot(def),
+          caseTopOf(def),
+          def.bottom ? bottomMat : caseMat,
+          caseFloorTop(def),
+        )
     }
   }
   // lớp giữa case và keycap theo cao độ Y của bàn build: PCB → plate → housing switch từng phím
@@ -332,7 +376,7 @@ export async function buildKeyboardModel(
   // khối chặn liền case ở chỗ trống hàng dưới (HHKB, WKL...)
   // case CAD cao hơn: khối chặn tới BLOCKER_TOP; case dựng bằng code thì ngang mép trên case
   // case CAD nghiêng (board thấp theo mặt nêm): khối chặn thấp ngang mặt khung, không nhô giữa hàng phím
-  const blockTop = caseModel ? (def.seat?.tilt ? 0.3 : BLOCKER_TOP) : Y.caseTop
+  const blockTop = caseModel ? (def.seat?.tilt ? 0.3 : BLOCKER_TOP) : caseTopOf(def)
   // mica: khung chặn đã nằm trong tấm mica trên cùng; model CAD có sẵn khối chặn (`ownBlocks`) thì thôi
   const blocks =
     (!caseModel && def.material === 'mica') || def.ownBlocks

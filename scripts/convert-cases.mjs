@@ -2,6 +2,7 @@
 // Dùng: bun run convert:cases
 //
 // - Bakeneko 60 (kkatano/bakeneko-60): assets/keyboards/bakeneko60/case/case.step
+// - Bakeneko 65 (kkatano/bakeneko-65): assets/keyboards/bakeneko65/case/case.step
 // - Planck (MajorKoos/KBDParts): assets/keyboards/planck/case/planck.stl
 // CAD: mm, trục cao = trục có kích thước nhỏ nhất (STEP Bakeneko Z lên, STL Planck Y lên). Game: Y hướng lên, mm, tâm case ở gốc (x, z), đáy case ở y = 0,
 // mặt thấp hơn (phía người gõ) quay về +z
@@ -17,6 +18,12 @@ const SOURCES = {
   // Bakeneko: đáy vát nên đoán theo "phía thấp hơn" cũng ngược → lỗ USB-C (cổng daughterboard) ra trước, xoay lại ra sau
   'bakeneko60/case': {
     file: 'assets/keyboards/bakeneko60/case/case.step',
+    kind: 'step',
+    turn: true,
+  },
+  // Bakeneko 65 (kkatano/bakeneko-65, MIT): cùng kiểu Bakeneko 60 (đáy vát, đoán mặt trước ngược)
+  'bakeneko65/case': {
+    file: 'assets/keyboards/bakeneko65/case/case.step',
     kind: 'step',
     turn: true,
   },

@@ -23,24 +23,33 @@ export function useCaseSplit() {
   if (!done && split) setSplit(false)
   useEffect(() => {
     if (!done) return
+    // tách 2 mảnh: cụm ngửa lại (đặt viewFlip sao cho không lật: bước mở case tự lật úp thì viewFlip = true), từ đó Q lật bình thường
+    const upright = () => {
+      const g = useGame.getState()
+      if (g.ctx) useGame.setState({ viewFlip: autoFlip('caseOpen', g.ctx) })
+    }
     const t = setTimeout(
-      () => setSplit(true),
-      (electric ? SPIN_MS.electric : SPIN_MS.manual) + OUT_MS,
+      () => {
+        setSplit(true)
+        upright()
+      },
+      split ? 0 : (electric ? SPIN_MS.electric : SPIN_MS.manual) + OUT_MS,
     )
     return () => clearTimeout(t)
+    // chỉ chạy lại khi vừa tháo xong / đổi tua vít (split đọc lúc bắt đầu: tải lại đã tách thì ngửa luôn)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [done, electric])
   return done && split
 }
 
 /**
  * Cụm bàn phím (Assembly) đang lật úp (thấy mặt đáy): bước tự lật (hàn, vít đáy…) thì Q lật ngược lại xem mặt trên; case 2 mảnh vừa
- * tách thì ngửa lại. Dùng chung cho Assembly (xoay) và vít (chỉ vặn được khi mặt có vít quay lên, `ScrewSet`)
+ * tách thì ngửa lại (đặt viewFlip lúc tách, Q vẫn lật được). Dùng chung cho Assembly (xoay) và vít (chỉ vặn được khi mặt có vít quay lên, `ScrewSet`)
  */
 export function useAssemblyFlipped() {
   const ctx = useCtx()
   const step = useStep()
   const viewFlip = useGame((s) => s.viewFlip)
-  const split = useCaseSplit()
-  if (!step || NO_FLIP_STEPS.includes(step) || split) return false
+  if (!step || NO_FLIP_STEPS.includes(step)) return false
   return autoFlip(step, ctx) ? !viewFlip : viewFlip
 }

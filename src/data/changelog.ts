@@ -13,6 +13,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.34',
+    date: '2026-11-08',
+    commits: [],
+    title: 'Case nhựa 2 mảnh làm lại kiểu đúc thật, case Bakeneko 65',
+    items: [
+      'Case nhựa 2 mảnh: case trên trùm case dưới, thành rỗng có gân, vít ghép bắt vào trụ nhỏ cấy ren đồng trong thành; daughterboard kê trên trụ nhựa',
+      'Case nhựa thấp gọn hơn (mép trên thấp, đáy nâng, pin Li-Po dẹt 3mm)',
+      'Case nhựa 2 mảnh chơi được top mount; plate bottom mount có tai như top mount, vít không cấn PCB',
+      'Gasket case nhựa 2 mảnh: plate có tai kẹp 2 dải gasket, case dưới có khối lược đỡ tai (bậc thấp + gờ chặn + 2 thành bên)',
+      'Thêm case Bakeneko 65 (CAD, MIT)',
+      'Pin Li-Po giống pin bán lẻ (băng keo vàng, nhãn thông số), jack sát pin; ảnh pin trong Shopii',
+      'Top mount: úp case trên + bắt vít plate trước khi lắp daughterboard',
+      'Sửa: case trên chìm xuống bàn khi lật, không lật được (Q) sau khi tách case, hốc vách nhìn xuyên thấu, lỗ ốc đáy chỉ thấy nửa',
+    ],
+  },
+  {
     version: '0.1.33',
     date: '2026-11-08',
     commits: ['3880202'],

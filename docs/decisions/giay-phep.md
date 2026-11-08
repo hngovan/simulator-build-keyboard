@@ -70,3 +70,6 @@ Quy tắc của người dùng:
   `public/textures/posters/` (`cherry-crazy.jpg`, `keyboards-click.jpg`).
 - 2026-10-29: bàn có hộc "office desk" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/desk/office-desk.glb`.
 - 2026-10-29: màn hình "ASUS PC gaming monitor" người dùng đưa (Sketchfab, **chưa rõ giấy phép → chỉ dùng cá nhân**) → `public/models/desk/asus-monitor.glb`.
+- 2026-11-08: case Bakeneko 65 (kkatano/bakeneko-65, **MIT**, © 2020 kkatano) → `assets/keyboards/bakeneko65/` (case STEP, plate DXF, viền PCB,
+  layout KLE, LICENSE), `public/models/keyboards/bakeneko65/case.glb` (`bun run convert:cases`); ghi công `src/data/credits.ts` +
+  `public/licenses/bakeneko-65-MIT.txt`. Bakeneko 60 đã có từ trước (repo kkatano/bakeneko-60, không tải lại).
