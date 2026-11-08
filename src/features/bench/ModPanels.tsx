@@ -3,6 +3,7 @@ import { useGame, useBuild, useCtx } from '@/store'
 import { STABS, SWITCHES, TOOLS } from '@/data/parts'
 import {
   FEET_IDS,
+  BATTERY_IDS,
   ORING_IDS,
   FOAM_ID,
   CASE_FOAM_ID,
@@ -23,7 +24,7 @@ import {
 } from '@/data/supplies'
 import { lubeAdvice, stabModRules, unitsModded } from '@/data/mods'
 import { toolOnWay } from '@/data/shipping'
-import { stabSets } from '@/data/steps'
+import { batteryFits, stabSets } from '@/data/steps'
 import type { LubePick } from '@/store/shopSlice'
 import type { ToolKind } from '@/types'
 import {
@@ -651,6 +652,64 @@ export function FoamPanel() {
         <Alert tone="yellow" title="Hết foam Poron">
           <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
             Mua foam ở Shopii
+          </Button>
+        </Alert>
+      )}
+    </HudPanel>
+  )
+}
+
+/** Bảng bước lắp pin (tuỳ chọn): chọn dung lượng (số còn trong kho, pin to hơn hốc thì khoá), trạng thái đặt / cắm dây */
+export function BatteryPanel() {
+  const ctx = useCtx()
+  const bat = useBuild().battery
+  const supplies = useGame((s) => s.supplies)
+  const pick = useGame((s) => s.batteryPick)
+  const openShop = useGame((s) => s.openShop)
+  const fit = BATTERY_IDS.filter((id) => batteryFits(id, ctx.battery))
+  const max = fit[fit.length - 1]
+  const cur = bat?.id ?? pick
+  return (
+    <HudPanel id="battery" title="🔋 Lắp pin Li-Po">
+      <div className="text-xs">
+        {!bat
+          ? 'Chọn pin rồi click hốc pin trên sàn case'
+          : bat.plugged
+            ? `Đã lắp ${SUPPLIES[bat.id].name}, dây đã cắm vào PCB`
+            : 'Đã đặt pin: click đầu dây đỏ / đen rồi click jack pin trên PCB'}
+      </div>
+      <HudSection id="battery.pick" title="Dung lượng">
+        <div className="flex flex-wrap gap-1.5">
+          {BATTERY_IDS.map((id) => {
+            const n = supplies[id] ?? 0
+            const ok = fit.includes(id)
+            return (
+              <OptionChip
+                key={id}
+                active={cur === id}
+                disabled={!!bat || !ok}
+                onClick={() => useGame.setState({ batteryPick: id })}
+                title={
+                  ok
+                    ? `${SUPPLIES[id].name}: ${n > 0 ? `còn ${n}` : 'chưa có, mua ở Shopii'}`
+                    : 'To hơn hốc pin của case này'
+                }
+              >
+                {SUPPLIES[id].battery!.mah}mAh{n > 0 ? ` · ${n}` : ''}
+              </OptionChip>
+            )
+          })}
+        </div>
+        <Muted>
+          {max
+            ? `Hốc pin case này vừa tối đa ${SUPPLIES[max].battery!.mah}mAh${ctx.mount === 'tray' ? ' (tray mount: trụ đồng chiếm chỗ)' : ''}. Không làm không dây thì bấm "Bỏ qua".`
+            : 'Hốc pin case này quá nhỏ cho mọi loại pin.'}
+        </Muted>
+      </HudSection>
+      {!bat && (supplies[cur] ?? 0) < 1 && (
+        <Alert tone="yellow" title={`Hết ${SUPPLIES[cur].name.toLowerCase()}`}>
+          <Button size="sm" tone="yellow" onClick={() => openShop('supply')}>
+            Mua pin ở Shopii
           </Button>
         </Alert>
       )}

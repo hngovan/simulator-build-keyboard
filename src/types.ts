@@ -367,6 +367,8 @@ export type StepId =
   | 'coverOn'
   /** cắm đầu dây JST còn lại vào PCB (board đang nhấc trên case) trước khi thả board vào case */
   | 'jst'
+  /** lắp pin Li-Po vào hốc sàn case + cắm dây pin vào jack JST trên PCB (tuỳ chọn, case dựng bằng code ≤ 60%) */
+  | 'battery'
   /** top mount: úp case trên lên plate rồi vặn vít plate vào case trên */
   | 'topCase'
   | 'topScrew'
@@ -433,6 +435,8 @@ export interface BuildState {
   cover?: { out?: Record<number, true>; off?: true; on?: true; tight?: Record<number, true> }
   /** đã cắm đầu dây JST còn lại vào PCB */
   jst?: true
+  /** pin Li-Po: `id` = vật tư pin đã đặt vào hốc (BATTERY_IDS), `plugged` = đã cắm dây pin vào jack PCB */
+  battery?: { id: string; plugged?: true }
   inCase: boolean
   closed: boolean
   /** vít bị tuôn ren (vặn sai đầu vít / quá lực); hoàn tác không gỡ được */
@@ -509,6 +513,21 @@ export interface DtbSpot {
   /** jack JST mặt dưới PCB (hệ board, u): tâm miệng x, z + xoay quanh trục đứng `ry` (miệng quay theo (−sin ry, −cos ry)) */
   jack: { x: number; z: number; ry: number }
 }
+/**
+ * Hốc pin Li-Po (u, toạ độ cảnh): tâm x, z, lòng hốc rộng `w` (theo x, cạnh dài pin) × sâu `d` (theo z), `y` = đáy hốc (mặt dưới pin);
+ * `top` = mặt sàn quanh hốc (case nhôm khoét xuống sàn, case nhựa = sàn mỏng bỏ gân). Dây pin ra ở cạnh ngắn `side` (−1 trái / +1 phải),
+ * `jack` = jack JST PH 2 pin mặt dưới PCB (hệ board) như `DtbSpot.jack`
+ */
+export interface BatterySpot {
+  x: number
+  z: number
+  w: number
+  d: number
+  y: number
+  top: number
+  side: 1 | -1
+  jack: { x: number; z: number; ry: number }
+}
 export interface BuildContext {
   layout: LayoutId
   variant: Variant
@@ -533,6 +552,8 @@ export interface BuildContext {
   feet: FootPocket[]
   /** daughterboard (u, toạ độ cảnh); null = case không lắp DTB */
   dtb: DtbSpot | null
+  /** hốc pin trên sàn case (case dựng bằng code nhựa / nhôm ≤ 60%); null = không có */
+  battery: BatterySpot | null
   screwSide: 'top' | 'bottom'
   pcbType: string
   /** không plate: bỏ bước foam + plate, switch hàn thẳng vào PCB */
@@ -588,6 +609,11 @@ export interface CaseDef {
    * dây JST từ DTB luồn lên qua tạ (Duality): lắp lại tạ rồi mới cắm dây vào PCB; top mount thì úp + bắt vít case trên vào plate
    * trước khi tháo tạ lắp DTB (`buildContext`)
    */
+  /**
+   * cổng USB-C hàn sẵn trên PCB (mặt dưới, sát mép sau, bên trái: 60% / 40%, bên phải: TKL): không daughterboard / dây JST,
+   * vách sau khoét lỗ đúng chỗ cổng
+   */
+  pcbUsb?: 'left' | 'right'
   jstUp?: true
   /** case CAD 2 mảnh: tâm lỗ vít ghép ở đáy [x, z] (mm, hệ model) thay vị trí vít tính theo cỡ case */
   screws?: [number, number][]

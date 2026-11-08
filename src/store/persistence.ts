@@ -170,10 +170,14 @@ export interface SaveData extends Profile {
 // 10: thêm bước tuỳ chọn lót foam đáy case (`caseFoam`, sau `feet`) → tìm lại bước đang làm theo tên (addCaseFoamStep)
 // 11: bỏ OG mount (thay bằng bottom mount): đơn / build OG đổi sang gasket mount, bỏ bước `ring` của build OG làm dở
 //     (ogSession), đơn OG thôi dặn dây O-ring (ogOrder)
-const SAVE_REV = 11
+// 12: thêm bước tuỳ chọn lắp pin (`battery`, sau `jst`, case dựng bằng code ≤ 60%) → tìm lại bước đang làm theo tên (addBatteryStep)
+const SAVE_REV = 12
+
+/** danh sách bước của bản lưu trước rev 12 (chưa có bước lắp pin) */
+const noBattery = (steps: StepId[]): StepId[] => steps.filter((s) => s !== 'battery')
 
 /** danh sách bước của bản lưu trước rev 10 (chưa có bước foam đáy case): các bước nâng cấp cũ tính trên danh sách này */
-const noCaseFoam = (steps: StepId[]): StepId[] => steps.filter((s) => s !== 'caseFoam')
+const noCaseFoam = (steps: StepId[]): StepId[] => noBattery(steps).filter((s) => s !== 'caseFoam')
 /** danh sách bước của bản lưu trước rev 8 (chưa có bước daughterboard) */
 const noDtb = (steps: StepId[]) => noCaseFoam(steps).filter((s) => s !== 'dtb' && s !== 'jst')
 
@@ -307,6 +311,20 @@ function addCaseFoamStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'bui
   const steps = buildContext(order, sess.inventory, sess.mount).steps
   if (!steps.includes('caseFoam')) return sess
   const stepIdx = steps.indexOf(noCaseFoam(steps)[b.stepIdx])
+  if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
+  return { ...sess, build: { ...b, stepIdx }, history: [] }
+}
+
+/** Build làm dở từ bản cũ (chưa có bước `battery`): tìm lại đúng bước đang làm trong danh sách mới */
+function addBatteryStep<S extends Pick<JobSession, 'inventory' | 'mount' | 'build' | 'history'>>(
+  order: Order | null | undefined,
+  sess: S,
+): S {
+  const b = sess.build
+  if (!order || !b || !sess.mount || !sess.inventory.case || !sess.inventory.pcb) return sess
+  const steps = buildContext(order, sess.inventory, sess.mount).steps
+  if (!steps.includes('battery')) return sess
+  const stepIdx = steps.indexOf(noBattery(steps)[b.stepIdx])
   if (stepIdx < 0 || stepIdx === b.stepIdx) return sess
   return { ...sess, build: { ...b, stepIdx }, history: [] }
 }
@@ -632,6 +650,13 @@ export function loadSave(): SaveData | null {
           const o = ogOrder(j.order)
           return { order: o, session: ogSession(o, j.session) }
         }),
+      }
+    }
+    if ((save.rev ?? 0) < 12 && session) {
+      session = {
+        ...session,
+        ...addBatteryStep(session.order, { ...session, history: session.history ?? [] }),
+        jobs: session.jobs?.map((j) => ({ ...j, session: addBatteryStep(j.order, j.session) })),
       }
     }
     if (session) {

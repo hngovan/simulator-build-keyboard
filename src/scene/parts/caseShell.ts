@@ -88,6 +88,32 @@ function carve(base: THREE.BufferGeometry, cuts: THREE.BufferGeometry[]) {
 /** bo mép trên / dưới vỏ case liền khối (u) */
 const SHELL_BEVEL = 0.035
 
+/** hốc chữ nhật phay xuống mặt sàn trong lòng case (chứa pin): tâm x, z, rộng w (x) × sâu d (z), đáy hốc y (u) */
+export interface ShellTub {
+  x: number
+  z: number
+  w: number
+  d: number
+  y: number
+}
+/** khoét hốc pin vào khối sàn (bo góc 1mm như dao phay) */
+const carveTub = (floor: THREE.BufferGeometry, tub: ShellTub | undefined, top: number) => {
+  if (!tub) return floor
+  const r = 0.05
+  const g = new THREE.ExtrudeGeometry(
+    roundedRect(new THREE.Shape(), tub.w, tub.d, r) as THREE.Shape,
+    {
+      depth: top - tub.y + 0.05,
+      bevelEnabled: false,
+      curveSegments: 6,
+    },
+  )
+  // shape nằm XY (y = −z sau khi xoay) → đùn theo +z rồi xoay nằm ngang, đáy ở tub.y
+  g.rotateX(-Math.PI / 2)
+  g.translate(tub.x, tub.y, tub.z)
+  return carve(floor, [g])
+}
+
 /** hốc tròn CNC lõm dưới đáy (dán feet): tâm x, z (u, toạ độ cảnh), bán kính, độ sâu từ mặt đáy */
 export interface Pocket {
   x: number
@@ -138,6 +164,8 @@ export function caseShellGeometry(
   bores: WallBore[] = [],
   /** lỗ ngang xuyên vách sau (cổng USB daughterboard) */
   ports: WallPort[] = [],
+  /** hốc pin khoét từ mặt sàn xuống tới `y` (case nhôm sàn dày) */
+  tub?: ShellTub,
 ) {
   const b = SHELL_BEVEL
   const extrude = (shape: THREE.Shape, h: number, bottom: number, segs = 6) => {
@@ -191,10 +219,10 @@ export function caseShellGeometry(
   const fw = W - 2 * wall + 0.02 - 2 * b
   const fd = D - 2 * wall + 0.02 - 2 * b
   if (!pockets.length) {
-    const floor = extrude(
-      roundedRect(new THREE.Shape(), fw, fd, INNER_R) as THREE.Shape,
-      floorTop - y0,
-      y0,
+    const floor = carveTub(
+      extrude(roundedRect(new THREE.Shape(), fw, fd, INNER_R) as THREE.Shape, floorTop - y0, y0),
+      tub,
+      floorTop,
     )
     const parts = [ring, floor]
     const merged = mergeGeometries(parts)
@@ -211,10 +239,14 @@ export function caseShellGeometry(
   )
   skin.rotateX(-Math.PI / 2)
   skin.translate(0, y0, 0)
-  const floor = extrude(
-    roundedRect(new THREE.Shape(), fw, fd, INNER_R) as THREE.Shape,
-    floorTop - y0 - depth,
-    y0 + depth,
+  const floor = carveTub(
+    extrude(
+      roundedRect(new THREE.Shape(), fw, fd, INNER_R) as THREE.Shape,
+      floorTop - y0 - depth,
+      y0 + depth,
+    ),
+    tub,
+    floorTop,
   )
   const parts = [ring, skin, floor]
   const merged = mergeGeometries(parts)

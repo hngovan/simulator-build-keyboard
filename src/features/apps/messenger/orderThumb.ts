@@ -5,6 +5,9 @@ import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS, caseFits, caseModelOf }
 import {
   CASE_MARGIN,
   CASE_WALL,
+  caseWall,
+  absTwo,
+  caseFloorTop,
   Y,
   caseBores,
   caseScrewHoles,
@@ -81,7 +84,9 @@ function woodMaterial(color: string) {
 /** Vật liệu vỏ case theo chất liệu + màu (trong suốt: acrylic / mica / PC màu trong) */
 async function shellMaterial(material: string, color: string) {
   if (material === 'wood') return (await woodMaterial(color)).clone()
-  const clear = color === 'clear' || material === 'acrylic' || material === 'mica'
+  // PC trong nhuộm màu (`CASE_COLORS[].clear`): trong mờ ánh màu
+  const tinted = !!CASE_COLORS[color]?.clear
+  const clear = color === 'clear' || tinted || material === 'acrylic' || material === 'mica'
   const pc = material === 'pc'
   return new THREE.MeshPhysicalMaterial({
     color: CASE_COLORS[color]?.hex ?? '#888',
@@ -92,7 +97,7 @@ async function shellMaterial(material: string, color: string) {
     thickness: pc ? 0.5 : 0,
     ior: pc ? 1.58 : 1.5,
     transparent: clear || pc,
-    opacity: color === 'clear' ? 0.55 : clear ? 0.75 : pc ? 0.6 : 1,
+    opacity: color === 'clear' ? 0.55 : tinted ? 0.62 : clear ? 0.75 : pc ? 0.6 : 1,
     depthWrite: !(clear || pc),
   })
 }
@@ -213,10 +218,12 @@ export async function buildKeyboardModel(
       group.add(w)
     }
   } else {
-    const W = width + 2 * (CASE_MARGIN + CASE_WALL)
-    const D = depth + 2 * (CASE_MARGIN + CASE_WALL)
+    // thành case theo chất liệu (nhựa ABS mỏng hơn)
+    const wall = caseWall(def)
+    const W = width + 2 * (CASE_MARGIN + wall)
+    const D = depth + 2 * (CASE_MARGIN + wall)
     // 4 hốc feet tròn CNC lõm dưới đáy (case CAD có hốc sẵn trong model)
-    const pockets = feetPockets(undefined, width, depth, origin)
+    const pockets = feetPockets(undefined, width, depth, origin, wall)
     // case 2 mảnh: lỗ vít ở đáy (nhôm / PC / acrylic) hoặc xuyên mọi lớp (mica ghép)
     const screwHoles = caseScrewHoles(def, width, depth)
     if (def.material === 'mica') {
@@ -239,7 +246,7 @@ export async function buildKeyboardModel(
     } else {
       // vỏ liền 1 khối (vành + sàn đáy) như bàn build; case 2 mảnh: phần dưới (đáy riêng màu) + vành trên
       // case 2 mảnh bắt vít từ đáy: lỗ xuyên + hốc chìm đầu ốc (case dưới), lỗ ren (case trên)
-      const bores = caseBores(def, caseScrewPoints(width, depth, 'bottom'))
+      const bores = caseBores(def, caseScrewPoints(width, depth, 'bottom', wall, absTwo(def)))
       const shell = (
         y0: number,
         y1: number,
@@ -253,7 +260,7 @@ export async function buildKeyboardModel(
           D,
           y0,
           y1,
-          CASE_WALL,
+          wall,
           floor,
           floor === undefined ? [] : [...pockets, ...screwHoles],
           [],
@@ -263,9 +270,9 @@ export async function buildKeyboardModel(
         group.add(new THREE.Mesh(def.material === 'wood' ? woodUV(g) : g, mat))
       }
       if (def.pieces === 2) {
-        shell(Y.floorBot, Y.split, bottomMat, Y.floorTop, bores.bottom)
+        shell(Y.floorBot, Y.split, bottomMat, caseFloorTop(def), bores.bottom)
         shell(Y.split, Y.caseTop, caseMat, undefined, bores.top)
-      } else shell(Y.floorBot, Y.caseTop, def.bottom ? bottomMat : caseMat, Y.floorTop)
+      } else shell(Y.floorBot, Y.caseTop, def.bottom ? bottomMat : caseMat, caseFloorTop(def))
     }
   }
   // lớp giữa case và keycap theo cao độ Y của bàn build: PCB → plate → housing switch từng phím

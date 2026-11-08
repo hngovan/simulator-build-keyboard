@@ -18,14 +18,17 @@ import {
   keyCutouts,
   coverBeforeJst,
   gasketTabbed,
+  ABS_BOSS,
+  absTwo,
 } from '@/data/steps'
 import type { Key, Point, StepId } from '@/types'
 import { playClick } from '@/sound'
 import { PcbJst, boardGroup, jstStand } from './Daughterboard'
+import { PcbBatteryJack } from './Battery'
 import { Drop, lerpTo } from '../common/anim'
 import { MM } from '../models/Switch'
 import { useHover } from '../common/useHover'
-import { Gaskets, HotswapSockets, SiliconeRing } from './BoardDetails'
+import { Gaskets, HotswapSockets, PcbUsbC, SiliconeRing } from './BoardDetails'
 import { SUPPLIES } from '@/data/supplies'
 import { KeySlot } from './KeySlot'
 import { PingWaves } from './PingWaves'
@@ -272,7 +275,7 @@ export function Board() {
   const { placePlate, placeFoam, wrapRing } = useGame.getState()
   const ref = useRef<THREE.Group>(null)
   // nhấc board lên trên case: chờ thả vào case, chờ cắm dây JST (dây từ daughterboard trong case lên cổng mặt dưới PCB)
-  const lifted = (step === 'caseIn' && !b.inCase) || step === 'jst'
+  const lifted = (step === 'caseIn' && !b.inCase) || step === 'jst' || step === 'battery'
   // gá O-ring: chỉ bấm vào vòng silicon chờ gá quanh mép (bấm mặt PCB không gá), xem `onRing`;
   // thả board vào case: chỉ bấm case dưới (Case.tsx), bấm board đang nhấc không thả
   const boardClick = step === 'plate' || step === 'foam'
@@ -285,7 +288,8 @@ export function Board() {
   // lắp lại tạ (sau khi cắm dây): vẫn dựng, nhấc thẳng lên thì che mất lòng case
   // case dây luồn lên qua tạ: tạ lắp trước khi cắm dây, lúc đó board để riêng (không dựng)
   const stand =
-    step === 'jst' || (step === 'coverOn' && !coverBeforeJst(ctx.steps))
+    // lắp pin: dựng như lúc cắm JST (jack pin cũng ở mặt dưới PCB)
+    step === 'jst' || step === 'battery' || (step === 'coverOn' && !coverBeforeJst(ctx.steps))
       ? jstStand(ctx.depth)
       : null
   useFrame((_, dt) => {
@@ -328,9 +332,27 @@ export function Board() {
   // tray mount: vít xuyên plate + PCB bắt vào trụ đồng đáy case (vị trí đã dò không chạm lỗ switch / stab)
   const trayHoles = ctx.mount === 'tray' ? ctx.screws.trayScrew : NO_HOLES
   // rãnh tròn mép PCB chỗ trụ đỡ O-ring trong case (r + khe 0,02u), cố định theo case nên PCB lúc nào cũng khoét sẵn
+  // case nhựa 2 mảnh: trụ vít ghép + vấu bottom mount đúc liền vách lấn vào lòng case → PCB khoét rãnh né (r + khe 0,02u)
+  const boss2 = absTwo(ctx.caseDef)
+  const bossHoles = useMemo(
+    () =>
+      boss2
+        ? [...ctx.screws.caseOpen, ...ctx.screws.bottomScrew].map((p) => ({
+            x: p.x,
+            z: p.z,
+            r: ABS_BOSS.r + 0.02,
+          }))
+        : [],
+    [ctx, boss2],
+  )
   const pcbNotches = useMemo(
-    () => ringPosts(ctx).map((p) => ({ x: p.x, z: p.z, r: p.r + 0.02 })),
-    [ctx],
+    () => [...ringPosts(ctx).map((p) => ({ x: p.x, z: p.z, r: p.r + 0.02 })), ...bossHoles],
+    [ctx, bossHoles],
+  )
+  // bottom mount case nhựa 2 mảnh: không tai plate, vít xuyên lỗ plate sát mép xuống vấu
+  const plateHoles = useMemo(
+    () => (boss2 && ctx.mount === 'bottom' ? [...trayHoles, ...ctx.screws.bottomScrew] : trayHoles),
+    [ctx, boss2, trayHoles],
   )
   // top / bottom mount (case dựng bằng code): plate phủ kín lòng case, tai thò vào hốc / rãnh vách
   const topFull = (ctx.mount === 'top' || ctx.mount === 'bottom') && !ctx.caseDef.model
@@ -358,15 +380,15 @@ export function Board() {
                 [],
               )
             : undefined,
-        trayHoles,
+        plateHoles,
         ctx.mount === 'top'
           ? ctx.screws.topScrew
-          : ctx.mount === 'bottom'
+          : ctx.mount === 'bottom' && !boss2
             ? ctx.screws.bottomScrew
             : NO_HOLES,
         ctx.mount === 'gasket' && gasketTabbed(ctx.caseDef) ? ctx.gaskets : NO_HOLES,
       ),
-    [ctx, standard60CAD, sandwich, topFull, trayHoles],
+    [ctx, standard60CAD, sandwich, topFull, plateHoles, boss2],
   )
   const at = (name: StepId) => ctx.steps.indexOf(name)
   return (
@@ -387,6 +409,9 @@ export function Board() {
       {ctx.pcbType === 'hotswap' && <HotswapSockets />}
       {/* cổng JST mặt dưới PCB nối daughterboard */}
       <PcbJst />
+      <PcbBatteryJack />
+      {/* PCB có cổng USB-C hàn sẵn (không daughterboard) */}
+      <PcbUsbC />
       {(b.foam || step === 'foam') && (
         <Drop y={0} from={b.foam ? 0.6 : 0}>
           <group onPointerDown={onBoard} {...bind}>
@@ -396,6 +421,7 @@ export function Board() {
               depth={ctx.depth}
               outline={ctx.outline}
               trayHoles={trayHoles}
+              bossHoles={bossHoles}
               ghost={!b.foam}
             />
           </group>

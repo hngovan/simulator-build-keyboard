@@ -19,6 +19,7 @@ import { HintArrow } from '../stations/StationKit'
 import { MM } from '../models/Switch'
 import type { DtbSpot } from '@/types'
 import type { WallPort } from './caseShell'
+import { useAssemblyFlipped } from './caseSplit'
 
 // Daughterboard ai03 Unified C3 (MIT, `bun run convert:dtb`) bắt vào sàn case sát vách sau, cổng USB-C ló ra lỗ khoét vách;
 // dây JST SH 4 pin (dựng bằng code: 2 đầu cắm + 4 sợi dây AWG28) nối DTB với cổng JST mặt dưới PCB.
@@ -32,9 +33,11 @@ const SCREW_GLB = '/models/screws/socket-cap-m2x6.glb'
  * ăn trong bạc ren): mũi chỉ xuống 3,5mm dưới mặt sàn
  */
 const SCREW_LEN = 5.5
+/** case nhựa sàn mỏng 1,9mm (`ABS_FLOOR`): vít ngắn còn 3,6mm (thân 1,6mm) cho khỏi lòi mặt đáy */
+const SCREW_LEN_THIN = 3.6
 
 /** clone model vít, ép mọi đỉnh dưới `SCREW_LEN` lên đúng mức đó (thân hình trụ nên chỉ ngắn lại, đầu giữ nguyên) */
-function shortScrew(src: THREE.Object3D) {
+function shortScrew(src: THREE.Object3D, len = SCREW_LEN) {
   const out = src.clone(true)
   out.traverse((o) => {
     if (!(o instanceof THREE.Mesh)) return
@@ -47,7 +50,7 @@ function shortScrew(src: THREE.Object3D) {
     const v = new THREE.Vector3()
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i).applyMatrix4(m)
-      if (v.y < -SCREW_LEN) pos.setXYZ(i, ...v.setY(-SCREW_LEN).applyMatrix4(inv).toArray())
+      if (v.y < -len) pos.setXYZ(i, ...v.setY(-len).applyMatrix4(inv).toArray())
     }
     pos.needsUpdate = true
     g.computeBoundingBox()
@@ -59,9 +62,9 @@ function shortScrew(src: THREE.Object3D) {
 useGLTF.preload(DTB_GLB)
 
 /** lỗ cổng USB-C khoét xuyên vách sau case (tâm ngang tâm cổng USB-C của DTB nằm trên sàn) */
-export const usbPort = (x: number): WallPort => ({
+export const usbPort = (x: number, floor: number = Y.floorTop): WallPort => ({
   x,
-  y: Y.floorTop + DTB_MM.usb.y * MM,
+  y: floor + DTB_MM.usb.y * MM,
   w: USB_PORT_MM.w * MM,
   h: USB_PORT_MM.h * MM,
   r: USB_PORT_MM.r * MM,
@@ -613,13 +616,20 @@ export function Daughterboard({ at }: { at: DtbSpot }) {
   const { placeDtb, plugDtb } = useGame.getState()
   // thanh lực đang chạy ở lỗ vít DTB nào
   const skill = useSkill((k) => (k.active?.id.startsWith('dtb-') ? k.active : null))
-  const active = step === 'dtb'
+  // lật case xem đáy (Q) thì tạm khoá đặt mạch / vít / dây (mặt trong case quay xuống, bấm xuyên sàn)
+  const flipped = useAssemblyFlipped()
+  const active = step === 'dtb' && !flipped
   const screws = d.screws ?? {}
   const nextHole = d.placed ? DTB_MM.holes.findIndex((_, i) => !screws[i]) : -1
   const mouth: [number, number, number] = [0, DTB_MM.jst.y * MM, DTB_MM.jst.z * MM]
   const headY = (DTB_MM.t + 2) * MM
   const screwSrc = useGLTF(SCREW_GLB).scene
-  const screwModel = useMemo(() => shortScrew(screwSrc), [screwSrc])
+  // case nhựa sàn mỏng: vít ngắn hơn
+  const thin = at.floor < Y.floorTop - 1e-6 && at.tilt === 0
+  const screwModel = useMemo(
+    () => shortScrew(screwSrc, thin ? SCREW_LEN_THIN : SCREW_LEN),
+    [screwSrc, thin],
+  )
   // kê trụ: mặt dưới mạch cao hơn sàn (case CAD lỗ USB nằm cao)
   const post = at.y - at.floor
   return (

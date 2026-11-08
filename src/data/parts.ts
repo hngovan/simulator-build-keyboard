@@ -104,6 +104,8 @@ export interface StabModel {
 interface ColorDef {
   name: string
   hex: string
+  /** PC trong nhuộm màu (case PC): vỏ trong mờ ánh màu, ô màu chia đôi đặc / trong */
+  clear?: boolean
 }
 interface KeycapColor extends ColorDef {
   legend: string
@@ -747,7 +749,33 @@ export const CASE_COLORS: Record<string, ColorDef> = {
   // gỗ không có ảnh vân riêng: mượn vân sồi / óc chó rồi nhân màu (materials.tsx woodTexFor)
   ash: { name: 'Gỗ tần bì', hex: '#f6ead6' },
   rosewood: { name: 'Gỗ hồng mộc', hex: '#c98572' },
+  // PC trong nhuộm màu (case PC)
+  clearBlack: { name: 'Đen trong', hex: '#30333b', clear: true },
+  clearBlue: { name: 'Xanh dương trong', hex: '#3d72d6', clear: true },
+  clearRed: { name: 'Đỏ trong', hex: '#c8323e', clear: true },
+  clearGreen: { name: 'Xanh lá trong', hex: '#3fa064', clear: true },
+  clearPurple: { name: 'Tím trong', hex: '#7c52c4', clear: true },
+  clearPink: { name: 'Hồng trong', hex: '#f08cb0', clear: true },
+  clearYellow: { name: 'Vàng trong', hex: '#e9b62e', clear: true },
 }
+
+/** màu PC trong nhuộm (chỉ case PC: nhựa ABS đục, không làm trong được) */
+export const TINT_COLORS = Object.keys(CASE_COLORS).filter((c) => CASE_COLORS[c].clear)
+
+/**
+ * Nền ô màu case (CSS background): màu thường = màu đặc; PC trong nhuộm = tròn chia đôi, nửa trái màu đặc, nửa phải màu trong
+ * (nhạt) để người mua hiểu là PC trong nhuộm màu; không vẽ vệt sáng chéo (nhìn như vết gạch / lỗi)
+ */
+export function caseSwatch(col: string) {
+  const c = CASE_COLORS[col]
+  if (!c) return col
+  if (!c.clear) return c.hex
+  const tint = `color-mix(in srgb, ${c.hex} 45%, #f4f8ff)`
+  // border-box: nền chia đôi phủ cả viền, không thì gradient lặp lại dưới viền → rìa ô lệch màu
+  return `linear-gradient(90deg, ${c.hex} 50%, ${tint} 50%) border-box`
+}
+/** màu đặc từ nền ô màu (dùng làm màu vẽ hình minh hoạ) */
+export const swatchHex = (s: string) => s.match(/#[0-9a-f]{3,8}\b/i)?.[0] ?? s
 
 /** nhãn cỡ case trên ảnh sản phẩm Shopii */
 const FF_BADGE: Record<string, string> = {
@@ -770,12 +798,16 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
   {
     name: 'Case 60%',
     variants: [
-      ['plastic60', 'Nhựa ABS'],
+      ['plastic60', 'Nhựa ABS 1 mảnh'],
+      ['pc60One', 'Nhựa PC 1 mảnh'],
+      ['plastic60Two', 'Nhựa ABS 2 mảnh'],
       ['wood60', 'Gỗ'],
       ['mica60', 'Mica xếp lớp'],
-      ['pc60', 'PC 2 mảnh'],
+      ['pc60', 'Nhựa PC 2 mảnh'],
       ['tofu60redux', 'Nhôm anod 1 mảnh (Tofu60 Redux)'],
+      ['tofu60reduxC', 'Nhôm anod 1 mảnh (Tofu60 Redux) · cổng C trên PCB'],
       ['alu60Ecoat1', 'Nhôm E-coat 1 mảnh'],
+      ['alu60Ecoat1C', 'Nhôm E-coat 1 mảnh · cổng C trên PCB'],
       ['gasket60', 'Nhôm anod 2 mảnh'],
       ['gasket60Ecoat', 'Nhôm E-coat 2 mảnh'],
       ['gasket60Duo', 'Nắp PC · đáy nhôm'],
@@ -784,18 +816,33 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
   {
     name: 'Case 40%',
     variants: [
-      ['plastic40', 'Nhựa ABS'],
+      ['plastic40', 'Nhựa ABS 1 mảnh'],
+      ['pc40One', 'Nhựa PC 1 mảnh'],
+      ['plastic40Two', 'Nhựa ABS 2 mảnh'],
+      ['pc40', 'Nhựa PC 2 mảnh'],
       ['mica40', 'Mica xếp lớp'],
       ['alu40Anod', 'Nhôm anod 1 mảnh'],
+      ['alu40AnodC', 'Nhôm anod 1 mảnh · cổng C trên PCB'],
       ['alu40Ecoat1', 'Nhôm E-coat 1 mảnh'],
+      ['alu40Ecoat1C', 'Nhôm E-coat 1 mảnh · cổng C trên PCB'],
       ['alu40Anod2', 'Nhôm anod 2 mảnh'],
       ['alu40', 'Nhôm E-coat 2 mảnh'],
     ],
   },
   {
+    name: 'Case 65%',
+    variants: [
+      ['case65Plastic', 'Nhựa ABS 1 mảnh'],
+      ['case65Pc', 'Nhựa PC 1 mảnh'],
+    ],
+  },
+  {
     name: 'Case 75%',
     variants: [
-      ['case75Plastic', 'Nhựa ABS'],
+      ['case75Plastic', 'Nhựa ABS 1 mảnh'],
+      ['case75PcOne', 'Nhựa PC 1 mảnh'],
+      ['case75PlasticTwo', 'Nhựa ABS 2 mảnh'],
+      ['case75Pc', 'Nhựa PC 2 mảnh'],
       ['case75Mica', 'Mica xếp lớp'],
       ['case75Alu', 'Nhôm anod 1 mảnh'],
       ['case75AluEcoat', 'Nhôm E-coat 1 mảnh'],
@@ -806,9 +853,14 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
   {
     name: 'Case TKL',
     variants: [
-      ['tklTray', 'Nhựa ABS'],
+      ['tklTray', 'Nhựa ABS 1 mảnh'],
+      ['tklPcOne', 'Nhựa PC 1 mảnh'],
+      ['tklPlasticTwo', 'Nhựa ABS 2 mảnh'],
+      ['tklPc', 'Nhựa PC 2 mảnh'],
       ['tklAlu', 'Nhôm anod 1 mảnh'],
+      ['tklAluC', 'Nhôm anod 1 mảnh · cổng C trên PCB'],
       ['tklAluEcoat', 'Nhôm E-coat 1 mảnh'],
+      ['tklAluEcoatC', 'Nhôm E-coat 1 mảnh · cổng C trên PCB'],
       ['tklAcrylic', 'Acrylic 2 mảnh'],
       ['tklGasket', 'Nhôm anod 2 mảnh'],
       ['tklGasketEcoat', 'Nhôm E-coat 2 mảnh'],
@@ -824,7 +876,10 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
   {
     name: 'Case Full',
     variants: [
-      ['fullTray', 'Nhựa ABS'],
+      ['fullTray', 'Nhựa ABS 1 mảnh'],
+      ['fullPcOne', 'Nhựa PC 1 mảnh'],
+      ['fullPlasticTwo', 'Nhựa ABS 2 mảnh'],
+      ['fullPc', 'Nhựa PC 2 mảnh'],
       ['fullMica', 'Mica xếp lớp'],
       ['fullGasketAnod', 'Nhôm anod 2 mảnh'],
       ['fullGasket', 'Nhôm E-coat 2 mảnh'],
@@ -859,11 +914,16 @@ export const CASE_MATERIALS: Record<string, SoundMod> = {
   abs: { name: 'Nhựa ABS', dl: 0.05, dp: 0 },
   anod: { name: 'Nhôm anod', dl: 0, dp: 0.04 },
   ecoat: { name: 'Nhôm E-coat (sần)', dl: 0, dp: 0.02 },
-  pc: { name: 'PC mờ', dl: -0.03, dp: -0.05 },
+  pc: { name: 'Nhựa PC', dl: -0.03, dp: -0.05 },
   acrylic: { name: 'Acrylic trong', dl: 0.02, dp: 0.03 },
   mica: { name: 'Mica xếp lớp', dl: 0.05, dp: 0.03 },
   wood: { name: 'Gỗ', dl: -0.05, dp: -0.08 },
 }
+
+/** case nhựa dựng bằng code (ABS đục / PC trong): cùng vỏ đúc (thành mỏng, khung xương cá, trụ ren), chỉ khác màu;
+ * case 2 chất liệu (nắp PC đáy nhôm) không tính */
+export const isPlasticCase = (c?: { material: string; model?: string; bottom?: unknown }) =>
+  !!c && !c.model && !c.bottom && (c.material === 'abs' || c.material === 'pc')
 
 // screwSide: 'top' = vít xuyên từ trên (case mica xếp lớp), 'bottom' = vít ở đáy case
 // Thông số Tofu60 Redux tham khảo trang sản phẩm Redux V2 của KBDfans (tray 5 standoff / O-ring)
@@ -890,6 +950,30 @@ export const CASES: Record<string, CaseDef> = {
     ],
     desc: 'Nhôm CNC anod 1 mảnh',
   },
+  tofu60reduxC: {
+    name: 'Tofu60 Redux · cổng C trên PCB',
+    ff: '60',
+    pieces: 1,
+    // PCB có cổng USB-C hàn sẵn bên trái (kiểu PCB 60% / 40% phổ thông): không lắp daughterboard
+    pcbUsb: 'left',
+    material: 'anod',
+    thinBezel: true,
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 1600,
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
+    desc: 'Nhôm CNC anod 1 mảnh, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
+  },
   alu60Ecoat1: {
     name: 'Case 60% nhôm E-coat 1 mảnh',
     ff: '60',
@@ -912,8 +996,32 @@ export const CASES: Record<string, CaseDef> = {
     ],
     desc: 'Nhôm E-coat sần 1 mảnh: tray / gasket / O-ring',
   },
+  alu60Ecoat1C: {
+    name: 'Case 60% nhôm E-coat 1 mảnh · cổng C trên PCB',
+    ff: '60',
+    pieces: 1,
+    // PCB có cổng USB-C hàn sẵn bên trái (kiểu PCB 60% / 40% phổ thông): không lắp daughterboard
+    pcbUsb: 'left',
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 1600,
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
+    desc: 'Nhôm E-coat sần 1 mảnh: tray / gasket / O-ring, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
+  },
   plastic60: {
-    name: 'Case 60% nhựa',
+    name: 'Case 60% nhựa ABS 1 mảnh',
     ff: '60',
     pieces: 1,
     material: 'abs',
@@ -921,6 +1029,27 @@ export const CASES: Record<string, CaseDef> = {
     price: 300,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
+  },
+  pc60One: {
+    name: 'Case 60% nhựa PC 1 mảnh',
+    ff: '60',
+    pieces: 1,
+    material: 'pc',
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 480,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Nhựa PC trong / mờ, xuyên đèn',
+  },
+  plastic60Two: {
+    name: 'Case 60% nhựa ABS 2 mảnh',
+    ff: '60',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'abs',
+    mounts: ['gasket', 'bottom'],
+    price: 500,
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
+    desc: 'Nhựa ABS đúc 2 mảnh, vít M2 bắt vào trụ nhựa cấy ren đồng: gasket / bottom mount giá mềm',
   },
   wood60: {
     name: 'Case 60% gỗ',
@@ -981,15 +1110,15 @@ export const CASES: Record<string, CaseDef> = {
     desc: 'Top + bottom E-coat sần, vít ở đáy',
   },
   pc60: {
-    name: 'Case 60% PC 2 mảnh',
+    name: 'Case 60% nhựa PC 2 mảnh',
     ff: '60',
     pieces: 2,
     screwSide: 'bottom',
     material: 'pc',
     mounts: ['gasket', 'top', 'bottom'],
     price: 1200,
-    colors: ['frost', 'smoke', 'yellow', 'green'],
-    desc: 'Polycarbonate mờ, xuyên đèn, vít ở đáy',
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Polycarbonate trong / mờ, xuyên đèn, vít ở đáy',
   },
   mica60: {
     name: 'Case 60% mica xếp lớp',
@@ -1003,7 +1132,7 @@ export const CASES: Record<string, CaseDef> = {
     desc: 'Các lớp mica stack, bắt vít từ trên xuống',
   },
   plastic40: {
-    name: 'Case 40% nhựa',
+    name: 'Case 40% nhựa ABS 1 mảnh',
     ff: '40',
     pieces: 1,
     material: 'abs',
@@ -1011,6 +1140,38 @@ export const CASES: Record<string, CaseDef> = {
     price: 280,
     colors: ['white', 'pink', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhỏ gọn',
+  },
+  pc40One: {
+    name: 'Case 40% nhựa PC 1 mảnh',
+    ff: '40',
+    pieces: 1,
+    material: 'pc',
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 450,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Nhựa PC trong / mờ, xuyên đèn',
+  },
+  plastic40Two: {
+    name: 'Case 40% nhựa ABS 2 mảnh',
+    ff: '40',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'abs',
+    mounts: ['gasket', 'bottom'],
+    price: 460,
+    colors: ['white', 'pink', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
+    desc: 'Nhựa ABS đúc 2 mảnh, vít M2 bắt vào trụ nhựa cấy ren đồng: gasket / bottom mount giá mềm',
+  },
+  pc40: {
+    name: 'Case 40% nhựa PC 2 mảnh',
+    ff: '40',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'pc',
+    mounts: ['gasket', 'top', 'bottom'],
+    price: 1100,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Polycarbonate trong / mờ, xuyên đèn, vít ở đáy',
   },
   alu40Anod: {
     name: 'Case 40% nhôm anod 1 mảnh',
@@ -1034,6 +1195,30 @@ export const CASES: Record<string, CaseDef> = {
     ],
     desc: 'Nhôm CNC anod 1 mảnh: tray / gasket / O-ring, O-ring đỡ trên trụ liền vách',
   },
+  alu40AnodC: {
+    name: 'Case 40% nhôm anod 1 mảnh · cổng C trên PCB',
+    ff: '40',
+    pieces: 1,
+    // PCB có cổng USB-C hàn sẵn bên trái (kiểu PCB 60% / 40% phổ thông): không lắp daughterboard
+    pcbUsb: 'left',
+    material: 'anod',
+    thinBezel: true,
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 1150,
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
+    desc: 'Nhôm CNC anod 1 mảnh: tray / gasket / O-ring, O-ring đỡ trên trụ liền vách, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
+  },
   alu40Ecoat1: {
     name: 'Case 40% nhôm E-coat 1 mảnh',
     ff: '40',
@@ -1055,6 +1240,30 @@ export const CASES: Record<string, CaseDef> = {
       'navy',
     ],
     desc: 'Nhôm E-coat sần 1 mảnh: tray / gasket / O-ring, O-ring đỡ trên trụ liền vách',
+  },
+  alu40Ecoat1C: {
+    name: 'Case 40% nhôm E-coat 1 mảnh · cổng C trên PCB',
+    ff: '40',
+    pieces: 1,
+    // PCB có cổng USB-C hàn sẵn bên trái (kiểu PCB 60% / 40% phổ thông): không lắp daughterboard
+    pcbUsb: 'left',
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 1150,
+    colors: [
+      'black',
+      'silver',
+      'pink',
+      'yellow',
+      'green',
+      'red',
+      'purple',
+      'latte',
+      'brown',
+      'navy',
+    ],
+    desc: 'Nhôm E-coat sần 1 mảnh: tray / gasket / O-ring, O-ring đỡ trên trụ liền vách, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
   },
   alu40: {
     name: 'Case 40% nhôm E-coat 2 mảnh',
@@ -1092,7 +1301,7 @@ export const CASES: Record<string, CaseDef> = {
     desc: 'Mica stack, bắt vít từ trên xuống',
   },
   tklTray: {
-    name: 'Case TKL nhựa',
+    name: 'Case TKL nhựa ABS 1 mảnh',
     ff: 'tkl',
     pieces: 1,
     material: 'abs',
@@ -1100,6 +1309,38 @@ export const CASES: Record<string, CaseDef> = {
     price: 550,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Phổ thông',
+  },
+  tklPcOne: {
+    name: 'Case TKL nhựa PC 1 mảnh',
+    ff: 'tkl',
+    pieces: 1,
+    material: 'pc',
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 880,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Nhựa PC trong / mờ, xuyên đèn',
+  },
+  tklPlasticTwo: {
+    name: 'Case TKL nhựa ABS 2 mảnh',
+    ff: 'tkl',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'abs',
+    mounts: ['gasket', 'bottom'],
+    price: 880,
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
+    desc: 'Nhựa ABS đúc 2 mảnh, vít M2 bắt vào trụ nhựa cấy ren đồng: gasket / bottom mount giá mềm',
+  },
+  tklPc: {
+    name: 'Case TKL nhựa PC 2 mảnh',
+    ff: 'tkl',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'pc',
+    mounts: ['gasket', 'top', 'bottom'],
+    price: 1700,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Polycarbonate trong / mờ, xuyên đèn, vít ở đáy',
   },
   tklAlu: {
     name: 'Case TKL nhôm anod 1 mảnh',
@@ -1112,6 +1353,19 @@ export const CASES: Record<string, CaseDef> = {
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm CNC 1 mảnh, chơi được tray / gasket / O-ring mount',
   },
+  tklAluC: {
+    name: 'Case TKL nhôm anod 1 mảnh · cổng C trên PCB',
+    ff: 'tkl',
+    pieces: 1,
+    // PCB TKL có cổng USB-C hàn sẵn bên phải: không lắp daughterboard
+    pcbUsb: 'right',
+    material: 'anod',
+    thinBezel: true,
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 1800,
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Nhôm CNC 1 mảnh, chơi được tray / gasket / O-ring mount, cổng USB-C hàn trên PCB bên phải (không daughterboard)',
+  },
   tklAluEcoat: {
     name: 'Case TKL nhôm E-coat 1 mảnh',
     ff: 'tkl',
@@ -1122,6 +1376,19 @@ export const CASES: Record<string, CaseDef> = {
     price: 1800,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
     desc: 'Nhôm E-coat sần 1 mảnh, chơi được tray / gasket / O-ring mount',
+  },
+  tklAluEcoatC: {
+    name: 'Case TKL nhôm E-coat 1 mảnh · cổng C trên PCB',
+    ff: 'tkl',
+    pieces: 1,
+    // PCB TKL có cổng USB-C hàn sẵn bên phải: không lắp daughterboard
+    pcbUsb: 'right',
+    material: 'ecoat',
+    thinBezel: true,
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 1800,
+    colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
+    desc: 'Nhôm E-coat sần 1 mảnh, chơi được tray / gasket / O-ring mount, cổng USB-C hàn trên PCB bên phải (không daughterboard)',
   },
   tklGasket: {
     name: 'Case TKL nhôm anod 2 mảnh',
@@ -1155,7 +1422,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'pc',
     mounts: ['gasket', 'top', 'bottom'],
     price: 1700,
-    colors: ['frost', 'clear'],
+    colors: ['frost', 'clear', ...TINT_COLORS],
     desc: 'Nắp PC mờ, đáy nhôm anod bạc, vít ở đáy',
     bottom: { material: 'anod', color: 'silver' },
   },
@@ -1171,7 +1438,7 @@ export const CASES: Record<string, CaseDef> = {
     desc: 'Acrylic trong suốt, nhìn thấy mạch',
   },
   fullTray: {
-    name: 'Case Full nhựa',
+    name: 'Case Full nhựa ABS 1 mảnh',
     ff: 'full',
     pieces: 1,
     material: 'abs',
@@ -1179,6 +1446,38 @@ export const CASES: Record<string, CaseDef> = {
     price: 650,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Phổ thông',
+  },
+  fullPcOne: {
+    name: 'Case Full nhựa PC 1 mảnh',
+    ff: 'full',
+    pieces: 1,
+    material: 'pc',
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 1050,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Nhựa PC trong / mờ, xuyên đèn',
+  },
+  fullPlasticTwo: {
+    name: 'Case Full nhựa ABS 2 mảnh',
+    ff: 'full',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'abs',
+    mounts: ['gasket', 'bottom'],
+    price: 1050,
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
+    desc: 'Nhựa ABS đúc 2 mảnh, vít M2 bắt vào trụ nhựa cấy ren đồng: gasket / bottom mount giá mềm',
+  },
+  fullPc: {
+    name: 'Case Full nhựa PC 2 mảnh',
+    ff: 'full',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'pc',
+    mounts: ['gasket', 'top', 'bottom'],
+    price: 1900,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Polycarbonate trong / mờ, xuyên đèn, vít ở đáy',
   },
   fullGasket: {
     name: 'Case Full nhôm E-coat 2 mảnh',
@@ -1360,7 +1659,7 @@ export const CASES: Record<string, CaseDef> = {
     seat: { rise: 0.006, tilt: 0.12 },
   },
   case65Plastic: {
-    name: 'Case 65% nhựa',
+    name: 'Case 65% nhựa ABS 1 mảnh',
     ff: '65',
     pieces: 1,
     material: 'abs',
@@ -1368,6 +1667,16 @@ export const CASES: Record<string, CaseDef> = {
     price: 400,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
+  },
+  case65Pc: {
+    name: 'Case 65% nhựa PC 1 mảnh',
+    ff: '65',
+    pieces: 1,
+    material: 'pc',
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 650,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Nhựa PC trong / mờ, xuyên đèn',
   },
   repent75: {
     name: 'Repent75',
@@ -1401,7 +1710,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'pc',
     mounts: ['gasket'],
     price: 2000,
-    colors: ['frost', 'clear', 'smoke'],
+    colors: ['frost', 'clear', 'smoke', ...TINT_COLORS],
     desc: 'Nắp PC mờ xuyên đèn, đáy nhôm bạc, tạ vàng; góc gõ 7°',
     model: 'repent75/case',
     seat: { rise: 0.03, tilt: 0.121 },
@@ -1443,7 +1752,7 @@ export const CASES: Record<string, CaseDef> = {
     material: 'pc',
     mounts: ['gasket', 'tray'],
     price: 2400,
-    colors: ['frost', 'clear', 'smoke'],
+    colors: ['frost', 'clear', 'smoke', ...TINT_COLORS],
     desc: 'TKL nắp PC mờ xuyên đèn, tạ đồng',
     model: 'exodus80/case',
     // cùng model + chỗ đặt board với Exodus80 nhôm
@@ -1585,7 +1894,7 @@ export const CASES: Record<string, CaseDef> = {
     desc: 'Nhôm E-coat sần 1 mảnh kiểu Q1, gasket mount êm',
   },
   case75Plastic: {
-    name: 'Case 75% nhựa',
+    name: 'Case 75% nhựa ABS 1 mảnh',
     ff: '75',
     pieces: 1,
     material: 'abs',
@@ -1593,6 +1902,38 @@ export const CASES: Record<string, CaseDef> = {
     price: 450,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
+  },
+  case75PcOne: {
+    name: 'Case 75% nhựa PC 1 mảnh',
+    ff: '75',
+    pieces: 1,
+    material: 'pc',
+    mounts: ['tray', 'gasket', 'oring'],
+    price: 720,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Nhựa PC trong / mờ, xuyên đèn',
+  },
+  case75PlasticTwo: {
+    name: 'Case 75% nhựa ABS 2 mảnh',
+    ff: '75',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'abs',
+    mounts: ['gasket', 'bottom'],
+    price: 720,
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
+    desc: 'Nhựa ABS đúc 2 mảnh, vít M2 bắt vào trụ nhựa cấy ren đồng: gasket / bottom mount giá mềm',
+  },
+  case75Pc: {
+    name: 'Case 75% nhựa PC 2 mảnh',
+    ff: '75',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'pc',
+    mounts: ['gasket', 'top', 'bottom'],
+    price: 1500,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Polycarbonate trong / mờ, xuyên đèn, vít ở đáy',
   },
   case75Mica: {
     name: 'Case 75% mica xếp lớp',
@@ -2287,7 +2628,7 @@ export function buildCatalog(): Product[] {
       options: g.variants.flatMap(([id, label]) =>
         CASES[id].colors.map((col) => ({
           label: CASE_COLORS[col].name,
-          swatch: CASE_COLORS[col].hex,
+          swatch: caseSwatch(col),
           price: CASES[id].price,
           item: { id, color: col },
           ...(label ? { group: label, hint: caseDesc(CASES[id]) } : {}),
@@ -2392,7 +2733,7 @@ export function buildCatalog(): Product[] {
   }
   for (const [id, sp] of Object.entries(SUPPLIES)) {
     // feet / dây O-ring: các loại gộp chung 1 sản phẩm (đẩy sau vòng này)
-    if (sp.feet || sp.oring) continue
+    if (sp.feet || sp.oring || sp.battery) continue
     products.push({
       id: `sup-${id}`,
       // sách phép bán ở mục riêng
@@ -2418,6 +2759,12 @@ export function buildCatalog(): Product[] {
       test: (sp) => !!sp.oring,
       prefix: 'Dây O-ring ',
     },
+    {
+      id: 'sup-battery',
+      name: 'Pin Li-Po (JST PH 2 pin)',
+      test: (sp) => !!sp.battery,
+      prefix: 'Pin Li-Po ',
+    },
   ]
   for (const m of merged) {
     const list = Object.entries(SUPPLIES).filter(([, sp]) => m.test(sp))
@@ -2426,7 +2773,9 @@ export function buildCatalog(): Product[] {
       id: m.id,
       cat: 'supply',
       name: m.name,
-      desc: list[0][1].desc.replace(/ (Mềm|Độ cứng|Cứng) .*$/, ''),
+      desc: list[0][1].battery
+        ? 'Pin Li-Po 3,7V dẹt dày 5mm cho bàn phím không dây, 1000 → 5000mAh (càng nhiều càng to mặt). Dây JST PH 2 pin đỏ / đen cắm vào jack pin trên PCB; nằm trong hốc sàn case ≤ 60% dựng sẵn'
+        : list[0][1].desc.replace(/ (Mềm|Độ cứng|Cứng) .*$/, ''),
       supply: list[0][0],
       options: list.flatMap(([id, sp]) =>
         sp.packs.map(([n, price]) => ({

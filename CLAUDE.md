@@ -39,7 +39,6 @@ Chỉ dùng **Bun** (`bun install`, `bun run <script>`).
 - `bun run fetch:emotes`: emote ếch Pepe (FrankerFaceZ, chỉ dùng cá nhân) → `public/emotes/`, emoji trong chat Mezzenger thay bằng emote (`messenger/emotes.tsx`).
 - `bun run convert:desk-gear`: bàn phím Realforce 87U + chuột DeathAdder người dùng đưa (`assets/desk/`, gitignore, chỉ dùng cá nhân)
   → `public/models/desk/` (gltf-transform optimize, simplify 2% + meshopt).
-- `bun run convert:screwdriver-lite`: tua vít tay Poly Haven → `public/models/room/screwdriver-lite.glb` (bỏ texture, màu đỉnh, 90KB).
 - `bun run gen:plate-blossom`: plate gasket Blossom từ `assets/keyboards/blossom/plate/plate.dxf` → `src/data/generated/plateBlossom.ts`
   (căn lỗ switch theo layout Alice, dò tai → `BLOSSOM_GASKETS`; Board `AlicePlate` dựng từ đây).
 - `bun run gen:plate-duality`: plate riêng Duality Horns (TKL F13 multi-layout): căn lỗ switch từ DWG người dùng đưa
@@ -267,6 +266,11 @@ vào `window.__r3f` để debug trong console.
 - Duality Horns (case CAD 2 mảnh, chỉ `tklf13`, mount top / O-ring): 8 vít ghép bắt chéo (đầu vít quay vào trong, chéo xuống ra ngoài) (`CaseDef.angledScrews` [đầu vít mm + hướng],
   `ScrewPoint.y / dir`, `ScrewSet` xoay vít theo hướng), vít top mount theo 6 tai plate thật (`CaseDef.topScrews`), `ownBlocks` (nắp có sẵn khối chặn), ốc cố định trên tạ / badge (`CaseDef.weightScrews` / `badgeScrews`, `FixedScrews` trong `CaseModel`, thân rút ngắn không xuyên case), badge chữ thập = node `badge` đi cùng nắp;
   số liệu in từ `convert-user-cases.mjs` (`screwHeads` / `marks`; trục + đáy hốc đầu vít dò bằng `scripts/probe-screw-axis.mjs`).
+- Case `pcbUsb` (nhôm 1 mảnh bản "cổng C trên PCB": 60 / 40 `'left'`, TKL `'right'`): cổng USB-C hàn mặt dưới PCB sát mép sau
+  (`PCB_USB` / `pcbUsbSpot`, `PcbUsbC`), vách sau khoét lỗ đúng chỗ, không bước daughterboard / JST.
+- Case nhựa dựng bằng code (ABS đục / PC trong, cùng vỏ, chỉ khác màu: `isPlasticCase`; 1 / 2 mảnh, mỗi cỡ đủ 4 bản, Free build gộp 1 dòng "nhựa" chọn ABS / PC + số mảnh): khung xương cá đúc liền sàn (`scene/parts/absRibs.ts`: gân ngang ở khe giữa hàng phím (≤ 5 hàng: 2, 6 hàng: 3) + gân dọc thẳng, mỗi gân 1 chiều cao: không dưới linh kiện thì sát mặt dưới PCB, có thì dưới đáy socket, `AbsRibs` trong Case.tsx, foam đáy khoét rãnh theo gân), trụ tray = trụ nhựa + ren đồng cấy (`TrayStandoffs` `boss`); thành mỏng `ABS_WALL` 0,1u (1 mảnh, trụ O-ring lùi vào trong `ringPosts`) / `ABS_WALL_2` 0,14u (2 mảnh) (`caseWall`, các case khác `CASE_WALL` 0,45u), sàn mỏng `ABS_FLOOR` (`caseFloorTop`: hạ mặt sàn trong, vít DTB ngắn);
+  nhựa 2 mảnh (`absTwo`): vít ghép M2 (`ABS_SCREW`, 40% 4 vít) bắt vào trụ nhựa 2 nửa đúc liền vách (`ABS_BOSS`, `AbsScrewBosses`, ren đồng cấy ở nửa trên), mount gasket (dải quanh mép, không tab) / bottom (vấu `AbsBoss`), PCB + foam khoét rãnh né trụ;
+  màu PC trong nhuộm `CASE_COLORS[].clear` chỉ cho case PC (`TINT_COLORS`; nhựa ABS đục), ô màu tròn chia đôi `caseSwatch`.
 - Case 1 mảnh dựng bằng code chơi được tray / gasket / O-ring (không còn OG); case 2 mảnh dựng bằng code: gasket / top / bottom mount
   (bottom: tai plate tì lên vấu case dưới `BottomPads` trong hốc vách case trên, trần hốc chừa đầu ốc `BOTTOM_NOTCH_TOP`; bước `bottomScrew`
   sau `caseIn`, trước `caseClose`, vặn ốc M2 từ trên xuống, id vít `bot-*`); case 2 mảnh có lỗ vít ở giữa thành case: nhôm / PC / acrylic bắt từ đáy
@@ -330,4 +334,6 @@ vào `window.__r3f` để debug trong console.
   giỏ: `ship-express` → `place-order`; vùng tối luôn chặn bấm (popup option z-[4500] nổi trên). Bàn build: `BenchTour` (`BENCH_TOUR_ID`)
   đơn hướng dẫn tối màn: thiếu đồ → sáng `bench-back`, đủ → chừa vùng 3D nhắc bấm vào thùng, vào build → giới thiệu `hud-order` / `hud-steps` / `bench-objective`,
   đang làm bước lắp → không khung / không tối, xong / tuỳ chọn → chỉ viền `bench-next` (`test-done`, `bench-pack`, `Spotlight passive` không chặn bấm), đang test → lời dẫn gõ phím; test bắt buộc với đơn hướng dẫn. Không còn lời dẫn "lần đầu gặp bước" kiểu cũ. Lần đầu tới bước vặn vít (mọi đơn): `BitTour` (`tour:bit`) tối màn sáng `bit-picker` tới khi chọn đúng đầu; lần đầu bước test: `TestTour` (`tour:test`, `hud-sound` → `bench-objective`). Bước vặn vít vào bắt đủ vít tự sang bước nên tour không sáng nút. Sau đóng gói đơn hướng dẫn (`tour:ship`): cầm thùng → kệ giao hàng → `PayTour` thu tiền ở Mezzenger (`collect-pay`) → lịch kết thúc ngày. Đi lại: `roomGuideSteps.ts` (lời dẫn + đích) → `RoomGuide` (HUD + la bàn `useRoom.guideDir / guideDist`) + `scene/room/GuideMarker` (mũi tên 3D xuyên tường, qua cửa phòng trước).
+- Pin Li-Po (case dựng bằng code nhựa / nhôm ≤ 60%): vật tư `BATTERY_IDS` 1000–5000mAh (dày 5mm), hốc sàn `ctx.battery` (`batterySpot`: né DTB + dây, trụ tray, trụ vít nhựa, USB-C trên PCB;
+  nhôm khoét `tub`, nhựa bỏ gân `batteryKeepout`), bước tuỳ chọn `battery` sau `jst` (board dựng: đặt pin `placeBattery` (`batteryFits`) → cầm dây `useBatPick` → jack PCB `plugBattery`), `scene/parts/Battery.tsx`, save rev 12.
 - Layout có `fits` (Planck: `['40']`): case cỡ khác không có model CAD cũng vừa (`caseFits`).

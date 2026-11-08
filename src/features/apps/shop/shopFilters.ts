@@ -41,6 +41,7 @@ function supplyGroup(p: Product) {
   if (sp.solder) return 'Thiếc hàn'
   if (sp.feet) return 'Feet cao su'
   if (sp.oring) return 'Dây O-ring'
+  if (sp.battery) return 'Pin'
   const fit = sp.fit ?? {}
   if (fit.linear || fit.tactile || fit.clicky) return 'Lube switch'
   if (fit.housing || fit.wire) return 'Lube stab'

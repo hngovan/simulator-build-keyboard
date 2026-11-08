@@ -5,10 +5,12 @@ import * as THREE from 'three'
 import { useGame, useCtx, useStep } from '@/store'
 import { SCREW_FULL, screwLevel } from '@/data/parts'
 import {
+  ABS_SCREW,
   SCREW_BITS,
   SCREW_HEADS,
   SCREW_STEPS,
   Y,
+  absTwo,
   caseScrewShaft,
   torqueSpec,
   type ScrewHead,
@@ -42,6 +44,8 @@ interface ScrewProps extends ScrewPoint {
   short?: number
   /** độ cao miệng lỗ (mặc định = y): vít tray chìm dưới plate thì khung nét đứt / vòng xanh nằm trên mặt plate cho khỏi bị che */
   mouth?: number
+  /** cỡ ốc so với model (vd vít ghép case nhựa M2 = 0,63 model M3): thu nhỏ cả đầu lẫn thân, thân ren dài vẫn đúng `shaft` */
+  size?: number
 }
 
 type ScrewStyle = ScrewHead
@@ -320,6 +324,7 @@ function Screw({
   hint = false,
   short = 1,
   mouth = y,
+  size = 1,
 }: ScrewProps) {
   const turns = useGame((s) => s.build?.screws[id] ?? 0)
   const toolLv = useGame((s) => screwLevel(s.tools, s.screwPick))
@@ -476,20 +481,20 @@ function Screw({
         )}
         {/* vặn vào mà chưa bấm lần nào: chỉ khung nét đứt ở miệng lỗ (ốc chưa tra), bấm mới tra ốc vào rồi vặn */}
         {mode === 'tighten' && turns === 0 && (
-          <group position-y={mouth - y - liftAt(0)}>
+          <group position-y={mouth - y - liftAt(0)} scale={size}>
             <ScrewGhost style={style} />
           </group>
         )}
         {!gone && !(mode === 'tighten' && turns === 0) && (
           // model có đỉnh đầu ốc ở y = 0: nâng lên 1 đầu ốc để mặt dưới đầu tì vào bề mặt,
           // thân ốc chui vào trong (vít stab bắt từ đáy PCB thì thân ăn vào housing, không lòi lên mặt trên)
-          <group ref={head} position-y={HEAD_H[style] * MM}>
+          <group ref={head} position-y={HEAD_H[style] * MM * size} scale={size}>
             <primitive object={model} scale={MM} />
             {shaft > 0 && (
               // thân ren dài xuyên các lớp mica (model gốc chỉ dài 6–10mm)
-              // cùng hệ toạ độ với model (mm, đỉnh đầu ốc y = 0): đáy thân ren = mặt bắt vít − shaft
+              // cùng hệ toạ độ với model (mm, đỉnh đầu ốc y = 0): đáy thân ren = mặt bắt vít − shaft (thu nhỏ `size` thì dài thêm bù)
               <mesh
-                geometry={threadGeometry(style, -HEAD_H[style] - shaft / MM)}
+                geometry={threadGeometry(style, -HEAD_H[style] - shaft / MM / size)}
                 material={modelMat}
                 scale={MM}
                 castShadow
@@ -580,6 +585,9 @@ export function ScrewSet({
         .filter((sc) => (s.build?.screws[sc.id] ?? 0) < SCREW_FULL)
         .sort((a, b) => Math.abs(a.x) - Math.abs(b.x) || a.z - b.z)[0]?.id,
   )
+  // vít ghép case nhựa 2 mảnh: M2 nhỏ (model M3 thu lại)
+  const size =
+    (step === 'caseOpen' || step === 'caseScrew') && absTwo(ctx.caseDef) ? ABS_SCREW.scale : 1
   const common = (sc: (typeof ctx.screws)[ScrewStep][number]) => ({
     mode: SCREW_STEPS[step],
     interactive: cur === step && active && facing,
@@ -589,6 +597,7 @@ export function ScrewSet({
     shaft: longShaft,
     hint: active && facing && sc.id === next,
     short: SCREW_SHORT[step] ?? 1,
+    size,
   })
   const list = ctx.screws[step].map((sc) =>
     sc.dir ? (
@@ -658,16 +667,30 @@ export function CurrentDriver({
 /** thân ren dài của vít tray: đầu ốc tì mặt PCB, xuyên PCB rồi ăn ~0,12u vào trụ đồng */
 export const TRAY_SHAFT = Y.pcbTop - Y.pcbBot + 0.12
 
-export function screwLength(step: ScrewStep, shaft = 0) {
+export function screwLength(step: ScrewStep, shaft = 0, size = 1) {
   const style = SCREW_STYLES[step]
-  return Math.max(-THREADS[style].end * (SCREW_SHORT[step] ?? 1), HEAD_H[style] + shaft / MM) * MM
+  return (
+    Math.max(
+      -THREADS[style].end * (SCREW_SHORT[step] ?? 1) * size,
+      HEAD_H[style] * size + shaft / MM,
+    ) * MM
+  )
 }
 
 /**
  * Ốc đã tháo nằm ngang (khay đựng ốc / vương trên bàn): đúng model + cỡ + độ dài ốc của bước `step` (kể cả thân ren dài
  * `shaft` của case mica). Trục ốc theo x, tâm ốc ở gốc, mặt dưới đầu ốc tì y = 0
  */
-export function LooseScrew({ step, shaft = 0 }: { step: ScrewStep; shaft?: number }) {
+export function LooseScrew({
+  step,
+  shaft = 0,
+  size = 1,
+}: {
+  step: ScrewStep
+  shaft?: number
+  /** cỡ ốc so với model (vít ghép case nhựa M2) */
+  size?: number
+}) {
   const style = SCREW_STYLES[step]
   const { scene } = useGLTF(SCREW_MODELS[style])
   const short = SCREW_SHORT[step] ?? 1
@@ -686,14 +709,18 @@ export function LooseScrew({ step, shaft = 0 }: { step: ScrewStep; shaft?: numbe
     })
     return m
   }, [model])
-  const len = screwLength(step, shaft)
+  const len = screwLength(step, shaft, size)
   return (
     // xoay +90° quanh z: đỉnh đầu ốc (y = 0 của model) về gốc, thân (−y) chĩa sang +x
-    <group position={[-len / 2, HEAD_R[style] * MM, 0]} rotation-z={Math.PI / 2}>
+    <group
+      position={[-len / 2, HEAD_R[style] * MM * size, 0]}
+      rotation-z={Math.PI / 2}
+      scale={size}
+    >
       <primitive object={model} scale={MM} />
       {shaft > 0 && (
         <mesh
-          geometry={threadGeometry(style, -HEAD_H[style] - shaft / MM)}
+          geometry={threadGeometry(style, -HEAD_H[style] - shaft / MM / size)}
           material={mat}
           scale={MM}
           castShadow

@@ -4,13 +4,9 @@ Từ [Poly Haven](https://polyhaven.com), giấy phép CC0:
 
 - Wooden Table 02 (`wooden_table_02`) — Serhii Khromov
 - Shelf 01 (`Shelf_01`) — Gabriel Radić
-- Screwdriver (`screwdriver-lite.glb`, bản nhẹ bỏ texture; gốc ở `assets/tools/polyhaven/`) — PierreB3D
 - Painted Wooden Chair 01 (`painted_wooden_chair_01`) — Kuutti Siitonen
 - Wall Clock (`wall_clock`) — PierreB3D
-- Metal Office Desk (`metal_office_desk`) — Ulan Cabanilla
 - Wooden Table 03 (`WoodenTable_03`) — Gabriel Radić
-- Drawer Cabinet (`drawer_cabinet`) — Ulan Cabanilla
-- Modern Wooden Cabinet (`modern_wooden_cabinet`) — Patrik Pangerl
 - Modern Ceiling Lamp 01 (`modern_ceiling_lamp_01`) — James Ray Cock
 - Desk Lamp Arm 01 (`desk_lamp_arm_01`) — Yann Kervran, Kuutti Siitonen
 - Laminate Floor 02 (`laminate_floor_02`, texture) — Dario Barresi, Charlotte Baglioni

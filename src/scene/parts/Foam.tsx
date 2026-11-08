@@ -1,13 +1,23 @@
 import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import polygonClipping, { type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping'
-import { CASE_MARGIN, DTB_MM, TRAY_HOLE, Y, stabSpan } from '@/data/steps'
+import {
+  ABS_BOSS,
+  CASE_MARGIN,
+  DTB_MM,
+  TRAY_HOLE,
+  Y,
+  absTwo,
+  caseFloorTop,
+  stabSpan,
+} from '@/data/steps'
 import { MM as MM_U } from '../models/Switch'
 import { useCtx } from '@/store'
 import { blockerGaps } from '@/data/layouts'
 import type { Key, Point } from '@/types'
 import { boardOutline } from './boardOutline'
 import { ringPosts } from './ringPosts'
+import { absRibs, batteryKeepout, ribSegBox, wallRibBox } from './absRibs'
 
 /** foam Poron lấp kín khe PCB – plate (~3,3mm): mặt dưới plate tì sát mặt foam */
 const FOAM_T = Y.plateBot - Y.pcbTop - 0.004
@@ -28,6 +38,8 @@ function foamGeometry(
   depth: number,
   outline?: [number, number][],
   trayHoles: Point[] = [],
+  /** case nhựa 2 mảnh: trụ / vấu nhựa sát vách lấn vào → khoét tròn bán kính r */
+  bossHoles: (Point & { r: number })[] = [],
 ) {
   const { shapes } = boardOutline(keys, width, depth, 0.03, outline)
   // trục y của hình = -z của cảnh (do xoay -90° quanh x)
@@ -62,6 +74,15 @@ function foamGeometry(
   for (const g of blockerGaps(keys, width, depth, CASE_MARGIN + 0.05))
     if (g.w > WEB && g.d > WEB) rect(g.x, g.z, (g.w - WEB) / 2, (g.d - WEB) / 2, 0)
   // vít tray: lỗ tròn như lỗ plate (không thì foam che mất đầu ốc tì mặt PCB)
+  for (const { x, z, r } of bossHoles)
+    holes.push([
+      ring(
+        Array.from({ length: 24 }, (_, i): [number, number] => {
+          const a = (i / 24) * Math.PI * 2
+          return [x + Math.cos(a) * r, -(z + Math.sin(a) * r)]
+        }),
+      ),
+    ])
   for (const { x, z } of trayHoles)
     holes.push([
       ring(
@@ -95,6 +116,7 @@ export function PcbFoam({
   depth,
   outline,
   trayHoles,
+  bossHoles,
   ghost = false,
 }: {
   keys: Key[]
@@ -103,11 +125,13 @@ export function PcbFoam({
   outline?: [number, number][]
   /** lỗ vít tray mount */
   trayHoles?: Point[]
+  /** case nhựa 2 mảnh: trụ / vấu nhựa sát vách */
+  bossHoles?: (Point & { r: number })[]
   ghost?: boolean
 }) {
   const geo = useMemo(
-    () => foamGeometry(keys, width, depth, outline, trayHoles),
-    [keys, width, depth, outline, trayHoles],
+    () => foamGeometry(keys, width, depth, outline, trayHoles, bossHoles),
+    [keys, width, depth, outline, trayHoles, bossHoles],
   )
   return (
     <mesh
@@ -168,11 +192,25 @@ export function CaseFoam({ ghost = false, hover = false }: { ghost?: boolean; ho
       const hd = (DTB_MM.d / 2) * MM_U
       box(dtb.x - hw, dtb.x + hw, dtb.z - hd - 0.15, dtb.z + hd + 0.35)
     }
+    // hốc pin + dải dây pin: foam khoét trống (pin nằm thẳng trên sàn / trong hốc)
+    if (ctx.battery)
+      for (const [x0, x1, z0, z1] of batteryKeepout(ctx.battery))
+        box(x0 - 0.02, x1 + 0.02, z0 - 0.02, z1 + 0.02)
+    // case nhựa 2 mảnh: nửa dưới trụ vít ghép mọc từ sàn
+    if (absTwo(ctx.caseDef))
+      for (const p of ctx.screws.caseOpen) {
+        const r = ABS_BOSS.r + 0.02
+        box(p.x - r, p.x + r, p.z - r, p.z + r)
+      }
     // trụ đỡ O-ring liền vách (case 1 mảnh): khoét chân trụ (khối chạm sàn)
     for (const p of ringPosts(ctx)) {
       const r = p.r + 0.02
       box(p.x - r, p.x + r, p.z - r, p.z + r)
     }
+    // case nhựa: khung xương cá cao hơn foam → khoét rãnh theo gân sàn + gân đứng tựa vách
+    const ribs = absRibs(ctx)
+    for (const [x0, x1, z0, z1] of [...ribs.segs.map(ribSegBox), ...ribs.walls.map(wallRibBox)])
+      box(x0 - 0.02, x1 + 0.02, z0 - 0.02, z1 + 0.02)
     for (const g of blockerGaps(keys, width, depth, CASE_MARGIN + 0.05))
       box(g.x - g.w / 2 - 0.02, g.x + g.w / 2 + 0.02, g.z - g.d / 2 - 0.02, g.z + g.d / 2 + 0.02)
     const plates = shapes.map((sh): Polygon => [
@@ -192,7 +230,7 @@ export function CaseFoam({ ghost = false, hover = false }: { ghost?: boolean; ho
     )
   }, [ctx])
   useEffect(() => () => geo.dispose(), [geo])
-  const floor = ctx.dtb?.floor ?? Y.floorTop
+  const floor = ctx.dtb?.floor ?? caseFloorTop(ctx.caseDef)
   return (
     <mesh
       geometry={geo}

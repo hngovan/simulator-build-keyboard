@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { KEYCAP_KITS, KEYCAP_MATERIALS, SHOP_CATS, keycapMaterialOf } from '@/data/parts'
+import { KEYCAP_KITS, KEYCAP_MATERIALS, SHOP_CATS, keycapMaterialOf, swatchHex } from '@/data/parts'
 import { PartArt } from '@/components/art/PartArt'
 import { SupplyArt, ToolArt } from '@/components/art/ToolArt'
 import { cn } from '@/lib/format'
@@ -73,7 +73,7 @@ export function ProductImage({
           ) : thumb === undefined ? (
             <ThumbLoading />
           ) : (
-            <PartArt category="keycap" color={swatch} />
+            <PartArt category="keycap" color={swatchHex(swatch)} />
           )}
           {/* nhãn nổi trên ảnh: profile (vàng) + chất liệu PBT / ABS / Mix (xanh);
               khung hẹp (ảnh bài chợ) không đủ chỗ thì nhãn chất liệu lên dòng trên, không đè nhau */}
@@ -159,7 +159,7 @@ export function ProductImage({
     return (
       <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
         <div className={frame}>
-          <SupplyArt id={product.supply} color={swatch} />
+          <SupplyArt id={product.supply} color={swatchHex(swatch)} />
         </div>
       </ImageZoom>
     )
@@ -175,7 +175,7 @@ export function ProductImage({
     return (
       <ImageZoom title={product.name} kind={kind} type={type} {...zoom}>
         <div className={frame}>
-          <PartArt category={product.cat} color={swatch} />
+          <PartArt category={product.cat} color={swatchHex(swatch)} />
           {badge}
         </div>
       </ImageZoom>

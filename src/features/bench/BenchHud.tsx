@@ -27,6 +27,7 @@ import {
   FeetPanel,
   FoamPanel,
   CaseFoamPanel,
+  BatteryPanel,
   InstallPanel,
   LubePanel,
   RingPanel,
@@ -538,6 +539,8 @@ export function BenchHud() {
       <FoamPanel />
     ) : step === 'caseFoam' ? (
       <CaseFoamPanel />
+    ) : step === 'battery' ? (
+      <BatteryPanel />
     ) : step === 'ring' ? (
       <RingPanel />
     ) : step === 'test' ? (

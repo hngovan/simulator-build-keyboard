@@ -2,8 +2,12 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Clone, Html, RoundedBox, useGLTF } from '@react-three/drei'
 import {
+  BoxGeometry,
   CylinderGeometry,
   DoubleSide,
+  ExtrudeGeometry,
+  Path,
+  Shape,
   EdgesGeometry,
   Mesh,
   Quaternion,
@@ -14,10 +18,18 @@ import {
 import type * as THREE from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { ringPosts } from './ringPosts'
+import { RIB_H, RIB_T, absRibs, hasAbsRibs, wallRibBox } from './absRibs'
 import { useGame, useBuild, useCtx, useStep, useStepIdx } from '@/store'
 import {
   CASE_MARGIN,
   CASE_WALL,
+  caseWall,
+  ABS_BOSS,
+  ABS_SCREW,
+  absTwo,
+  pcbUsbSpot,
+  caseFloorTop,
+  gasketTabbed,
   GASKET,
   GASKET_NOTCH,
   TOP_FLIP_STEPS,
@@ -53,11 +65,13 @@ import {
   micaLayerGeometry,
   micaLayerKind,
   micaStackPlan,
+  type ShellTub,
   type WallBore,
   type WallNotch,
   type WallPort,
 } from './caseShell'
 import { Daughterboard, jstStand, usbPort } from './Daughterboard'
+import { BatterySlot } from './Battery'
 import { caseModelOf } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { MM } from '../models/Switch'
@@ -123,6 +137,8 @@ function Walls({
   notchTop,
   bores,
   ports,
+  tub,
+  wall = CASE_WALL,
 }: ShellProps & {
   floorTop?: number
   pockets?: FootPocket[]
@@ -133,12 +149,16 @@ function Walls({
   bores?: WallBore[]
   /** lỗ ngang xuyên vách sau (cổng USB daughterboard) */
   ports?: WallPort[]
+  /** bề dày thành (nhựa ABS mỏng hơn, `caseWall`) */
+  wall?: number
+  /** hốc pin khoét xuống sàn (case nhôm sàn dày) */
+  tub?: ShellTub
 }) {
-  const key = JSON.stringify([notches ?? [], bores ?? [], ports ?? []])
+  const key = JSON.stringify([notches ?? [], bores ?? [], ports ?? [], tub ?? null])
   const geometry = useMemo(() => {
-    const g = caseShellGeometry(W, D, y0, y1, CASE_WALL, floorTop, pockets, ...cuts(key, notchTop))
+    const g = caseShellGeometry(W, D, y0, y1, wall, floorTop, pockets, ...cuts(key, notchTop))
     return wood ? woodUV(g) : g
-  }, [W, D, y0, y1, floorTop, wood, pockets, key, notchTop])
+  }, [W, D, y0, y1, wall, floorTop, wood, pockets, key, notchTop])
   useEffect(() => () => geometry.dispose(), [geometry])
   return (
     <mesh geometry={geometry} castShadow receiveShadow>
@@ -149,8 +169,13 @@ function Walls({
 
 /** khoét vỏ theo khoá JSON (hốc / lỗ khoan, ghi nhớ theo nội dung chứ không theo mảng mới mỗi lần vẽ) */
 const cuts = (key: string, notchTop?: number) => {
-  const [notches, bores, ports] = JSON.parse(key) as [WallNotch[], WallBore[], WallPort[]]
-  return [notches, notchTop, bores, ports] as const
+  const [notches, bores, ports, tub] = JSON.parse(key) as [
+    WallNotch[],
+    WallBore[],
+    WallPort[],
+    ShellTub | null,
+  ]
+  return [notches, notchTop, bores, ports, tub ?? undefined] as const
 }
 
 /**
@@ -369,6 +394,44 @@ function RingPosts({ mat }: { mat: ReactNode }) {
   )
 }
 
+/** case nhựa ABS dựng bằng code: khung xương cá đúc liền sàn + gân đứng tựa vách (`absRibs`), gộp 1 lưới */
+function AbsRibs({ mat }: { mat: ReactNode }) {
+  const ctx = useCtx()
+  const geometry = useMemo(() => {
+    const { segs, walls, floor } = absRibs(ctx)
+    const parts = [
+      ...segs.map((s) => {
+        // đoạn nối liền nhau (cao / thấp): chỉ đoạn cao mới chờm thêm nửa bề dày 2 đầu (chỗ giao gân / chạm vách)
+        const h = s.h ?? RIB_H
+        const len = Math.hypot(s.x1 - s.x0, s.z1 - s.z0) + (s.tall ? RIB_T : 0)
+        return new BoxGeometry(len, h, RIB_T)
+          .rotateY(-Math.atan2(s.z1 - s.z0, s.x1 - s.x0))
+          .translate((s.x0 + s.x1) / 2, floor + h / 2, (s.z0 + s.z1) / 2)
+      }),
+      ...walls.map((w) => {
+        const [x0, x1, z0, z1] = wallRibBox(w)
+        const h = w.y1 - floor
+        return new BoxGeometry(x1 - x0, h, z1 - z0).translate(
+          (x0 + x1) / 2,
+          floor + h / 2,
+          (z0 + z1) / 2,
+        )
+      }),
+    ]
+    if (!parts.length) return null
+    const g = mergeGeometries(parts)
+    parts.forEach((p) => p.dispose())
+    return g
+  }, [ctx])
+  useEffect(() => () => geometry?.dispose(), [geometry])
+  if (!geometry) return null
+  return (
+    <mesh geometry={geometry} castShadow receiveShadow>
+      {mat}
+    </mesh>
+  )
+}
+
 /** top mount: độ sâu lỗ ren M2 khoan lên từ trần hốc tai plate (u) */
 const TOP_TAP_DEPTH = 0.15
 
@@ -401,6 +464,20 @@ const BOTTOM_NOTCH_TOP = 0.14
 function BottomPads({ mat }: { mat: ReactNode }) {
   const ctx = useCtx()
   const h = Y.plateBot - Y.split
+  // case nhựa 2 mảnh: vấu = trụ nhựa tròn đúc liền vách (PCB khoét rãnh né), đỉnh cấy ren đồng
+  if (absTwo(ctx.caseDef))
+    return ctx.screws.bottomScrew.map((p) => (
+      <AbsBoss
+        key={p.id}
+        x={p.x}
+        z={p.z}
+        y0={Y.split}
+        y1={Y.plateBot}
+        hole={ABS_SCREW.tap}
+        insertTop
+        mat={mat}
+      />
+    ))
   const w = TOP_TAB + 2 * TOP_NOTCH.gap - 0.02
   // từ sát mép PCB (không chạm) qua khe board – vách tới gần đáy hốc
   const z0 = ctx.depth / 2 + 0.01
@@ -422,6 +499,111 @@ function BottomPads({ mat }: { mat: ReactNode }) {
     )
   })
 }
+
+/** ống tròn đứng (u): bán kính ngoài `r`, lỗ `hole`, từ y0 tới y1 tâm (x, z) */
+function tubeGeometry(r: number, hole: number, y0: number, y1: number) {
+  const shape = new Shape().absarc(0, 0, r, 0, Math.PI * 2, false)
+  shape.holes.push(new Path().absarc(0, 0, hole, 0, Math.PI * 2, true))
+  return new ExtrudeGeometry(shape, { depth: y1 - y0, bevelEnabled: false, curveSegments: 24 })
+    .rotateX(-Math.PI / 2)
+    .translate(0, y0, 0)
+}
+
+/**
+ * Trụ nhựa đúc liền vách case nhựa 2 mảnh (`ABS_BOSS`): ống tròn có lỗ; `insertTop` / `insertBottom` = ren đồng cấy ở đầu trên / dưới
+ * (vành đồng lộ ở miệng lỗ + đáy tối)
+ */
+function AbsBoss({
+  x,
+  z,
+  y0,
+  y1,
+  hole,
+  insertTop,
+  insertBottom,
+  mat,
+}: {
+  x: number
+  z: number
+  y0: number
+  y1: number
+  hole: number
+  insertTop?: boolean
+  insertBottom?: boolean
+  mat: ReactNode
+}) {
+  const geo = useMemo(() => tubeGeometry(ABS_BOSS.r, hole, y0, y1), [hole, y0, y1])
+  useEffect(() => () => geo.dispose(), [geo])
+  const ins = (y: number, s: 1 | -1) => (
+    <group position-y={y}>
+      {/* vành ren đồng: ống mỏng lộ ở miệng lỗ */}
+      <mesh position-y={(s * INSERT_DEPTH) / 2}>
+        <cylinderGeometry args={[hole + 0.025, hole + 0.025, INSERT_DEPTH, 20, 1, true]} />
+        <meshStandardMaterial color="#c9a54a" metalness={0.85} roughness={0.3} side={DoubleSide} />
+      </mesh>
+      <mesh position-y={s * 0.001} rotation-x={s > 0 ? -Math.PI / 2 : Math.PI / 2}>
+        <ringGeometry args={[hole, hole + 0.025, 20]} />
+        <meshStandardMaterial color="#c9a54a" metalness={0.85} roughness={0.3} />
+      </mesh>
+      <mesh position-y={s * INSERT_DEPTH} rotation-x={s > 0 ? Math.PI / 2 : -Math.PI / 2}>
+        <circleGeometry args={[hole, 16]} />
+        <meshBasicMaterial color="#060607" />
+      </mesh>
+    </group>
+  )
+  return (
+    <group position={[x, 0, z]}>
+      <mesh geometry={geo} castShadow receiveShadow>
+        {mat}
+      </mesh>
+      {insertTop && ins(y1, -1)}
+      {insertBottom && ins(y0, 1)}
+    </group>
+  )
+}
+/** ren đồng cấy: sâu (u) */
+const INSERT_DEPTH = 0.08
+
+/**
+ * Trụ vít ghép case nhựa 2 mảnh: `bottom` = nửa case dưới (sàn → mép ghép, lỗ xuyên vít), `top` = nửa case trên (mép ghép → dưới
+ * mặt dưới plate, ren đồng cấy ở miệng dưới)
+ */
+function AbsScrewBosses({ part, mat }: { part: 'top' | 'bottom'; mat: ReactNode }) {
+  const ctx = useCtx()
+  return ctx.screws.caseOpen.map((p) =>
+    part === 'bottom' ? (
+      <AbsBoss
+        key={p.id}
+        x={p.x}
+        z={p.z}
+        y0={caseFloorTop(ctx.caseDef) - 0.01}
+        y1={Y.split}
+        hole={ABS_SCREW.thru}
+        mat={mat}
+      />
+    ) : (
+      <AbsBoss
+        key={p.id}
+        x={p.x}
+        z={p.z}
+        y0={Y.split}
+        y1={Y.plateBot - 0.01}
+        hole={ABS_SCREW.tap}
+        insertBottom
+        mat={mat}
+      />
+    ),
+  )
+}
+
+/** case nhựa 2 mảnh bottom mount: hốc nông trong vách case trên đúng chỗ vấu (vấu lấn vào vách `r − inset`) */
+const absPadNotches = (pads: { x: number; z: number }[]): WallNotch[] =>
+  pads.map((p) => ({
+    x: p.x,
+    side: p.z > 0 ? 1 : -1,
+    w: 2 * Math.sqrt(ABS_BOSS.r ** 2 - ABS_BOSS.inset ** 2) + 0.04,
+    d: ABS_BOSS.r - ABS_BOSS.inset + 0.02,
+  }))
 
 /** tab gasket: hốc trong vách case trên đúng chỗ tai plate, từ mép ghép lên trần ngang mặt trên dải gasket trên */
 const gasketNotches = (gaskets: { x: number; z: number }[]): WallNotch[] =>
@@ -459,6 +641,10 @@ function GasketPads({ mat }: { mat: ReactNode }) {
 /** standoff tray mount: trụ đồng M2 (u), lỗ ren tối ở đỉnh */
 const STANDOFF_R = 0.1
 const STANDOFF_HOLE = new CylinderGeometry(0.045, 0.045, 0.004, 16)
+/** case nhựa: trụ nhựa (u, ~Ø5,7mm) + ren đồng cấy (Ø3,4mm, cao 1,3mm lộ vành ở đỉnh trụ) */
+const BOSS_R = 0.15
+const INSERT_R = 0.09
+const INSERT_H = 0.07
 /** case CAD có sẵn trụ ngay dưới PCB (khe < ngưỡng) thì không thêm standoff */
 const STANDOFF_MIN = 0.03
 
@@ -471,11 +657,14 @@ function TrayStandoffs({
   nodes,
   origin,
   floorY = Y.floorTop,
+  boss,
 }: {
   nodes: Record<string, THREE.Mesh> | null
   origin: [number, number]
   /** mặt sàn case dựng bằng code (mica: mặt trên 2 tấm đáy) */
   floorY?: number
+  /** case nhựa: trụ nhựa đúc liền case (vật liệu case) + ren đồng cấy ở đỉnh thay trụ đồng */
+  boss?: ReactNode
 }) {
   const ctx = useCtx()
   const posts = useMemo(() => {
@@ -515,10 +704,24 @@ function TrayStandoffs({
   }, [ctx, nodes, origin, floorY])
   return posts.map((p) => (
     <group key={p.id} position={[p.x, p.y, p.z]}>
-      <mesh castShadow receiveShadow>
-        <cylinderGeometry args={[STANDOFF_R, STANDOFF_R, p.h, 6]} />
-        <meshStandardMaterial color="#c9a54a" metalness={0.85} roughness={0.32} />
-      </mesh>
+      {boss ? (
+        <>
+          {/* trụ nhựa tròn đúc liền sàn, to hơn trụ đồng; đỉnh lộ vành ren đồng cấy (insert) */}
+          <mesh castShadow receiveShadow>
+            <cylinderGeometry args={[BOSS_R, BOSS_R * 1.15, p.h, 24]} />
+            {boss}
+          </mesh>
+          <mesh position-y={p.h / 2 - INSERT_H / 2 + 0.002}>
+            <cylinderGeometry args={[INSERT_R, INSERT_R, INSERT_H, 20]} />
+            <meshStandardMaterial color="#c9a54a" metalness={0.85} roughness={0.3} />
+          </mesh>
+        </>
+      ) : (
+        <mesh castShadow receiveShadow>
+          <cylinderGeometry args={[STANDOFF_R, STANDOFF_R, p.h, 6]} />
+          <meshStandardMaterial color="#c9a54a" metalness={0.85} roughness={0.32} />
+        </mesh>
+      )}
       <mesh geometry={STANDOFF_HOLE} position-y={p.h / 2}>
         <meshStandardMaterial color="#2b2418" metalness={0.4} roughness={0.7} />
       </mesh>
@@ -1038,8 +1241,10 @@ export function Case({
   const mica = caseDef.material === 'mica'
   const sandwich = ctx.mount === 'sandwich'
   const wood = caseDef.material === 'wood'
-  const W = ctx.width + 2 * (CASE_MARGIN + CASE_WALL)
-  const D = ctx.depth + 2 * (CASE_MARGIN + CASE_WALL)
+  // thành case theo chất liệu (nhựa ABS mỏng hơn nhôm / gỗ)
+  const wall = caseWall(caseDef)
+  const W = ctx.width + 2 * (CASE_MARGIN + wall)
+  const D = ctx.depth + 2 * (CASE_MARGIN + wall)
   // case 2 mảnh: lỗ vít ở đáy (nhôm / PC / acrylic) hoặc xuyên mọi lớp (mica ghép)
   const screwHoles = useMemo(() => caseScrewHoles(caseDef, ctx.width, ctx.depth), [ctx, caseDef])
   // case 2 mảnh bắt vít từ đáy: lỗ xuyên + hốc chìm đầu ốc ở case dưới, lỗ ren ở case trên; top mount thêm lỗ ren trần hốc tai plate
@@ -1060,7 +1265,15 @@ export function Case({
     [ctx, bores],
   )
   // cổng USB daughterboard khoét xuyên vách sau case dưới
-  const ports = useMemo(() => (ctx.dtb ? [usbPort(ctx.dtb.x)] : undefined), [ctx])
+  // cổng USB-C khoét vách sau: ngang cổng DTB, hoặc ngang cổng hàn trên PCB (`pcbUsb`)
+  const ports = useMemo(() => {
+    if (ctx.dtb) return [usbPort(ctx.dtb.x, ctx.dtb.floor)]
+    if (!caseDef.pcbUsb) return undefined
+    const p = pcbUsbSpot(ctx.width, ctx.depth, ctx.caseDef.pcbUsb)
+    return [{ ...usbPort(p.x), y: p.y }]
+  }, [ctx, caseDef])
+  // mặt sàn trong (case nhựa sàn mỏng thấp hơn)
+  const floorTop = caseFloorTop(caseDef)
   const floorPockets = useMemo(
     () => (mica ? ctx.feet : [...ctx.feet, ...screwHoles]),
     [ctx, mica, screwHoles],
@@ -1087,7 +1300,11 @@ export function Case({
   // mở case: tháo hết vít đáy thì case trên nhấc lên lơ lửng (đã tách 2 mảnh)
   const split = useCaseSplit()
   const topY =
-    placing || split || (topMount && ((step === 'caseIn' && !inCase) || step === 'jst')) ? 2.6 : 0
+    placing ||
+    split ||
+    (topMount && ((step === 'caseIn' && !inCase) || step === 'jst' || step === 'battery'))
+      ? 2.6
+      : 0
   // cao độ case trên lúc mới dựng; sau đó chỉ `lerpTo` trong useFrame (gán thẳng prop thì đổi `topY` là nhảy ngay về chỗ:
   // top mount thả board vào case thì case trên rơi xuống trước, board + plate lerp theo sau)
   const [topY0] = useState(topY)
@@ -1104,7 +1321,9 @@ export function Case({
   // (case dây luồn qua tạ thì lắp tạ trước khi cắm dây: lúc đó board + case trên để riêng, không dựng)
   const coverFirst = coverBeforeJst(ctx.steps)
   const stand =
-    topMount && (step === 'jst' || (step === 'coverOn' && !coverFirst)) ? jstStand(ctx.depth) : null
+    topMount && (step === 'jst' || step === 'battery' || (step === 'coverOn' && !coverFirst))
+      ? jstStand(ctx.depth)
+      : null
   // top mount: board chưa nằm trong case (còn phẳng ngoài bàn / nhấc chờ thả / dựng cắm JST, không có `seat`) → nắp CAD đi cùng
   // board phải bỏ `seat` (phép ngược), không thì nắp lệch / hở khỏi plate theo độ nâng + góc nghiêng
   const unseated = topOnly || (topMount && ((step === 'caseIn' && !inCase) || !!stand))
@@ -1153,10 +1372,11 @@ export function Case({
     )
   const wallTop = two ? Y.split : Y.caseTop
   // giữa vách trước case (mũi tên hướng dẫn bấm case)
-  const frontZ = ctx.depth / 2 + CASE_MARGIN + CASE_WALL / 2
+  const frontZ = ctx.depth / 2 + CASE_MARGIN + wall / 2
   // gờ / vấu chỉ dựng cho case dựng bằng code (case CAD theo model), mica kẹp plate giữa các lớp nên không cần
   const coded = !model && !mica
-  const gasket = coded && two && ctx.mount === 'gasket'
+  // tab gasket (hốc vách + vấu đỡ): case 2 mảnh vách dày; case nhựa 2 mảnh vách mỏng dùng dải gasket quanh mép plate như case 1 mảnh
+  const gasket = coded && two && ctx.mount === 'gasket' && gasketTabbed(caseDef)
   const screwY = caseScrewY(caseDef)
   const onClick = (target: StepId, action: () => void) => (e: ThreeEvent<PointerEvent>) => {
     if (step !== target) return
@@ -1204,20 +1424,23 @@ export function Case({
             />
           ) : (
             <Walls
+              wall={wall}
               W={W}
               D={D}
               y0={Y.floorBot}
               y1={wallTop}
-              floorTop={Y.floorTop}
+              floorTop={floorTop}
               pockets={floorPockets}
               mat={bottomMat(bottom.hover)}
               wood={wood && !lower}
               bores={bores.bottom}
               ports={ports}
+              tub={ctx.battery && ctx.battery.y < floorTop - 0.005 ? ctx.battery : undefined}
             />
           )}
           <RubberFeet pockets={ctx.feet} />
           {ctx.dtb && <Daughterboard at={ctx.dtb} />}
+          {ctx.battery && <BatterySlot at={ctx.battery} />}
           {/* thả board vào case: mũi tên xanh chỉ mép trước case dưới (bấm case) */}
           {step === 'caseIn' && !inCase && (
             <HintArrow at={[0, (model ? BLOCKER_TOP : wallTop) + 0.05, frontZ]} size={1.6} />
@@ -1226,12 +1449,20 @@ export function Case({
             // O-ring: trụ đúc liền vách mọc từ sàn (phay từ trên xuống được) đỡ mép board, không lọt xuống đáy
             <RingPosts mat={bottomMat(bottom.hover)} />
           )}
+          {coded && hasAbsRibs(ctx) && (
+            // case nhựa: khung xương cá gia cố đúc liền sàn
+            <AbsRibs mat={bottomMat(bottom.hover)} />
+          )}
           {gasket && (
             // tab gasket: vấu case dưới trong hốc vách đỡ dải gasket dưới tai plate
             <GasketPads mat={bottomMat(bottom.hover)} />
           )}
           {coded && two && ctx.screws.bottomScrew.length > 0 && (
             <BottomPads mat={bottomMat(bottom.hover)} />
+          )}
+          {coded && absTwo(caseDef) && (
+            // case nhựa 2 mảnh: nửa dưới trụ vít ghép (lỗ xuyên vít M2)
+            <AbsScrewBosses part="bottom" mat={bottomMat(bottom.hover)} />
           )}
           {ctx.mount === 'tray' &&
             (model ? (
@@ -1240,9 +1471,8 @@ export function Case({
               <TrayStandoffs
                 nodes={null}
                 origin={ctx.origin}
-                floorY={
-                  mica ? Y.floorBot + 2 * micaStackPlan(Y.floorBot, wallTop).step : Y.floorTop
-                }
+                floorY={mica ? Y.floorBot + 2 * micaStackPlan(Y.floorBot, wallTop).step : floorTop}
+                boss={hasAbsRibs(ctx) ? bottomMat(bottom.hover) : undefined}
               />
             ))}
           {/* case CAD: khối chặn tới BLOCKER_TOP · case dựng bằng code: vừa bằng mép trên case, không nhô lên.
@@ -1376,6 +1606,7 @@ export function Case({
               ) : (
                 <>
                   <Walls
+                    wall={wall}
                     W={W}
                     D={D}
                     y0={Y.split}
@@ -1386,7 +1617,9 @@ export function Case({
                       topMount
                         ? topNotches(ctx.screws.topScrew)
                         : ctx.screws.bottomScrew.length
-                          ? topNotches(ctx.screws.bottomScrew)
+                          ? absTwo(caseDef)
+                            ? absPadNotches(ctx.screws.bottomScrew)
+                            : topNotches(ctx.screws.bottomScrew)
                           : gasket
                             ? gasketNotches(ctx.gaskets)
                             : undefined
@@ -1398,6 +1631,10 @@ export function Case({
                     bores={topBores}
                   />
                   <BoreEnds holes={topBores.map((b) => ({ ...b, y: b.y1 }))} />
+                  {absTwo(caseDef) && (
+                    // case nhựa 2 mảnh: nửa trên trụ vít ghép, ren đồng cấy ở miệng dưới
+                    <AbsScrewBosses part="top" mat={mat(top.hover)} />
+                  )}
                   <Blockers
                     keys={ctx.keys}
                     width={ctx.width}

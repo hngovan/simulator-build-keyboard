@@ -1,13 +1,15 @@
 import * as THREE from 'three'
 import { RoundedBox } from '@react-three/drei'
 import { useGame, useCtx, useStep } from '@/store'
-import { GASKET, Y, ringFrame } from '@/data/steps'
+import { GASKET, PCB_USB, Y, pcbUsbSpot, ringFrame } from '@/data/steps'
 import { GASKET_ID, SUPPLIES } from '@/data/supplies'
 import { playClick } from '@/sound'
 import { useHover } from '../common/useHover'
 import { HINT_COLOR } from '../common/hoverOutline'
 import { HintArrow } from '../stations/StationKit'
 
+/** mm → u */
+const MM_U = 1 / 19.05
 const socketGeo = new THREE.BoxGeometry(0.5, 0.09, 0.28)
 const socketMat = new THREE.MeshStandardMaterial({ color: '#1a1a1a', roughness: 0.6 })
 const padGeo = new THREE.BoxGeometry(0.12, 0.02, 0.14)
@@ -164,6 +166,42 @@ export function SiliconeRing({
             <meshBasicMaterial visible={false} />
           </mesh>
         ))}
+    </group>
+  )
+}
+
+/**
+ * Cổng USB-C hàn sẵn mặt dưới PCB (`CaseDef.pcbUsb`): vỏ thép đầu cái mid-mount sát mép sau bên trái, miệng nhô khỏi mép PCB
+ * (lòng cổng tối + lưỡi tiếp điểm), thẳng lỗ khoét vách sau case
+ */
+export function PcbUsbC() {
+  const ctx = useCtx()
+  if (!ctx.caseDef.pcbUsb) return null
+  const p = pcbUsbSpot(ctx.width, ctx.depth, ctx.caseDef.pcbUsb)
+  const w = PCB_USB.w * MM_U
+  const h = PCB_USB.h * MM_U
+  const d = PCB_USB.d * MM_U
+  // thân lùi vào trong board, miệng nhô ra khỏi mép sau `out`
+  const zc = p.z - PCB_USB.out * MM_U + d / 2
+  const mouthZ = p.z - PCB_USB.out * MM_U - 0.001
+  return (
+    <group position={[p.x, p.y, 0]}>
+      <RoundedBox args={[w, h, d]} radius={h / 2 - 0.001} smoothness={4} position-z={zc}>
+        <meshStandardMaterial color="#c7cbd1" metalness={0.9} roughness={0.28} />
+      </RoundedBox>
+      {/* lòng cổng tối + lưỡi tiếp điểm */}
+      <RoundedBox
+        args={[w - 0.025, h - 0.025, 0.02]}
+        radius={(h - 0.025) / 2 - 0.001}
+        smoothness={4}
+        position-z={mouthZ}
+      >
+        <meshStandardMaterial color="#0b0c0e" roughness={0.8} />
+      </RoundedBox>
+      <mesh position-z={mouthZ - 0.006}>
+        <boxGeometry args={[w * 0.62, h * 0.22, 0.012]} />
+        <meshStandardMaterial color="#2a2b30" roughness={0.6} />
+      </mesh>
     </group>
   )
 }

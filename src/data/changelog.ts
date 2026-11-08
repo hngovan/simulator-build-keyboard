@@ -13,6 +13,22 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.33',
+    date: '2026-11-08',
+    commits: [],
+    title: 'Pin Li-Po cho bàn phím không dây, case nhựa PC, case nhựa 2 mảnh',
+    items: [
+      'Shopii bán pin Li-Po 1000 → 5000mAh; case nhựa / nhôm ≤ 60% có sẵn hốc pin trên sàn (né daughterboard, cổng USB-C, trụ tray)',
+      'Bước lắp pin (tuỳ chọn) sau khi cắm dây JST: đặt pin vào hốc rồi cắm dây đỏ / đen vào jack pin trên PCB; pin to hơn hốc thì không lắp được',
+      'Case nhựa thêm loại PC trong (trong suốt / mờ / khói / nhuộm màu), đủ 1 mảnh và 2 mảnh mọi cỡ; Free build gộp 1 dòng chọn ABS / PC',
+      'Case nhựa 2 mảnh: khung xương cá trong lòng case, vít ghép bắt vào trụ nhựa',
+      'Bản nhôm cổng USB-C hàn trên PCB (không daughterboard)',
+      'Lật case (Q) được ở bước lắp daughterboard',
+      'Ô màu nhuộm trong không còn lệch rìa',
+      'Dọn 4 model không dùng (~5,7MB)',
+    ],
+  },
+  {
     version: '0.1.32',
     date: '2026-11-08',
     commits: ['cec09ba'],

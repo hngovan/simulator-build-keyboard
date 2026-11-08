@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type * as THREE from 'three'
 import { useGame, useBuild, useCtx } from '@/store'
 import { SCREW_FULL, screwLevel } from '@/data/parts'
-import { DTB_MM, Y, caseScrewShaft } from '@/data/steps'
+import { ABS_SCREW, DTB_MM, Y, absTwo, caseScrewShaft } from '@/data/steps'
 import { playClick } from '@/sound'
 import { Clickable } from '../stations/StationKit'
 import { bowlY, createScrewTray } from '../models/screwTrayModel'
@@ -74,7 +74,9 @@ export function ScrewTray() {
   const stabLeft = ctx.steps.includes('stabScrew')
     ? ctx.screws.stabScrew.filter((s) => !b.screws[s.id]).length
     : 0
-  const len = screwLength('caseOpen', shaft)
+  // vít ghép case nhựa 2 mảnh: M2 nhỏ
+  const caseSize = absTwo(ctx.caseDef) ? ABS_SCREW.scale : 1
+  const len = screwLength('caseOpen', shaft, caseSize)
   const trayLen = screwLength('trayScrew', TRAY_SHAFT)
   const topLen = screwLength('topScrew')
   const stabLen = screwLength('stabScrew')
@@ -151,7 +153,7 @@ export function ScrewTray() {
       {spots.map((p, i) => (
         <group key={i} position={[p.x, p.y, p.z]} rotation-y={p.rot}>
           {kindOf(i) === 'case' ? (
-            <LooseScrew step="caseOpen" shaft={shaft} />
+            <LooseScrew step="caseOpen" shaft={shaft} size={caseSize} />
           ) : kindOf(i) === 'tray' ? (
             <LooseScrew step="trayScrew" shaft={TRAY_SHAFT} />
           ) : kindOf(i) === 'top' ? (

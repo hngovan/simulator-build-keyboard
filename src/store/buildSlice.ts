@@ -18,6 +18,7 @@ import {
   stepProgress,
   holeKind,
   ruinedBy,
+  batteryFits,
 } from '@/data/steps'
 import {
   CASES,
@@ -174,6 +175,9 @@ export interface BuildSlice {
   plugDtb: () => void
   /** cắm đầu dây JST còn lại vào cổng mặt dưới PCB (board đang nhấc trên case) */
   plugJst: () => void
+  /** bước `battery`: đặt pin đang chọn (`batteryPick`) vào hốc sàn case, trừ 1 vật tư; `plugBattery` = cắm dây pin vào jack PCB */
+  placeBattery: () => void
+  plugBattery: () => void
   wrapRing: () => void
   dropInCase: () => void
   closeCase: () => void
@@ -1307,6 +1311,28 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
         build: { ...build, dtb: { ...d, plugged: true }, stepIdx: build.stepIdx + 1 },
         testIdleFrom: performance.now(),
       })
+    },
+    placeBattery: () => {
+      const s = at('battery')
+      if (!s || s.build.battery || !s.ctx.battery) return
+      const id = s.batteryPick
+      if (!batteryFits(id, s.ctx.battery))
+        return s.toast(
+          `${SUPPLIES[id]?.name ?? 'Pin'} to hơn hốc pin của case, chọn pin nhỏ hơn`,
+          'bad',
+        )
+      const snap = snapshot()
+      if (!s.useSupply(id, 1)) return
+      commit(snap)
+      get().patchBuild({ battery: { id } })
+    },
+    plugBattery: () => {
+      const s = at('battery')
+      const b = s?.build.battery
+      if (!s || !b || b.plugged) return
+      commit(snapshot())
+      // không tự sang bước: board còn dựng cho người chơi nhìn dây đã cắm
+      s.patchBuild({ battery: { ...b, plugged: true } })
     },
     plugJst: () => {
       const s = at('jst')

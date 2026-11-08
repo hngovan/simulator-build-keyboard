@@ -26,7 +26,6 @@ export const CREDITS: CreditGroup[] = [
     items: [
       ['Wooden Table 02', 'Serhii Khromov', 'wooden_table_02'],
       ['Shelf 01', 'Gabriel Radić', 'Shelf_01'],
-      ['Screwdriver', 'PierreB3D', 'screwdriver'],
       ['Painted Wooden Chair 01', 'Kuutti Siitonen', 'painted_wooden_chair_01'],
       ['Wall Clock', 'PierreB3D', 'wall_clock'],
       ['Laminate Floor 02 (texture)', 'Dario Barresi, Charlotte Baglioni', 'laminate_floor_02'],

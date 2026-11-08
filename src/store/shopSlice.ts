@@ -179,6 +179,8 @@ export interface ShopSlice {
   /** loại dây O-ring đang chọn ở bước cuốn O-ring (ORING_IDS) */
   oringPick: string
   setOringPick: (id: string) => void
+  /** pin Li-Po đang chọn ở bước lắp pin (BATTERY_IDS) */
+  batteryPick: string
   setMount: (mount: string) => void
   /** bật / tắt plateless cho đơn đang làm (chưa vào build): plate đang có cất về kho chung */
   setPlateless: (on: boolean) => void
@@ -559,6 +561,7 @@ export const createShopSlice: StateCreator<GameState, [], [], ShopSlice> = (set,
   solderPick: 'solder6337',
   feetPick: 'feetBlack',
   oringPick: 'oring50',
+  batteryPick: 'bat2000',
 
   // ---------- đơn hàng ----------
   acceptOrder: (id) => {

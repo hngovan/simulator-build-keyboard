@@ -1,5 +1,109 @@
 # Cảnh 3D & model
 
+## 2026-11-08
+
+### Case nhựa 2 mảnh, khung xương cá, nhựa trong nhuộm màu
+
+- Yêu cầu: "tại sao case nhựa không thể làm 2 mảnh" → thêm vào Shopii + Free build + Dev, gộp gọn; "case nhựa phải có khung xương cá gia cố
+  bên trong lòng case vs topcase"; "thêm option case nhựa nhưng màu trong, ô màu hình tròn chia đôi nửa màu chính nửa màu trong".
+- Không có giới hạn trong code (dựng hình 2 mảnh không phụ thuộc chất liệu), chỉ thiếu dữ liệu. `parts.ts`: thêm `plastic40Two` /
+  `plastic60Two` / `case75PlasticTwo` / `tklPlasticTwo` / `fullPlasticTwo` (ABS 2 mảnh, vít đáy, gasket / top / bottom; giá ~1,6× bản 1 mảnh),
+  bản 1 mảnh đổi tên "… nhựa 1 mảnh". `CASE_LINES` thêm biến thể "Nhựa ABS 1 mảnh / 2 mảnh" (Shopii gộp 1 sản phẩm mỗi cỡ).
+- `FreeBuildDialog` (dùng chung Dev "Build thử"): họ case dựng bằng code gộp 1 dòng mỗi cỡ theo `familyOf` (nhôm: bề mặt + số mảnh,
+  nhựa: số mảnh), `famSel` theo `${ff}-${fam}`.
+- `scene/parts/absRibs.ts` (`absRibs`, `hasAbsRibs`): case nhựa ABS dựng bằng code có khung xương cá đúc liền sàn: sống dọc giữa + gân xiên
+  45° mỗi 1,25u ra vách trước / sau (dày 0,05u, cao 0,1u < foam đáy 2,5mm), chỗ gân chạm vách có gân đứng tựa vách (nhô 0,15u, đỉnh thấp
+  hơn mặt dưới PCB 0,04u), cắt gân ở vùng DTB + dây JST. `AbsRibs` trong Case.tsx (gộp 1 lưới), `CaseFoam` khoét khe gân đứng.
+  Case trên chưa có gân: vách trong cách mép PCB / plate 0,6mm, mép ghép 2 mảnh nằm ngang PCB → không có chỗ trống (hỏi lại người dùng).
+- Nhựa trong nhuộm màu: `CASE_COLORS` thêm `clearBlack / Blue / Red / Green / Purple / Pink / Yellow` (`clear: true`), `CLEAR_ABS_COLORS`
+  thêm vào mọi case nhựa ABS dựng bằng code. `CaseMaterial` `abs` + màu `clear` = `meshPhysicalMaterial` trong mờ (transmission 0,85,
+  opacity 0,62); `orderThumb` `shellMaterial` cũng trong mờ. Ô màu: `caseSwatch(col)` (nền CSS: màu trong = nửa trái màu đặc, nửa phải màu
+  nhạt + vệt sáng), Shopii option `swatch`, ô màu Free build / panel "Màu case" thành hình tròn; hình minh hoạ dùng `swatchHex`.
+- Sửa theo người dùng ("xương cá nằm chéo, không thẳng được à? quá thấp, cho cao lên; case dùng xương cá thì trụ dùng trụ nhựa + cấy ren
+  đồng"): gân thẳng vuông góc sống (dọc z, mỗi 1,25u), 2 đầu sống có gân đứng tựa vách trái / phải; cao gân `RIB_H` = tới cách đáy
+  socket hotswap 0,02u (~2,8mm, socket cao 0,09u dưới PCB) → cao hơn foam đáy nên `CaseFoam` khoét rãnh theo cả gân sàn (`ribSegBox`).
+  `TrayStandoffs` thêm `boss` (case nhựa dựng bằng code): trụ nhựa tròn Ø~5,7mm vật liệu case (chân loe 1,15×) + vành ren đồng cấy
+  Ø~3,4mm lộ ở đỉnh thay trụ đồng lục giác. Chụp kiểm tra Free build plastic60 tray bước lót foam đáy: gân thẳng, trụ nhựa có ren đồng.
+- Sửa theo người dùng ("cho xương cá đi qua giữa các trụ O-ring, đang lệch qua 1 bên"): `absRibs` lấy `ringPosts(ctx)` (O-ring mount):
+  sống dọc đặt ở z của 2 trụ vách trái / phải (lệch về sau `SIDE_AT`, đi qua tâm 2 trụ), gân vuông góc đặt đúng x các trụ vách trước / sau,
+  khoảng giữa rải thêm cho cách ~`RIB_STEP` (khoảng vách – trụ: gân sát vách cách vách ~nửa bước); chỗ có trụ thì khỏi gân đứng tựa vách.
+  Không O-ring thì như cũ (sống giữa, gân rải đều). Chụp kiểm tra plastic60 O-ring: gân đâm đúng giữa trụ trước và trụ bên.
+- Sửa theo người dùng ("thiếu xương cá ngang, chỉ có dọc, cho cao lên 1 xíu nữa"): bỏ sống giữa, thay bằng 2 gân ngang chia lòng case
+  làm 3 (dời về đường ranh 2 hàng phím gần nhất để không nằm dưới socket; O-ring: qua tâm 2 trụ bên + đối xứng), gân dọc chạy suốt
+  vách trước → vách sau. Cao 2 bậc (`stepRib`): mặc định `RIB_H_TALL` (đỉnh cách mặt dưới PCB 0,03u, ~4,3mm), đoạn đi dưới vùng linh kiện
+  (socket hotswap / chân switch quanh tâm phím ±0,32 × ±0,3u, chân stab `stabHoles`, jack JST) hạ xuống `RIB_H` (~2,8mm, dưới đáy socket);
+  đoạn cao ngắn hơn `MIN_TALL` 0,25u giữa 2 vùng thấp thì gộp thấp (đỡ răng cưa). `RibSeg.h` theo đoạn, `AbsRibs` dựng hộp theo `h`.
+- Sửa theo người dùng ("xương cá bị cut, không thẳng; xương ngang chỉ có 1 cái, TKL phải 3, 40% phải 2"; "move xương dưới ở case 40"):
+  bỏ `stepRib` (răng cưa) → mỗi gân 1 chiều cao đều: không đi dưới linh kiện nào (socket Kailh đúng khối 0,5 × 0,28 lệch (0,05; 0,1),
+  cọc giữa / chân switch ±0,3u quanh tâm, lỗ chân stab, jack JST) thì `RIB_H_TALL`, có thì `RIB_H`. Gân ngang đặt đúng khe giữa 2 hàng
+  phím (trung điểm 2 tâm hàng, tính cả khe hàng F của TKL), số gân theo số hàng (≤ 5 hàng: 2, 6 hàng: 3), mỗi gân lấy khe gần chỗ chia đều
+  nhất (ngang ngửa < 0,3u mới ưu tiên khe không vướng chân stab — trước ưu tiên khe trống nên 40% ra 2 gân sát nhau z −1 / 0, giờ −1 / +1).
+  Gân ngang qua vùng DTB thì cắt còn 2 khúc 2 bên (`outside`, trước cắt từ giữa ra nên DTB nằm giữa là mất cả gân). O-ring: trụ vách
+  trái / phải (`ringPosts`) dời về khe hàng phím gần `SIDE_AT` nhất, gân ngang gần nhất dời về đúng z trụ.
+- Sửa theo người dùng (đánh X gân đứng tựa vách + khúc gân dọc cụt; "thành case nhựa mỏng lại, không dày như case alu / mica"): bỏ
+  hết gân đứng tựa vách (`walls` luôn rỗng, giữ kiểu cho Case / Foam), gân dọc nửa nào vướng DTB (bị cắt giữa chừng) bỏ hẳn nửa đó.
+  Thành case: `caseWall(caseDef)` (steps.ts) = `ABS_WALL` 0,3u (~5,7mm) cho nhựa ABS dựng bằng code, còn lại `CASE_WALL` 0,45u; dùng ở
+  `Walls` (prop `wall`), W / D + `frontZ` (Case.tsx), `caseScrewPoints(…, wall)` (vít ghép giữa thành), `feetPockets(…, wall)`, ảnh
+  `orderThumb`. 0,3u đủ cho hốc tai plate 0,22u + lỗ vít ghép (hốc chìm đầu bằng r 0,168u sát mép ngoài, chụp từ đáy không lẹm).
+  Chụp lại ảnh Shopii các case nhựa (`ONLY=plastic40 / plastic60 / Plastic / tklTray / fullTray`).
+- Sửa tiếp ("sao vẫn còn nhô ra"): 1 gân dọc 2 nửa khác chiều cao (nửa không dưới linh kiện thì cao) → bậc ở chỗ nối. Chiều cao giờ
+  tính theo cả đường gân (gom khúc cùng x / cùng z: 2 nửa gân dọc, các khúc gân ngang bị DTB cắt), 1 khúc vướng linh kiện thì cả đường
+  thấp. Kiểm số liệu 60 2 mảnh / 40 / TKL / 60 O-ring: không đường nào còn 2 chiều cao.
+- Sửa theo người dùng ("viền case dày quá, cho mỏng lại như case nhựa mới đúng"): case nhựa 1 mảnh `ABS_WALL` 0,15u (~2,9mm, 1 mảnh không
+  có lỗ vít ghép / hốc tai plate trong thành), 2 mảnh `ABS_WALL_2` 0,3u (cần chỗ cho hốc tai plate 0,22u + lỗ vít ghép); `caseWall` theo
+  `pieces`.
+- Sửa theo người dùng ("chỉ có case PC mới trong suốt được và nhuộm màu, case ABS không thể trong"): bỏ màu trong khỏi case nhựa,
+  `CLEAR_ABS_COLORS` → `TINT_COLORS` thêm vào case PC (`pc60` thay vàng / xanh lá đục, `gasket60Duo`, `repent75Pc`, `exodus80Pc`);
+  bỏ nhánh `abs` trong mờ của `CaseMaterial` (PC sẵn trong mờ theo màu). Xoá 77 ảnh Shopii màu trong của case nhựa + dòng bảng tra,
+  chụp lại ảnh case PC + case nhựa 1 mảnh.
+- Sửa theo người dùng ("cho mỏng hơn nữa, trụ đang bị lòi ra ngoài rồi, cut đi"): `ABS_WALL` 0,15 → 0,1u (~1,9mm, case nhựa 1 mảnh).
+  Trụ O-ring lấn vào vách cố định `POST_IN` 0,03u + bán kính 0,135u → vách mỏng thì nửa trụ lòi ra ngoài vỏ; `ringPosts` giờ lấn
+  `min(POST_IN, caseWall − POST_R − SKIN 0,02)` (vách mỏng thì tâm trụ lùi vào lòng case). Chụp kiểm tra plastic60 O-ring: mặt ngoài
+  vách phẳng, trụ nằm trong. Chụp lại ảnh Shopii case nhựa 1 mảnh.
+- Sửa ("đoạn này mã màu bị lỗi à?"): vệt sáng chéo trên nửa "trong" của ô màu chia đôi nhìn như vết gạch → bỏ; `caseSwatch` giờ chỉ
+  nửa trái màu đặc / nửa phải màu nhạt (pha 45% với trắng xanh).
+- Case nhựa 2 mảnh làm lại theo người dùng ("thành vẫn dày; phải làm trụ nhựa cấy ren đồng để bắt ốc; case 40 chỉ 4 lỗ vít; vít nhỏ lại;
+  thành dày hơn 1 mảnh 1 xíu nhưng không đặc ruột; top case cũng nhựa đúc"; hỏi lại → chọn "vấu nhựa trong lòng case" + "M2 đầu bằng"):
+  - `ABS_WALL_2` 0,14u (~2,7mm). `absTwo(c)`, `ABS_BOSS` {r 0,12, inset 0,05} (tâm trụ lùi vào trong mặt trong vách, nửa ngoài chìm
+    trong vách), `ABS_SCREW` M2 (đầu Ø3,8, lỗ xuyên Ø2,2, ren Ø1,6, model ốc ×0,63).
+  - Vít ghép: `absCaseScrews` (caseScrewPoints `boss`: z = mặt trong vách − inset; 40% 2 vít / bên = 4 vít; `dodgeStabs` né lỗ chân stab),
+    `caseBores` cỡ M2 (`m2HeadHole`), `dtbSpot` né cả thân trụ (`screwClear`). Trụ: `AbsBoss` (ống tròn `tubeGeometry`) + `AbsScrewBosses`:
+    nửa dưới (sàn → mép ghép, lỗ xuyên) trong case dưới, nửa trên (mép ghép → dưới plate, ren đồng cấy `INSERT_DEPTH` ở miệng dưới) trong
+    case trên. Ốc M2: `Screw` / `LooseScrew` / `screwLength` thêm `size`, `ScrewSet` + khay ốc dùng `ABS_SCREW.scale` cho vít case nhựa.
+  - Mount: case nhựa 2 mảnh chỉ còn gasket + bottom (top mount bỏ: vấu treo từ case trên phải nằm trên plate, vướng keycap hàng mép).
+    Gasket: `gasketTabbed` loại `abs` → dải gasket quanh mép plate như 1 mảnh, không hốc / vấu (trước khoét hốc tab 0,22u thủng vách).
+    Bottom mount: `topScrewPoints(…, bossKeys)` vấu tại mặt trong vách − inset, `BottomPads` = `AbsBoss` (mép ghép → mặt dưới plate, ren
+    đồng ở đỉnh), case trên khoét hốc nông `absPadNotches` (sâu r − inset + 0,02), plate không tai mà khoan lỗ (`plateHoles`).
+  - PCB khoét rãnh né trụ / vấu (`bossHoles` vào `pcbNotches`), foam PCB khoét (`PcbFoam bossHoles`), foam đáy khoét chân trụ dưới.
+- Sửa theo người dùng ("đáy case nhựa dày quá, sửa mỏng đi nhưng lắp DTB không lộ ốc xuống đáy → ốc ngắn"): `ABS_FLOOR` 0,1u (~1,9mm),
+  `caseFloorTop(c)`: giữ mặt đáy ngoài, hạ mặt sàn trong (case nhựa: floorBot + 0,1). Dùng ở `Walls floorTop`, `TrayStandoffs`, trụ / gân
+  (`absRibs` đỉnh gân cố định `RIB_TOP` / `RIB_TOP_TALL` → gân cao thêm theo sàn), `ringPosts`, `dtbSpot` (DTB + cổng USB `usbPort(x, floor)`
+  hạ theo sàn), foam đáy, ảnh `orderThumb`. Vít DTB: `shortScrew(len)` 3,6mm (thân 1,6mm) khi sàn thấp hơn `Y.floorTop` (trước 5,5mm).
+  Chụp kiểm tra: plastic40Two 4 vít, plastic60Two tách case (trụ 2 nửa), bottom mount 8 vấu + lỗ plate; chụp lại ảnh Shopii case nhựa.
+- Thêm theo người dùng ("thêm option case nhôm 1 mảnh 60% đổ lại dùng cổng C bên trái thay vì gắn DTB", kèm ảnh PCB 60% có cổng C
+  hàn ở góc): `CaseDef.pcbUsb`; case mới `tofu60reduxC` / `alu60Ecoat1C` / `alu40AnodC` / `alu40Ecoat1C` (bản sao nhôm 1 mảnh 60 / 40 +
+  "· cổng C trên PCB", thêm vào `CASE_LINES`). `buildContext`: `pcbUsb` thì `dtb = null` (không bước `dtb` / `jst`). `PCB_USB` / `pcbUsbSpot`
+  (steps.ts): đầu cái USB-C mid-mount mặt dưới PCB, tâm cách mép trái board 0,8u (sau phím Esc), miệng nhô khỏi mép sau 0,6mm; `PcbUsbC`
+  (BoardDetails.tsx, vỏ thép + lòng tối + lưỡi tiếp điểm); Case.tsx khoét `usbPort` ở vách sau đúng chỗ (`ports`); trụ O-ring vách sau né
+  lỗ cổng (`ringPosts`). Free build / Dev: dòng nhôm thêm chip "Daughterboard / Cổng C trên PCB" (`aluPick(…, usb)`, chỉ hiện khi có bản
+  `pcbUsb` cùng chất liệu + số mảnh). Chụp kiểm tra Tofu60 Redux cổng C: cổng nằm giữa lỗ vách sau. Chụp ảnh Shopii 4 case mới.
+- Thêm ("case có cổng C bên phải cũng có, chỉ áp dụng với case TKL, cổng C liền PCB"): `pcbUsb` thành `'left' | 'right'`; `tklAluC` /
+  `tklAluEcoatC` (TKL nhôm 1 mảnh, `'right'`: tâm cổng cách mép phải board 0,8u, sau cụm điều hướng); `pcbUsbSpot(w, d, side)`.
+  Chụp ảnh Shopii 2 case mới.
+- Ảnh Shopii: `ONLY=Two` + `ONLY=clear<Màu>` `bun run bake:thumbs` (chạy 1 lượt cả `ONLY=clear` bị lỗi lẻ tẻ, chạy từng màu thì đủ).
+  Đã chụp kiểm tra trong game bằng Chrome ngầm (Free build plastic60Two trắng bước lót foam đáy, xanh dương trong bước đậy case).
+
+## 2026-11-08
+
+### Dọn model không dùng
+
+- Yêu cầu: "check xem model nào ko xài thì xoá đi".
+- Dò mọi file trong `public/models/` theo tên (case CAD theo `<bàn phím>/<file>`, keycap theo `${profile}-r${row}` trong keycapShape.ts):
+  4 file không còn code nào nạp → xoá: `room/drawer_cabinet.glb`, `room/metal_office_desk.glb`, `room/modern_wooden_cabinet.glb`
+  (phòng đi lại cũ, ~5,6MB) và `room/screwdriver-lite.glb` (tua vít tay đã bỏ, xem dung-cu.md) + `scripts/convert-screwdriver-lite.mjs`
+  - script `convert:screwdriver-lite`. Bỏ 3 model phòng khỏi `fetch-room.mjs`, dòng ghi công ở `room/CREDITS.md` + `credits.ts` (Screwdriver).
+    `jpeg-js` vẫn giữ (convert-cafe-pictures dùng). Nguồn tua vít gốc còn ở `assets/` nếu cần dựng lại.
+
 ## 2026-11-07
 
 ### Duality Horns: thêm hàng dưới WK
@@ -1713,3 +1817,47 @@
   (tranh nghiêng ~1°, sát tường thì nửa dưới lẹm vào tường), `Model noShadow` (bóng khung hắt sọc lên mặt tranh).
 - Poster: "MY KEYBOARDS" + "CHERRY" từ tường trước sang tường trái (z 3,45 / 2,6 m, giữa góc tường trước và ô cửa); "ベースライン303" lên
   tường cuối hành lang trên kệ sắt nhận hàng; "CAUTION" sang tường trước cạnh kệ chưng bàn phím (`-SHELF_X + 0.9`).
+
+## 2026-11-08 — Case nhựa: ABS + PC đủ 1 / 2 mảnh mọi cỡ
+
+- Yêu cầu: case nhựa 2 mảnh sao không có PC trong suốt; PC sao không có 1 mảnh; gộp PC với nhựa thành 1 loại, chọn chất liệu chỉ đổi
+  bảng màu (PC mới có màu trong); Free build ghi "Case 40 nhựa" không rõ nhựa gì; rìa ô màu nhuộm trong bị khuất.
+- Đã làm:
+  - `parts.ts`: thêm PC 2 mảnh `pc40` / `case75Pc` / `tklPc` / `fullPc` + PC 1 mảnh `pc60One` / `pc40One` / `case65Pc` / `case75PcOne` /
+    `tklPcOne` / `fullPcOne` (giá ~1,6× ABS cùng loại; màu `clear` + `frost` + `smoke` + `TINT_COLORS`), `pc60` thêm `clear`.
+    `CASE_LINES` ghi "Nhựa ABS / Nhựa PC n mảnh", thêm dòng "Case 65%". Tên case ghi rõ "nhựa ABS / nhựa PC". `CASE_MATERIALS.pc` = "Nhựa PC" (trước "PC mờ").
+  - `isPlasticCase` (parts.ts): ABS / PC dựng bằng code, không model, không `bottom` (nắp PC đáy nhôm đứng riêng) → `caseWall` (thành mỏng
+    `ABS_WALL` / `ABS_WALL_2`), `hasAbsRibs` (khung xương cá + trụ ren), `caseLv` (1 mảnh cấp 1). PC vẫn giòn (`BRITTLE`: vít có thể nứt case).
+  - `FreeBuildDialog`: họ `plastic` (ABS + PC) gộp 1 dòng "Case <cỡ> nhựa", nút ABS / PC (cạnh Anod / E-coat của nhôm) + số mảnh, dòng phụ ghi chất liệu;
+    `aluPick` ưu tiên giữ chất liệu khi thiếu số mảnh.
+  - `caseSwatch`: gradient chia đôi thêm `border-box` (trước nền tính trong viền, lặp dưới viền → rìa ô lệch màu).
+  - Chụp lại ảnh Shopii mọi case PC dựng bằng code (`ONLY=:pc60` / `:pc40` / `:tklPc` / `:fullPc` / `:case65Pc` / `:case75Pc`).
+
+## 2026-11-08 — Lật case (Q) ở bước lắp DTB
+
+- Yêu cầu: bước lắp daughterboard sao không lật case xem được.
+- Đã làm: bỏ `dtb` khỏi `NO_FLIP_STEPS` (steps.ts): bước này chỉ có case trên bàn (board để riêng), DTB nằm trong nhóm case nên lật theo.
+  `Daughterboard` (Daughterboard.tsx): đang lật (`useAssemblyFlipped`) thì tạm khoá đặt mạch / vít M2 / cắm dây + ẩn mũi tên (mặt trong case
+  quay xuống, tránh bấm xuyên sàn), HUD tự hiện "Đang xem mặt đáy — bấm Lật lại mặt trên". `coverOff` / `coverOn` / `jst` vẫn không lật
+  (tạ đang nhấc / board dựng đứng trên case). Chụp kiểm pc60One tray mount: lật / lật lại đúng.
+
+## 2026-11-08 — Pin Li-Po: Shopii + hốc pin case ≤ 60% + bước lắp pin
+
+- Yêu cầu: bán pin trên Shopii theo dung lượng 1000 → 5000mAh; PCB có cổng JST cắm pin, dây pin 2 sợi âm / dương; case nhựa / nhôm khoét hốc
+  chứa pin (mặc định mọi case ≤ 60%, không theo option), soát case cổng C bên trái / giữa / phải; chỉ case dựng bằng code.
+- Đã làm:
+  - `supplies.ts`: `BATTERY_IDS` (`bat1000`…`bat5000`, `SupplyDef.battery` {mah, w, l, t}), dày cố định `BATTERY_T` 5mm, mặt pin to dần
+    (34 × 50 → 60 × 115mm); Shopii gộp 1 sản phẩm "Pin Li-Po (JST PH 2 pin)" (`sup-battery`, nhóm lọc "Pin"), mở cấp 2 (`supplyLv`).
+  - `steps.ts`: `batteryCase` (không model, 40 / 60, nhựa `isPlasticCase` hoặc nhôm anod / E-coat kể cả đáy nhôm), `batterySpot` → `ctx.battery`
+    (`BatterySpot`): thử pin to nhất xuống, quét lưới chỗ gần giữa nhất trong lòng case (chừa `BAT_WALL`), né DTB + dải dây JST tới jack,
+    trụ tray (chỉ tray mount — trụ chặn nên tray chỉ vừa 1000–3000mAh, mount khác 60% vừa 5000), trụ vít nhựa 2 mảnh, cổng USB-C trên PCB
+    (bản "C" cổng trái, `pcbUsbSpot`); mặt trên pin dưới đáy socket (`BAT_TOP`) → nhôm khoét sàn xuống, nhựa sàn mỏng nằm thẳng. Jack JST PH
+    trên PCB: tách lõi `placeJack` khỏi `jackSpot` (thêm vùng cấm: mặt pin, jack DTB). `batteryFits` / `batterySize`. Vít tray tách `trayPoints`.
+    Bước tuỳ chọn `battery` sau `jst` (board vẫn dựng `jstStand`), `NO_FLIP_STEPS`, `stepProgress` 2 phần, `remapStepIdx` không lùi về.
+  - Store: `batteryPick` (shopSlice), `placeBattery` (pin to hơn hốc thì báo, trừ 1 vật tư) / `plugBattery` (buildSlice), `BuildState.battery`.
+    Save rev 12 `addBatteryStep` (build dở dời stepIdx theo tên bước; các bước nâng cấp cũ bỏ `battery` qua `noBattery`).
+  - Cảnh: `scene/parts/Battery.tsx` (`BatterySlot` trong case dưới: pin bọc nhôm + nhãn xanh + băng keo vàng, khối mờ chờ đặt (đỏ = to quá),
+    dây đỏ / đen tới đầu cắm; `PcbBatteryJack` trong Board, `useBatPick`). `caseShellGeometry` thêm `tub` (`ShellTub`, CSG khoét hốc sàn nhôm),
+    `absRibs` bỏ gân trong hốc + dải dây (`batteryKeepout`, dùng chung foam đáy), `BatteryPanel` (ModPanels) chọn dung lượng.
+  - Kèm: vá `caseFloorTop` / `absTwo` / `gasketTabbed` dùng `isPlasticCase` (case PC dựng y như ABS).
+  - Chụp kiểm plastic60 + gasket60 gasket mount: đặt pin 5000mAh, cắm dây, thả board vào case.

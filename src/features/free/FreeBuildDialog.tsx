@@ -6,6 +6,7 @@ import { LAYOUTS, variantLabel } from '@/data/layouts'
 import {
   CASES,
   CASE_COLORS,
+  caseSwatch,
   KEYCAP_COLORS,
   KEYCAP_KITS,
   MOUNTS,
@@ -31,21 +32,38 @@ const KC_COLORS = Object.keys(KEYCAP_COLORS)
 const kitName = (id: string) =>
   KEYCAP_KITS[id].name.replace(/\s*\(.*\)/, '').replace(/\s+Full$/, '')
 
-/** bề mặt nhôm (chất liệu case) */
+/** chất liệu chọn trong họ case: bề mặt nhôm, loại nhựa */
 const FINISHES = [
   ['anod', 'Anod'],
   ['ecoat', 'E-coat'],
+  ['abs', 'ABS'],
+  ['pc', 'PC'],
 ] as const
-/** case nhôm dựng bằng code (không CAD): cùng cỡ gộp 1 dòng, chọn bề mặt + số mảnh */
-const isAluFamily = (id: string) =>
-  !CASES[id].model && (CASES[id].material === 'anod' || CASES[id].material === 'ecoat')
-/** 1 dòng trong bảng: case lẻ hoặc cả họ case nhôm cùng cỡ */
-type Row = { id: string } | { ff: FormFactor; ids: string[] }
-/** case nhôm theo bề mặt + số mảnh; thiếu đúng tổ hợp thì lấy cùng số mảnh, rồi bất kỳ */
-const aluPick = (ids: string[], finish: string, pieces: number) =>
-  ids.find((id) => CASES[id].material === finish && CASES[id].pieces === pieces) ??
-  ids.find((id) => CASES[id].pieces === pieces) ??
-  ids[0]
+/** họ case dựng bằng code (không CAD) gộp 1 dòng mỗi cỡ: nhôm (anod / E-coat), nhựa (ABS đục / PC trong); chọn chất liệu + số mảnh */
+type Family = 'alu' | 'plastic'
+const FAMILY_NAME: Record<Family, string> = { alu: 'nhôm', plastic: 'nhựa' }
+const familyOf = (id: string): Family | null => {
+  const c = CASES[id]
+  // case CAD / case 2 chất liệu (nắp PC đáy nhôm) đứng riêng
+  if (c.model || c.bottom) return null
+  if (c.material === 'anod' || c.material === 'ecoat') return 'alu'
+  return c.material === 'abs' || c.material === 'pc' ? 'plastic' : null
+}
+/** 1 dòng trong bảng: case lẻ hoặc cả họ case cùng cỡ */
+type Row = { id: string } | { ff: FormFactor; fam: Family; ids: string[] }
+/** case trong họ theo chất liệu + số mảnh; thiếu đúng tổ hợp thì giữ chất liệu (PC chỉ có 2 mảnh), rồi cùng số mảnh */
+const aluPick = (ids: string[], finish: string, pieces: number, usb = false) => {
+  // cổng USB: daughterboard / cổng C hàn trên PCB (`pcbUsb`, nhôm 1 mảnh 60% / 40% bên trái, TKL bên phải); thiếu thì lấy bản DTB
+  const list = ids.filter((id) => !!CASES[id].pcbUsb === usb)
+  const pool = list.length ? list : ids.filter((id) => !CASES[id].pcbUsb)
+  return (
+    pool.find((id) => CASES[id].material === finish && CASES[id].pieces === pieces) ??
+    pool.find((id) => CASES[id].material === finish) ??
+    pool.find((id) => CASES[id].pieces === pieces) ??
+    pool[0] ??
+    ids[0]
+  )
+}
 
 /** ô màu bấm chọn (case, keycap, feet, O-ring) */
 function Swatch({
@@ -65,7 +83,7 @@ function Swatch({
       title={name}
       onClick={onClick}
       className={cn(
-        'size-6 rounded-md border-2 shadow-[0_2px_0_rgba(0,0,0,0.45)] transition-transform hover:-translate-y-px',
+        'size-6 rounded-full border-2 shadow-[0_2px_0_rgba(0,0,0,0.45)] transition-transform hover:-translate-y-px',
         active ? 'border-yellow' : 'border-black/40',
       )}
       style={{ background: hex }}
@@ -104,20 +122,25 @@ export function FreeBuildDialog() {
 
   const groups = FF_ORDER.map((ff) => {
     const ids = Object.keys(CASES).filter((id) => CASES[id].ff === ff)
-    // case nhôm cùng cỡ gộp 1 dòng (đặt ở chỗ case nhôm đầu tiên)
-    const alu = ids.filter(isAluFamily)
+    // case cùng họ (nhôm / nhựa) cùng cỡ gộp 1 dòng (đặt ở chỗ case đầu tiên của họ)
     const rows: Row[] = []
-    for (const id of ids)
-      if (!isAluFamily(id)) rows.push({ id })
-      else if (id === alu[0]) rows.push(alu.length > 1 ? { ff, ids: alu } : { id })
+    for (const id of ids) {
+      const fam = familyOf(id)
+      const same = fam ? ids.filter((x) => familyOf(x) === fam) : []
+      if (!fam) rows.push({ id })
+      else if (id === same[0]) rows.push(same.length > 1 ? { ff, fam, ids: same } : { id })
+    }
     return { ff, ids, rows }
   }).filter((g) => g.ids.length)
-  // dòng nhôm: bề mặt + số mảnh đang chọn theo cỡ (mặc định anod, 2 mảnh)
-  const [aluSel, setAluSel] = useState<
-    Partial<Record<FormFactor, { finish: string; pieces: number }>>
+  // dòng họ case: chất liệu + số mảnh đang chọn theo cỡ + họ (mặc định anod / ABS, 2 mảnh)
+  const [famSel, setFamSel] = useState<
+    Record<string, { finish: string; pieces: number; usb?: boolean }>
   >({})
-  const aluOf = (ff: FormFactor, ids: string[]) =>
-    aluSel[ff] ?? { finish: 'anod', pieces: ids.some((id) => CASES[id].pieces === 2) ? 2 : 1 }
+  const famOf = (key: string, ids: string[]) =>
+    famSel[key] ?? {
+      finish: CASES[ids[0]].material === 'abs' ? 'abs' : 'anod',
+      pieces: ids.some((id) => CASES[id].pieces === 2) ? 2 : 1,
+    }
   const choose = (caseId: string, color: string) => {
     setPick({ caseId, color })
     const lays = freeLayouts(caseId)
@@ -173,24 +196,32 @@ export function FreeBuildDialog() {
               </div>
               {g.rows.map((row) => {
                 if ('ids' in row) {
-                  const sel = aluOf(row.ff, row.ids)
-                  const id = aluPick(row.ids, sel.finish, sel.pieces)
+                  const key = `${row.ff}-${row.fam}`
+                  const sel = famOf(key, row.ids)
+                  const id = aluPick(row.ids, sel.finish, sel.pieces, sel.usb)
                   const c = CASES[id]
                   // đổi bề mặt / số mảnh: đang chọn case họ này thì chọn luôn case mới (giữ màu nếu có)
-                  const set = (next: { finish: string; pieces: number }) => {
-                    setAluSel({ ...aluSel, [row.ff]: next })
+                  const set = (next: { finish: string; pieces: number; usb?: boolean }) => {
+                    setFamSel({ ...famSel, [key]: next })
                     if (pick && row.ids.includes(pick.caseId)) {
-                      const nid = aluPick(row.ids, next.finish, next.pieces)
+                      const nid = aluPick(row.ids, next.finish, next.pieces, next.usb)
                       choose(
                         nid,
                         CASES[nid].colors.includes(pick.color) ? pick.color : CASES[nid].colors[0],
                       )
                     }
                   }
-                  const pieces = [...new Set(row.ids.map((x) => CASES[x].pieces))].sort()
+                  // số mảnh có ở chất liệu đang xem (PC chỉ 2 mảnh)
+                  const pieces = [
+                    ...new Set(
+                      row.ids
+                        .filter((x) => CASES[x].material === c.material)
+                        .map((x) => CASES[x].pieces),
+                    ),
+                  ].sort()
                   return (
                     <div
-                      key={row.ff + '-alu'}
+                      key={key}
                       className={cn(
                         'flex flex-wrap items-center gap-2 rounded-xl border-2 bg-panel-2 px-3 py-1.5',
                         pick && row.ids.includes(pick.caseId)
@@ -199,9 +230,11 @@ export function FreeBuildDialog() {
                       )}
                     >
                       <span className="min-w-[200px] flex-1 text-sm font-bold">
-                        Case {row.ff.toUpperCase()} nhôm
+                        Case {row.ff.toUpperCase()} {FAMILY_NAME[row.fam]}
                         <span className="ml-1.5 text-xs font-normal text-muted">
-                          {c.pieces} mảnh · {c.mounts.map((m) => MOUNTS[m].name).join(', ')}
+                          {FINISHES.find(([f]) => f === c.material)?.[1]} · {c.pieces} mảnh ·{' '}
+                          {c.pcbUsb ? 'cổng C trên PCB · ' : ''}
+                          {c.mounts.map((m) => MOUNTS[m].name).join(', ')}
                         </span>
                       </span>
                       <div className="flex flex-wrap gap-1">
@@ -210,7 +243,13 @@ export function FreeBuildDialog() {
                             <OptionChip
                               key={f}
                               active={sel.finish === f}
-                              onClick={() => set({ ...sel, finish: f })}
+                              onClick={() =>
+                                set({
+                                  ...sel,
+                                  finish: f,
+                                  pieces: CASES[aluPick(row.ids, f, sel.pieces, sel.usb)].pieces,
+                                })
+                              }
                             >
                               {label}
                             </OptionChip>
@@ -219,18 +258,34 @@ export function FreeBuildDialog() {
                         {pieces.map((p) => (
                           <OptionChip
                             key={p}
-                            active={sel.pieces === p}
+                            active={c.pieces === p}
                             onClick={() => set({ ...sel, pieces: p })}
                           >
                             {p} mảnh
                           </OptionChip>
                         ))}
+                        {/* cổng USB: daughterboard hoặc cổng C hàn trên PCB (chỉ case có bản `pcbUsb` cùng chất liệu + số mảnh) */}
+                        {row.ids.some(
+                          (x) =>
+                            CASES[x].pcbUsb &&
+                            CASES[x].material === c.material &&
+                            CASES[x].pieces === c.pieces,
+                        ) &&
+                          ([false, true] as const).map((u) => (
+                            <OptionChip
+                              key={String(u)}
+                              active={!!c.pcbUsb === u}
+                              onClick={() => set({ ...sel, usb: u })}
+                            >
+                              {u ? 'Cổng C trên PCB' : 'Daughterboard'}
+                            </OptionChip>
+                          ))}
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {c.colors.map((col) => (
                           <Swatch
                             key={col}
-                            hex={CASE_COLORS[col]?.hex ?? col}
+                            hex={caseSwatch(col)}
                             name={CASE_COLORS[col]?.name ?? col}
                             active={pick?.caseId === id && pick.color === col}
                             onClick={() => choose(id, col)}
@@ -261,7 +316,7 @@ export function FreeBuildDialog() {
                       {c.colors.map((col) => (
                         <Swatch
                           key={col}
-                          hex={CASE_COLORS[col]?.hex ?? col}
+                          hex={caseSwatch(col)}
                           name={CASE_COLORS[col]?.name ?? col}
                           active={pick?.caseId === id && pick.color === col}
                           onClick={() => choose(id, col)}
@@ -283,7 +338,7 @@ export function FreeBuildDialog() {
               {CASES[pick.caseId].colors.map((col) => (
                 <Swatch
                   key={col}
-                  hex={CASE_COLORS[col]?.hex ?? col}
+                  hex={caseSwatch(col)}
                   name={CASE_COLORS[col]?.name ?? col}
                   active={pick.color === col}
                   onClick={() => choose(pick.caseId, col)}

@@ -17,11 +17,8 @@ const MODELS = [
   'Shelf_01',
   'painted_wooden_chair_01',
   'wall_clock',
-  // phòng đi lại được: bàn máy tính, bàn workbench, tủ chứa hàng, đèn trần
-  'metal_office_desk',
+  // phòng đi lại được: bàn workbench, đèn trần
   'WoodenTable_03',
-  'drawer_cabinet',
-  'modern_wooden_cabinet',
   'modern_ceiling_lamp_01',
   'desk_lamp_arm_01',
   // thùng hàng ở bước mở hộp

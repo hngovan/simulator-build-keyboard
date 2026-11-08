@@ -1,7 +1,7 @@
 {
   "name": "simulator-build-keyboard",
   "private": true,
-  "version": "0.1.32",
+  "version": "0.1.33",
   "type": "module",
   "packageManager": "bun@1.4.3",
   "scripts": {
@@ -28,7 +28,6 @@
     "bake:thumbs": "bun scripts/bake-shop-thumbs.ts",
     "gen:plate-duality": "bun scripts/gen-duality-plate.ts",
     "gen:duality-wk": "bun scripts/gen-duality-wk.ts",
-    "convert:screwdriver-lite": "node scripts/convert-screwdriver-lite.mjs",
     "fetch:emotes": "node scripts/fetch-emotes.mjs",
     "fetch:avatars": "node scripts/fetch-avatars.mjs",
     "convert:solder-tools": "node scripts/convert-solder-tools.mjs",

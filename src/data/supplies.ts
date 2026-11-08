@@ -45,6 +45,8 @@ export interface SupplyDef {
   caseFoam?: true
   /** dải gasket Poron dán tai plate (bước `gasket`): mỗi điểm gasket dán 2 miếng, trên + dưới tai */
   gasketStrip?: true
+  /** pin Li-Po dẹt (bước `battery`, case ≤ 60%): dung lượng mAh, cỡ (mm) rộng `w` × dài `l` × dày `t`, dây JST PH 2 pin đỏ / đen */
+  battery?: { mah: number; w: number; l: number; t: number }
 }
 
 /** foam Poron lót PCB – plate: 1 tấm / bàn phím */
@@ -68,6 +70,37 @@ const FEET_COLORS: [id: string, name: string, color: string][] = [
   ['feetPurple', 'tím', '#6b4a9c'],
 ]
 export const FEET_IDS = FEET_COLORS.map(([id]) => id)
+
+/**
+ * Pin Li-Po 3,7V dẹt cho bàn phím không dây: dày cố định 5mm (vừa khe sàn → đáy socket hotswap khi nằm trong hốc), dung lượng lớn thì
+ * mặt pin rộng / dài ra; 1000 → 5000mAh. Shopii gộp 1 sản phẩm, chọn dung lượng
+ */
+const BATTERY_DEFS: [mah: number, w: number, l: number, price: number][] = [
+  [1000, 34, 50, 90],
+  [2000, 40, 72, 140],
+  [3000, 48, 88, 190],
+  [4000, 54, 102, 240],
+  [5000, 60, 115, 290],
+]
+/** độ dày pin (mm) */
+export const BATTERY_T = 5
+export const BATTERY_IDS = BATTERY_DEFS.map(([mah]) => `bat${mah}`)
+
+function batteryDefs(): Record<string, SupplyDef> {
+  return Object.fromEntries(
+    BATTERY_DEFS.map(([mah, w, l, price]) => [
+      `bat${mah}`,
+      {
+        name: `Pin Li-Po ${mah}mAh`,
+        unit: 'cục',
+        color: '#3d6fb8',
+        packs: [[1, price]],
+        desc: `Pin Li-Po 3,7V dẹt ${w} × ${l} × ${BATTERY_T}mm, dây JST PH 2 pin (đỏ dương / đen âm): nằm trong hốc sàn case, cắm vào jack pin trên PCB (case ≤ 60% dựng sẵn hốc)`,
+        battery: { mah, w, l, t: BATTERY_T },
+      },
+    ]),
+  )
+}
 
 /** dây O-ring silicon theo độ cứng: trắng 30A (mềm, nhún nhiều) → đen 50A → cam 70A (cứng, chắc tay) */
 const ORING_DEFS: [id: string, shore: number, name: string, color: string, desc: string][] = [
@@ -150,6 +183,8 @@ export const SUPPLIES: Record<string, SupplyDef> = {
   ...feetDefs(),
   // dây O-ring: chỉ khác độ cứng → Shopii gộp 1 sản phẩm, chọn độ cứng bằng option (`ORING_IDS`)
   ...oringDefs(),
+  // pin Li-Po: chỉ khác dung lượng → Shopii gộp 1 sản phẩm (`BATTERY_IDS`)
+  ...batteryDefs(),
   foamPoron: {
     name: 'Foam Poron lót PCB (đen)',
     unit: 'tấm',

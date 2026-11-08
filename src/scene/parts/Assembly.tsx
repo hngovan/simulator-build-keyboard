@@ -59,7 +59,11 @@ export function Assembly() {
   // cắm dây JST: board nhấc trên case (như lúc chờ thả vào case)
   // lắp lại tạ (sau khi cắm JST): board vẫn nhấc trên case, dây nối DTB lên PCB
   const showCase =
-    caseOnly || step === 'jst' || step === 'coverOn' || stepIdx >= ctx.steps.indexOf('caseIn')
+    caseOnly ||
+    step === 'jst' ||
+    step === 'battery' ||
+    step === 'coverOn' ||
+    stepIdx >= ctx.steps.indexOf('caseIn')
   const topEarly = ctx.steps.includes('topCase') && stepIdx >= ctx.steps.indexOf('topCase')
   // bước tự lật vẫn cho Q lật lại xem mặt trên; case 2 mảnh vừa tháo hết vít đáy: ngửa lại (tách 2 mảnh)
   const flipped = useAssemblyFlipped()

@@ -13,7 +13,7 @@ import type {
   ToolKind,
 } from '@/types'
 import { LAYOUTS } from './layouts'
-import { CASES, KEYCAP_KITS, STABS, caseFits } from './parts'
+import { CASES, KEYCAP_KITS, STABS, caseFits, isPlasticCase } from './parts'
 import { SUPPLIES } from './supplies'
 
 // Cấp xưởng: giao đủ đơn + đủ uy tín thì lên cấp, mở thêm linh kiện ở Shopii / Hội Phím Cơ và loại đơn khách đặt.
@@ -208,7 +208,8 @@ export const plateLv = (m: string) => PLATE_LV[m] ?? 1
 export const stabLv = (t: string) => STAB_MOUNT_LV[STABS[t]?.mount] ?? 1
 export const switchLv = (t: string) => (PREMIUM_SWITCHES.has(t) ? 4 : 1)
 export const keycapLv = (k: string) => KEYCAP_LV[k] ?? 1
-export const supplyLv = (id: string) => (SUPPLIES[id]?.spell ? 5 : (SUPPLY_LV[id] ?? 1))
+export const supplyLv = (id: string) =>
+  SUPPLIES[id]?.spell ? 5 : SUPPLIES[id]?.battery ? 2 : (SUPPLY_LV[id] ?? 1)
 export const toolLv = (kind: ToolKind) => TOOL_LV[kind] ?? 1
 
 /** case: nhựa 1 mảnh cấp 1, nhôm / gỗ 1 mảnh / mica cấp 2, 2 mảnh cấp 3, CAD cấp 4; không thấp hơn layout dễ nhất case vừa */
@@ -221,7 +222,7 @@ export function caseLv(id: string) {
       ? 2
       : c.pieces === 2
         ? 3
-        : c.material === 'abs'
+        : isPlasticCase(c)
           ? 1
           : 2
   const lays = (Object.keys(LAYOUTS) as LayoutId[]).filter((l) => caseFits(c, l)).map(layoutLv)
