@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.34',
     date: '2026-11-08',
-    commits: [],
+    commits: ['f8db921'],
     title: 'Case nhựa 2 mảnh làm lại kiểu đúc thật, case Bakeneko 65',
     items: [
       'Case nhựa 2 mảnh: case trên trùm case dưới, thành rỗng có gân, vít ghép bắt vào trụ nhỏ cấy ren đồng trong thành; daughterboard kê trên trụ nhựa',
