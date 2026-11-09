@@ -165,3 +165,55 @@ export function keycapModel(profile: KeycapProfile, row: number): string | null 
   if (profile === 'cherry' || profile === 'oem' || profile === 'sa') return `${profile}-r${r}`
   return profile
 }
+
+/**
+ * Keycap chữ L (Enter ISO / Big-ass Enter) dựng bằng code theo viền phím `bottom` (điểm [x, z], tâm ô chính): thành nghiêng vào
+ * `shape.inset` (mỗi đỉnh dời theo pháp tuyến 2 cạnh kề, góc lõm cũng đúng), mặt trên phẳng nghiêng theo hàng (`tilt` theo z
+ * chuẩn hoá trên nửa chiều sâu `halfD`), không lòng chảo (mặt chữ L đúc thật gần phẳng). Chưa có CAD chữ L nên mọi profile dùng chung
+ */
+export function lCapGeometry(bottom: [number, number][], halfD: number, shape: KeycapShape) {
+  const n = bottom.length
+  // chiều vòng (diện tích có dấu trên mặt x-z): bên trong nằm bên trái cạnh khi > 0
+  const area = bottom.reduce((s, [x, z], i) => {
+    const [x2, z2] = bottom[(i + 1) % n]
+    return s + x * z2 - x2 * z
+  }, 0)
+  const side = area > 0 ? 1 : -1
+  const inward = (a: [number, number], b: [number, number]) => {
+    const dx = b[0] - a[0]
+    const dz = b[1] - a[1]
+    const len = Math.hypot(dx, dz) || 1
+    return [(-dz / len) * side, (dx / len) * side]
+  }
+  const d = shape.inset
+  const top = bottom.map((p, i): [number, number] => {
+    const prev = bottom[(i - 1 + n) % n]
+    const next = bottom[(i + 1) % n]
+    const n1 = inward(prev, p)
+    const n2 = inward(p, next)
+    return [p[0] + (n1[0] + n2[0]) * d, p[1] + (n1[1] + n2[1]) * d]
+  })
+  const y = (z: number) => shape.height + (z / halfD) * shape.tilt
+  const verts: number[] = []
+  const tri = (a: number[], b: number[], c: number[]) => verts.push(...a, ...b, ...c)
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n
+    const a = [bottom[i][0], 0, bottom[i][1]]
+    const b = [bottom[j][0], 0, bottom[j][1]]
+    const c = [top[j][0], y(top[j][1]), top[j][1]]
+    const e = [top[i][0], y(top[i][1]), top[i][1]]
+    tri(a, c, b)
+    tri(a, e, c)
+  }
+  const contour = top.map(([x, z]) => new THREE.Vector2(x, z))
+  for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(contour, []))
+    tri(
+      [top[i][0], y(top[i][1]), top[i][1]],
+      [top[j][0], y(top[j][1]), top[j][1]],
+      [top[k][0], y(top[k][1]), top[k][1]],
+    )
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3))
+  geo.computeVertexNormals()
+  return geo
+}

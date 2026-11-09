@@ -7,7 +7,14 @@ import { useGame } from '@/store'
 import { KEYCAP_COLORS, KEYCAP_KITS, type KeycapProfile } from '@/data/parts'
 import type { Key } from '@/types'
 import { lerpTo } from '../common/anim'
-import { capGeometry, keycapShape, keycapModel, stretchCap } from '../models/keycapShape'
+import {
+  capGeometry,
+  keycapShape,
+  keycapModel,
+  lCapGeometry,
+  stretchCap,
+} from '../models/keycapShape'
+import { STEP_LOW, isStepped, keyOutline } from './keyShape'
 
 /** sau bao lâu không bấm phím nào thì viền đỏ các phím chưa test (ms) */
 const IDLE_MS = 5000
@@ -222,10 +229,50 @@ export function Keycap({ k, color, kit }: { k: Key; color: string; kit?: string 
   const profile = KEYCAP_KITS[kit ?? 'base']?.profile ?? 'cherry'
   const shape = useMemo(() => keycapShape(profile, k.row), [profile, k.row])
   const geometry = useMemo(() => capGeometry(k.w - 0.08, k.h - 0.08, shape), [k.w, k.h, shape])
+  // Caps stepped: `ext` cùng hàng phủ cả phím → bậc thấp dựng theo viền phím, phần nhô là keycap thường cỡ ô chính
+  const stepped = isStepped(k)
+  // Enter chữ L (ISO / Big-ass): chưa có CAD → dựng theo viền phím, mọi profile
+  const lGeo = useMemo(
+    () => (k.ext ? lCapGeometry(keyOutline(k, 0.04), k.h / 2, shape) : null),
+    [k, shape],
+  )
+  useEffect(() => () => lGeo?.dispose(), [lGeo])
+  const capMat = (
+    <meshStandardMaterial
+      color={KEYCAP_COLORS[color].hex}
+      roughness={0.55}
+      side={THREE.DoubleSide}
+    />
+  )
   useFrame((_, dt) => lerpTo(ref, 'y', pressed ? -0.15 : 0, dt, 30))
   return (
     <group ref={ref}>
-      {keycapModel(profile, k.row) ? (
+      {stepped && lGeo && (
+        // bậc thấp (~40% cao keycap) phủ cả 1.75u
+        <mesh geometry={lGeo} scale-y={STEP_LOW} castShadow receiveShadow>
+          {capMat}
+        </mesh>
+      )}
+      {lGeo && !stepped ? (
+        <>
+          <mesh geometry={lGeo} castShadow receiveShadow>
+            <meshStandardMaterial
+              color={KEYCAP_COLORS[color].hex}
+              roughness={0.55}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          <CapOverlay
+            k={k}
+            color={color}
+            height={shape.height}
+            dish={0}
+            inset={shape.inset}
+            testing={testing}
+            tested={tested}
+          />
+        </>
+      ) : keycapModel(profile, k.row) ? (
         // model chưa tải xong thì chỉ phím này hiện trễ, không treo Suspense cả bàn build (cả cảnh nháy màn chờ)
         <Suspense fallback={null}>
           <NativeCap k={k} color={color} profile={profile} testing={testing} tested={tested} />

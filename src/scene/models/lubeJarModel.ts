@@ -111,12 +111,14 @@ export function createOilBottle(id: string) {
   const group = new THREE.Group()
   const body = new THREE.Mesh(
     new THREE.CylinderGeometry(0.2, 0.22, 0.64, 32),
+    // nhựa trong: trong suốt thường, không transmission (bắt three vẽ lại cả phòng vào khung phụ mỗi khung + lần đầu biên dịch
+    // lại shader mọi vật trong phòng → vào bàn lube đứng hình vài giây)
     new THREE.MeshPhysicalMaterial({
       color: '#cfe0ee',
-      transmission: 0.6,
       roughness: 0.15,
       transparent: true,
-      opacity: 0.85,
+      opacity: 0.55,
+      depthWrite: false,
     }),
   )
   body.position.y = 0.32

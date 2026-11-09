@@ -1,5 +1,17 @@
 # Giao diện
 
+## 2026-11-10
+
+### Esc mở Cài đặt (không còn đứng dậy), app Cài đặt máy tính chỉ còn hình nền
+
+- Yêu cầu: Esc giờ mở Cài đặt, Esc không còn thoát ra (rời màn phải bấm chuột vào nút quay lại); Cài đặt trong máy tính chỉ để đổi
+  hình nền, bỏ hết mục khác; popup Esc thì bỏ hình nền.
+- `hooks/useAppShortcuts.ts`: Esc (mọi màn trừ tiêu đề, trừ lúc test phím / gõ chữ / có popup) bật / tắt `useSettingsPop.open`, không gọi `standUp`.
+- `features/settings/SettingsDialog.tsx` (mới, gắn ở `App.tsx`): popup Cài đặt tab Chung / Âm thanh / Phím tắt / Dev (`SettingsTabs`), z-[2000],
+  bấm nền / X / Esc đóng, về màn đăng nhập thì tự đóng; tab nhớ trong `useSettingsPop.tab`.
+- `apps/settings/SettingsApp.tsx`: chỉ còn lưới chọn hình nền (bỏ tab).
+- Bỏ "Esc" khỏi tooltip `BackButton` ("Quay lại") và dòng hướng dẫn `EmptyBenchHud` ("Esc để rời bàn"); bảng phím tắt: Esc = "Mở / đóng Cài đặt".
+
 ## 2026-11-07
 
 ### Màn tiêu đề: mục con menu to hơn
@@ -1565,3 +1577,70 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
 
 - Bỏ icon 💾 ở tiêu đề + nút "Lưu & thoát"; khung giống cửa sổ app: `TitleBar` màu app Cài đặt (`#66758f`, ghi thẳng vì import apps.ts thành vòng)
   - `TitleButton` đóng (= Ở lại), thân `p-3.5` (SettingsTabs.tsx `ConfirmExit`).
+
+## 2026-11-09 — Bảng xếp hạng ra màn đăng nhập
+
+- Yêu cầu: "đưa bảng xếp hạng ra màn hình đăng nhập và bên trong màn hình máy tính xoá đi".
+- Đã làm: bỏ app `leaderboard` khỏi `APPS` (desktop / taskbar) + `AppId`; component dời `features/apps/leaderboard/LeaderboardApp` →
+  `features/leaderboard/Leaderboard`; màn tiêu đề thêm mục menu "Bảng xếp hạng" (cuối danh sách, không cần bản lưu) mở popup `TitleModal`
+  (thêm prop `wide` 600px, khung cao cố định cho danh sách cuộn bên trong). Có lượt chơi trong store (vừa về màn đăng nhập) thì vẫn chèn dòng của mình.
+  Thứ tự taskbar đã lưu (`localStorage`) tự bỏ id lạ.
+
+## 2026-11-09 — Cảnh báo "AudioContext was not allowed to start"
+
+- Yêu cầu: hỏi cảnh báo Chrome trong console lúc mở game.
+- Nguyên nhân: `startBgm` (App.tsx gọi lúc vào màn tiêu đề) + tiếng rê menu `playUiHover` tạo AudioContext trước lần tương tác đầu
+  (autoplay policy) → Chrome cảnh báo 3 lần (vô hại, nhạc vẫn chạy sau cú bấm đầu nhờ `resume`).
+- Sửa (`src/sound.ts`): `activated()` = `navigator.userActivation.hasBeenActive`; chưa tương tác thì `startBgm` chỉ ghi `bgmPending`, `playUiHover`
+  im; listener `pointerdown` / `pointerup` / `touchend` / `keydown` chờ tới khi trình duyệt ghi nhận tương tác (cảm ứng: pointerdown chưa tính) rồi tạo
+  context + phát nhạc, `stopBgm` bỏ `bgmPending`. Kiểm bằng Chrome ngầm: bản cũ 3 cảnh báo, bản mới 0 (trước và sau cú bấm đầu).
+
+## 2026-11-09 — Free build: "Kiểu layout" thành ô đổ xuống
+
+- Yêu cầu: "kiểu layout ở dev và free build đang dài quá rồi đưa vào option giúp tôi".
+- Đã làm: `FreeBuildDialog` mỗi dòng "Kiểu layout" (mỗi `VariantKey` có > 1 kiểu case làm được) dùng `OptionSelect` (`w-80`, nhãn
+  `variantLabel`) thay hàng `OptionChip` (40% có 7 kiểu space, hàng nút tràn dòng). Bảng chọn Free build cũng là bảng build thử dev.
+
+## 2026-11-10 — Free build: "Kiểu layout" + Planck gộp vào 40%
+
+- Yêu cầu: "đổi từ layout row cuối => kiểu layout"; "tại sao lại có layout planck ortho 40% nằm lẻ loi 1 mình ... nó ko nằm trong
+  option kiểu layout ?".
+- Đã làm: `VARIANT_NAME.bottom / space` = "Kiểu layout". `FreeBuildDialog`: case làm được cả 40% + Planck (`planckIn40`) thì bỏ nút
+  layout Planck, ô "Kiểu layout" của 40% thêm mục cuối "Planck (ortho 40%)" (chọn = `setLayout('planck')`, chọn kiểu khác = về `'40'`);
+  nút 40% sáng cả khi đang Planck (`baseLayout`). Chỉ là UI: dữ liệu vẫn layout `planck` riêng (đơn / save / case CAD Planck không đổi);
+  case chỉ hợp Planck vẫn hiện nút Planck.
+- Tiếp: "case planck nhôm đang ở ngoài đơn lẻ 1 mình gộp vào luôn được ko" — Planck nhôm là case CAD riêng (OLKB, MIT, chỉ layout
+  ortho 12 × 4 rộng 12u, 40% 12.75u) nên không gộp vào họ case 40% nhôm; `FF_GROUP` (FreeBuildDialog) xếp case `ff: 'planck'` vào nhóm
+  40% (bỏ nhóm Planck riêng trong `FF_ORDER`), đứng riêng 1 dòng như case CAD khác. Shopii giữ nguyên.
+- Tiếp: người dùng chọn "Planck ra nhóm riêng dưới" → bỏ `FF_GROUP`, case Planck về nhóm riêng, `FF_ORDER` đặt `'planck'` cuối bảng.
+
+## 2026-11-10 — Free build: chọn layout lọc từ trên xuống (40% / 40% HHKB)
+
+- Yêu cầu: "làm theo kiểu filter từ trên xuống dưới ... thay vì đưa hhkb vào bên trong option ở 40% thì sẽ đưa ra ở trên đoạn layout
+  như case 60 ex: 60%, 60% hhkb, 60% true hhkb ... tuỳ theo layout như này thì ở kiểu layout ... sẽ có option tương ứng".
+- Đã làm (`FreeBuildDialog`, chỉ UI, dữ liệu vẫn layout `'40'` + `variant.space`): dòng Layout tách nút "40%" / "40% HHKB" (`isHhkb40`
+  = space `hhkb*`, `pick40`), "Kiểu layout" chỉ hiện kiểu thuộc nút đang chọn (`scopeOpts`: HHKB → 4 kiểu hhkb; 40% thường → 6.25u /
+  7u / 10u / split / mũi tên + Planck); nút HHKB / True HHKB đổi tên "60% HHKB" / "60% True HHKB" (`CHIP_NAME`).
+- Kiểm (Chrome ngầm): case 40% nhựa → dòng Layout "40% | 40% HHKB", bấm 40% HHKB → Kiểu layout "HHKB (space 7u)".
+
+## 2026-11-10 — Free build: nhóm case xếp theo cỡ + lọc theo cỡ
+
+- Yêu cầu: "sắp xếp loại case theo từng layout giúp tôi, filter được ở trong bảng free build và dev luôn chứ, tự nhiên planck nằm xuống dưới ?".
+- Đã làm (`FreeBuildDialog`): `FF_ORDER` từ nhỏ tới lớn 40% → Planck → 60% → 65% → Alice → 75% → FRL → TKL → Full; `FF_NAME` tên nhóm
+  (đầu nhóm "40% · 11 case", tên họ case "Case 40% nhựa" thay "40"/"FULL" viết hoa); hàng "Lọc" (`OptionChip` Tất cả + từng cỡ,
+  `ffFilter`) trên danh sách case. Kiểm Chrome ngầm: lọc Planck chỉ còn Planck nhôm.
+- Tiếp: "đưa vào 1 filter option chứ nằm bên phải" → bỏ hàng nút lọc, thay 1 `OptionSelect` (`w-44`) góc phải dòng tiêu đề: "Tất cả"
+  - từng cỡ (note = số case); "sao lại mọi cỡ case => tất cả" → mục đầu "Tất cả".
+
+## 2026-11-10 — Free build: nhóm cỡ đóng / mở, thu gọn cài đặt, gộp case dựng bằng code 1 dòng
+
+- Yêu cầu: "header case 40% 60%... chưa thấy nổi bật ... đóng mở lại thẻ được như sub menu"; "đã mở lên rồi thì ko ẩn xuống được ??"
+  (phần cài đặt case đang chọn); "60% 20 case gì ?? tính theo tên case"; "case vật liệu tự code model gộp vào chung như 40% cho gọn".
+- Đã làm (`FreeBuildDialog`): đầu nhóm cỡ = thanh bấm `bg-panel-2` chữ vàng `font-head` + `ChevronDown` (`folded`, `toggleFold`);
+  tên case đang chọn = thanh bấm thu gọn / mở phần cài đặt (`optsOpen`); số case = số dòng (`g.rows.length`, cả ô lọc);
+  mọi case dựng bằng code (không `model`) cùng cỡ gộp 1 dòng "Case 60%" (`familyOf` → `'coded'`, `finishOf`: nhôm anod / E-coat,
+  nhựa ABS / PC, nắp PC · đáy nhôm (`bottom`), gỗ, mica, acrylic) + nút số mảnh / cổng USB như cũ; case CAD đứng riêng.
+- Tiếp (các lần chỉnh sau đó, theo người dùng): bỏ chữ phụ cạnh tên thẻ; thẻ case dựng bằng code: 1 thẻ "Case 60%" mỗi cỡ, hàng 1 nút
+  1 mảnh / 2 mảnh (`setPieces`: giữ chất liệu nếu có, không thì chất liệu đầu), hàng 2 chất liệu của số mảnh đó = `OptionSelect`
+  (`w-52`), hàng 3 (chỉ khi có) Daughterboard / Cổng C trên PCB tách riêng, hàng cuối ô màu, mọi hàng canh phải; mỗi nhóm cỡ là 1 khối
+  khung (`rounded-2xl border-2 border-white/10 bg-black/20`, đầu nhóm trong khung, không vạch trái).

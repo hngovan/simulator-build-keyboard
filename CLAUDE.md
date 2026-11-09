@@ -164,7 +164,7 @@ vào `window.__r3f` để debug trong console.
 - Mua/được cung cấp linh kiện → chọn mount → `startBuild` kiểm tra kho rồi tạo `ctx = buildContext(...)`
   và `build = newBuild()`. `ctx` là dữ liệu dẫn xuất, không lưu — dựng lại từ order + inventory + mount.
 - Các action trong `buildSlice` cập nhật `build` qua `patchBuild` (không tự chuyển bước; người chơi bấm
-  `nextStep`; riêng `dropInCase` thả board vào case / ghép case trên xong, `placeFoot` dán xong feet cuối, `turnScrew` bắt đủ vít bước vặn vào (chờ `SPIN_MS`) thì tự sang bước kế) → bước `test` → `deliver()` gọi `scoreDelivery`, trừ uy tín theo số ngày trễ hạn.
+  `nextStep`; riêng `dropInCase` thả board vào case / ghép case trên xong, `placeFoot` dán xong feet cuối, `installRun` lắp đủ switch, `turnScrew` bắt đủ vít bước vặn vào (chờ `SPIN_MS`) thì tự sang bước kế) → bước `test` → `deliver()` gọi `scoreDelivery`, trừ uy tín theo số ngày trễ hạn.
 - Hàn (PCB solder): cần mỏ hàn (`tools.solder` ≥ 1) + thiếc (`SOLDER_IDS` trong supplies, chọn ở `solderPick`).
   Hàn + vặn vít vào = skill check (`data/skillCheck.ts`, `scene/common/skill.ts`, thanh `components/game/SkillBar`): nhấn giữ chuột cho thanh lực / nhiệt chạy lên rồi tụt xuống (3 khoảng cố định tối / xanh / đỏ cuối),
   nhả chuột dừng (camera khoá lúc giữ, `useCamLock`); chưa tới xanh = thiếu (hụt / vít vào 1 phần), xanh đạt (bỏ vùng hoàn hảo + điểm thưởng),
@@ -254,6 +254,7 @@ vào `window.__r3f` để debug trong console.
   (`bun run convert:cases`, MIT), Alice = Blossom (doughnut923/Blossom, MIT; layout + viền PCB sinh từ PCB KiCad bằng `node scripts/alice-layout.mjs` → `src/data/aliceKeys.ts`) và bộ sưu tập cá nhân (`assets/keyboards/<tên>/`, danh sách ở `assets/keyboards/USER-CASES.md`) (Exodus60/80, Repent75,
   Catto HHKB...; `bun run convert:user-cases`, chưa rõ giấy phép; cả 2 script convert case đã sửa lật gương: phím mũi tên ở trước phải, USB ở sau). `seat` = độ cao + góc nghiêng plate
   trong case (board nâng / nghiêng khi thả vào case); `modelFor` = nắp riêng HHKB / WKL; `layouts` = giới hạn layout.
+- Kiểu Enter (`variant.enter`: `ansi` / `iso` / `bae`, layout 40 / 60 / 65 / 75 / TKL / full, `enterCluster` trong layouts.ts; 40% `enter40`: chữ L cuối hàng QWERTY + ASDF, Backspace xuống thay phím cuối hàng Shift): phím chữ L có `Key.ext` (cánh, như x2/y2/w2/h2 KLE; ô chính = switch + stab dọc 2u), `keyRects` (khối chặn / vùng mica), `keyShape.ts` `keyOutline` (ô bấm, keycap `lCapGeometry` dựng bằng code mọi profile), plate bỏ universal khi có phím chữ L, case CAD không nhận (`caseFits`).
 - Phím có `rot` (Alice: cột trong xoay ±12°, layout `fixed` toạ độ thật + `origin` / `outline`); `row` = hàng keycap đếm từ dưới lên (R1–R4 theo profile).
   PCB / plate theo đường viền `boardOutline` (layout xoay: đa giác lồi mỗi nửa). Chỗ trống hàng dưới
   (HHKB, WKL) có khối chặn liền case (`blockerGaps`).
@@ -274,7 +275,7 @@ vào `window.__r3f` để debug trong console.
   vít ghép M2 (`ABS_SCREW`, 40% 4 vít) từ đáy xuyên trụ nhỏ trong rãnh thành (`AbsScrewBosses`, ren đồng cấy ở trụ case trên), không lấn lòng case; mount gasket (tab gasket như case 2 mảnh khác: tai plate kẹp 2 dải trong hốc vách case trên, vấu đỡ = khối lược đúc liền đáy kiểu M0110 `combPadGeometry` trong `GasketPads`: gân hở phía lòng case, bậc thấp đỡ tai + gờ cao chặn đầu tai + 2 thành bên cao ôm cạnh tai `COMB`, hốc vách sâu thêm `COMB.lip`) / top (tai vào hốc vách + trụ ren nhỏ trong rãnh thành trên tai `ABS_TOP`) / bottom (plate y như top mount: tai `ABS_TOP.d` vào hốc vách case trên, vít cách mặt trong vách `ABS_TOP.z` để đầu ốc không cấn PCB, trụ nhỏ `ABS_TOP.bossR` nằm trong rãnh thành: top mount trên mặt tai, bottom mount từ sàn lên dưới tai `AbsBoss`);
   case nhựa (1 / 2 mảnh) kê DTB trên 2 trụ nhựa liền sàn (`ABS_DTB_POST`, `DtbPosts`);
   màu PC trong nhuộm `CASE_COLORS[].clear` chỉ cho case PC (`TINT_COLORS`; nhựa ABS đục), ô màu tròn chia đôi `caseSwatch`.
-- Case 1 mảnh dựng bằng code chơi được tray / gasket / O-ring (không còn OG); case 2 mảnh dựng bằng code: gasket / top / bottom mount
+- Case 1 mảnh dựng bằng code chỉ tray / O-ring (không còn OG; không gasket: 1 mảnh không có nắp kẹp tai plate, khe vách mở từ mép trên lộ ra khi nhìn từ trên); case 2 mảnh dựng bằng code: gasket / top / bottom mount
   (bottom: tai plate tì lên vấu case dưới `BottomPads` trong hốc vách case trên, trần hốc chừa đầu ốc `BOTTOM_NOTCH_TOP`; bước `bottomScrew`
   sau `caseIn`, trước `caseClose`, vặn ốc M2 từ trên xuống, id vít `bot-*`); case 2 mảnh có lỗ vít ở giữa thành case: nhôm / PC / acrylic bắt từ đáy
   (`caseBores` khoét CSG: hốc chìm + lỗ xuyên thành case dưới, lỗ ren case trên; tháo hết vít thì tách 2 mảnh `useCaseSplit`), mica xuyên mọi tấm (mica: sandwich hoặc top mount, top mount case trên chia 2 chồng: tấm dưới mặt plate khoét hốc tai `topNotches` qua `micaLayerGeometry` `notches`, tấm trên làm trần hốc)
@@ -289,13 +290,13 @@ vào `window.__r3f` để debug trong console.
   xin bớt, lowball, tự nhập giá `'offer'` popup, đi ăn xin `'beg'` → 10% được free, 70% người bán chặn, 20% ban chợ 3 ngày `marketBanUntil`...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
 - Nhạc nền: xoay ngẫu nhiên `public/audio/bgm.mp3` / `bgm-2.mp3` / `bgm-3.mp3` (không lặp bài vừa nghe), không tải được thì loop tổng hợp (`src/sound.ts`).
 - Tiền linh kiện: giao xong khách trả đủ `budget` (`reimburse`), mua rẻ hơn thì phần dư là lãi, lố thì shop chịu; "Đã chi" = `partSpent` (chỉ món trong ô đối chiếu, switch / stab dư không tính).
-- Stab đếm theo cỡ dây: `short` 2u, `long` 6.25u, `long7` 7u (`StabCount`, `stabStock` / `stabNeed` / `stabText` trong parts.ts).
+- Stab đếm theo cỡ dây: `short` 2u, `long` 6.25u, `long7` 7u (`StabCount`, `stabStock` / `stabNeed` / `stabText` trong parts.ts); phím ≥ 7u dùng dây 7u (`stabSpan` chân cách tâm 3u): 40% có space 10u (`space: '10u'`, Ctrl 1.25 + space 10 + Fn 1.5, 1 stab 7u).
 - Kho chung (`Profile.spare`, `src/store/spare.ts`): áp dụng cho **mọi linh kiện**. Switch / stab gộp theo loại, case / PCB / plate /
   keycap / stab lỗi để từng món (`spare.items`). Vào kho chung: switch / stab thừa khi giao (`leftoverSpare`), món bị thay khi mua món khác
   (`buy` / `takeStock`), đồ của đơn bị huỷ (`stashAll`), cất từ đơn đang chờ chưa build (`releasePart`). Nhận / chuyển đơn thì
   `fillActive` → `fillFromStock` tự lấy món hợp yêu cầu (`checkInventory`). App Kho hiện đồ đơn đang làm + đơn đang chờ (tên khách)
   - kho chung trong cùng lưới (`useParts` trong OwnedItems), bấm ô để lấy / cất.
-- App "Bảng xếp hạng" (`apps/leaderboard/LeaderboardApp`, `lib/leaderboardApi.ts`): chỉ tính server (bỏ shop đối thủ giả lập),
+- Bảng xếp hạng (`features/leaderboard/Leaderboard`, `lib/leaderboardApi.ts`): chỉ mở ở màn đăng nhập (mục menu "Bảng xếp hạng" → popup `TitleModal` `wide`), không còn app trong máy tính; chỉ tính server (bỏ shop đối thủ giả lập),
   lượt chơi đã kết thúc của mọi người + lượt đang chơi chèn vào, xếp theo điểm tổng (`runScore`: tiền lãi so với vốn 7.500k / 100k + uy tín ×20 + sao TB ×20 + đơn ×10 × sao TB / 5, ngày không tính), chip lọc theo tiền / đơn / uy tín / ngày (`server/leaderboardCore.ts`); gửi lỗi thì cất hàng chờ `sbk-lb-pending`.
   Tiền gọn theo cỡ `fmtMoney` (< 10.000k giữ k, ≥ 10.000k → m, ≥ 100.000k → B; `lib/format.ts`) ở bảng xếp hạng + ví; giá Shopii vẫn `fmt` (k).
 - Shop tự đăng bán ở Hội Phím Cơ (tab "Bài của tôi", `apps/group/MyListings`, `data/selling.ts`, `store/sellSlice.ts`): đồ kho chung,
@@ -321,10 +322,10 @@ vào `window.__r3f` để debug trong console.
   (prop `tour` của `DesktopIcon` / `TabChip` / `BackButton` / thẻ đơn + nút Nhận đơn Mezzenger), bấm đúng chỗ thì sang bước; Cài đặt → Xem lại.
 - Chuông thông báo (`components/game/NotifyBell.tsx`, chỉ ở taskbar máy tính, portal vào `data-desktop-frame`; tiền / uy tín / cấp `StatusChips` ở góc trên ngoài viền): `logNotify` ghi `Profile.inbox` + `unread` (`notify` / `addReviews` /
   bán đồ / fast bid / huỷ đơn trễ tự ghi), xoá từng cái hoặc xoá hết.
-- Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup; popup nhỏ tự bắt Esc thì `preventDefault`) = nút quay lại `BackButton`:
-  ngồi máy tính / bàn build thì đứng dậy (máy tính đang mở Cài đặt trên cùng thì đóng Cài đặt trước), đi lại thì thôi. Không còn menu Cài đặt ngoài game.
-  Mọi cài đặt ở app Cài đặt trong máy tính (`apps/settings/SettingsApp`, tab nội dung `features/settings/SettingsTabs`): Chung (Lưu tiến trình `saveRun` = gửi
-  bảng xếp hạng lý do `'save'`, hình nền, về màn đăng nhập; hàng tab dính đầu khi cuộn) / Âm thanh (`AudioSettings.musicOff` tắt riêng nhạc nền) / Phím tắt (cố định, chỉ liệt kê `KEYBINDS`) /
+- Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup; popup nhỏ tự bắt Esc thì `preventDefault`) = bật / tắt popup Cài đặt
+  `features/settings/SettingsDialog` (`useSettingsPop`, máy tính / bàn build / đi lại). Esc không đứng dậy: rời máy tính / bàn build chỉ bằng chuột (`BackButton`).
+  App Cài đặt trong máy tính (`apps/settings/SettingsApp`) chỉ đổi hình nền. Popup Esc (tab nội dung `features/settings/SettingsTabs`): Chung (Lưu tiến trình `saveRun` = gửi
+  bảng xếp hạng lý do `'save'`, về màn đăng nhập; hàng tab dính đầu khi cuộn) / Âm thanh (`AudioSettings.musicOff` tắt riêng nhạc nền) / Phím tắt (cố định, chỉ liệt kê `KEYBINDS`) /
   Dev (chỉ khi dev: tiền vô hạn, FPS `PerfHud` kéo thả hút 4 góc `setPerfCorner`); đóng tab tự gửi (`beaconRun`), về màn đăng nhập thì hỏi lưu (`unsynced` theo `lbSynced`).
 - Thua game (`data/gameOver.ts`): uy tín ≤ `LOSE_REP` (−10) hoặc rảnh tay mà ví < tiền linh kiện đơn chào rẻ nhất → `endRun(reason)`
   (gửi server theo `Profile.runId`, xoá save, `GameOverDialog`). Chơi mới đè save cũng gửi lượt cũ (nút phá sản ở Cài đặt đã bỏ).

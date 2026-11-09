@@ -2,7 +2,7 @@ import { useGame } from '@/store'
 import { CATS, checkInventory } from '@/data/parts'
 import { BackButton, Button } from '@/components/ui'
 import { StatusChips } from '@/components/game/StatusChips'
-import { ControlsHint, KeyCap, MouseIcon } from '@/components/game/ControlsHint'
+import { ControlsHint, MouseIcon } from '@/components/game/ControlsHint'
 import { boxCustomer, isPackedBox } from '@/store/carrySlice'
 import { ResetCamButton } from './CamModeButton'
 
@@ -49,8 +49,7 @@ function BenchStatus() {
   if (isPackedBox(s, box))
     return (
       <ControlsHint>
-        Nhấn <MouseIcon btn="left" /> vào thùng để cầm lên đặt vào kệ giao hàng,{' '}
-        <KeyCap>Esc</KeyCap> để rời bàn
+        Nhấn <MouseIcon btn="left" /> vào thùng để cầm lên đặt vào kệ giao hàng
       </ControlsHint>
     )
   // thùng đơn trên bàn nhưng chưa vào build: còn thiếu linh kiện
@@ -59,8 +58,7 @@ function BenchStatus() {
   // thùng đơn đủ đồ: bấm = build (đổi đơn thì vào build bấm "Cầm thùng đơn lên"); thiếu đồ: bấm = cầm lên
   const hint = (
     <ControlsHint>
-      Nhấn <MouseIcon btn="left" /> vào thùng để {missing.length ? 'cầm thùng lên' : 'build'},{' '}
-      <KeyCap>Esc</KeyCap> để rời bàn
+      Nhấn <MouseIcon btn="left" /> vào thùng để {missing.length ? 'cầm thùng lên' : 'build'}
     </ControlsHint>
   )
   if (!missing.length) return hint
@@ -83,7 +81,7 @@ function BenchStatus() {
   )
 }
 
-/** HUD bàn build chưa vào build: nút quay lại (Esc), góc nhìn + khung trạng thái thùng trên bàn */
+/** HUD bàn build chưa vào build: nút quay lại, góc nhìn + khung trạng thái thùng trên bàn */
 export function EmptyBenchHud() {
   const s = useGame()
   return (

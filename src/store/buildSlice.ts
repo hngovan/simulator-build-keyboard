@@ -985,6 +985,11 @@ export const createBuildSlice: StateCreator<GameState, [], [], BuildSlice> = (se
       const next = { ...s.build[field] }
       targets.forEach((t) => (next[t] = true))
       s.patchBuild({ [field]: next })
+      // lắp đủ switch thì tự sang bước kế (dán gasket / hàn / ...), không bắt bấm "Bước tiếp theo"
+      if (kind === 'switch' && s.ctx.keys.every((k) => next[k.id])) {
+        const g = get()
+        if (g.step() === 'switch') g.nextStep()
+      }
       return targets.length
     },
     // dùng 1 lần dụng cụ có độ bền; đủ số lần thì hỏng, phải mua lại

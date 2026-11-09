@@ -13,6 +13,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.35',
+    date: '2026-11-10',
+    commits: [],
+    title: 'Enter ISO / Big-ass mọi layout, nhiều tuỳ chọn layout, Esc mở Cài đặt',
+    items: [
+      'Enter ISO / Big-ass cho 40% / 60% / 65% / 75% / TKL / full (case dựng bằng code); Shift trái ISO, Backspace split / dời xuống, step cap',
+      'HHKB / true HHKB cho case 40%, space 10u full hàng (stab 7u), HHKB split space 3u + 3u hoặc 2,75u + 3u',
+      'Case gỗ đủ cỡ 40% / 60% / TKL / full',
+      'Free build: chọn kiểu layout bằng bộ lọc, case xếp theo layout, nhóm case đóng / mở được',
+      'Bảng xếp hạng chuyển ra màn hình đăng nhập, bỏ app trong máy tính',
+      'Esc giờ mở / đóng Cài đặt (rời máy tính / bàn build bấm nút quay lại); app Cài đặt trong máy tính chỉ còn đổi hình nền',
+      'Sửa: switch nằm quá cao trong case nhựa 40%, foam sai ở space 7u, tai plate gasket case nhựa, giật lúc tải bàn lube',
+    ],
+  },
+  {
     version: '0.1.34',
     date: '2026-11-08',
     commits: ['f8db921'],

@@ -844,3 +844,41 @@ kiện chợ không; tên trên thùng bỏ "chị / anh".
     tactile = max(chỉ lube lò xo, lube thân mỏng như cũ); linear như cũ. `lubeAdvice(feel)` = câu khuyên.
   - Lời khách (`orders.ts`) đơn muốn lube: clicky "lube lò xo, đừng lube thân", tactile "lò xo là chính, thân chỉ quét mỏng".
   - `ConfirmDeliver` (BenchHud): tactile / clicky muốn lube thì chỉ nhắc khi chưa lube lò xo. `LubePanel`: khung `Alert` lời khuyên theo loại switch.
+
+## 2026-11-09 — 40% space 10u (stab 7u)
+
+- Yêu cầu: "thêm option case 40% dùng stab 7u nhưng space là keycap 10u nghĩa là full 1 row luôn, nhớ cập nhật trong đơn hàng".
+- Đã làm: layout 40% thêm kiểu `space: '10u'` (`alpha40` trong layouts.ts: Ctrl 1.25u + space 10u + Fn 1.5u = 12.75u như các hàng khác;
+  `VARIANT_INFO` "Space 10u", người dùng bỏ phần ghi chú stab trong tên). `stabSpan` (steps.ts): phím ≥ 7u dùng dây 7u, chân cách tâm 3u (trước tính theo cỡ phím
+  → 10u ra 4,5u); `stabSize` / `stabNeed` đã tính ≥ 7u là `long7` → cần 1 stab 7u. Đơn hàng: `randomVariant` tự bốc kiểu mới (chat khách chỉ ghi
+  "Space 10u", không thêm câu nhắc stab); bảng chọn Free build tự có lựa chọn mới.
+- Kiểm: layout 39 phím, rộng 12.75u, `stabNeed` = 1× 7u, 2 vít stab ±3u; chụp Free build case 40% nhựa (vít stab + keycap space 10u).
+
+## 2026-11-09 — Enter ISO + Big-ass Enter
+
+- Yêu cầu: "tất cả các case chưa có option enter iso, enter bigass ??" — chọn: layout 60 / 65 / 75 / TKL / full, chỉ case dựng bằng code,
+  đơn hàng bốc ngẫu nhiên như các kiểu khác.
+- Đã làm: kiểu layout `enter` (`ENTERS` ansi / iso / bae, `VARIANT_INFO` "Enter ANSI / Enter ISO / Big-ass Enter"); `enterCluster` (layouts.ts) đổi
+  4 hàng chữ: ISO = `\` 1.5u → khe 0.25 + Enter chữ L (ô chính 1.25 × 2u, cánh trên 1.5u), Enter ANSI → `#` (mã Backslash) + khe, Shift trái
+  1.25u + `\` (IntlBackslash); Big-ass = Backspace → `\` + Back 1u, `\` 1.5u → Enter 1.5 × 2u cánh dưới 2.25u, Enter ANSI → khe. 65 / 75%
+  (`rows75(v)`) giữ cột điều hướng. `KeyTuple` thêm phần mở rộng → `Key.ext` (tâm cánh tương đối ô chính). Stab: ô chính 2u dọc (ISO / BAE
+  đều 1 stab 2u dọc, bớt 1 stab 2u so với ANSI: Shift trái ISO 1.25u, Backspace BAE 1u).
+- Cảnh: `keyRects` (khối chặn `blockerGaps`, vùng mica `keyRegions` tính cả cánh), `scene/parts/keyShape.ts` (`keyOutline` hợp 2 ô bằng
+  polygon-clipping), ô bấm KeySlot theo hình L, keycap chữ L `lCapGeometry` (keycapShape.ts, dựng bằng code cho mọi profile: thành nghiêng theo
+  inset, mặt trên phẳng nghiêng theo hàng; chưa có CAD chữ L), ảnh đơn `orderThumb` cũng vậy, foam PCB khoét cả cánh; plate bỏ universal / CAD
+  typ60 khi có phím chữ L (`plateCutoutsFor`, Board `lShape`). `caseFits`: Enter khác ANSI không nhận case CAD.
+- Kiểm: 5 layout × 3 kiểu: bề ngang không đổi, không phím đè nhau, khe chặn y như ANSI, số stab đúng; chụp case 60% nhựa ISO / BAE (plate + keycap).
+
+## 2026-11-09 — 40% HHKB split space thêm 2 dạng
+
+- Yêu cầu: "hhkb split space sẽ có 2 dạng 1 là đều cả 2 bên 3u 2 là 2.75u + 3u or là như hiện tại trên case 40% thêm vào".
+- Đã làm (`alpha40` layouts.ts): ngoài `hhkbSplit` (2.75u + Fn 1.5u + 2.75u) thêm `hhkbSplit3` (3u + Fn 1u + 3u) và `hhkbSplit275`
+  (2.75u + Fn 1.25u + 3u); cùng khung kiểu HHKB (bỏ 2 góc, Alt 1.5u 2 bên, phần giữa 7u), mỗi nửa space 1 stab 2u. Tên trong `VARIANT_INFO`,
+  đơn hàng / Free build tự có (`randomVariant`, bảng chọn layout). Kiểm: rộng 12.75u, 2 stab 2u, 2 khối chặn góc.
+
+## 2026-11-09 — 40% Enter ISO / Big-ass
+
+- Yêu cầu: "sao 40% ko thấy enter iso và big ass enter?" — chọn bố trí: cả 2 kiểu chiếm cuối hàng QWERTY + ASDF, Backspace dời xuống hàng Shift.
+- Đã làm (`enter40` layouts.ts, 40% thêm `enter: ENTERS`): ISO = cánh trên 1.75u (chỗ Backspace) + ô chính 1.5 × 2u (chỗ Enter 1.5u);
+  Big-ass = Esc 1.25u, ô chính 1.5 × 2u cuối hàng QWERTY, cánh dưới 2.25u hàng ASDF (Tab 1.5u, bỏ `;`); Backspace 1u thay phím cuối hàng
+  Shift (Shift phải, kiểu mũi tên thì `/`). Kiểm 7 kiểu space × 3 kiểu Enter: rộng 12.75u, không đè phím, đúng 1 Backspace, +1 stab 2u dọc; chụp case 40% nhựa.

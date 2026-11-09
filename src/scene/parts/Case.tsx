@@ -343,6 +343,7 @@ function Blockers({
   mat,
   wood,
   top = BLOCKER_TOP,
+  solidFrom,
 }: {
   keys: Key[]
   width: number
@@ -351,6 +352,8 @@ function Blockers({
   wood?: boolean
   /** mặt trên khối chặn: ngang mép trên case đang dùng (case dựng bằng code thấp hơn case CAD) */
   top?: number
+  /** khối đặc từ cao độ này lên (case 1 mảnh HHKB: góc đúc liền case từ sàn, PCB + plate cắt góc nhường chỗ `cornerCutOutline`) */
+  solidFrom?: number
 }) {
   const blocks = useMemo(
     () => blockerGaps(keys, width, depth, CASE_MARGIN + 0.05),
@@ -360,7 +363,11 @@ function Blockers({
   // ăn nhẹ vào thành trong → liền với thành case mà không lòi ra ngoài case CAD mỏng (Bakeneko...)
   return blocks.map((b, i) => {
     const t = b.top ?? top
-    const h = Math.min(BLOCKER_SKIN, t - Y.plateBot)
+    // chỉ khối ở 2 góc hàng dưới đặc (PCB đã cắt góc), khe giữa hàng (WKL...) vẫn là tấm mỏng trên mặt
+    const corner =
+      b.z + b.d / 2 > depth / 2 && (b.x - b.w / 2 < -width / 2 || b.x + b.w / 2 > width / 2)
+    const h =
+      solidFrom !== undefined && corner ? t - solidFrom : Math.min(BLOCKER_SKIN, t - Y.plateBot)
     return (
       <CaseBox
         key={i}
@@ -652,37 +659,24 @@ function AbsBoss({
 const INSERT_DEPTH = 0.08
 
 /**
- * Trụ vít ghép case nhựa 2 mảnh, nằm trong rãnh thành rỗng (`ABS_SHELL`): `bottom` = case dưới (sàn khay → mép ghép, lỗ xuyên vít),
- * `top` = case trên (mép ghép → dưới mặt trên, ren đồng cấy ở miệng dưới)
+ * Trụ vít ghép case nhựa 2 mảnh, thuộc case trên, nằm trong rãnh thành rỗng (`ABS_SHELL`): chạy suốt từ mặt sàn khay case dưới
+ * lên dưới mặt trên, ren đồng cấy ở miệng dưới; vít M2 từ đáy xuyên sàn khay ăn lên
  */
-function AbsScrewBosses({ part, mat }: { part: 'top' | 'bottom'; mat: ReactNode }) {
+function AbsScrewBosses({ mat }: { mat: ReactNode }) {
   const ctx = useCtx()
-  return ctx.screws.caseOpen.map((p) =>
-    part === 'bottom' ? (
-      <AbsBoss
-        key={p.id}
-        x={p.x}
-        z={p.z}
-        y0={caseFloorTop(ctx.caseDef) - 0.005}
-        y1={Y.split}
-        r={ABS_SHELL.bossR}
-        hole={ABS_SCREW.thru}
-        mat={mat}
-      />
-    ) : (
-      <AbsBoss
-        key={p.id}
-        x={p.x}
-        z={p.z}
-        y0={Y.split}
-        y1={caseTopOf(ctx.caseDef) - ABS_SHELL.deck + 0.005}
-        r={ABS_SHELL.bossR}
-        hole={ABS_SCREW.tap}
-        insertBottom
-        mat={mat}
-      />
-    ),
-  )
+  return ctx.screws.caseOpen.map((p) => (
+    <AbsBoss
+      key={p.id}
+      x={p.x}
+      z={p.z}
+      y0={caseFloorTop(ctx.caseDef) + 0.002}
+      y1={caseTopOf(ctx.caseDef) - ABS_SHELL.deck + 0.005}
+      r={ABS_SHELL.bossR}
+      hole={ABS_SCREW.tap}
+      insertBottom
+      mat={mat}
+    />
+  ))
 }
 
 /** trụ nhựa kê DTB đúc liền sàn case nhựa (`ABS_DTB_POST`): đúng 2 lỗ vít DTB, ren đồng ở đầu trụ do `Daughterboard` vẽ */
@@ -1670,10 +1664,6 @@ export function Case({
           {coded && two && ctx.screws.bottomScrew.length > 0 && (
             <BottomPads mat={bottomMat(bottom.hover)} />
           )}
-          {coded && absTwo(caseDef) && (
-            // case nhựa 2 mảnh: nửa dưới trụ vít ghép trong rãnh thành (lỗ xuyên vít M2)
-            <AbsScrewBosses part="bottom" mat={bottomMat(bottom.hover)} />
-          )}
           {coded && hasAbsRibs(ctx) && ctx.dtb && (
             // case nhựa: trụ kê DTB đúc liền sàn (ren đồng ở đầu trụ)
             <DtbPosts mat={bottomMat(bottom.hover)} />
@@ -1699,6 +1689,8 @@ export function Case({
               mat={mat(bottom.hover)}
               wood={wood}
               top={model ? BLOCKER_TOP : caseTop}
+              // case 1 mảnh dựng bằng code, layout khe 2 góc (HHKB, 40% kiểu HHKB): góc chặn đúc liền sàn (board đã cắt góc)
+              solidFrom={!model && ctx.outline && ctx.layout !== 'alice' ? floorTop : undefined}
             />
           )}
         </group>
@@ -1848,7 +1840,7 @@ export function Case({
                   <BoreEnds holes={topBores.map((b) => ({ ...b, y: b.y1 }))} />
                   {absTwo(caseDef) && (
                     // case nhựa 2 mảnh: nửa trên trụ vít ghép, ren đồng cấy ở miệng dưới
-                    <AbsScrewBosses part="top" mat={mat(top.hover)} />
+                    <AbsScrewBosses mat={mat(top.hover)} />
                   )}
                   {absTwo(caseDef) &&
                     topMount &&

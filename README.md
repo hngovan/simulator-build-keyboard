@@ -51,7 +51,7 @@ Các file CAD bàn phím, case, plate và PCB công khai dùng làm nguồn cho 
 |  |  | 🏆 Bảng xếp hạng | Server riêng (`bun run server`), gồm lượt chơi đã kết thúc của mọi người, xếp theo tiền; tiền gọn k → m → B. |
 |  |  | 🦶 Feet cao su | Bước mới trước khi lắp case: case tự lật úp, dán feet đen / trắng vào 4 hốc CNC; Shopii bán vỉ 4 cái. |
 |  |  | 🧩 Case theo cụm phím | Khối chặn liền case tách theo cụm (TKL / full / FRL / 75 / 65); tấm mica trên plate khoét theo cụm. |
-|  |  | 🔩 Case & mount | Case 2 mảnh có lỗ vít (nhôm / PC / acrylic ở đáy, mica xuyên mọi tấm); case 1 mảnh chơi tray / gasket / O-ring, case 2 mảnh thêm bottom mount; thêm Case TKL nhôm 1 mảnh. |
+|  |  | 🔩 Case & mount | Case 2 mảnh có lỗ vít (nhôm / PC / acrylic ở đáy, mica xuyên mọi tấm); case 1 mảnh chơi tray / O-ring (gasket chỉ case 2 mảnh), case 2 mảnh thêm bottom mount; thêm Case TKL nhôm 1 mảnh. |
 |  |  | 🛒 Shopii | Case cùng dòng gộp 1 sản phẩm (chọn chất liệu rồi màu), ghi cỡ layout; ô nhập số lượng khi mua. |
 |  |  | 📦 Đơn hàng | Có đơn đòi đích danh 1 loại switch; switch phải hợp kiểu âm thanh khách muốn. |
 |  |  | 🎨 Switch & màu case | Otemu Silent, Cherry Tím / Cam, Gateron Type R / Milky / Silent Tactile, HMX, Wingtree, Ruben Bumblebee..., housing kim tuyến; case thêm tím, coffee sữa, nâu đậm, đỏ + navy. |
@@ -132,9 +132,9 @@ Không hiện trong game, chỉ ghi ở đây. Số liệu lấy từ `src/data/
 - **Test hết phím trước khi giao**: phím chưa hàn sẽ không ăn và khách báo lỗi nút; bỏ sót test thì 5% khách gặp nút lỗi (đánh giá thấp).
 - Hội Phím Cơ → **Bài của tôi**: tự đăng bán đồ trong kho, đồ trong đơn chưa build hoặc… phím của khách (95% bị lộ, −1 uy tín; chuộc lại trên chợ thì gỡ được uy tín). Đăng giá cố định (giá cao tới 1.4× giá gốc vẫn có thể gặp đại gia chốt trong đêm) hoặc fast bid 1 phút. Gỡ bài quá 3 lần / ngày bị admin ban.
 - Hàng pass lỗi keycap / switch / stab (viền đỏ trong Kho) không lắp cho khách được, chỉ đăng bán lại.
-- **Esc** = nút quay lại góc trên trái: đứng dậy khỏi máy tính / bàn build (trừ lúc test phím). **Cài đặt** là app trong máy tính, chia tab: Chung (nút xanh **Lưu tiến trình** ghi lên bảng xếp hạng — đóng tab cũng tự gửi, hình nền, về màn đăng nhập) / Âm thanh (tắt / bật nhạc nền, âm lượng) / Phím tắt (cố định, chỉ xem).
+- **Esc** = mở / đóng **Cài đặt** (trừ lúc test phím); rời máy tính / bàn build bấm nút quay lại góc trên trái. Cài đặt chia tab: Chung (nút xanh **Lưu tiến trình** ghi lên bảng xếp hạng — đóng tab cũng tự gửi, về màn đăng nhập) / Âm thanh (tắt / bật nhạc nền, âm lượng) / Phím tắt (cố định, chỉ xem). Hình nền đổi ở app **Cài đặt** trong máy tính (app này chỉ còn hình nền).
 - Giữ đơn trong hạn để tránh mất uy tín; đơn chờ trễ quá 3 ngày sẽ bị khách huỷ. Dụng cụ có độ bền và chứng chỉ thợ giúp lắp / lube nhanh hơn.
-- **Thua game** khi uy tín từ −10 trở xuống (bị phốt quá nhiều) hoặc rảnh tay mà ví không đủ mua linh kiện cho đơn rẻ nhất. Có thể tự **tuyên bố phá sản** ở Cài đặt. Thua / phá sản / chơi mới đè bản lưu thì kết quả được ghi lên bảng xếp hạng server (app **Bảng xếp hạng**, xếp theo điểm tổng của số đơn + uy tín + số ngày + tiền, lọc lại được theo từng thông số).
+- **Thua game** khi uy tín từ −10 trở xuống (bị phốt quá nhiều) hoặc rảnh tay mà ví không đủ mua linh kiện cho đơn rẻ nhất. Có thể tự **tuyên bố phá sản** ở Cài đặt. Thua / phá sản / chơi mới đè bản lưu thì kết quả được ghi lên bảng xếp hạng server (**Bảng xếp hạng** ở màn đăng nhập, xếp theo điểm tổng của số đơn + uy tín + số ngày + tiền, lọc lại được theo từng thông số).
 
 ## Yêu cầu
 
@@ -168,7 +168,7 @@ bun run dev
   **Storage** (Marketplace) → thêm **Upstash Redis** và nối vào project. Vercel tự gắn `KV_REST_API_URL` / `KV_REST_API_TOKEN`
   (tạo database Upstash tay thì đặt `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`), rồi deploy lại.
 - Client gọi `/api/leaderboard` cùng domain nên không cần đặt `VITE_LEADERBOARD_URL`. Chưa nối Redis thì API trả 503, kết quả
-  lượt chơi nằm trong hàng chờ ở máy người chơi và gửi lại khi mở app Bảng xếp hạng.
+  lượt chơi nằm trong hàng chờ ở máy người chơi và gửi lại khi mở Bảng xếp hạng ở màn đăng nhập.
 - Danh sách biến môi trường + giải thích: [.env.example](.env.example). File `.env` không có tác dụng trên Vercel, phải đặt
   ở Settings → Environment Variables (môi trường **Production**) rồi **Redeploy**; API còn trả 503 thì phản hồi liệt kê tên biến
   Redis đang thấy để dò.

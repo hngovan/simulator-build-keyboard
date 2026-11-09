@@ -9,11 +9,14 @@ export function TitleModal({
   title,
   color,
   onClose,
+  wide = false,
   children,
 }: {
   title: string
   color: string
   onClose: () => void
+  /** rộng hơn (bảng xếp hạng) */
+  wide?: boolean
   children: ReactNode
 }) {
   return createPortal(
@@ -21,7 +24,9 @@ export function TitleModal({
       className="fixed inset-0 z-[2000] grid animate-fade-in place-items-center bg-black/60 p-4"
       onPointerDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="flex max-h-[min(80vh,640px)] w-[min(94vw,560px)] flex-col overflow-hidden rounded-2xl border-[3px] border-black/40 bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]">
+      <div
+        className={`flex max-h-[min(80vh,640px)] flex-col ${wide ? 'w-[min(94vw,600px)]' : 'w-[min(94vw,560px)]'} overflow-hidden rounded-2xl border-[3px] border-black/40 bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]`}
+      >
         <TitleBar color={color} title={title}>
           <TitleButton close aria-label="Đóng" title="Đóng" onClick={onClose}>
             <X />

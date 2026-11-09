@@ -292,7 +292,7 @@ function TopBar({ canFlip, isFlipped }: { canFlip: boolean; isFlipped: boolean }
     // z-[8]: tooltip icon nổi trên khung HUD 2 bên (z-[5]), dưới bảng hỏi / danh sách đơn
     <div className="pointer-events-none fixed inset-x-3 top-3 z-[8] flex items-center justify-between max-md:flex-wrap max-md:gap-2 [&>*]:pointer-events-auto">
       <div className="flex gap-2">
-        {/* chỉ 1 nút quay lại (= Esc) đứng dậy ra phòng; về máy tính thì bấm máy tính trong phòng */}
+        {/* chỉ 1 nút quay lại đứng dậy ra phòng; về máy tính thì bấm máy tính trong phòng */}
         <BackButton tour="bench-back" onClick={() => useGame.getState().standUp('bench')} />
         <IconButton
           tone="yellow"

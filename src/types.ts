@@ -14,7 +14,7 @@ export type LayoutId =
   | 'planck'
   | 'alice'
 export type FormFactor = '40' | '60' | '65' | '75' | 'frl' | 'tkl' | 'full' | 'planck' | 'alice'
-export type VariantKey = 'backspace' | 'bottom' | 'rshift' | 'space'
+export type VariantKey = 'backspace' | 'bottom' | 'rshift' | 'lshift' | 'caps' | 'space' | 'enter'
 export type Variant = Partial<Record<VariantKey, string>>
 
 export interface Key {
@@ -32,6 +32,11 @@ export interface Key {
   rot: number
   /** phím ≥ 2u cần stab */
   stab: boolean
+  /**
+   * phần mở rộng của phím chữ L (Enter ISO / Big-ass Enter, như x2 / y2 / w2 / h2 của KLE): ô chữ nhật thứ 2 hợp với ô chính
+   * (w × h, tâm = switch + stab); toạ độ tâm (x, z) tương đối tâm ô chính, chưa xoay
+   */
+  ext?: { x: number; z: number; w: number; h: number }
   /** hàng tính cho keycap điêu khắc: 0 = hàng số / F … 3 = hàng Shift, 4 = hàng dưới cùng (đếm từ dưới lên) */
   row: number
 }

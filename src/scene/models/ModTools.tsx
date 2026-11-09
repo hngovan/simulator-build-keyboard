@@ -178,10 +178,8 @@ export function greaseMaterial(lube: string) {
       new THREE.MeshPhysicalMaterial({
         color: look.color,
         transparent: true,
+        // không transmission (xem lọ dầu `createOilBottle`): mỡ trong = độ đục thấp
         opacity: 0.25 + look.opacity * 0.75,
-        transmission: 1 - look.opacity,
-        thickness: 0.4,
-        ior: 1.4,
         roughness: 0.06,
         clearcoat: 1,
         depthWrite: look.opacity > 0.6,

@@ -2,8 +2,15 @@ import type { Key, LayoutGeometry, LayoutId, FormFactor, Variant, VariantKey } f
 import polygonClipping, { type Polygon } from 'polygon-clipping'
 import { ALICE_KEYS, ALICE_OUTLINE } from './aliceKeys'
 
-// Mỗi hàng: { x, y, items } — item là số (khoảng trống, đơn vị u) hoặc [nhãn, rộng, KeyboardEvent.code, cao]
-type KeyTuple = [label: string, w?: number, code?: string | null, h?: number]
+// Mỗi hàng: { x, y, items } — item là số (khoảng trống, đơn vị u) hoặc [nhãn, rộng, KeyboardEvent.code, cao, phần mở rộng]
+// phần mở rộng phím chữ L = [x2, y2, w2, h2] như KLE (tính từ góc trái trên ô chính)
+type KeyTuple = [
+  label: string,
+  w?: number,
+  code?: string | null,
+  h?: number,
+  ext?: [number, number, number, number],
+]
 type Item = number | KeyTuple
 interface RowSpec {
   x: number
@@ -31,6 +38,124 @@ const PUNCT: Record<string, string> = {
 const codeOf = (c: string) => PUNCT[c] ?? (/\d/.test(c) ? `Digit${c}` : `Key${c.toUpperCase()}`)
 const chars = (s: string): KeyTuple[] => [...s].map((c) => [c.toUpperCase(), 1, codeOf(c)])
 const F = (n: number): KeyTuple => [`F${n}`, 1, `F${n}`]
+
+/** mã phím của 1 item (không phải khoảng trống) */
+const codeAt = (it: Item) => (typeof it === 'number' ? undefined : it[2])
+
+/**
+ * Kiểu Backspace của 4 hàng chữ (hàng số, QWERTY, ASDF, Shift):
+ * - `split`: Backspace 2u hàng số → "Back" 1u + "Del" 1u (60 / TKL / full đã tách sẵn ở `backspace`, 65 / 75 tách ở đây)
+ * - `row2` (kiểu HHKB): `\|` 1.5u hàng QWERTY → Backspace 1.5u; chỗ Backspace hàng số → `\|` 1u + "Del" 1u.
+ *   Enter ISO / Big-ass Enter chiếm chỗ `\|` hàng QWERTY → bỏ qua `row2`
+ */
+function backspaceSpot(v: Variant, [num, top, home, shift]: Item[][]): Item[][] {
+  const b = num.findIndex((it) => codeAt(it) === 'Backspace')
+  if (b < 0 || (v.backspace !== 'split' && v.backspace !== 'row2')) return [num, top, home, shift]
+  const next = num[b + 1]
+  const len = typeof next !== 'number' && next?.[0] === 'Del' ? 2 : 1
+  if (v.backspace === 'split')
+    return len === 2
+      ? [num, top, home, shift]
+      : [
+          [...num.slice(0, b), ['Back', 1, 'Backspace'], ['Del', 1], ...num.slice(b + 1)],
+          top,
+          home,
+          shift,
+        ]
+  if (v.enter === 'iso' || v.enter === 'bae') return [num, top, home, shift]
+  return [
+    [...num.slice(0, b), ['\\', 1, 'Backslash'], ['Del', 1], ...num.slice(b + len)],
+    top.map((it): Item =>
+      codeAt(it) === 'Backslash' ? ['Back', (it as KeyTuple)[1], 'Backspace'] : it,
+    ),
+    home,
+    shift,
+  ]
+}
+
+/**
+ * Caps Lock stepped (`caps: 'stepped'`): Caps 1.75u → phần nhô 1.25u (switch ở giữa phần nhô) + bậc thấp 0.5u bên phải; phím 2 ô như
+ * Enter chữ L (`ext` cùng hàng phủ cả 1.75u, keycap dựng bậc ở Keycap.tsx `stepOf`), khe 0.5u sau phím để hàng không lệch
+ */
+function capsSpot(v: Variant, [num, top, home, shift]: Item[][]): Item[][] {
+  if (v.caps !== 'stepped') return [num, top, home, shift]
+  // HHKB / True HHKB: Ctrl nằm chỗ Caps Lock → Ctrl stepped
+  const i = home.findIndex((it) => codeAt(it) === 'CapsLock' || codeAt(it) === 'ControlLeft')
+  const it = home[i]
+  if (i < 0 || typeof it === 'number') return [num, top, home, shift]
+  const w = it[1] ?? 1
+  if (w <= 1.25) return [num, top, home, shift]
+  return [
+    num,
+    top,
+    [...home.slice(0, i), [it[0], 1.25, it[2], 1, [0, 0, w, 1]], w - 1.25, ...home.slice(i + 1)],
+    shift,
+  ]
+}
+
+/**
+ * Shift trái ngắn kiểu ISO (`lshift: 'split'`): Shift trái 2.25u → Shift 1.25u + `<>` 1u (IntlBackslash). Enter ISO đã tự tách
+ * Shift trái → bỏ qua
+ */
+function lshiftSpot(v: Variant, [num, top, home, shift]: Item[][]): Item[][] {
+  if (v.lshift !== 'split' || v.enter === 'iso') return [num, top, home, shift]
+  const i = shift.findIndex((it) => codeAt(it) === 'ShiftLeft')
+  if (i < 0) return [num, top, home, shift]
+  return [
+    num,
+    top,
+    home,
+    [
+      ...shift.slice(0, i),
+      ['Shift', 1.25, 'ShiftLeft'],
+      ['<>', 1, 'IntlBackslash'],
+      ...shift.slice(i + 1),
+    ],
+  ]
+}
+
+/**
+ * Đổi cụm Enter của 4 hàng chữ (hàng số, QWERTY, ASDF, Shift) theo `v.enter`, giữ nguyên các phím sau cụm (cột điều hướng 65 / 75%):
+ * - ISO: `\` 1.5u hàng QWERTY → khe 0.25u + Enter chữ L (ô chính 1.25 × 2u, cánh trên 1.5u); Enter 2.25u hàng ASDF → `#` 1u
+ *   + khe 1.25u (ô chính Enter phủ); Shift trái 2.25u → Shift 1.25u + `\` 1u (IntlBackslash)
+ * - Big-ass Enter: Backspace (2u / split) → `\` 1u + Backspace 1u; `\` 1.5u hàng QWERTY → Enter chữ L (ô chính 1.5 × 2u,
+ *   cánh dưới 2.25u hàng ASDF); Enter 2.25u hàng ASDF → khe 2.25u (cánh dưới phủ)
+ */
+function enterCluster(v: Variant, rows: Item[][]): Item[][] {
+  const [num, top, home, shift] = capsSpot(v, lshiftSpot(v, backspaceSpot(v, rows)))
+  if (v.enter !== 'iso' && v.enter !== 'bae') return [num, top, home, shift]
+  const swap = (row: Item[], code: string, by: Item[]) => {
+    const i = row.findIndex((it) => codeAt(it) === code)
+    return i < 0 ? row : [...row.slice(0, i), ...by, ...row.slice(i + 1)]
+  }
+  if (v.enter === 'iso')
+    return [
+      num,
+      swap(top, 'Backslash', [0.25, ['Enter', 1.25, 'Enter', 2, [-0.25, 0, 1.5, 1]]]),
+      swap(home, 'Enter', [['#', 1, 'Backslash'], 1.25]),
+      swap(shift, 'ShiftLeft', [
+        ['Shift', 1.25, 'ShiftLeft'],
+        ['\\', 1, 'IntlBackslash'],
+      ]),
+    ]
+  // Backspace split = "Back" 1u + "Del" 1u (không mã): bỏ cả 2
+  const b = num.findIndex((it) => codeAt(it) === 'Backspace')
+  const next = num[b + 1]
+  const bLen = typeof next !== 'number' && next?.[0] === 'Del' ? 2 : 1
+  return [
+    b < 0
+      ? num
+      : [
+          ...num.slice(0, b),
+          ['\\', 1, 'Backslash'],
+          ['Back', 1, 'Backspace'],
+          ...num.slice(b + bLen),
+        ],
+    swap(top, 'Backslash', [['Enter', 1.5, 'Enter', 2, [-0.75, 1, 2.25, 1]]]),
+    swap(home, 'Enter', [2.25]),
+    shift,
+  ]
+}
 
 const backspace = (v: Variant): KeyTuple[] =>
   v.backspace === 'split'
@@ -69,20 +194,53 @@ const bottomRow = (v: Variant): Item[] =>
       ]
 
 const alpha60 = (v: Variant): Item[][] => [
-  [...chars('`1234567890-='), ...backspace(v)],
-  [['Tab', 1.5, 'Tab'], ...chars('qwertyuiop[]'), ['\\', 1.5, 'Backslash']],
-  [['Caps', 1.75, 'CapsLock'], ...chars("asdfghjkl;'"), ['Enter', 2.25, 'Enter']],
-  [['Shift', 2.25, 'ShiftLeft'], ...chars('zxcvbnm,./'), ...rshift(v)],
+  ...enterCluster(v, [
+    [...chars('`1234567890-='), ...backspace(v)],
+    [['Tab', 1.5, 'Tab'], ...chars('qwertyuiop[]'), ['\\', 1.5, 'Backslash']],
+    [['Caps', 1.75, 'CapsLock'], ...chars("asdfghjkl;'"), ['Enter', 2.25, 'Enter']],
+    [['Shift', 2.25, 'ShiftLeft'], ...chars('zxcvbnm,./'), ...rshift(v)],
+  ]),
   bottomRow(v),
 ]
 
+/**
+ * Cụm Enter 40% (3 hàng chữ): ISO / Big-ass Enter chữ L chiếm cuối hàng ASDF + hàng Shift (hàng QWERTY giữ Backspace 1.75u),
+ * mất Shift phải; kiểu mũi tên (↑ dưới cột `.`) vướng ô Enter → giữ Enter ANSI:
+ * - ISO: hàng ASDF Tab 1u + `A`–`;` + khe 0.25u + cánh trên 1.75u; ô chính 1.5 × 2u, hàng Shift còn Shift 1.25u + `Z`–`/`
+ * - Big-ass: hàng ASDF Tab 1.25u + `A`–`;` + ô chính 1.5 × 2u; cánh dưới 2.25u hàng Shift (Shift 1.5u + `Z`–`.`, bỏ `/`)
+ */
+function enter40(v: Variant, [top, home, shift]: Item[][]): Item[][] {
+  if ((v.enter !== 'iso' && v.enter !== 'bae') || v.space === 'arrow') return [top, home, shift]
+  // phím chữ hàng ASDF / Shift (bỏ Tab / Enter, Shift trái / phải)
+  const letters = home.slice(1, -1)
+  const zs = shift.slice(1, -1)
+  if (v.enter === 'iso')
+    return [
+      top,
+      [['Tab', 1, 'Tab'], ...letters, 0.25, ['Enter', 1.5, 'Enter', 2, [-0.25, 0, 1.75, 1]]],
+      [['Shift', 1.25, 'ShiftLeft'], ...zs],
+    ]
+  return [
+    top,
+    [['Tab', 1.25, 'Tab'], ...letters, ['Enter', 1.5, 'Enter', 2, [-0.75, 1, 2.25, 1]]],
+    [['Shift', 1.5, 'ShiftLeft'], ...zs.slice(0, -1)],
+  ]
+}
+
 const alpha40 = (v: Variant): Item[][] => [
-  [['Esc', 1, 'Escape'], ...chars('qwertyuiop'), ['Back', 1.75, 'Backspace']],
-  [['Tab', 1.25, 'Tab'], ...chars('asdfghjkl;'), ['Enter', 1.5, 'Enter']],
-  v.space === 'arrow'
-    ? // mũi tên: ↑ thế chỗ phím trước '/', ← ↓ → góc phải hàng dưới
-      [['Shift', 1.75, 'ShiftLeft'], ...chars('zxcvbnm,.'), ['↑', 1, 'ArrowUp'], ['/', 1, 'Slash']]
-    : [['Shift', 1.75, 'ShiftLeft'], ...chars('zxcvbnm,./'), ['Shift', 1, 'ShiftRight']],
+  ...enter40(v, [
+    [['Esc', 1, 'Escape'], ...chars('qwertyuiop'), ['Back', 1.75, 'Backspace']],
+    [['Tab', 1.25, 'Tab'], ...chars('asdfghjkl;'), ['Enter', 1.5, 'Enter']],
+    v.space === 'arrow'
+      ? // mũi tên: ↑ thế chỗ phím trước '/', ← ↓ → góc phải hàng dưới
+        [
+          ['Shift', 1.75, 'ShiftLeft'],
+          ...chars('zxcvbnm,.'),
+          ['↑', 1, 'ArrowUp'],
+          ['/', 1, 'Slash'],
+        ]
+      : [['Shift', 1.75, 'ShiftLeft'], ...chars('zxcvbnm,./'), ['Shift', 1, 'ShiftRight']],
+  ]),
   v.space === 'arrow'
     ? // split space 2.25u + 2.75u, Fn + cụm mũi tên (cùng bề ngang 12.75u)
       [
@@ -107,23 +265,52 @@ const alpha40 = (v: Variant): Item[][] => [
           ['Alt', 1.25, 'AltRight'],
           ['Ctrl', 1.5, 'ControlRight'],
         ]
-      : v.space === '7u'
-        ? // space 7u (stab dây 7u): bỏ Win, Ctrl / Alt to hơn, cùng bề ngang 12.75u
-          [
-            ['Ctrl', 1.5, 'ControlLeft'],
-            ['Alt', 1.5, 'AltLeft'],
-            ['', 7, 'Space'],
-            ['Alt', 1.25, 'AltRight'],
-            ['Ctrl', 1.5, 'ControlRight'],
-          ]
-        : [
-            ['Ctrl', 1.25, 'ControlLeft'],
-            ['Win', 1.25, 'MetaLeft'],
-            ['Alt', 1.25, 'AltLeft'],
-            ['', 6.25, 'Space'],
-            ['Alt', 1.25, 'AltRight'],
-            ['Ctrl', 1.5, 'ControlRight'],
-          ],
+      : v.space === 'hhkbSplit' || v.space === 'hhkbSplit3' || v.space === 'hhkbSplit275'
+        ? // kiểu HHKB split space: như `hhkb`, phần space 7u chia 2 nửa + Fn giữa (stab 2u mỗi nửa):
+          // 2.75u + 1.5u + 2.75u / đều 3u + 1u + 3u / lệch 2.75u + 1.25u + 3u
+          (() => {
+            const [l, fn, r] =
+              v.space === 'hhkbSplit3'
+                ? [3, 1, 3]
+                : v.space === 'hhkbSplit275'
+                  ? [2.75, 1.25, 3]
+                  : [2.75, 1.5, 2.75]
+            return [
+              1.25,
+              ['Alt', 1.5, 'AltLeft'],
+              ['', l, 'Space'],
+              ['Fn', fn],
+              ['', r],
+              ['Alt', 1.5, 'AltRight'],
+            ] satisfies Item[]
+          })()
+        : v.space === 'hhkb'
+          ? // kiểu HHKB: bỏ 2 phím góc hàng dưới (khối chặn 1.25u trái / 1.5u phải), Alt 1.5u + space 7u + Alt 1.5u, cùng bề ngang 12.75u
+            [1.25, ['Alt', 1.5, 'AltLeft'], ['', 7, 'Space'], ['Alt', 1.5, 'AltRight']]
+          : v.space === '10u'
+            ? // space 10u gần kín cả hàng (stab dây 7u giữa phím), chỉ chừa Ctrl / Fn 2 đầu, cùng bề ngang 12.75u
+              [
+                ['Ctrl', 1.25, 'ControlLeft'],
+                ['', 10, 'Space'],
+                ['Fn', 1.5],
+              ]
+            : v.space === '7u'
+              ? // space 7u (stab dây 7u): bỏ Win, Ctrl / Alt to hơn, cùng bề ngang 12.75u
+                [
+                  ['Ctrl', 1.5, 'ControlLeft'],
+                  ['Alt', 1.5, 'AltLeft'],
+                  ['', 7, 'Space'],
+                  ['Alt', 1.25, 'AltRight'],
+                  ['Ctrl', 1.5, 'ControlRight'],
+                ]
+              : [
+                  ['Ctrl', 1.25, 'ControlLeft'],
+                  ['Win', 1.25, 'MetaLeft'],
+                  ['Alt', 1.25, 'AltLeft'],
+                  ['', 6.25, 'Space'],
+                  ['Alt', 1.25, 'AltRight'],
+                  ['Ctrl', 1.5, 'ControlRight'],
+                ],
 ]
 
 const hhkbTop: Item[][] = [
@@ -238,8 +425,8 @@ const frlRows = (v: Variant): RowSpec[] =>
     .map((r) => ({ ...r, y: r.y - 1.25 }))
 
 /** 65%: 75% bỏ hàng F (cột điều hướng bên phải, mũi tên dưới Shift) */
-const rows65 = (): RowSpec[] =>
-  rows75()
+const rows65 = (v: Variant): RowSpec[] =>
+  rows75(v)
     .filter((r) => r.y > 0)
     .map((r) => ({ ...r, y: r.y - 1 }))
 
@@ -248,7 +435,7 @@ const rows65 = (): RowSpec[] =>
  * 75% kiểu Repent75 (đo từ model case: lòng 16u): hàng F tách nhóm Esc | F1–F4 | F5–F8 | F9–F12 | Del (khe 0.5u)
  * và cách hàng số 0.25u (thanh ngang của case); hàng dưới 12.5u phím + khe 0.5u + cụm mũi tên
  */
-const rows75 = (): RowSpec[] => [
+const rows75 = (v: Variant): RowSpec[] => [
   {
     x: 0,
     y: 0,
@@ -275,26 +462,28 @@ const rows75 = (): RowSpec[] => [
   },
   ...stack(
     [
-      [...chars('`1234567890-='), ['Backspace', 2, 'Backspace'], ['Home', 1, 'Home']],
-      [
-        ['Tab', 1.5, 'Tab'],
-        ...chars('qwertyuiop[]'),
-        ['\\', 1.5, 'Backslash'],
-        ['PgUp', 1, 'PageUp'],
-      ],
-      [
-        ['Caps', 1.75, 'CapsLock'],
-        ...chars("asdfghjkl;'"),
-        ['Enter', 2.25, 'Enter'],
-        ['PgDn', 1, 'PageDown'],
-      ],
-      [
-        ['Shift', 2.25, 'ShiftLeft'],
-        ...chars('zxcvbnm,./'),
-        ['Shift', 1.75, 'ShiftRight'],
-        ['↑', 1, 'ArrowUp'],
-        ['End', 1, 'End'],
-      ],
+      ...enterCluster(v, [
+        [...chars('`1234567890-='), ['Backspace', 2, 'Backspace'], ['Home', 1, 'Home']],
+        [
+          ['Tab', 1.5, 'Tab'],
+          ...chars('qwertyuiop[]'),
+          ['\\', 1.5, 'Backslash'],
+          ['PgUp', 1, 'PageUp'],
+        ],
+        [
+          ['Caps', 1.75, 'CapsLock'],
+          ...chars("asdfghjkl;'"),
+          ['Enter', 2.25, 'Enter'],
+          ['PgDn', 1, 'PageDown'],
+        ],
+        [
+          ['Shift', 2.25, 'ShiftLeft'],
+          ...chars('zxcvbnm,./'),
+          ['Shift', 1.75, 'ShiftRight'],
+          ['↑', 1, 'ArrowUp'],
+          ['End', 1, 'End'],
+        ],
+      ]),
       [
         ['Ctrl', 1.25, 'ControlLeft'],
         ['Win', 1.25, 'MetaLeft'],
@@ -362,6 +551,9 @@ const numpad: RowSpec[] = [
   },
 ]
 
+/** kiểu Enter (60 / 65 / 75 / TKL / full): ANSI, ISO chữ L, Big-ass Enter (`enterCluster`); chỉ case dựng bằng code (`caseFits`) */
+const ENTERS = ['ansi', 'iso', 'bae']
+
 // ff = form factor của case (HHKB dùng chung case 60%)
 interface LayoutDef {
   name: string
@@ -382,39 +574,62 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
   '40': {
     name: '40%',
     ff: '40',
-    variants: { space: ['6.25u', '7u', 'split', 'arrow'] },
+    variants: {
+      space: [
+        '6.25u',
+        '7u',
+        '10u',
+        'hhkb',
+        'hhkbSplit',
+        'hhkbSplit3',
+        'hhkbSplit275',
+        'split',
+        'arrow',
+      ],
+      enter: ENTERS,
+    },
     rows: (v) => stack(alpha40(v)),
   },
   '60': {
     name: '60%',
     ff: '60',
-    variants: { backspace: ['2u', 'split'], bottom: ['wk', 'wkl'], rshift: ['2.75u', 'split'] },
+    variants: {
+      backspace: ['2u', 'split', 'row2'],
+      bottom: ['wk', 'wkl'],
+      lshift: ['2.25u', 'split'],
+      caps: ['normal', 'stepped'],
+      rshift: ['2.75u', 'split'],
+      enter: ENTERS,
+    },
     rows: (v) => stack(alpha60(v)),
   },
   hhkb: {
     name: 'HHKB',
     ff: '60',
-    variants: {},
-    rows: () =>
+    variants: { space: ['7u', '10u'], caps: ['normal', 'stepped'] },
+    rows: (v) =>
       stack([
-        ...hhkbTop,
-        [
-          1.5,
-          ['Win', 1, 'MetaLeft'],
-          ['Alt', 1.5, 'AltLeft'],
-          ['', 7, 'Space'],
-          ['Alt', 1.5, 'AltRight'],
-          ['Win', 1, 'MetaRight'],
-        ],
+        ...capsSpot(v, hhkbTop),
+        v.space === '10u'
+          ? // space 10u kín hàng giữa 2 khối chặn 1.5u: chỉ chừa 1 phím 1.75u mỗi bên (stab dây 7u giữa phím)
+            [1.5, ['Alt', 1.75, 'AltLeft'], ['', 10, 'Space'], ['Alt', 1.75, 'AltRight']]
+          : [
+              1.5,
+              ['Win', 1, 'MetaLeft'],
+              ['Alt', 1.5, 'AltLeft'],
+              ['', 7, 'Space'],
+              ['Alt', 1.5, 'AltRight'],
+              ['Win', 1, 'MetaRight'],
+            ],
       ]),
   },
   truehhkb: {
     name: 'True HHKB',
     ff: '60',
-    variants: {},
-    rows: () =>
+    variants: { caps: ['normal', 'stepped'] },
+    rows: (v) =>
       stack([
-        ...hhkbTop,
+        ...capsSpot(v, hhkbTop),
         [
           1.5,
           ['Alt', 1.5, 'AltLeft'],
@@ -428,7 +643,13 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
   tkl: {
     name: 'TKL',
     ff: 'tkl',
-    variants: { backspace: ['2u', 'split'], bottom: ['wk', 'wkl'] },
+    variants: {
+      backspace: ['2u', 'split', 'row2'],
+      bottom: ['wk', 'wkl'],
+      lshift: ['2.25u', 'split'],
+      caps: ['normal', 'stepped'],
+      enter: ENTERS,
+    },
     rows: tklRows,
   },
   tklf13: {
@@ -436,31 +657,57 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     ff: 'tkl',
     strict: true,
     // Duality Horns (case duy nhất dùng F13): nắp gốc WKL, bản WK khoét bỏ khối chặn chỗ Win (`bun run gen:duality-wk`)
-    variants: { backspace: ['2u', 'split'], bottom: ['wkl', 'wk'] },
+    variants: {
+      backspace: ['2u', 'split', 'row2'],
+      bottom: ['wkl', 'wk'],
+      lshift: ['2.25u', 'split'],
+      caps: ['normal', 'stepped'],
+    },
     rows: tklF13Rows,
   },
   full: {
     name: 'Full size',
     ff: 'full',
-    variants: { backspace: ['2u', 'split'], bottom: ['wk', 'wkl'] },
+    variants: {
+      backspace: ['2u', 'split', 'row2'],
+      bottom: ['wk', 'wkl'],
+      lshift: ['2.25u', 'split'],
+      caps: ['normal', 'stepped'],
+      enter: ENTERS,
+    },
     rows: (v) => [...tklRows(v), ...numpad],
   },
   '65': {
     name: '65%',
     ff: '65',
-    variants: {},
+    variants: {
+      backspace: ['2u', 'split', 'row2'],
+      lshift: ['2.25u', 'split'],
+      caps: ['normal', 'stepped'],
+      enter: ENTERS,
+    },
     rows: rows65,
   },
   '75': {
     name: '75%',
     ff: '75',
-    variants: {},
+    variants: {
+      backspace: ['2u', 'split', 'row2'],
+      lshift: ['2.25u', 'split'],
+      caps: ['normal', 'stepped'],
+      enter: ENTERS,
+    },
     rows: rows75,
   },
   frl: {
     name: 'FRL (TKL không hàng F)',
     ff: 'frl',
-    variants: { backspace: ['2u', 'split'], bottom: ['wk', 'wkl'] },
+    variants: {
+      backspace: ['2u', 'split', 'row2'],
+      bottom: ['wk', 'wkl'],
+      lshift: ['2.25u', 'split'],
+      caps: ['normal', 'stepped'],
+    },
     rows: frlRows,
   },
   // Alice (Blossom, doughnut923/Blossom, MIT): 67 phím đúng tâm / góc / cỡ switch trên PCB KiCad (scripts/alice-layout.mjs)
@@ -502,18 +749,47 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
 }
 
 const VARIANT_INFO: Record<VariantKey, Record<string, string>> = {
-  backspace: { '2u': 'Backspace 2u', split: 'Split backspace (1u + 1u)' },
+  backspace: {
+    '2u': 'Backspace 2u',
+    split: 'Split backspace (1u + 1u)',
+    row2: 'Backspace hàng 2 (thay \\|, hàng số \\| + Del 1u)',
+  },
   bottom: { wk: 'Hàng dưới WK (có phím Win)', wkl: 'Hàng dưới WKL (không Win, space 7u)' },
   rshift: { '2.75u': 'Shift phải 2.75u', split: 'Split shift phải (1.75u + Fn)' },
+  lshift: { '2.25u': 'Shift trái 2.25u', split: 'Shift trái ISO (1.25u + <>)' },
+  caps: { normal: 'Caps Lock thường', stepped: 'Caps Lock stepped (bậc 1.25u + 0.5u)' },
+  enter: { ansi: 'Enter ANSI', iso: 'Enter ISO', bae: 'Big-ass Enter' },
   space: {
     '6.25u': 'Space liền 6.25u',
     '7u': 'Space liền 7u (không Win)',
+    '10u': 'Space 10u',
+    hhkb: 'HHKB (space 7u)',
+    hhkbSplit: 'HHKB split space (2.75u + 1.5u + 2.75u)',
+    hhkbSplit3: 'HHKB split space (3u + 1u + 3u)',
+    hhkbSplit275: 'HHKB split space (2.75u + 1.25u + 3u)',
     split: 'Split space (2.25u + 1.25u + 2.75u)',
     arrow: 'Split space + mũi tên (2.25u + 2.75u)',
   },
 }
 /** tên 1 kiểu layout (vd "Split space (2.25u + 1.25u + 2.75u)") */
 export const variantLabel = (k: VariantKey, val: string) => VARIANT_INFO[k][val] ?? val
+/** tên từng lựa chọn kiểu layout (nhãn dòng ở bảng Free build) */
+export const VARIANT_NAME: Record<VariantKey, string> = {
+  backspace: 'Kiểu backspace',
+  bottom: 'Kiểu layout',
+  rshift: 'Kiểu shift phải',
+  lshift: 'Kiểu shift trái',
+  caps: 'Kiểu Caps Lock',
+  // 40% / HHKB: kiểu space = cả hàng dưới
+  space: 'Kiểu layout',
+  enter: 'Kiểu enter',
+}
+/** nhãn ngắn cho nút chọn (lựa chọn chỉ 2 kiểu hiện thành nút) */
+const VARIANT_SHORT: Partial<Record<VariantKey, Record<string, string>>> = {
+  caps: { normal: 'Thường', stepped: 'Stepped (bậc 1.25u + 0.5u)' },
+}
+export const variantShort = (k: VariantKey, val: string) =>
+  VARIANT_SHORT[k]?.[val] ?? variantLabel(k, val)
 
 export const variantText = (v: Variant) =>
   (Object.entries(v) as [VariantKey, string][]).map(([k, val]) => VARIANT_INFO[k][val])
@@ -562,9 +838,11 @@ export function getLayout(layoutId: LayoutId, variant: Variant = {}): LayoutGeom
         x += it
         continue
       }
-      const [label, w = 1, code = null, h = 1] = it
+      const [label, w = 1, code = null, h = 1, e] = it
       const [px, pz] = turn(x + w / 2, y + h / 2)
-      raw.push({ label, w, h, code, x, y, rot: a, px, pz })
+      // phím chữ L: tâm cánh tương đối tâm ô chính (chưa xoay)
+      const ext = e && { x: e[0] + e[2] / 2 - w / 2, z: e[1] + e[3] / 2 - h / 2, w: e[2], h: e[3] }
+      raw.push({ label, w, h, code, x, y, rot: a, px, pz, ...(ext && { ext }) })
       x += w
     }
   }
@@ -616,17 +894,25 @@ export function getLayout(layoutId: LayoutId, variant: Variant = {}): LayoutGeom
  * Mọi khối cao bằng nhau (ngang mép case, mặt khung phẳng như case thật). Trả về tâm x, z và kích thước w × d
  * (u, quanh gốc). Layout có phím xoay (Alice) không tính
  */
+/**
+ * Các ô chữ nhật phủ mặt phím (toạ độ layout, chưa xoay: dùng cho layout không xoay): ô chính + cánh phím chữ L (Enter ISO / Big-ass)
+ */
+export function keyRects(k: Key): { x: number; z: number; w: number; h: number }[] {
+  const main = { x: k.cx, z: k.cz, w: k.w, h: k.h }
+  return k.ext ? [main, { x: k.cx + k.ext.x, z: k.cz + k.ext.z, w: k.ext.w, h: k.ext.h }] : [main]
+}
+
 export function blockerGaps(keys: Key[], width: number, depth: number, edge: number) {
   if (keys.some((k) => k.rot)) return []
   const S = 0.125
   const nx = Math.round(width / S)
   const nz = Math.round(depth / S)
   const free = Array.from({ length: nz }, () => new Array<boolean>(nx).fill(true))
-  for (const k of keys) {
-    const x0 = Math.max(0, Math.round((k.cx - k.w / 2 + width / 2) / S))
-    const x1 = Math.min(nx, Math.round((k.cx + k.w / 2 + width / 2) / S))
-    const z0 = Math.max(0, Math.round((k.cz - k.h / 2 + depth / 2) / S))
-    const z1 = Math.min(nz, Math.round((k.cz + k.h / 2 + depth / 2) / S))
+  for (const r of keys.flatMap(keyRects)) {
+    const x0 = Math.max(0, Math.round((r.x - r.w / 2 + width / 2) / S))
+    const x1 = Math.min(nx, Math.round((r.x + r.w / 2 + width / 2) / S))
+    const z0 = Math.max(0, Math.round((r.z - r.h / 2 + depth / 2) / S))
+    const z1 = Math.min(nz, Math.round((r.z + r.h / 2 + depth / 2) / S))
     for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) free[z][x] = false
   }
   /** top: mặt trên riêng (u), không có thì theo mép case */
@@ -690,11 +976,11 @@ export function keyRegions(keys: Key[], width: number, depth: number): [number, 
   const nx = Math.round(width / S)
   const nz = Math.round(depth / S)
   const occ = Array.from({ length: nz }, () => new Array<boolean>(nx).fill(false))
-  for (const k of keys) {
-    const x0 = Math.max(0, Math.round((k.cx - k.w / 2 + width / 2) / S))
-    const x1 = Math.min(nx, Math.round((k.cx + k.w / 2 + width / 2) / S))
-    const z0 = Math.max(0, Math.round((k.cz - k.h / 2 + depth / 2) / S))
-    const z1 = Math.min(nz, Math.round((k.cz + k.h / 2 + depth / 2) / S))
+  for (const r of keys.flatMap(keyRects)) {
+    const x0 = Math.max(0, Math.round((r.x - r.w / 2 + width / 2) / S))
+    const x1 = Math.min(nx, Math.round((r.x + r.w / 2 + width / 2) / S))
+    const z0 = Math.max(0, Math.round((r.z - r.h / 2 + depth / 2) / S))
+    const z1 = Math.min(nz, Math.round((r.z + r.h / 2 + depth / 2) / S))
     for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) occ[z][x] = true
   }
   const at = (x: number, z: number) => x >= 0 && z >= 0 && x < nx && z < nz && occ[z][x]

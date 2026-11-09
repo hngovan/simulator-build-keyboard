@@ -50,6 +50,8 @@ function foamGeometry(
     // phím dài có nhãn (Shift, Enter, Backspace...) 1 lỗ liền
     if (!(k.stab && !k.label.trim())) {
       rect(k.cx, k.cz, (k.w - WEB) / 2, (k.h - WEB) / 2, k.rot)
+      // Enter chữ L (ISO / Big-ass): khoét thêm cánh (layout không xoay)
+      if (k.ext) rect(k.cx + k.ext.x, k.cz + k.ext.z, (k.ext.w - WEB) / 2, (k.ext.h - WEB) / 2, 0)
       continue
     }
     // spacebar: lỗ switch giữa + 2 khe stab hai bên

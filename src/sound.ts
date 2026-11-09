@@ -88,6 +88,13 @@ function playSfx(
   return true
 }
 
+/**
+ * Trang đã có tương tác (bấm / gõ phím) chưa: tạo AudioContext trước đó thì Chrome cảnh báo "AudioContext was not allowed to start"
+ * (autoplay policy) → nhạc nền + tiếng rê chuột chờ tới lần tương tác đầu
+ */
+const activated = () =>
+  typeof navigator === 'undefined' || (navigator.userActivation?.hasBeenActive ?? true)
+
 function ac() {
   if (ctx) return ctx
   ctx = new AudioContext()
@@ -300,6 +307,8 @@ export function playKey(
 
 /** Menu màn tiêu đề: rê / đổi mục đang chọn = tiếng tick nhẹ */
 export function playUiHover() {
+  // rê chuột không tính là tương tác: chưa bấm / gõ phím lần nào thì im
+  if (!activated()) return
   noiseBurst(ac().currentTime, { freq: 3200, q: 4, dur: 0.025, gain: 0.18 })
 }
 
@@ -560,21 +569,31 @@ function pickTrack() {
   return pool.length ? pool[Math.floor(Math.random() * pool.length)] : -1
 }
 
-// Trình duyệt chặn phát âm thanh tới lần tương tác đầu tiên: nhạc nền bắt đầu ở màn tiêu đề sẽ chờ (AudioContext tạm dừng),
-// bấm / gõ phím lần đầu thì mở lại để nhạc chạy luôn
+// Trình duyệt chặn phát âm thanh tới lần tương tác đầu tiên: nhạc nền gọi ở màn tiêu đề chỉ ghi lại (chưa tạo AudioContext),
+// bấm / gõ phím lần đầu thì tạo / mở lại để nhạc chạy luôn
+let bgmPending = false
 if (typeof window !== 'undefined') {
+  // cảm ứng: pointerdown chưa tính là tương tác (pointerup / touchend mới tính) → chờ tới khi trình duyệt ghi nhận rồi mới gỡ
+  const EVENTS = ['pointerdown', 'pointerup', 'touchend', 'keydown'] as const
   const unlock = () => {
+    if (!activated()) return
     if (ctx) void ctx.resume().catch(() => undefined)
-    window.removeEventListener('pointerdown', unlock)
-    window.removeEventListener('keydown', unlock)
+    if (bgmPending) {
+      bgmPending = false
+      startBgm()
+    }
+    EVENTS.forEach((e) => window.removeEventListener(e, unlock))
   }
-  window.addEventListener('pointerdown', unlock)
-  window.addEventListener('keydown', unlock)
+  EVENTS.forEach((e) => window.addEventListener(e, unlock))
 }
 
 /** Nhạc nền ở màn tiêu đề / máy tính / bàn build: xoay ngẫu nhiên các bài trong BGM_URLS */
 export function startBgm(settings = audioSettings) {
   applyAudioSettings(settings)
+  if (!activated()) {
+    bgmPending = true
+    return
+  }
   const a = ac()
   void a.resume().catch(() => undefined)
   if (bgmSource || bgmWanted) return
@@ -638,6 +657,7 @@ function ambientLoop(a: AudioContext) {
 
 export function stopBgm() {
   bgmWanted = false
+  bgmPending = false
   if (!bgmSource) return
   bgmSource.onended = null
   bgmSource.stop()

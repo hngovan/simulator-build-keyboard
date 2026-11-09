@@ -27,7 +27,14 @@ import {
 } from '@/scene/parts/caseShell'
 import { WEIGHT_METALS, WOOD_TEX, prepWood, woodTexFor, woodUV } from '@/scene/materials'
 import { boardOutline, outlineSlab } from '@/scene/parts/boardOutline'
-import { capGeometry, keycapModel, keycapShape, stretchCap } from '@/scene/models/keycapShape'
+import {
+  capGeometry,
+  keycapModel,
+  keycapShape,
+  lCapGeometry,
+  stretchCap,
+} from '@/scene/models/keycapShape'
+import { STEP_LOW, isStepped, keyOutline } from '@/scene/parts/keyShape'
 import type { FormFactor, Key, LayoutId, Order, Variant } from '@/types'
 import { bakedThumb, cachedThumb, glbMeshes, glbScene } from '../shop/modelThumb'
 import { caseKey } from '../shop/productThumb'
@@ -361,7 +368,23 @@ export async function buildKeyboardModel(
     // cả bàn 1 profile: model CAD 1u (phím rộng kéo dãn), ASA chưa có CAD thì dựng theo thông số
     const model = lite ? null : keycapModel(profile, k.row)
     let cap: THREE.Object3D
-    if (model) {
+    // Caps stepped: bậc thấp theo viền cả phím, phần nhô là keycap thường cỡ ô chính (như bàn build)
+    if (isStepped(k)) {
+      const low = new THREE.Mesh(
+        lCapGeometry(keyOutline(k, 0.04), k.h / 2, keycapShape(profile, k.row)),
+        mat,
+      )
+      low.scale.y = STEP_LOW
+      low.position.set(k.cx, 0.36, k.cz)
+      board.add(low)
+    }
+    // Enter chữ L (ISO / Big-ass): dựng theo viền phím như bàn build
+    if (k.ext && !isStepped(k))
+      cap = new THREE.Mesh(
+        lCapGeometry(keyOutline(k, 0.04), k.h / 2, keycapShape(profile, k.row)),
+        mat,
+      )
+    else if (model) {
       cap = (await glbScene(`/models/keycaps/${model}.glb`)).clone(true)
       cap.traverse((part) => {
         if ((part as THREE.Mesh).isMesh) (part as THREE.Mesh).material = mat

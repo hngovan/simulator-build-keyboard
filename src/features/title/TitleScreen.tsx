@@ -5,7 +5,8 @@ import { playUiHover, playUiSelect } from '@/sound'
 import { Button } from '@/components/ui'
 import { WORKSPACE_ART } from '@/components/art/workspace'
 import { GameLogo } from '@/components/art/GameLogo'
-import { Changelog } from './Changelog'
+import { Changelog, TitleModal } from './Changelog'
+import { Leaderboard } from '@/features/leaderboard/Leaderboard'
 
 /** trang Facebook tác giả */
 const AUTHOR_FB = 'https://www.facebook.com/mn.HoangEt'
@@ -85,7 +86,7 @@ export function TitleScreen() {
   const continueGame = useGame((s) => s.continueGame)
   const startFree = useGame((s) => s.startFree)
   const [creating, setCreating] = useState<Mode | null>(null)
-  const [dialog, setDialog] = useState<'log' | null>(null)
+  const [dialog, setDialog] = useState<'log' | 'board' | null>(null)
   const musicOff = useGame((s) => !!s.audio.musicOff)
   const setAudio = useGame((s) => s.setAudio)
   const items: MenuItem[] = [
@@ -101,6 +102,8 @@ export function TitleScreen() {
     { id: 'guide', label: 'Hướng dẫn build', run: () => setCreating('guide') },
     // không hỏi tên, không đụng bản lưu Sự nghiệp
     { id: 'free', label: 'Free build', run: startFree },
+    // bảng xếp hạng server (không cần bản lưu)
+    { id: 'board', label: 'Bảng xếp hạng', run: () => setDialog('board') },
   ]
   // mặc định chọn Tiếp tục nếu có bản lưu, không thì Chơi mới
   const [sel, setSel] = useState(saveInfo ? 0 : 1)
@@ -240,6 +243,14 @@ export function TitleScreen() {
       </button>
 
       {dialog === 'log' && <Changelog onClose={() => setDialog(null)} />}
+      {dialog === 'board' && (
+        <TitleModal color="#c0392b" title="Bảng xếp hạng" wide onClose={() => setDialog(null)}>
+          {/* khung cao cố định, danh sách cuộn bên trong (không cuộn cả popup) */}
+          <div data-fill className="group/win flex h-[min(64vh,560px)] min-h-0 flex-col">
+            <Leaderboard />
+          </div>
+        </TitleModal>
+      )}
     </div>
   )
 }

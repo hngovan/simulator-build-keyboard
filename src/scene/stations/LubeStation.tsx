@@ -811,7 +811,6 @@ function SpringShaker({
               <sphereGeometry args={[0.045, 10, 8]} />
               <meshPhysicalMaterial
                 color={SUPPLIES[oil].color}
-                transmission={0.8}
                 roughness={0.05}
                 transparent
                 opacity={0.6}

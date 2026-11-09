@@ -85,9 +85,9 @@ export function estimateCost(
   keycapKit = 'full',
   switchType?: string,
   /** món khách đòi đích danh: tính theo giá món đó (case / stab / plate đắt không bị hụt budget) */
-  want: Pick<Order, 'caseId' | 'stabType' | 'plateMaterial'> = {},
+  want: Pick<Order, 'caseId' | 'stabType' | 'plateMaterial'> & { variant?: Variant } = {},
 ) {
-  const { keys } = getLayout(layout, {})
+  const { keys } = getLayout(layout, want.variant ?? {})
   const needStab = keys.some((k) => k.stab)
   // khách đòi đúng con switch thì tính theo giá con đó (con đắt như Panda không bị hụt budget)
   const sw10 = switchType ? Math.max(65, SWITCHES[switchType].price10) : 65
@@ -98,7 +98,7 @@ export function estimateCost(
   if (!kit?.case) {
     const cheapestCase = Math.min(
       ...Object.values(CASES)
-        .filter((c) => caseFits(c, layout))
+        .filter((c) => caseFits(c, layout, want.variant))
         .map((c) => c.price),
     )
     cost += want.caseId
@@ -182,7 +182,10 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
     layout_ ??
     featured?.layout ??
     pick(atLv(Object.keys(LAYOUTS) as LayoutId[], (l) => layoutLv(l) <= lv))
-  const variant = randomVariant(layout)
+  let variant = randomVariant(layout)
+  // case "hot" không làm được variant vừa bốc (HHKB 10u mà case 1 mảnh) → variant mặc định
+  if (featured?.caseId && !caseFits(CASES[featured.caseId], layout, variant))
+    variant = defaultVariant(layout)
   const { keys } = getLayout(layout, variant)
   const wish = pick(Object.keys(SOUND_WISH) as SoundWish[])
   const keycapColor = pick(Object.keys(KEYCAP_COLORS))
@@ -220,7 +223,7 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
       featured?.caseId ??
       pick(
         atLv(
-          Object.keys(CASES).filter((id) => caseFits(CASES[id], layout)),
+          Object.keys(CASES).filter((id) => caseFits(CASES[id], layout, variant)),
           caseOk,
         ),
       )
@@ -251,7 +254,7 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
     caseColor = pick([
       ...new Set(
         atLv(
-          Object.keys(CASES).filter((id) => caseFits(CASES[id], layout)),
+          Object.keys(CASES).filter((id) => caseFits(CASES[id], layout, variant)),
           caseOk,
         ).flatMap((id) => CASES[id].colors),
       ),
@@ -295,7 +298,8 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
           atLv(
             Object.keys(CASES).filter(
               (id) =>
-                caseFits(CASES[id], layout) && (!caseColor || CASES[id].colors.includes(caseColor)),
+                caseFits(CASES[id], layout, variant) &&
+                (!caseColor || CASES[id].colors.includes(caseColor)),
             ),
             caseOk,
           ),
@@ -307,7 +311,7 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
       : undefined
   const plateMaterial =
     !kit?.plate && Math.random() < 0.3 ? pick(atLv(plateIds(), (m) => plateLv(m) <= lv)) : undefined
-  const want = { caseId, stabType, plateMaterial }
+  const want = { caseId, stabType, plateMaterial, variant }
   // ~25% khách muốn lót foam Poron PCB (tiền 1 tấm foam tính vào budget)
   const foam = lv >= 2 && Math.random() < 0.25
   // dây O-ring: đơn kit gửi case O-ring mount → 60% khách dặn độ cứng dây; đơn mua đủ (không đòi đích danh case)

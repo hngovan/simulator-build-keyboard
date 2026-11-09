@@ -2031,3 +2031,134 @@
   trần hốc bottom mount case nhựa `ABS_BOTTOM_NOTCH_TOP` 0,1 (đầu ốc M2 ~1,3mm) để lót hốc không lòi mặt trên. Tổng cao giảm ~0,11u (~2mm), áp mọi
   case nhựa (1 / 2 mảnh), mọi kiểu mount cùng cao (vỏ chỉ theo `caseFloorBot` / `caseTopOf`, không theo mount). Gân xương cá còn ~3,7mm, pin 3mm vẫn dưới
   đáy socket. Chụp lại ảnh Shopii case nhựa.
+
+## 2026-11-09 — Vào bàn lube switch bị khựng
+
+- Yêu cầu: "ở bước tải model lube switch thì có vẻ đang vào màn liền dẫn tới hơi lag".
+- Đo (Chrome ngầm, móc `renderBufferDirect` đếm shader mới): model lube đã `useGLTF.preload` sẵn, khựng là do **transmission**: lọ dầu
+  (`createOilBottle`), lớp mỡ (`greaseMaterial`), giọt dầu là vật transmission đầu tiên lọt khung (các bước trước không có) → three vẽ lại cả
+  phòng vào khung phụ (không tone mapping) → biên dịch lại shader cho từng vật trong phòng (bàn, ổ điện, màn hình...) ngay khung đó, đứng hình vài giây.
+- Sửa: 3 vật liệu đó bỏ transmission, trong suốt thường (`transparent` + opacity, lọ dầu `depthWrite: false`) → hết lượt vẽ lại phòng (nhẹ cả
+  khi đang ở bước lube). Thêm `Warm` (Bench.tsx) bọc bàn lube / mod stab: lần dựng đầu giấu khỏi camera (layer 31), `warmUp` → `compileAsync`
+  biên dịch song song trong lúc hiện lớp "Đang tải mô hình", xong mới hiện. Còn lại 1 shader bóng đổ cho InstancedMesh (lượt shadow map không
+  biên dịch trước được bằng `compileAsync`), nhỏ trên GPU thật. `window.__r3f` bàn build có thêm `gl` (debug).
+
+## 2026-11-09 — Bỏ gasket mount khỏi case 1 mảnh dựng bằng code
+
+- Yêu cầu: "mount gasket sao ko có tai plate thì làm sao mà mount được" (ABS 40% 1 mảnh), "case 60 có đang làm tương tự ko",
+  rồi "1 mảnh nhựa và nhôm ko có gasket mount vì nó sẽ bị lộ ở trên => bỏ đi".
+- Lỗi: `gasketTabbed` chỉ case 2 mảnh → case 1 mảnh dựng bằng code (mọi cỡ) gasket chỉ là dải dán quanh mép plate, không gì đỡ.
+- Đã thử: tai plate thả vào khe vách mở từ mép trên (kiểu Tofu60 2.0); thành nhựa 1 mảnh 0,1u không đủ sâu → phình vách ra ngoài
+  (lồi cục, bị chê) rồi làm thành dày 0,3u; người dùng chốt bỏ vì khe lộ khi nhìn từ trên. Đã hoàn tác hết phần code đó.
+- Đã làm: `CaseDef.mounts` mọi case 1 mảnh dựng bằng code (nhựa ABS / PC, nhôm anod / E-coat, gỗ; 28 case) = `['tray', 'oring']`,
+  sửa `desc` cho khớp. Case CAD 1 mảnh (Exodus, Repent75...) giữ gasket (theo model thật). Save cũ: `fixMount` / `fixOrderMount`
+  (persistence.ts) tự đổi sang mount đầu tiên hợp lệ + `remapStepIdx`; đơn full đòi gasket thì phải dùng case 2 mảnh / CAD.
+
+## 2026-11-09 — PCB: via viền + nhãn silkscreen không in đè phím
+
+- Yêu cầu: "foam 7u đang sai ?" (40% space 7u, ảnh khoanh Ctrl trái + Alt / Ctrl phải hàng dưới).
+- Nguyên nhân: không phải foam (lỗ foam khớp phím). Texture PCB (`makePcbTexture`, PcbSurface.tsx) in hàng via dọc mép trên / dưới
+  + chữ "HOTSWAP | PCB REV.01" góc dưới trái cố định theo mép; layout kín mép (40%) hàng dưới nằm đè lên → nhìn qua lỗ foam
+  phím to thấy chữ + chấm via chen vào footprint, trông như foam khoét lệch.
+- Đã làm: `underKey(x, y, pad)` (px canvas, theo khung phím có xoay): via nằm trong vùng phím thì bỏ; nhãn thử 4 góc, góc nào
+  không đè phím thì in, không góc nào trống thì bỏ nhãn.
+
+## 2026-11-09 — Case nhựa 2 mảnh: gân + trụ vít case trên chạy suốt xuống sàn khay
+
+- Yêu cầu: "xương cá ở case 2 mảnh pc thì phải cho xương ở top case dài hết luôn thì mới chắc được => bot case xương cá ở ngoài bỏ đi",
+  rồi "đưa viền nhựa sát ra để úp vào", "khung xương đang bị ngắn hơn => nhìn như đang bị cut", "cho top nó nhỏ hơn để bot có khung
+  xương như lúc trước".
+- Đã thử (bỏ): case dưới thu vào trong da trong + vấu đáy chỗ vít (sàn không ra sát da ngoài, bị chê); da trong thuộc case trên từ sàn
+  lên (case dưới chỉ là tấm phẳng, mất vành chạy quanh, bị chê); gân 2 khúc (dưới mép ghép ngắn hơn → nhìn như bị cắt).
+- Chốt (`absTwoShellGeometry`): case dưới như cũ (khay ra sát da ngoài + vành da trong chạy quanh tới mép ghép) nhưng bỏ gân + trụ
+  trong rãnh; case trên gân 1 bề ngang chạy từ mặt khay (`ys.floor`) lên dưới mặt trên, đầu trong dừng sát mặt ngoài da trong case dưới
+  (`channelRibs` thêm `inner`, = −gap); da trong case trên dày thêm `gap` cho gân nối vào; trụ vít ghép thuộc hẳn case trên, từ mặt khay
+  lên (`AbsScrewBosses` chỉ còn case trên, ren đồng ở miệng dưới; vít từ đáy xuyên sàn khay).
+
+## 2026-11-09 — HHKB: thêm space 10u
+
+- Yêu cầu: "layout hhkb thì nếu mount 10u thì sẽ full hết row và 2 bên hông là 1.75u" (ảnh: 40% bản 10u = Ctrl 1.25 + space 10 + Fn 1.5).
+- Đã làm: `LAYOUTS.hhkb.variants.space` = `['7u', '10u']` (mặc định 7u như cũ, save cũ `{}` vẫn ra 7u); 10u: khối chặn 1.5u +
+  Alt 1.75u + space 10u + Alt 1.75u (+ khối chặn 1.5u) = 15u. Stab dây 7u (`stabNeed` ≥ 7u → `long7`).
+- 40% bản 10u (phiên song song thêm) giữ nguyên: 40% chỉ rộng 12.75u, 1.75 + 10 + 1.75 = 13.5u không vừa.
+
+## 2026-11-09 — HHKB trên case 1 mảnh: PCB cắt 2 góc; space 10u chỉ case 2 mảnh
+
+- Yêu cầu: "hhkb dành cho case 2 mảnh thôi case 1 mảnh muốn chơi thì phải cut pcb 2 góc đi và thường là hhkb or true hhkb thôi".
+- Đã làm:
+  - `cornerCutOutline` (steps.ts): case 1 mảnh (không `plateModel`) + layout `hhkb` / `truehhkb` → `ctx.outline` = chữ nhật trừ 2 góc
+    hàng dưới (khe khối chặn `blockerGaps`, chừa `CASE_MARGIN`) → PCB, plate, foam cắt góc (đều đi qua `boardOutline(..., outline)`).
+  - `Blockers` thêm `solidFrom`: case 1 mảnh dựng bằng code chơi HHKB → khối chặn góc đặc từ mặt sàn lên (đúc liền case), thay
+    tấm khung mỏng trên mặt (board thả từ trên xuống không vướng vì đã cắt góc).
+  - `caseFits(def, layout, variant?)`: HHKB `space: '10u'` chỉ case 2 mảnh; truyền variant ở `checkInventory`, sinh đơn (orders.ts:
+    case hot 1 mảnh mà bốc phải 10u → về variant mặc định; `estimateCost` nhận `want.variant`), Free build (ẩn 10u khi case 1 mảnh,
+    `effVariant` gửi `startFreeBuild`).
+- Kiểm: case nhựa 60% 1 mảnh + HHKB: PCB khuyết 2 góc dưới, khối chặn trắng đặc lấp góc.
+
+## 2026-11-09 — 40% kiểu HHKB (1 / 2 mảnh)
+
+- Yêu cầu: "case 40% 1 mảnh và 2 mảnh vẫn có hhkb vd bỏ 2 nút 2u or 1u bên trái rồi bên phải bỏ 1u, 1.75 chẳng hạn là thành hhkb rồi".
+- Đã làm: 40% thêm `space: 'hhkb'` ("Kiểu HHKB (bỏ 2 phím góc, space 7u)"): khối chặn 1.25u + Alt 1.5u + space 7u + Alt 1.5u + khối chặn 1.5u
+  = 12.75u. `cornerCutOutline` bỏ điều kiện layout: case 1 mảnh cứ có khe chạm 2 góc hàng dưới là cắt góc PCB / plate / foam (dò mọi
+  layout + variant: chỉ 40% hhkb, HHKB 7u / 10u, True HHKB); `Blockers` chỉ khối ở góc mới đặc từ sàn (`solidFrom`), khe giữa hàng
+  (WKL...) vẫn là tấm mỏng trên mặt. Case 2 mảnh: PCB chữ nhật, khối chặn thuộc case trên.
+
+## 2026-11-09 — Case nhựa: mép trên ngang đỉnh housing switch; 40% HHKB split space
+
+- Yêu cầu: "sao sw lại cao thế này ??? đáng lẽ phải nằm thấp vừa đủ để lộ chân keycap thôi" (ảnh nhìn ngang case nhựa 40% 1 mảnh);
+  "hhkb case 40% cũng có split space nữa".
+- Đã làm: `ABS_CASE_TOP` 0,18 → 0,34u (~6,5mm trên mặt plate ≈ đỉnh housing switch ~6,6mm): 0,18 (hạ ở mục "Hạ thấp case nhựa thêm")
+  lộ nửa trên housing khi nhìn ngang. Đáy không hạ thêm được (pin / DTB / USB-C) nên case nhựa cao lại ~3mm. Ảnh Shopii case nhựa
+  cần `bun run bake:thumbs` lại.
+- 40% thêm `space: 'hhkbSplit'`: khối chặn 1.25u + Alt 1.5u + space 2.75u + Fn 1.5u + space 2.75u + Alt 1.5u + khối chặn 1.5u (stab 2u
+  mỗi nửa); case 1 mảnh tự cắt góc PCB như `hhkb`.
+
+## 2026-11-09 — Lắp đủ switch tự sang bước kế
+
+- Yêu cầu: "khi step từ bước lắp sw lắp xong thì tự động qua step mount gasket luôn".
+- Đã làm: `installRun` (buildSlice.ts): lắp switch xong mà mọi phím đã có switch, đang ở bước `switch` → `nextStep()` ngay (bước kế
+  là `gasket` / `solder` / `ring` / `feet` tuỳ build). Hoàn tác vẫn lùi về được như các bước tự sang khác.
+
+## 2026-11-09 — Backspace hàng 2 (kiểu HHKB) + split backspace 65 / 75; Enter ISO / BAE 40% xuống hàng 2–3
+
+- Yêu cầu: "bổ sung có thể chọn option backspace ở row 1 split 1u or là ở row 2 thay cho nút \| ... ở tất cả case có thể hỗ trợ";
+  "đổi lại enter iso ở layout 40 và big ass enter về row 2 và 3 thay vì 1 và 2".
+- Backspace (layouts.ts `backspaceSpot`, gọi đầu `enterCluster` nên mọi layout có hàng số đi qua: 60 / TKL / TKL F13 / FRL / full /
+  65 / 75): `backspace: ['2u', 'split', 'row2']` (65 / 75 trước không có lựa chọn backspace). `row2`: `\|` 1.5u hàng QWERTY → Backspace
+  1.5u, hàng số chỗ Backspace → `\|` 1u + Del 1u; Enter ISO / Big-ass (chiếm chỗ `\|`) thì bỏ qua `row2`. `split` cho 65 / 75 tách
+  Backspace 2u thành Back 1u + Del 1u ngay trong `backspaceSpot`.
+- 40% `enter40`: ô Enter chữ L dời xuống hàng ASDF + Shift, hàng QWERTY giữ Backspace 1.75u (trước Backspace dời xuống chỗ Shift phải).
+  ISO: Tab 1u + A–; + khe 0.25u + cánh trên 1.75u, ô chính 1.5 × 2u, hàng Shift còn Shift 1.25u + Z–/. Big-ass: Tab 1.25u + A–; + ô chính
+  1.5 × 2u, cánh dưới 2.25u, hàng Shift = Shift 1.5u + Z–. (bỏ `/`). Kiểu mũi tên (↑ dưới cột `.`) vướng ô Enter → giữ Enter ANSI.
+
+## 2026-11-09 — Shift trái ngắn + phím <>
+
+- Yêu cầu: "layout shift bên trái ngắn hơn để có 1 nút <> ở cạnh".
+- Đã làm: `VariantKey` thêm `lshift` (`'2.25u' | 'split'`), `lshiftSpot` (layouts.ts, gọi trong `enterCluster`): Shift trái 2.25u →
+  Shift 1.25u + `<>` 1u (mã IntlBackslash). Có ở 60 / 65 / 75 / TKL / TKL F13 / FRL / full; Enter ISO tự tách Shift trái nên bỏ qua.
+
+## 2026-11-09 — Shift trái ISO + Caps Lock stepped
+
+- Yêu cầu: "bổ sung option Shift trái ISO (1.25u + <>)", "bổ sung option step cap or normal cap ở riêng ở ngoài", rồi "option step cap
+  và normal cap chưa có ??" (lẫn trong các ô cùng tên "Kiểu layout").
+- Đã làm:
+  - `lshift.split` đổi nhãn "Shift trái ISO (1.25u + <>)".
+  - `VariantKey` thêm `caps` (`normal` / `stepped`) ở 60 / 65 / 75 / TKL / TKL F13 / FRL / full; `capsSpot` (layouts.ts, trong
+    `enterCluster`): Caps 1.75u → ô chính 1.25u (switch giữa phần nhô) + `ext` cùng hàng phủ cả 1.75u + khe 0.5u. Keycap
+    (Keycap.tsx, orderThumb): `isStepped` / `STEP_LOW` (keyShape.ts) = bậc thấp 40% cao dựng theo viền cả phím + keycap thường
+    cỡ 1.25u. Plate universal / CAD 60 không có Caps stepped / Shift trái ISO → cắt lỗ theo phím (`plateCutoutsFor`, Board
+    `standard60CAD` / `lShape`).
+  - Free build: mỗi lựa chọn kiểu layout 1 dòng nhãn riêng (`VARIANT_NAME`: Backspace / Hàng dưới / Shift phải / Shift trái /
+    Caps Lock / Space / Enter); Caps Lock là 2 nút (`variantShort`: Thường / Stepped), còn lại ô đổ xuống.
+  - Nhãn dòng (theo người dùng): "Layout row cuối" (hàng dưới / space), "Kiểu enter", "Kiểu Caps Lock", "Kiểu backspace", "Kiểu shift trái / phải";
+    cột nhãn `Line` rộng `w-28`.
+- Tiếp (2026-11-10): "bên trong dev và free build chưa thấy option chọn kiểu caploc" — lựa chọn chỉ có ở layout có Caps Lock 1.75u
+  (60 / 65 / 75 / TKL / TKL F13 / FRL / full); 40% chỗ đó là Tab 1.25u nên không có. Thêm `caps` cho HHKB / True HHKB: `capsSpot`
+  nhận cả Ctrl trái (chỗ Caps Lock của HHKB) → Ctrl stepped (giữ nhãn / mã phím gốc).
+
+## 2026-11-10 — Case gỗ 40% / TKL / Full
+
+- Yêu cầu: "tất nhiên case 40%, 60%, tkl, full size cũng có vật liệu gỗ" (trước chỉ `wood60`).
+- Đã làm (parts.ts): `wood40` (800k), `tklWood` (1.200k), `fullWood` (1.500k) như `wood60` (1 mảnh, tray / O-ring, 4 màu gỗ), thêm
+  vào `CASE_LINES` 40% / TKL / Full ("Gỗ"). Dựng bằng code chung (`Walls` + `woodUV`). Ảnh Shopii cần `ONLY=Wood bun run bake:thumbs`
+  + `ONLY=wood40`.

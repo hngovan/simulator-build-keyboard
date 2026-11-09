@@ -65,7 +65,7 @@ function ConfirmExit({ onCancel }: { onCancel: () => void }) {
   )
 }
 
-/** Tab Chung: lưu tiến trình, `children` (hình nền), về màn hình đăng nhập (hướng dẫn chọn 1 lần lúc tạo game: người chơi mới / đã từng chơi) */
+/** Tab Chung: lưu tiến trình, `children` (thêm mục nếu cần), về màn hình đăng nhập (hướng dẫn chọn 1 lần lúc tạo game: người chơi mới / đã từng chơi) */
 export function GameTab({ children }: { children?: ReactNode }) {
   const [saving, setSaving] = useState(false)
   const [exiting, setExiting] = useState(false)
@@ -194,7 +194,7 @@ const KEYBINDS: [string, [string, Bind[]][]][] = [
   [
     'Chung',
     [
-      ['Quay lại / đứng dậy', ['Esc']],
+      ['Mở / đóng Cài đặt', ['Esc']],
       ['Hoàn tác', ['Ctrl', '+', 'Z']],
     ],
   ],

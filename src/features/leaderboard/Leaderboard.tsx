@@ -40,8 +40,9 @@ const ranked = (r: Row) => runScore(r) >= 0 && r.rep >= 0
 
 // Bảng xếp hạng server: lượt chơi đã kết thúc của mọi người (thua / phá sản / chơi lại) + lượt đang chơi,
 // mặc định xếp theo điểm tổng hợp (tiền lãi + uy tín + sao + đơn theo sao, ngày không tính, `runScore`), lọc lại theo từng thông số.
-// Lượt điểm tổng âm hoặc uy tín âm không lên bảng; mở bảng thì tự cuộn tới dòng của mình
-export function LeaderboardApp() {
+// Lượt điểm tổng âm hoặc uy tín âm không lên bảng; mở bảng thì tự cuộn tới dòng của mình.
+// Chỉ mở ở màn đăng nhập (popup `TitleModal`), không còn là app trong máy tính; đang có lượt chơi trong store thì chèn dòng của mình
+export function Leaderboard() {
   const name = useGame((s) => s.name)
   const day = useGame((s) => s.day)
   const done = useGame((s) => s.done)

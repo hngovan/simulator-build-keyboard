@@ -26,6 +26,7 @@ import type {
   ToolItem,
   ToolKind,
   ToolLevels,
+  Variant,
 } from '@/types'
 
 export interface SwitchDef {
@@ -820,6 +821,7 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
       ['pc40One', 'Nhựa PC 1 mảnh'],
       ['plastic40Two', 'Nhựa ABS 2 mảnh'],
       ['pc40', 'Nhựa PC 2 mảnh'],
+      ['wood40', 'Gỗ'],
       ['mica40', 'Mica xếp lớp'],
       ['alu40Anod', 'Nhôm anod 1 mảnh'],
       ['alu40AnodC', 'Nhôm anod 1 mảnh · cổng C trên PCB'],
@@ -857,6 +859,7 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
       ['tklPcOne', 'Nhựa PC 1 mảnh'],
       ['tklPlasticTwo', 'Nhựa ABS 2 mảnh'],
       ['tklPc', 'Nhựa PC 2 mảnh'],
+      ['tklWood', 'Gỗ'],
       ['tklAlu', 'Nhôm anod 1 mảnh'],
       ['tklAluC', 'Nhôm anod 1 mảnh · cổng C trên PCB'],
       ['tklAluEcoat', 'Nhôm E-coat 1 mảnh'],
@@ -880,6 +883,7 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
       ['fullPcOne', 'Nhựa PC 1 mảnh'],
       ['fullPlasticTwo', 'Nhựa ABS 2 mảnh'],
       ['fullPc', 'Nhựa PC 2 mảnh'],
+      ['fullWood', 'Gỗ'],
       ['fullMica', 'Mica xếp lớp'],
       ['fullGasketAnod', 'Nhôm anod 2 mảnh'],
       ['fullGasket', 'Nhôm E-coat 2 mảnh'],
@@ -934,7 +938,7 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'anod',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1600,
     colors: [
       'black',
@@ -958,7 +962,7 @@ export const CASES: Record<string, CaseDef> = {
     pcbUsb: 'left',
     material: 'anod',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1600,
     colors: [
       'black',
@@ -980,7 +984,7 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'ecoat',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1600,
     colors: [
       'black',
@@ -994,7 +998,7 @@ export const CASES: Record<string, CaseDef> = {
       'brown',
       'navy',
     ],
-    desc: 'Nhôm E-coat sần 1 mảnh: tray / gasket / O-ring',
+    desc: 'Nhôm E-coat sần 1 mảnh: tray / O-ring',
   },
   alu60Ecoat1C: {
     name: 'Case 60% nhôm E-coat 1 mảnh · cổng C trên PCB',
@@ -1004,7 +1008,7 @@ export const CASES: Record<string, CaseDef> = {
     pcbUsb: 'left',
     material: 'ecoat',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1600,
     colors: [
       'black',
@@ -1018,14 +1022,14 @@ export const CASES: Record<string, CaseDef> = {
       'brown',
       'navy',
     ],
-    desc: 'Nhôm E-coat sần 1 mảnh: tray / gasket / O-ring, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
+    desc: 'Nhôm E-coat sần 1 mảnh: tray / O-ring, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
   },
   plastic60: {
     name: 'Case 60% nhựa ABS 1 mảnh',
     ff: '60',
     pieces: 1,
     material: 'abs',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 300,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
@@ -1035,7 +1039,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: '60',
     pieces: 1,
     material: 'pc',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 480,
     colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
     desc: 'Nhựa PC trong / mờ, xuyên đèn',
@@ -1056,8 +1060,39 @@ export const CASES: Record<string, CaseDef> = {
     ff: '60',
     pieces: 1,
     material: 'wood',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 900,
+    colors: ['walnut', 'oak', 'ash', 'rosewood'],
+    desc: 'Gỗ nguyên khối, tiếng ấm',
+  },
+  // case gỗ nguyên khối các cỡ khác (dựng bằng code như wood60, 1 mảnh)
+  wood40: {
+    name: 'Case 40% gỗ',
+    ff: '40',
+    pieces: 1,
+    material: 'wood',
+    mounts: ['tray', 'oring'],
+    price: 800,
+    colors: ['walnut', 'oak', 'ash', 'rosewood'],
+    desc: 'Gỗ nguyên khối, tiếng ấm',
+  },
+  tklWood: {
+    name: 'Case TKL gỗ',
+    ff: 'tkl',
+    pieces: 1,
+    material: 'wood',
+    mounts: ['tray', 'oring'],
+    price: 1200,
+    colors: ['walnut', 'oak', 'ash', 'rosewood'],
+    desc: 'Gỗ nguyên khối, tiếng ấm',
+  },
+  fullWood: {
+    name: 'Case Full gỗ',
+    ff: 'full',
+    pieces: 1,
+    material: 'wood',
+    mounts: ['tray', 'oring'],
+    price: 1500,
     colors: ['walnut', 'oak', 'ash', 'rosewood'],
     desc: 'Gỗ nguyên khối, tiếng ấm',
   },
@@ -1136,7 +1171,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: '40',
     pieces: 1,
     material: 'abs',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 280,
     colors: ['white', 'pink', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhỏ gọn',
@@ -1146,7 +1181,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: '40',
     pieces: 1,
     material: 'pc',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 450,
     colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
     desc: 'Nhựa PC trong / mờ, xuyên đèn',
@@ -1179,7 +1214,7 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'anod',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1150,
     colors: [
       'black',
@@ -1193,7 +1228,7 @@ export const CASES: Record<string, CaseDef> = {
       'brown',
       'navy',
     ],
-    desc: 'Nhôm CNC anod 1 mảnh: tray / gasket / O-ring, O-ring đỡ trên trụ liền vách',
+    desc: 'Nhôm CNC anod 1 mảnh: tray / O-ring, O-ring đỡ trên trụ liền vách',
   },
   alu40AnodC: {
     name: 'Case 40% nhôm anod 1 mảnh · cổng C trên PCB',
@@ -1203,7 +1238,7 @@ export const CASES: Record<string, CaseDef> = {
     pcbUsb: 'left',
     material: 'anod',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1150,
     colors: [
       'black',
@@ -1217,7 +1252,7 @@ export const CASES: Record<string, CaseDef> = {
       'brown',
       'navy',
     ],
-    desc: 'Nhôm CNC anod 1 mảnh: tray / gasket / O-ring, O-ring đỡ trên trụ liền vách, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
+    desc: 'Nhôm CNC anod 1 mảnh: tray / O-ring, O-ring đỡ trên trụ liền vách, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
   },
   alu40Ecoat1: {
     name: 'Case 40% nhôm E-coat 1 mảnh',
@@ -1225,7 +1260,7 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'ecoat',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1150,
     colors: [
       'black',
@@ -1239,7 +1274,7 @@ export const CASES: Record<string, CaseDef> = {
       'brown',
       'navy',
     ],
-    desc: 'Nhôm E-coat sần 1 mảnh: tray / gasket / O-ring, O-ring đỡ trên trụ liền vách',
+    desc: 'Nhôm E-coat sần 1 mảnh: tray / O-ring, O-ring đỡ trên trụ liền vách',
   },
   alu40Ecoat1C: {
     name: 'Case 40% nhôm E-coat 1 mảnh · cổng C trên PCB',
@@ -1249,7 +1284,7 @@ export const CASES: Record<string, CaseDef> = {
     pcbUsb: 'left',
     material: 'ecoat',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1150,
     colors: [
       'black',
@@ -1263,7 +1298,7 @@ export const CASES: Record<string, CaseDef> = {
       'brown',
       'navy',
     ],
-    desc: 'Nhôm E-coat sần 1 mảnh: tray / gasket / O-ring, O-ring đỡ trên trụ liền vách, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
+    desc: 'Nhôm E-coat sần 1 mảnh: tray / O-ring, O-ring đỡ trên trụ liền vách, cổng USB-C hàn trên PCB bên trái (không daughterboard)',
   },
   alu40: {
     name: 'Case 40% nhôm E-coat 2 mảnh',
@@ -1305,7 +1340,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: 'tkl',
     pieces: 1,
     material: 'abs',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 550,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Phổ thông',
@@ -1315,7 +1350,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: 'tkl',
     pieces: 1,
     material: 'pc',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 880,
     colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
     desc: 'Nhựa PC trong / mờ, xuyên đèn',
@@ -1348,10 +1383,10 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'anod',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1800,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
-    desc: 'Nhôm CNC 1 mảnh, chơi được tray / gasket / O-ring mount',
+    desc: 'Nhôm CNC 1 mảnh, chơi được tray / O-ring mount',
   },
   tklAluC: {
     name: 'Case TKL nhôm anod 1 mảnh · cổng C trên PCB',
@@ -1361,10 +1396,10 @@ export const CASES: Record<string, CaseDef> = {
     pcbUsb: 'right',
     material: 'anod',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1800,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
-    desc: 'Nhôm CNC 1 mảnh, chơi được tray / gasket / O-ring mount, cổng USB-C hàn trên PCB bên phải (không daughterboard)',
+    desc: 'Nhôm CNC 1 mảnh, chơi được tray / O-ring mount, cổng USB-C hàn trên PCB bên phải (không daughterboard)',
   },
   tklAluEcoat: {
     name: 'Case TKL nhôm E-coat 1 mảnh',
@@ -1372,10 +1407,10 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'ecoat',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1800,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
-    desc: 'Nhôm E-coat sần 1 mảnh, chơi được tray / gasket / O-ring mount',
+    desc: 'Nhôm E-coat sần 1 mảnh, chơi được tray / O-ring mount',
   },
   tklAluEcoatC: {
     name: 'Case TKL nhôm E-coat 1 mảnh · cổng C trên PCB',
@@ -1385,10 +1420,10 @@ export const CASES: Record<string, CaseDef> = {
     pcbUsb: 'right',
     material: 'ecoat',
     thinBezel: true,
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1800,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
-    desc: 'Nhôm E-coat sần 1 mảnh, chơi được tray / gasket / O-ring mount, cổng USB-C hàn trên PCB bên phải (không daughterboard)',
+    desc: 'Nhôm E-coat sần 1 mảnh, chơi được tray / O-ring mount, cổng USB-C hàn trên PCB bên phải (không daughterboard)',
   },
   tklGasket: {
     name: 'Case TKL nhôm anod 2 mảnh',
@@ -1442,7 +1477,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: 'full',
     pieces: 1,
     material: 'abs',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 650,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Phổ thông',
@@ -1452,7 +1487,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: 'full',
     pieces: 1,
     material: 'pc',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1050,
     colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
     desc: 'Nhựa PC trong / mờ, xuyên đèn',
@@ -1663,7 +1698,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: '65',
     pieces: 1,
     material: 'abs',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 400,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
@@ -1673,7 +1708,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: '65',
     pieces: 1,
     material: 'pc',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 650,
     colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
     desc: 'Nhựa PC trong / mờ, xuyên đèn',
@@ -1877,10 +1912,10 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'anod',
     thinBezel: true,
-    mounts: ['gasket', 'tray', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1500,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
-    desc: 'Nhôm CNC 1 mảnh kiểu Q1, gasket mount êm',
+    desc: 'Nhôm CNC 1 mảnh viền mỏng: tray / O-ring mount',
   },
   case75AluEcoat: {
     name: 'Case 75% nhôm E-coat 1 mảnh',
@@ -1888,17 +1923,17 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'ecoat',
     thinBezel: true,
-    mounts: ['gasket', 'tray', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1500,
     colors: ['black', 'silver', 'navy', 'yellow', 'green', 'red', 'purple', 'latte', 'brown'],
-    desc: 'Nhôm E-coat sần 1 mảnh kiểu Q1, gasket mount êm',
+    desc: 'Nhôm E-coat sần 1 mảnh viền mỏng: tray / O-ring mount',
   },
   case75Plastic: {
     name: 'Case 75% nhựa ABS 1 mảnh',
     ff: '75',
     pieces: 1,
     material: 'abs',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 450,
     colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
     desc: 'Nhựa ABS, giá rẻ',
@@ -1908,7 +1943,7 @@ export const CASES: Record<string, CaseDef> = {
     ff: '75',
     pieces: 1,
     material: 'pc',
-    mounts: ['tray', 'gasket', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 720,
     colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
     desc: 'Nhựa PC trong / mờ, xuyên đèn',
@@ -1953,7 +1988,7 @@ export const CASES: Record<string, CaseDef> = {
     pieces: 1,
     material: 'anod',
     thinBezel: true,
-    mounts: ['gasket', 'tray', 'oring'],
+    mounts: ['tray', 'oring'],
     price: 1700,
     colors: [
       'black',
@@ -3049,17 +3084,17 @@ function checkParts(inv: Inventory, order: Order, installedSwitches: number): In
       // khách đòi kiểu mount (vd O-ring mount) thì case phải làm được mount đó
       ok:
         !!c &&
-        caseFits(c, order.layout) &&
+        caseFits(c, order.layout, order.variant) &&
         (!order.caseId || inv.case!.id === order.caseId) &&
         (!order.mount || c.mounts.includes(order.mount)),
       wrong:
         !!c &&
-        (!caseFits(c, order.layout) ||
+        (!caseFits(c, order.layout, order.variant) ||
           (!!order.caseId && inv.case!.id !== order.caseId) ||
           (!!order.mount && !c.mounts.includes(order.mount))),
       msg: !c
         ? 'Chưa có case'
-        : !caseFits(c, order.layout)
+        : !caseFits(c, order.layout, order.variant)
           ? `Chưa có case vừa layout ${lay.name}`
           : order.caseId && inv.case!.id !== order.caseId
             ? `Chưa có case ${CASES[order.caseId]?.name ?? order.caseId}`
@@ -3165,7 +3200,14 @@ export function platelessIssue(inv: Pick<Inventory, 'plate' | 'pcb' | 'stab'>): 
 
 /** Case có hợp layout không (cùng cỡ, hoặc cỡ layout cho phép với case không có model CAD,
  * vd case 40% vừa Planck) + layout case cho phép */
-export function caseFits(def: CaseDef, layout: LayoutId) {
+/**
+ * Case hợp layout. `variant`: HHKB space 10u (kín hàng giữa 2 khối chặn) chỉ case 2 mảnh: case 1 mảnh chơi HHKB phải cắt 2 góc PCB nhường
+ * khối chặn đúc liền case (`cornerCutOutline`), thường chỉ làm HHKB / True HHKB thường
+ */
+export function caseFits(def: CaseDef, layout: LayoutId, variant?: Variant) {
+  // Enter ISO / Big-ass: chỉ case dựng bằng code (case CAD nắp / plate cắt sẵn cụm Enter ANSI)
+  if (variant?.enter && variant.enter !== 'ansi' && def.model) return false
+  if (layout === 'hhkb' && variant?.space === '10u' && def.pieces !== 2) return false
   const lay = LAYOUTS[layout]
   const ff = def.ff === lay.ff || (!def.model && !!lay.fits?.includes(def.ff))
   // layout `strict` (TKL F13): case CAD phải ghi đích danh, case dựng bằng code thì tự khớp theo phím

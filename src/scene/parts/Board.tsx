@@ -330,7 +330,13 @@ export function Board() {
     ctx.layout === '60' &&
     (ctx.variant.backspace ?? '2u') === '2u' &&
     (ctx.variant.bottom ?? 'wk') === 'wk' &&
-    (ctx.variant.rshift ?? '2.75u') === '2.75u'
+    (ctx.variant.rshift ?? '2.75u') === '2.75u' &&
+    (ctx.variant.enter ?? 'ansi') === 'ansi' &&
+    (ctx.variant.lshift ?? '2.25u') === '2.25u' &&
+    (ctx.variant.caps ?? 'normal') === 'normal'
+  // Enter ISO / Big-ass (phím chữ L): switch Enter lệch chỗ ANSI → bỏ plate universal, cắt lỗ theo phím
+  // Shift trái ISO (phím <>), Caps stepped (`ext` cùng hàng): plate universal không có → cũng cắt theo phím
+  const lShape = ctx.keys.some((k) => k.ext || k.code === 'IntlBackslash')
   // tray mount: vít xuyên plate + PCB bắt vào trụ đồng đáy case (vị trí đã dò không chạm lỗ switch / stab)
   const trayHoles = ctx.mount === 'tray' ? ctx.screws.trayScrew : NO_HOLES
   // rãnh tròn mép PCB chỗ trụ đỡ O-ring trong case (r + khe 0,02u), cố định theo case nên PCB lúc nào cũng khoét sẵn
@@ -351,7 +357,7 @@ export function Board() {
         ctx.outline,
         standard60CAD ? plate60Cutouts : undefined,
         // 60 / 75 / TKL / full: plate universal có lỗ cho mọi variant
-        standard60CAD || ctx.outline ? undefined : plateUniversal[ctx.layout],
+        standard60CAD || ctx.outline || lShape ? undefined : plateUniversal[ctx.layout],
         sandwich
           ? sandwichPlateShape(
               ctx.width + 2 * (CASE_MARGIN + CASE_WALL),
@@ -376,7 +382,7 @@ export function Board() {
         ctx.mount === 'gasket' && gasketTabbed(ctx.caseDef) ? ctx.gaskets : NO_HOLES,
         boss2 ? ABS_TOP.d : TOP_NOTCH.d,
       ),
-    [ctx, standard60CAD, sandwich, topFull, trayHoles, boss2],
+    [ctx, standard60CAD, sandwich, topFull, trayHoles, boss2, lShape],
   )
   const at = (name: StepId) => ctx.steps.indexOf(name)
   return (

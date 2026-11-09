@@ -102,10 +102,10 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
 
 1. **Title** (`features/title/TitleScreen.tsx`): nền ảnh góc bàn cạnh cửa sổ chụp trong game (phủ mờ), logo game (icon keycap +
    "BUILD KEYBOARD / SIMULATOR") + menu chữ chính giữa màn: "Sự nghiệp" → Tiếp tục (tên, ngày, tiền; chưa có bản lưu thì mờ) / Chơi mới
-   (nhập tên, không hướng dẫn), "Hướng dẫn build" (nhập tên, có tour Keeb-chan), "Free build" (chọn case ở bảng `FreeBuildDialog`, có sẵn đủ đồ, không lưu, `startFree`);
+   (nhập tên, không hướng dẫn), "Hướng dẫn build" (nhập tên, có tour Keeb-chan), "Free build" (chọn case ở bảng `FreeBuildDialog`, có sẵn đủ đồ, không lưu, `startFree`), "Bảng xếp hạng" (popup bảng server, không còn app trong máy tính);
    ↑ ↓ + Enter, có âm thanh menu, nhạc nền phát ngay. Góc trên trái: bật / tắt nhạc; đáy: Facebook, số phiên bản (bấm xem lịch sử cập nhật).
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar, hiện trong khung đúng mặt kính màn hình 3D (~90%, quanh đó thấy bàn / phòng). Chơi mới mở sẵn
-   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc bấm vùng phòng ngoài màn hình; Esc cũng vậy)
+   Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc bấm vùng phòng ngoài màn hình; Esc thì mở Cài đặt)
    rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), kéo chuột nhìn, cuộn chuột giữa phóng to;
    đang ngồi bàn build chỉ nút quay lại mới đứng dậy, bấm WASD không đứng dậy).
    Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
@@ -125,8 +125,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
    "Mua đồ còn thiếu" / ra bàn build; đơn đã nhận khác bấm "Nhận làm" để đổi sang.
 7. **Hội Phím Cơ VN**: bài pass đồ của người chơi khác. Hàng rẻ hơn 20–40% nhưng có khoảng 20% khả
    năng bị seller bùng tiền. Mua xong người bán gửi kiện tới kệ cửa trong ngày (không tag Shopii), mở kiện mới biết lỗi. Inbox: tự nhập giá trả (popup, 3 lần), "Đi ăn xin" xin free (10% được, 70% bị người bán chặn, 20% bị ban chợ 3 ngày).
-8. **Bảng xếp hạng**: bảng server, xếp theo điểm tổng (đơn + uy tín + ngày + tiền, lọc theo từng thông số) các lượt chơi đã kết thúc (thua / phá sản / chơi lại) + lượt đang chơi.
-9. **Cài đặt**: tắt âm thanh, chỉnh âm lượng nhạc nền / hiệu ứng, xem ghi công, về màn hình title.
+8. **Cài đặt**: tắt âm thanh, chỉnh âm lượng nhạc nền / hiệu ứng, xem ghi công, về màn hình title.
    Tiến trình được lưu tự động.
 
 ### Bàn build 3D

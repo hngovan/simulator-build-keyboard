@@ -295,8 +295,11 @@ export const ABS_WALL_2 = 0.36
  * dưới), trụ bán kính `bossR` vừa khít rãnh. Khay hở `gap` với da ngoài
  */
 export const ABS_SHELL = { skin: 0.08, deck: 0.1, rib: 0.03, ribGap: 0.8, bossR: 0.09, gap: 0.006 }
-/** mép trên case nhựa (u, trên mặt plate ~3,4mm): thấp hơn case khác (`Y.caseTop` ~6,9mm) cho dáng gọn (đáy cũng nâng: `ABS_RAISE`) */
-export const ABS_CASE_TOP = 0.18
+/**
+ * mép trên case nhựa (u, trên mặt plate ~6,5mm ≈ đỉnh housing switch): nhìn ngang chỉ lộ chân keycap, không lộ switch (0,18 ≈ 3,4mm
+ * lộ nửa trên housing); thấp hơn chút so với case khác (`Y.caseTop` ~6,9mm), đáy nâng `ABS_RAISE` cho dáng gọn
+ */
+export const ABS_CASE_TOP = 0.34
 /** mép trên case dựng bằng code theo chất liệu */
 export const caseTopOf = (c?: { material: string; model?: string; bottom?: unknown }) =>
   isPlasticCase(c) ? ABS_CASE_TOP : Y.caseTop
@@ -444,8 +447,10 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   ])
   const hit = cache.get(ck)
   if (hit) return hit
-  const { keys, width, depth, origin, outline } = getLayout(order.layout, order.variant)
+  const lay = getLayout(order.layout, order.variant)
+  const { keys, width, depth, origin } = lay
   const caseDef = CASES[inv.case!.id]
+  const outline = lay.outline ?? cornerCutOutline(keys, width, depth, caseDef, order.layout)
   const stabKeys = keys.filter((k) => k.stab)
   const stabModel = inv.stab?.type
   const stabType = stabModel ? STABS[stabModel].mount : undefined
@@ -647,6 +652,44 @@ export function buildContext(order: Order, inv: Inventory, mount: string): Build
   }
   cache.set(ck, ctx)
   return ctx
+}
+
+/**
+ * Case 1 mảnh chơi layout có khe 2 góc hàng dưới (HHKB / True HHKB, 40% kiểu HHKB): khối chặn 2 góc hàng dưới đúc liền case từ sàn lên (case trên không có để úp xuống) → PCB + plate
+ * (+ foam) cắt 2 góc đó (chừa khe `CASE_MARGIN`) cho board thả từ trên xuống không vướng. Case 2 mảnh: khối chặn thuộc case trên,
+ * PCB chữ nhật. Trả đa giác viền (toạ độ phím, z tới trước) hoặc undefined
+ */
+export function cornerCutOutline(
+  keys: Key[],
+  width: number,
+  depth: number,
+  caseDef: Pick<CaseDef, 'pieces' | 'plateModel'>,
+  layout: LayoutId,
+): [number, number][] | undefined {
+  if (caseDef.pieces === 2 || caseDef.plateModel || layout === 'alice') return undefined
+  const hw = width / 2
+  const hd = depth / 2
+  const c = CASE_MARGIN
+  // khe chạm mép trước + mép trái / phải (góc hàng dưới)
+  const gaps = blockerGaps(keys, width, depth, 0).filter((g) => g.z + g.d / 2 > hd - 0.01)
+  const left = gaps.find((g) => g.x - g.w / 2 < -hw + 0.01)
+  const right = gaps.find((g) => g.x + g.w / 2 > hw - 0.01)
+  if (!left && !right) return undefined
+  const pts: [number, number][] = [
+    [-hw, -hd],
+    [hw, -hd],
+  ]
+  if (right) {
+    const x = right.x - right.w / 2 - c
+    const z = right.z - right.d / 2 - c
+    pts.push([hw, z], [x, z], [x, hd])
+  } else pts.push([hw, hd])
+  if (left) {
+    const x = left.x + left.w / 2 + c
+    const z = left.z - left.d / 2 - c
+    pts.push([x, hd], [x, z], [-hw, z])
+  } else pts.push([-hw, hd])
+  return pts
 }
 
 /** Vít tray: nằm ở khe giữa các hàng phím (chỗ trụ đồng / trụ nhựa trên sàn case) */
@@ -1151,9 +1194,10 @@ export const FOOT_R = 0.21
 export const FOOT_DEPTH = 0.042
 
 // Khoảng cách từ tâm phím tới 2 chân stab
+/** nửa khoảng cách 2 chân stab (u): phím ≥ 7u (space 7u / 10u) dùng dây 7u (chân cách tâm 3u), 6–6.75u theo cỡ phím */
 export const stabSpan = (k: Key) => {
   const len = Math.max(k.w, k.h)
-  return len >= 6 ? (len - 1) / 2 : 0.62
+  return len >= 7 ? 3 : len >= 6 ? (len - 1) / 2 : 0.62
 }
 
 const MM_U = 1 / 19.05
@@ -1195,7 +1239,9 @@ export function keyCutouts(k: Key): [number, number][][] {
 
 /** lỗ cắt plate dùng để dò chỗ khoét vít tray: plate universal (gộp mọi variant) nếu có, không thì theo phím */
 export const plateCutoutsFor = (layout: string, keys: Key[], outline?: unknown) =>
-  (!outline && plateUniversal[layout]) || keys.flatMap(keyCutouts)
+  // Enter ISO / Big-ass (phím chữ L): switch Enter lệch chỗ ANSI → plate universal không khớp, cắt theo phím
+  (!outline && !keys.some((k) => k.ext || k.code === 'IntlBackslash') && plateUniversal[layout]) ||
+  keys.flatMap(keyCutouts)
 
 /** vòng tròn tâm (x, z) bán kính r không chạm lỗ cắt nào (không nằm trong lỗ, cách mọi cạnh ≥ r) */
 export function clearOfCutouts(loops: [number, number][][], x: number, z: number, r: number) {

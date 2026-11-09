@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { onBench } from '@/store/carrySlice'
 import { usePack } from '@/features/bench/packStore'
 import { PackBox, PackCarry } from './parts/PackBox'
@@ -57,6 +57,48 @@ function StepLoading() {
   return null
 }
 
+/** layer camera không bật: vật đang hâm nóng shader vẫn "visible" (compile chỉ duyệt vật visible) nhưng không bị vẽ / bấm trúng */
+const WARM_LAYER = 31
+
+/**
+ * Bàn trạm (lube, mod stab) lần đầu dựng: nhiều vật liệu / hình mới → khung đầu biên dịch shader + đẩy hình lên GPU đồng bộ, đứng hình
+ * vài giây. Giấu khỏi camera (layer riêng), biên dịch song song (`warmUp` → `compileAsync`) trong lúc hiện lớp "Đang tải", xong mới hiện
+ */
+function Warm({ children }: { children: ReactNode }) {
+  const ref = useRef<THREE.Group>(null)
+  const gl = useThree((s) => s.gl)
+  const camera = useThree((s) => s.camera)
+  const scene = useThree((s) => s.scene)
+  // ref (không state): khung kế tiếp sau khi hâm xong không giấu lại
+  const warm = useRef(true)
+  useLayoutEffect(() => {
+    const root = ref.current
+    if (!root) return
+    root.traverse((o) => o.layers.set(WARM_LAYER))
+    useSceneLoading.setState((s) => ({ pending: s.pending + 1 }))
+    let open = true
+    const done = () => {
+      if (!open) return
+      open = false
+      useSceneLoading.setState((s) => ({ pending: s.pending - 1 }))
+    }
+    void warmUp(gl, root, camera, scene).then(() => {
+      if (!open) return
+      warm.current = false
+      root.traverse((o) => o.layers.set(0))
+      done()
+    })
+    return done
+    // chỉ lần dựng đầu của trạm
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  // vật mới mọc thêm lúc đang hâm (chưa xong) cũng giấu theo
+  useFrame(() => {
+    if (warm.current) ref.current?.traverse((o) => o.layers.set(WARM_LAYER))
+  })
+  return <group ref={ref}>{children}</group>
+}
+
 /** Chọn thứ hiển thị trên bàn theo bước hiện tại */
 function Workbench() {
   const step = useStep()
@@ -73,8 +115,18 @@ function Workbench() {
       </>
     )
   if (step === 'unbox') return <ShippingBox />
-  if (step === 'stabMod') return <StabModStation />
-  if (step === 'switchLube') return <LubeStation />
+  if (step === 'stabMod')
+    return (
+      <Warm key="stab">
+        <StabModStation />
+      </Warm>
+    )
+  if (step === 'switchLube')
+    return (
+      <Warm key="lube">
+        <LubeStation />
+      </Warm>
+    )
   // bước hàn: thêm đồ hàn (mỏ hàn, cuộn thiếc, bùi nhùi) cạnh board
   if (step === 'solder')
     return (
@@ -115,6 +167,7 @@ function CameraRig() {
   const camKey = useGame((s) => s.camKey)
   const camera = useThree((s) => s.camera)
   const scene = useThree((s) => s.scene)
+  const gl = useThree((s) => s.gl)
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null
   const fit = useThree((s) => fitAspect(s.size.width / s.size.height))
   const step = useStep()
@@ -147,8 +200,8 @@ function CameraRig() {
 
   // dev: mở camera + controls trong console (cùng kiểu window.__game) để đặt góc nhìn khi debug
   useEffect(() => {
-    if (import.meta.env.DEV) window.__r3f = { camera, controls, scene }
-  }, [camera, controls, scene])
+    if (import.meta.env.DEV) window.__r3f = { camera, controls, scene, gl }
+  }, [camera, controls, scene, gl])
 
   // giữ tâm nhìn trong 4 bức tường, camera không xuống dưới sàn
   useFrame((state) => {
@@ -261,7 +314,7 @@ function Controls() {
   const pc = useGame((s) => s.screen === 'pc')
   // đang giữ chuột thao tác (hàn...) thì khoá camera
   const locked = useCamLock((s) => s.locked)
-  // đang ngồi bàn build: chỉ Esc / nút quay lại mới đứng dậy (WASD không đứng dậy, dễ bấm nhầm lúc thao tác)
+  // đang ngồi bàn build: chỉ nút quay lại mới đứng dậy (Esc mở Cài đặt) (WASD không đứng dậy, dễ bấm nhầm lúc thao tác)
   // ngồi máy tính: camera đứng yên (PcView), không điều khiển
   if (pc) return null
   // đi lại trong phòng: góc nhìn người (WASD + kéo chuột nhìn)

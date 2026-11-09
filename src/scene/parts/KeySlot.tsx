@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { create } from 'zustand'
 import { useGame, useStep } from '@/store'
@@ -12,6 +13,7 @@ import { useHover } from '../common/useHover'
 import { SwitchMesh } from '../models/Switch'
 import { Keycap } from './Keycap'
 import { StabMesh } from './StabMesh'
+import { keyShape2D } from './keyShape'
 import { HintArrow } from '../stations/StationKit'
 
 /** 1 vị trí phím: lỗ plate, stab, switch, keycap; xử lý click theo bước hiện tại */
@@ -64,6 +66,8 @@ export function KeySlot({ k }: { k: Key }) {
       s.ctx.keys.find((x) => s.build?.switches[x.id] && !s.build?.keycaps[x.id])?.id === k.id,
   )
   const { hover, bind } = useHover(canAct)
+  // Enter chữ L: ô bấm theo đúng hình phím (cả cánh)
+  const slotShape = useMemo(() => (k.ext ? keyShape2D(k, 0.03) : null), [k])
   const lit = useRunLit((s) => s.lit.has(k.id)) && canAct
 
   const onDown = (e: ThreeEvent<PointerEvent>) => {
@@ -109,7 +113,11 @@ export function KeySlot({ k }: { k: Key }) {
           onUp()
         }}
       >
-        <planeGeometry args={[k.w - 0.06, k.h - 0.06]} />
+        {slotShape ? (
+          <shapeGeometry args={[slotShape]} />
+        ) : (
+          <planeGeometry args={[k.w - 0.06, k.h - 0.06]} />
+        )}
         <meshBasicMaterial
           color="#5cf"
           transparent

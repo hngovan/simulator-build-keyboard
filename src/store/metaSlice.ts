@@ -31,7 +31,7 @@ import { afterLoad } from '@/scene/common/loadingStore'
 
 type Screen = 'title' | 'pc' | 'bench'
 export type AppId =
-  'messenger' | 'shopii' | 'group' | 'inventory' | 'order' | 'reviews' | 'leaderboard' | 'settings'
+  'messenger' | 'shopii' | 'group' | 'inventory' | 'order' | 'reviews' | 'settings'
 
 // Trạng thái chung: màn hình, cửa sổ, thông báo, tiến trình lưu
 export interface MetaSlice extends Profile {

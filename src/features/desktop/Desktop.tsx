@@ -23,7 +23,7 @@ function usePcFrame() {
 
 /**
  * Màn hình "máy tính trong game": icon app, các cửa sổ, taskbar. Nằm trong khung đúng chỗ mặt kính màn hình 3D (~90%),
- * quanh đó là phòng (Bench làm nền); góc trên trái nút quay lại = đứng dậy (như Esc)
+ * quanh đó là phòng (Bench làm nền); góc trên trái nút quay lại = đứng dậy (Esc mở Cài đặt)
  */
 export function Desktop() {
   const frame = usePcFrame()

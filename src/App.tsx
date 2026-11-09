@@ -25,6 +25,7 @@ import { onBench } from '@/store/carrySlice'
 import { useSceneLoading } from '@/scene/common/loadingStore'
 import { applyAudioSettings, startBgm } from '@/sound'
 import { TOUR_ID, Tour } from '@/features/guide/Tour'
+import { SettingsDialog } from '@/features/settings/SettingsDialog'
 
 export default function App() {
   const screen = useGame((s) => s.screen)
@@ -96,7 +97,8 @@ export default function App() {
           <PayBanner />
         </>
       )}
-      {/* menu Cài đặt ngoài game (Esc) */}
+      {/* Cài đặt nổi ở bàn build / đi lại (Esc bật / tắt) */}
+      <SettingsDialog />
       <GameOverDialog />
       {freePick && <FreeBuildDialog />}
     </>

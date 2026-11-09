@@ -416,11 +416,13 @@ function channelRibs(
   y0: number,
   y1: number,
   avoid: { x: number; side: 1 | -1; half: number }[],
-  /** đầu ngoài gân cách mặt ngoài case (case trên: lấn vào da ngoài; case dưới: dừng trong mép khay) */
+  /** đầu ngoài gân cách mặt ngoài case (lấn vào da ngoài) */
   outer: number,
+  /** đầu trong gân vượt mặt ngoài da trong (u): dương = lấn vào da trong, âm = dừng cách da trong */
+  inner = 0.01,
 ) {
-  // gân từ trong da trong (lấn 0,01) ra tới `outer`
-  const zIn = wall - s.skin + 0.01
+  // gân từ da trong ra tới `outer`
+  const zIn = wall - s.skin + inner
   const span = zIn - outer
   const mid = (zIn + outer) / 2
   const out: THREE.BufferGeometry[] = []
@@ -575,13 +577,14 @@ export function absTwoShellGeometry(
       ),
       // rãnh rỗng giữa 2 lớp da, từ mép ghép lên tới dưới mặt trên
       slab(
+        // da trong case trên dày thêm `gap` (+ lấn 0,004): mặt ngoài thẳng hàng mặt ngoài da trong case dưới, gân 1 bề ngang nối vào
         ringRect(
           W - 2 * skin,
           D - 2 * skin,
           outerR,
-          innerW + 2 * skin,
-          innerD + 2 * skin,
-          INNER_R + skin,
+          innerW + 2 * (skin + s.gap + 0.004),
+          innerD + 2 * (skin + s.gap + 0.004),
+          INNER_R + skin + s.gap,
         ),
         ys.split - 0.01,
         ys.top - deck,
@@ -600,13 +603,17 @@ export function absTwoShellGeometry(
     return mergeAll([
       shell,
       ...notchPockets(notches, D, wall, ys.split, o.notchTop ?? ys.top),
-      ...channelRibs(W, D, wall, s, ys.split, y1, avoid, skin - 0.01),
+      // gân chạy suốt từ mặt sàn khay case dưới lên dưới mặt trên, 1 bề ngang: từ da ngoài vào tới sát mặt ngoài da trong case dưới
+      // (hở `gap`, case trên úp trùm vành da trong case dưới); trên mép ghép gân cũng dừng đó, da trong case trên dày thêm `gap`
+      ...channelRibs(W, D, wall, s, ys.floor + 0.002, y1, avoid, skin - 0.01, -s.gap - 0.002),
+      // trụ vít ghép từ mặt sàn khay lên dưới mặt trên (vít từ đáy xuyên sàn khay ăn lên)
       ...(o.bosses
-        ? o.screws.map((p) => tubeGeometry(p.x, p.z, s.bossR, o.hole, ys.split, y1))
+        ? o.screws.map((p) => tubeGeometry(p.x, p.z, s.bossR, o.hole, ys.floor + 0.002, y1))
         : []),
     ])
   }
-  // khay đáy: lọt trong da ngoài case trên (hở `gap`), khối đặc tới mép ghép rồi khoét lòng case + rãnh ngoài da trong
+  // khay đáy: lọt trong da ngoài case trên (hở `gap`), mép thẳng ra sát da ngoài, khối đặc tới mép ghép rồi khoét lòng case + rãnh
+  // ngoài da trong (vành da trong chạy quanh tới mép ghép); rãnh để trống: gân + trụ vít thuộc case trên, chạy xuống tới mặt khay
   const tw = W - 2 * (skin + s.gap)
   const td = D - 2 * (skin + s.gap)
   const tr = Math.max(0.02, outerR - s.gap)
@@ -643,11 +650,5 @@ export function absTwoShellGeometry(
     ),
     ...portCuts,
   ]
-  const shell = carve(solid, cuts)
-  const y0 = ys.floor - 0.005
-  return mergeAll([
-    shell,
-    ...channelRibs(W, D, wall, s, y0, ys.split, avoid, skin + s.gap + 0.01),
-    ...(o.bosses ? o.screws.map((p) => tubeGeometry(p.x, p.z, s.bossR, o.hole, y0, ys.split)) : []),
-  ])
+  return carve(solid, cuts)
 }

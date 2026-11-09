@@ -125,9 +125,21 @@ export function makePcbTexture(
     g.restore()
   })
 
+  // vùng phím (px canvas, nới `pad`): via / chữ silkscreen không in đè lên footprint (hàng sát mép, lỗ foam phím to nhìn thấy)
+  const underKey = (x: number, y: number, pad: number) =>
+    keys.some((k) => {
+      const c = Math.cos(k.rot)
+      const sn = Math.sin(k.rot)
+      const dx = x - px(k.cx)
+      const dy = y - py(k.cz)
+      const lx = dx * c - dy * sn
+      const ly = dx * sn + dy * c
+      return Math.abs(lx) < (k.w * SCALE) / 2 + pad && Math.abs(ly) < (k.h * SCALE) / 2 + pad
+    })
   // Vias dọc viền và ký hiệu mạch điều khiển.
   for (let x = 34; x < w - 30; x += 33) {
     for (const y of [31, h - 31]) {
+      if (underKey(x, y, 4)) continue
       g.strokeStyle = '#b79c67'
       g.lineWidth = 2
       g.beginPath()
@@ -148,9 +160,22 @@ export function makePcbTexture(
     g.arc(cx, cy, 4, 0, Math.PI * 2)
     g.fill()
   })
+  // nhãn PCB: góc nào trống (không đè phím) thì in, layout kín mép (40%...) thì bỏ
   g.fillStyle = dark ? '#b0c6c0' : '#c4dbc4'
   g.font = 'bold 14px monospace'
-  g.fillText(dark ? 'HOTSWAP  |  PCB REV.01' : 'SOLDER  |  PCB REV.01', 30, h - 47)
+  const label = dark ? 'HOTSWAP  |  PCB REV.01' : 'SOLDER  |  PCB REV.01'
+  const tw = g.measureText(label).width
+  const spot = [
+    [30, h - 47],
+    [w - 30 - tw, h - 47],
+    [30, 56],
+    [w - 30 - tw, 56],
+  ].find(([x, y]) =>
+    [0, 0.25, 0.5, 0.75, 1].every(
+      (f) => !underKey(x + f * tw, y, 2) && !underKey(x + f * tw, y - 12, 2),
+    ),
+  )
+  if (spot) g.fillText(label, spot[0], spot[1])
 
   const texture = new CanvasTexture(canvas)
   texture.colorSpace = SRGBColorSpace
