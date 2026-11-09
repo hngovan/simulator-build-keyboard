@@ -28,6 +28,8 @@ export function useAppShortcuts() {
       setTimeout(() => {
         if (e.defaultPrevented) return
         if (useGame.getState().screen === 'title') return
+        // Esc lúc khoá tâm chuột: trình duyệt nhả chuột, WalkControls vừa mở Cài đặt rồi
+        if (Date.now() - useSettingsPop.getState().at < 400) return
         useSettingsPop.setState((p) => ({ open: !p.open }))
       })
     }

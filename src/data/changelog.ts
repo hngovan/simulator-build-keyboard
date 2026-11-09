@@ -13,6 +13,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.36',
+    date: '2026-11-10',
+    commits: [],
+    title: 'Đi lại trong phòng: khoá tâm chuột kiểu Minecraft',
+    items: [
+      'Bấm vào cảnh để khoá chuột: rê chuột là quay nhìn, không cần kéo; bấm đồ vật ở tâm ngắm giữa màn',
+      'Giữ Alt để hiện con trỏ, nhả Alt khoá lại; Esc nhả chuột và mở Cài đặt, đóng Cài đặt là chơi tiếp',
+      'Mở lịch / popup tự nhả chuột; màn hình cảm ứng vẫn kéo để nhìn',
+    ],
+  },
+  {
     version: '0.1.35',
     date: '2026-11-10',
     commits: ['1b1f441'],

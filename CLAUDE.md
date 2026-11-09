@@ -128,7 +128,8 @@ vào `window.__r3f` để debug trong console.
     (không dùng chuột phải; chuột trái vào thùng `EmptyBench`: đủ đồ = `buildOrder`, thiếu đồ / đã đóng gói = `pickBench` cầm lên; không còn phím B). `title/`: màn hình tiêu đề.
 - Phòng đi lại (kiểu PC Building Simulator): `screen = 'bench'` + `walk` (metaSlice, không lưu; `standUp('pc' | 'bench')`).
   `scene/room/`: `roomLayout.ts` (toạ độ phòng / bàn / hành lang / vùng đi `WALK_AREAS` / khối cản `BLOCKS`), `WalkControls`
-  (chỉ WASD đi, không mũi tên, không chạy, không bấm sàn đi tới; kéo nhìn, cuộn chuột giữa zoom FOV, bay camera `useRoom.fly`), `RoomSpot` (vật bấm được + chữ gợi ý HUD), `PcDesk` (bàn máy tính sát
+  (chỉ WASD đi, không mũi tên, không chạy, không bấm sàn đi tới; khoá tâm chuột pointer lock kiểu Minecraft: bấm cảnh khoá, rê nhìn, tia chọn bắn từ tâm
+  (`setEvents` compute + `events.update` mỗi 50ms), tâm ngắm HUD `useRoom.locked`, giữ Alt hiện chuột, mất khoá ngoài ý (Esc) = mở Cài đặt, popup mở thì tự nhả; không khoá thì kéo nhìn, cuộn chuột giữa zoom FOV, bay camera `useRoom.fly`), `RoomSpot` (vật bấm được + chữ gợi ý HUD), `PcDesk` (bàn máy tính sát
   trái bàn build, CPU dưới gầm, lót chuột 90 × 40), `RoomWindow` (rèm lá), `WallCalendar`, `DoorParcels` (kệ cuối hành lang nhận hàng: thùng đơn + kiện Shopii / chợ, cất lại thùng đơn `placeDoor`),
   `ShipShelf` (kệ giao hàng tường phải trong phòng, `SHIP_SHELF`), `HeldBox` (thùng đang cầm),
   `Stool`, `HallProps` (cửa 6 ô, kệ sắt), tranh `CanvasPainting` / `ModelPainting` (+ `*Art.ts` vẽ canvas), `sitAtBench`;

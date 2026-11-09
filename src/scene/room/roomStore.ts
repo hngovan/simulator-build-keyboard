@@ -25,6 +25,8 @@ export const useRoom = create<{
   /** dẫn đường người mới (`GuideMarker`): hướng chỗ cần tới so với hướng nhìn (độ, + = phải), khoảng cách (m); null = không dẫn */
   guideDir: number | null
   guideDist: number | null
+  /** đang khoá tâm chuột (pointer lock, kiểu Minecraft): ẩn con trỏ, hiện tâm ngắm giữa màn */
+  locked: boolean
 }>(() => ({
   spot: 'bench',
   fly: null,
@@ -34,4 +36,5 @@ export const useRoom = create<{
   calendar: false,
   guideDir: null,
   guideDist: null,
+  locked: false,
 }))

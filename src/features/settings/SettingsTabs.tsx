@@ -202,7 +202,8 @@ const KEYBINDS: [string, [string, Bind[]][]][] = [
     'Đi lại trong phòng',
     [
       ['Di chuyển', ['W', 'A', 'S', 'D']],
-      ['Nhìn quanh (kéo)', [{ mouse: 'left' }]],
+      ['Khoá tâm chuột (bấm vào cảnh)', [{ mouse: 'left' }]],
+      ['Hiện con trỏ (giữ)', ['Alt']],
       ['Phóng to / thu nhỏ', [{ mouse: 'wheel' }]],
       ['Tương tác với đồ vật', [{ mouse: 'left' }]],
     ],

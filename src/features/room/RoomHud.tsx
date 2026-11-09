@@ -9,12 +9,27 @@ import { useRoom } from '@/scene/room/roomStore'
 import { boxCustomer, isPackedBox } from '@/store/carrySlice'
 import { RoomGuide } from '@/features/guide/RoomGuide'
 
-/** cách điều khiển khi đi lại: 1 dòng chữ to giữa đáy màn hình */
+/** cách điều khiển khi đi lại: 1 dòng chữ to giữa đáy màn hình (đang khoá tâm chuột: rê chuột nhìn, giữ Alt hiện chuột) */
+const HINT_LOCKED = (
+  <>
+    <span>Rê chuột nhìn quanh,</span>
+    <span className="flex gap-1">
+      {['A', 'D', 'W', 'S'].map((k) => (
+        <KeyCap key={k}>{k}</KeyCap>
+      ))}
+    </span>
+    <span>di chuyển, giữ</span>
+    <KeyCap>Alt</KeyCap>
+    <span>hiện chuột</span>
+  </>
+)
+
+/** chưa khoá tâm chuột (vừa nhả Esc / giữ Alt / cảm ứng) */
 const HINT = (
   <>
-    <span>Kéo</span>
+    <span>Nhấn</span>
     <MouseIcon btn="left" />
-    <span>để nhìn quanh,</span>
+    <span>vào cảnh để điều khiển (hoặc kéo nhìn quanh),</span>
     <MouseIcon btn="wheel" />
     <span>phóng to và</span>
     <span className="flex gap-1">
@@ -31,6 +46,7 @@ export function RoomHud() {
   const hover = useRoom((r) => r.hover)
   const hoverNote = useRoom((r) => r.hoverNote)
   const calendar = useRoom((r) => r.calendar)
+  const locked = useRoom((r) => r.locked)
   // thùng đang chờ ở kệ cuối hành lang: thùng đơn khách gửi tới + thùng kiện Shopii / chợ đã tới
   // (kiện cùng nguồn + cùng tên gộp 1 thùng như trên kệ, `parcelStacks`: đếm theo thùng nhìn thấy, không theo từng kiện)
   const atDoor = useGame(
@@ -67,6 +83,15 @@ export function RoomHud() {
           </span>
         </div>
       )}
+      {/* tâm ngắm giữa màn khi khoá chuột: trỏ vào vật bấm được thì sáng vàng, to ra */}
+      {locked && !calendar && (
+        <div
+          className={cn(
+            'pointer-events-none fixed top-1/2 left-1/2 z-[6] -translate-1/2 rounded-full border-2 border-black/60 transition-[width,height,background-color] duration-100',
+            hover ? 'size-3.5 bg-yellow' : 'size-2 bg-white/90',
+          )}
+        />
+      )}
       {/* Keeb-chan dẫn người mới: bấm màn hình máy tính → nhận kiện → cầm thùng đơn → bàn build */}
       <RoomGuide />
       {heldWho && !hover && !hoverNote && (
@@ -87,6 +112,8 @@ export function RoomHud() {
             <MouseIcon btn="left" />
             <span>{hover.charAt(0).toLowerCase() + hover.slice(1)}</span>
           </>
+        ) : locked ? (
+          HINT_LOCKED
         ) : (
           HINT
         )}

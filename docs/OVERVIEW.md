@@ -106,7 +106,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
    ↑ ↓ + Enter, có âm thanh menu, nhạc nền phát ngay. Góc trên trái: bật / tắt nhạc; đáy: Facebook, số phiên bản (bấm xem lịch sử cập nhật).
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar, hiện trong khung đúng mặt kính màn hình 3D (~90%, quanh đó thấy bàn / phòng). Chơi mới mở sẵn
    Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc bấm vùng phòng ngoài màn hình; Esc thì mở Cài đặt)
-   rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), kéo chuột nhìn, cuộn chuột giữa phóng to;
+   rời máy tính, đi lại trong phòng (`walk`, góc nhìn người: WASD (không dùng phím mũi tên), chuột khoá tâm kiểu Minecraft (bấm cảnh để khoá, rê chuột nhìn, bấm vật ở tâm ngắm, giữ Alt hiện con trỏ, Esc nhả chuột + mở Cài đặt; cảm ứng vẫn kéo nhìn), cuộn chuột giữa phóng to;
    đang ngồi bàn build chỉ nút quay lại mới đứng dậy, bấm WASD không đứng dậy).
    Trong phòng: bàn máy tính sát bàn build dưới cửa sổ rèm lá, kệ bàn phím sau lưng, ô cửa cạnh bàn máy tính ra
    hành lang: kệ cuối hành lang nhận hàng (thùng đơn khách + kiện Shopii / chợ, hết kệ thì đổ đống sàn), kệ giao hàng

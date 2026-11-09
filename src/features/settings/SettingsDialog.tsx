@@ -16,7 +16,12 @@ const TABS: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
 ]
 
 /** popup Cài đặt (máy tính / bàn build / đi lại): Esc bật / tắt (`useAppShortcuts`); tab đang chọn nhớ giữa các lần mở, không lưu */
-export const useSettingsPop = create(() => ({ open: false, tab: 'game' as SettingsTab }))
+export const useSettingsPop = create(() => ({
+  open: false,
+  tab: 'game' as SettingsTab,
+  /** lúc mở do mất khoá tâm chuột (Esc lúc đi lại, `WalkControls`): Esc ngay sau đó không đóng lại */
+  at: 0,
+}))
 
 /**
  * Cài đặt nổi giữa màn, mở bằng Esc: Chung (lưu tiến trình, về màn đăng nhập) / Âm thanh / Phím tắt (chỉ xem) /

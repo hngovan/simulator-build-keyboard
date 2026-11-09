@@ -2,6 +2,18 @@
 
 ## 2026-11-10
 
+### Đi lại trong phòng: khoá tâm chuột kiểu Minecraft
+
+- Yêu cầu: dùng camera khoá tâm (như Minecraft) cho xoay / di chuyển mượt, quen tay; giữ 1 phím (Ctrl / Alt) để hiện con trỏ, thay vì phải kéo chuột để quay.
+- `scene/room/WalkControls.tsx`: pointer lock trên canvas. Vào chế độ đi lại thử khoá ngay (còn hiệu lực cú bấm đứng dậy), không được thì bấm
+  vào cảnh để khoá. Khoá: `movementX/Y` × `LOCK_LOOK` quay (bỏ cú giật > `LOCK_SPIKE`), `setEvents({ compute })` đặt tia chọn ở tâm màn,
+  `state.events.update()` mỗi 50ms để đi / quay không rê chuột vẫn bắt hover vật. Giữ **Alt** (chọn Alt vì Ctrl dùng cho Ctrl+Z) nhả chuột,
+  nhả Alt khoá lại; popup (lịch, Cài đặt, xem 3D, z-[2000+] / role dialog, `blocked()`) mở thì tự nhả (`selfExit`). Mất khoá ngoài ý (Esc,
+  đổi cửa sổ) = mở Cài đặt (`useSettingsPop.at`, `useAppShortcuts` bỏ qua Esc trong 400ms để không đóng lại). Đóng Cài đặt thì khoá lại.
+  Cảm ứng / đang giữ Alt: kéo nhìn như cũ.
+- `features/room/RoomHud.tsx`: tâm ngắm giữa màn (`useRoom.locked`, trỏ vật bấm được thì vàng to ra), dòng hướng dẫn theo trạng thái khoá.
+- Bảng phím tắt (`SettingsTabs` `KEYBINDS`): thêm khoá tâm chuột + giữ Alt.
+
 ### Esc mở Cài đặt (không còn đứng dậy), app Cài đặt máy tính chỉ còn hình nền
 
 - Yêu cầu: Esc giờ mở Cài đặt, Esc không còn thoát ra (rời màn phải bấm chuột vào nút quay lại); Cài đặt trong máy tính chỉ để đổi

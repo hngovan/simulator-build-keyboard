@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useGame } from '@/store'
+import { useSettingsPop } from '@/features/settings/SettingsDialog'
 import { pcEye, screenCenter } from '../models/computerLayout'
 import { BLOCKS, BODY_R, EYE_Y, M, SPOTS, WALK_AREAS } from './roomLayout'
 import { useRoom } from './roomStore'
@@ -10,6 +11,10 @@ import { useRoom } from './roomStore'
 const SPEED = 2.2
 /** độ nhạy kéo chuột nhìn (rad / px) */
 const LOOK = 0.0042
+/** độ nhạy khi khoá tâm chuột (rad / px chuột di chuyển, kiểu Minecraft) */
+const LOCK_LOOK = 0.0024
+/** bỏ cú giật chuột bất thường (trình duyệt đôi khi trả movementX rất lớn) */
+const LOCK_SPIKE = 250
 /** kéo quá bao nhiêu px thì không tính là bấm */
 const DRAG_PX = 6
 /** zoom con lăn chuột giữa: góc nhìn hẹp nhất = FOV gốc × ZOOM_MIN, mỗi nấc cuộn đổi bao nhiêu (0..1) */
@@ -59,6 +64,25 @@ function collide(p: THREE.Vector3) {
   }
 }
 
+/** đang có popup / cửa sổ phủ màn: nhả khoá chuột cho bấm popup */
+function blocked() {
+  if (useRoom.getState().calendar || useSettingsPop.getState().open || useGame.getState().pcZoom)
+    return true
+  return !!document.querySelector(
+    '[role="dialog"], [class*="z-[2000]"], [class*="z-[3000]"], [class*="z-[3500]"], [class*="z-[4000]"]',
+  )
+}
+
+/** xin khoá tâm chuột (Chrome trả Promise, có thể từ chối khi chưa có thao tác người dùng): lỗi thì thôi */
+function lockPointer(el: HTMLElement) {
+  try {
+    const p = el.requestPointerLock() as unknown as Promise<void> | undefined
+    p?.catch?.(() => {})
+  } catch {
+    /* trình duyệt từ chối: bấm vào cảnh để khoá lại */
+  }
+}
+
 /** góc quay ngang / ngẩng của camera khi nhìn từ `from` tới `to` */
 function aim(from: THREE.Vector3, to: THREE.Vector3) {
   const d = to.clone().sub(from)
@@ -74,16 +98,26 @@ function standPose(spot: 'pc' | 'bench') {
 }
 
 /**
- * Đi lại trong phòng góc nhìn người: WASD đi (không dùng phím mũi tên), kéo chuột / 1 ngón nhìn quanh, cuộn con lăn chuột giữa zoom
+ * Đi lại trong phòng góc nhìn người: WASD đi (không dùng phím mũi tên). Chuột khoá tâm kiểu Minecraft (pointer lock): bấm vào cảnh
+ * để khoá, rê chuột nhìn quanh, bấm vật ở tâm ngắm giữa màn (tia chọn bắn từ tâm, `setEvents` compute); giữ Alt hiện con trỏ
+ * (nhả Alt khoá lại), Esc trình duyệt nhả chuột → mở Cài đặt; có popup thì tự nhả. Không khoá (cảm ứng / đang giữ Alt) thì kéo
+ * chuột / 1 ngón nhìn quanh như cũ. Cuộn con lăn chuột giữa zoom
  * (thu hẹp góc nhìn, rời chế độ đi lại thì trả FOV gốc). Bấm đồ vật (màn hình, bàn build, lịch, thùng hàng) do từng vật tự xử lý.
  * Đứng dậy / ngồi xuống: camera bay mượt giữa tư thế cũ và mới (`useRoom.fly`)
  */
 export function WalkControls() {
   const camera = useThree((s) => s.camera)
   const dom = useThree((s) => s.gl.domElement)
+  const setEvents = useThree((s) => s.setEvents)
   const st = useRef({
     yaw: 0,
     pitch: 0,
+    /** đang khoá tâm chuột / đang giữ Alt / nhả khoá do mình chủ động (không phải Esc) */
+    locked: false,
+    alt: false,
+    selfExit: false,
+    /** lần cuối bắn lại tia chọn từ tâm (giây, đồng hồ useFrame) */
+    rayAt: 0,
     keys: new Set<string>(),
     /** mức zoom 0 (không) .. 1 (sát nhất) đang muốn / đang hiện */
     zoom: 0,
@@ -159,6 +193,86 @@ export function WalkControls() {
     [camera],
   )
 
+  // khoá tâm: tia chọn (rê / bấm vật) bắn từ giữa màn thay vì vị trí con trỏ (con trỏ đứng yên khi khoá)
+  const get = useThree((s) => s.get)
+  useEffect(() => {
+    const old = get().events.compute
+    setEvents({
+      compute: (event, state, prev) => {
+        if (st.current.locked) state.pointer.set(0, 0)
+        else if (old) return old(event, state, prev)
+        else
+          state.pointer.set(
+            (event.offsetX / state.size.width) * 2 - 1,
+            -(event.offsetY / state.size.height) * 2 + 1,
+          )
+        state.raycaster.setFromCamera(state.pointer, state.camera)
+      },
+    })
+    return () => setEvents({ compute: old })
+  }, [get, setEvents])
+
+  // khoá tâm chuột: vào chế độ đi lại thì thử khoá luôn (vừa bấm đứng dậy, còn hiệu lực thao tác người dùng),
+  // Esc (trình duyệt nhả) → mở Cài đặt như Minecraft; popup mở thì nhả, rời chế độ đi lại thì nhả
+  useEffect(() => {
+    const s = st.current
+    const release = () => {
+      if (document.pointerLockElement !== dom) return
+      s.selfExit = true
+      document.exitPointerLock()
+    }
+    const change = () => {
+      const on = document.pointerLockElement === dom
+      s.locked = on
+      useRoom.setState({ locked: on })
+      if (on) {
+        s.drag = null
+        return
+      }
+      // tự nhả (Alt / popup / rời phòng) thì thôi; mất khoá ngoài ý (Esc, đổi cửa sổ) = mở Cài đặt
+      if (s.selfExit) s.selfExit = false
+      else if (!blocked()) useSettingsPop.setState({ open: true, at: Date.now() })
+    }
+    const altDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Alt') return
+      e.preventDefault()
+      if (e.repeat) return
+      s.alt = true
+      release()
+    }
+    const altUp = (e: KeyboardEvent) => {
+      if (e.key !== 'Alt') return
+      // chặn trình duyệt nhảy vào thanh menu khi nhả Alt
+      e.preventDefault()
+      s.alt = false
+      if (!blocked()) lockPointer(dom)
+    }
+    const blur = () => (s.alt = false)
+    // có popup (lịch, Cài đặt, xem kệ...) thì nhả chuột cho bấm popup
+    const poll = window.setInterval(() => {
+      if (s.locked && blocked()) release()
+    }, 150)
+    // đóng Cài đặt (bấm X / nền) = quay lại chơi: khoá lại luôn như Minecraft (Esc đóng thì trình duyệt có thể từ chối, bấm cảnh để khoá)
+    const offPop = useSettingsPop.subscribe((p, old) => {
+      if (old.open && !p.open && !blocked()) lockPointer(dom)
+    })
+    document.addEventListener('pointerlockchange', change)
+    window.addEventListener('keydown', altDown)
+    window.addEventListener('keyup', altUp)
+    window.addEventListener('blur', blur)
+    if (!blocked()) lockPointer(dom)
+    return () => {
+      window.clearInterval(poll)
+      offPop()
+      document.removeEventListener('pointerlockchange', change)
+      window.removeEventListener('keydown', altDown)
+      window.removeEventListener('keyup', altUp)
+      window.removeEventListener('blur', blur)
+      release()
+      useRoom.setState({ locked: false })
+    }
+  }, [dom])
+
   useEffect(() => {
     const s = st.current
     const typing = (e: KeyboardEvent) =>
@@ -173,9 +287,20 @@ export function WalkControls() {
     const up = (e: KeyboardEvent) => s.keys.delete(e.code)
     const blur = () => s.keys.clear()
     const pDown = (e: PointerEvent) => {
+      if (s.locked) return
+      // chuột (không giữ Alt): bấm vào cảnh = khoá tâm chuột; cảm ứng / đang giữ Alt: kéo nhìn như cũ
+      if (e.pointerType === 'mouse' && !s.alt && !blocked()) return lockPointer(dom)
       s.drag = { x: e.clientX, y: e.clientY, moved: false }
     }
     const pMove = (e: PointerEvent) => {
+      if (s.locked) {
+        if (s.anim || Math.abs(e.movementX) > LOCK_SPIKE || Math.abs(e.movementY) > LOCK_SPIKE)
+          return
+        const look = LOCK_LOOK * (1 - s.shownZoom * (1 - ZOOM_MIN))
+        s.yaw -= e.movementX * look
+        s.pitch = THREE.MathUtils.clamp(s.pitch - e.movementY * look, -1.5, 1.5)
+        return
+      }
       const d = s.drag
       if (!d || s.anim) return
       const dx = e.clientX - d.x
@@ -261,6 +386,11 @@ export function WalkControls() {
     collide(pos)
     pos.y = EYE_Y
     cam.rotation.set(s.pitch, s.yaw, 0, 'YXZ')
+    // khoá tâm: đi / quay mà không rê chuột thì R3F không tự bắn lại tia chọn → bắn lại từ tâm ~20 lần / giây
+    if (s.locked && state.clock.elapsedTime - s.rayAt > 0.05) {
+      s.rayAt = state.clock.elapsedTime
+      state.events.update?.()
+    }
   })
   return null
 }
