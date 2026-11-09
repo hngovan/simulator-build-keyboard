@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.35',
     date: '2026-11-10',
-    commits: [],
+    commits: ['1b1f441'],
     title: 'Enter ISO / Big-ass mọi layout, nhiều tuỳ chọn layout, Esc mở Cài đặt',
     items: [
       'Enter ISO / Big-ass cho 40% / 60% / 65% / 75% / TKL / full (case dựng bằng code); Shift trái ISO, Backspace split / dời xuống, step cap',
