@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.39',
     date: '2026-11-12',
-    commits: [],
+    commits: ['1bd764c'],
     title: 'Taskbar gọn hơn',
     items: [
       'Icon app trên taskbar chỉ có nền khi đang mở; app thu nhỏ có gạch dưới ngắn',
