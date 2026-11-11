@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.37',
     date: '2026-11-11',
-    commits: [],
+    commits: ['84cf6d5'],
     title: 'Keycap DCS, SA / DSA phím rộng thật, switch chi tiết hơn',
     items: [
       'Keycap DCS (font Gorton), font Cherry / SA riêng; keycap thành mỏng + switch tactile (+ top mount) tiếng ngon hơn',
