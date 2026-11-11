@@ -27,6 +27,11 @@ Quy tắc của người dùng:
 | power plug (european)            | ChoboiAssets         | phích đèn bàn (2026-10-30)          |
 | Light Switch                     | Avot                 | công tắc đèn cạnh cửa (2026-10-30)  |
 
+- MIT (2026-11-10): keycap DSA cũng đổi sang mjseabright/keycaps (bỏ anhthang/dsa-keycap). Keycap SA đổi sang mjseabright/keycaps (© 2018 Matthew Seabright) → `assets/keycaps/sa/`,
+  `public/licenses/mjseabright-keycaps-MIT.txt`; bỏ SA getclacking (`sa-profile-keys-MIT.txt`).
+- MIT (2026-11-10): keycap DCS 1u R1–R4 (Fooblitzky/DCS_keycaps, © 2020) → `assets/keycaps/dcs/`, `public/models/keycaps/dcs-r*.glb`;
+  font Open Gorton + Open Cherry (dakotafelder, © 2020) → `public/fonts/`. Ghi ở `credits.ts`, `public/CREDITS.md`,
+  `public/licenses/dcs-keycaps-MIT.txt` / `open-gorton-MIT.txt` / `open-cherry-MIT.txt`.
 - MIT: daughterboard ai03 Unified C3 (STEP, © 2019 ai03, github.com/mraghuram3/Unified-Daughterboard) → `public/models/dtb/`, ghi ở `credits.ts` + `public/licenses/unified-daughterboard-MIT.txt` (2026-10-30).
 
 ## CC0 / tự dựng

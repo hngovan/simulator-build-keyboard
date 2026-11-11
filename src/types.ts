@@ -59,6 +59,8 @@ export interface SoundProfile {
   sound?: string
   dl?: number
   dp?: number
+  /** tiếng "ngon" do keycap thành mỏng + switch tactile (+ top mount), 0..1 (`keycapSweet`) */
+  sweet?: number
 }
 
 /** Tuỳ chọn âm thanh của người chơi, lưu cùng tiến trình. */
@@ -133,8 +135,8 @@ export interface SwitchItem extends Paid {
   /** hàng pass lỗi: không lắp cho khách được, chỉ đăng bán lại */
   flaw?: string
 }
-/** chất liệu keycap: PBT / ABS / mix PBT + ABS */
-export type KeycapMaterial = 'pbt' | 'abs' | 'mix'
+/** chất liệu keycap: PBT / ABS / mix PBT + ABS / PC trong suốt (màu nhuộm trong) */
+export type KeycapMaterial = 'pbt' | 'abs' | 'mix' | 'pc'
 export interface KeycapItem extends Paid {
   kit: string
   color: string

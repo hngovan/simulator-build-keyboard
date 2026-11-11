@@ -16,7 +16,7 @@ import {
 import { SUPPLIES } from '@/data/supplies'
 import { topUpSpells } from '@/features/apps/settings/devMoney'
 import { avatarSrc } from '@/data/avatars'
-import type { LayoutId, Order, SoundWish, ToolKind, Variant } from '@/types'
+import type { KeycapMaterial, LayoutId, Order, SoundWish, ToolKind, Variant } from '@/types'
 
 // Free build: chọn case (+ màu, layout, mount, PCB, plate, stab, switch, keycap; feet / thiếc / O-ring = vật tư đang chọn) ở bảng `FreeBuildDialog` rồi vào bàn build luôn với đủ linh kiện,
 // không mua gì. Dụng cụ / vật tư đã bơm đủ lúc vào chế độ (`startFree`).
@@ -35,6 +35,8 @@ export interface FreeBuildOpts {
   switchType: string
   keycapKit: string
   keycapColor: string
+  /** chất liệu keycap (PBT / ABS / mix), thiếu = PBT */
+  keycapMaterial?: KeycapMaterial
 }
 
 /** layout lắp vừa case (case CAD / cắt sẵn chỉ hợp vài layout) */
@@ -145,7 +147,7 @@ export function startFreeBuild(o: FreeBuildOpts) {
       ...session.inventory.stab,
       ...double(stabStock(session.inventory.stab)),
     },
-    keycap: { kit: keycapKit, color: keycapColor },
+    keycap: { kit: keycapKit, color: keycapColor, material: o.keycapMaterial },
   }
   const boxes = { ...s.boxes }
   if (oldDev) delete boxes[oldDev.id]

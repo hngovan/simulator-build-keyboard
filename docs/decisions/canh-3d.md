@@ -1,5 +1,68 @@
 # Cảnh 3D & model
 
+## 2026-11-11
+
+### Switch: stem Kailh Box, thân stem, lò xo trong housing trong; DCS pháp tuyến
+
+- Yêu cầu: model switch nhìn thật hơn (stem box, chân / ray thân stem, thấy lò xo qua housing trong); keycap DCS bóng đổ sai.
+- `Switch.tsx`: màu housing Kailh Box; stem box `BOX_STEM` (`roundRect` + `ExtrudeGeometry`, `boxStemGeos`); thân stem `bodyGeo`
+  (khối + cột giữa vát đầu + khung chân mặt sau `STEM_BODY.leg` + ray 2 bên `rail`), gờ tactile `tactileGeo`; `stemBodyGeos(type)`.
+  Lò xo `SPRING_IN` (`springGeometry`) chỉ vẽ khi housing trong (`switchSeeThrough`). Bàn lube dùng `bodyGeo` mới (chưa có box / gờ tactile).
+- DCS: OBJ có `vn` không chuẩn hoá (dài ~0,1) → `convert-keycaps.mjs` `fromObjAll` gọi `normalizeNormals()`; 4 GLB `dcs-r*` chuẩn hoá tại chỗ.
+- Chụp lại ảnh Shopii `ONLY=switch` + `ONLY=dcs`.
+
+### Enter chữ L dựng bằng code: bo mép, lòng chảo, gân + stem dưới keycap
+
+- Yêu cầu: Enter ISO / Big-ass thô, mặt trên phẳng, vai XDA khác Enter thường; mặt dưới thiếu gân như keycap CAD; stem xuyên lên mặt.
+- `keycapShape.ts` `lCapGeometry(bottom, halfD, shape, profile)`: góc bo Bézier (`CORNER_R` / `CORNER_R_TOP`), vách phình
+  (`WALL_BULGE`), mép bo elip theo profile (`RIM_OF`: XDA vai cao tròn, DSA / SA / MT3 tròn rộng), lòng chảo theo khoảng cách mềm tới mép
+  (`DISH_R`, cầu với `SPHERICAL_DISH`, trụ với profile khác), mặt trên lưới `TOP_STEP` cắt bằng `polygon-clipping`, điểm biên khớp cạnh vòng mép.
+- `capUnder(k, cap, cadWide)` (thay `stabUnderGeometry`): bắn tia vào bản sao 2 mặt của keycap đo trần → gân chính xuyên 3 stem từ vách tới vách
+  - gân ngang mỗi stem, đỉnh gân theo trần, stem stab chạm trần. Vỏ dày (CAD) gân cắm nhẹ vào vỏ; vỏ 1 lớp (Enter chữ L, ASA) gân / stem lùi
+    dưới mặt `THIN_GAP` 0,05u và kẹp mọi đỉnh dưới mặt bằng tia từ trên (trước bị xuyên thành vệt chữ thập trên mặt keycap).
+- Dùng ở `Keycap.tsx` (`NativeCap` + keycap dựng bằng code), `modelThumb.ts`, `orderThumb.ts` (truyền `profile`).
+
+## 2026-11-10
+
+### Keycap SA / DSA phím rộng thật + chất liệu keycap Free build + "Layout hỗ trợ"
+
+- Yêu cầu: có DSA / SA cỡ rộng thì thêm (layout có Shift trái 1.25u, space 7u); DCS có cả ABS lẫn PBT; ASA vẫn chưa có stem;
+  bỏ "giá mềm nhất" ở chất liệu keycap; "Layout hợp" → layout hỗ trợ (40%, 60%, Full size...), không kèm chú thích loại case.
+- mjseabright/keycaps bản `med`: SA phím rộng theo hàng (R1 1.5 / 2; R2 1.5 / 1.75; R3 1.25–3, space 6.25 / 7, đứng 2u; R4 1.25–2.75)
+  - DSA 1u–2.75u + đứng 2u (DSA 1u đổi luôn nguồn). `convert-keycaps.mjs`: tên `sa-r3-w625`, `dsa-h200` (`wideTag`), scale theo cạnh ngắn.
+    `keycapShape.ts` `WIDE` + `wideModel`: `keycapModel(profile, row, w, h)` trả model đúng cỡ (space ≥ 6u lấy R3), không có thì 1u kéo dãn.
+    `stretchCapGeometry` kéo dãn theo cỡ thật của model (bounding box), không còn cố định 0,46 → model đúng cỡ gần như không giãn.
+- Dev server đang chạy không nhận một số file GLB mới trong `public/` (trả về HTML) → khởi động lại `bun run dev`.
+- Free build: chọn chất liệu keycap (`FreeBuildOpts.keycapMaterial`, ô thứ 2 cạnh bộ keycap), trước luôn PBT. Shopii vốn bán đủ PBT / Mix / ABS.
+- ASA: stem thêm cả ở ảnh Shopii (`modelThumb`) và ảnh đơn (`orderThumb`, trừ bản `lite`); chụp lại `ONLY=keycap:asa`.
+- `productSpecs` keycap: "Layout hỗ trợ" = tên cỡ gọn xếp nhỏ → lớn (`layoutSizes`, bỏ phần trong ngoặc).
+
+### Keycap thiếu stem: SA đổi nguồn, XDA khoét + gắn stem, phím rộng giữ stem tròn
+
+- Yêu cầu: "keycap SA SP không có chân stem à? và 1 số keycap khác nữa", tham khảo github.com/mjseabright/keycaps.
+- Soát GLB: SA (getclacking) + XDA (spooknik) chỉ là vỏ ngoài đặc để render, không lòng / stem; ASA + Enter chữ L dựng bằng code cũng không có.
+- SA đổi sang mjseabright/keycaps (MIT, bản `med` `sa_R*_100x100`, có lòng + stem MX, đủ R1–R4) → `assets/keycaps/sa/r1..4-1u.stl`;
+  `R_OF.sa` [1,2,3,4,4], `CAD_ROW.sa` đo lại (R1 cao 0,75u). Bỏ nguồn getclacking (file + giấy phép).
+- XDA: `convert-keycaps.mjs` `hollowWithStem` (three-bvh-csg: trừ khối chóp cụt lòng keycap, thêm trụ stem Ø5,5mm lỗ chữ thập 4,1 × 1,3mm).
+- Code: `stemGeometry(top)` (keycapShape.ts) gắn dưới ASA / Enter chữ L trong `Keycap.tsx`. `stretchCapGeometry` không kéo dãn điểm stem
+  (gần tâm, thấp hơn đáy lòng chảo, pháp tuyến không hướng lên) → phím rộng stem vẫn tròn, không bè ra.
+
+### Keycap DCS + font chữ riêng theo profile + keycap đổi tiếng gõ
+
+- Yêu cầu: thêm model keycap DCS (github.com/Fooblitzky/DCS_keycaps), mô tả keycap thành mỏng trên switch tactile, nhất là top mount
+  thì tiếng ngon hơn (tự tìm trên mạng: DCS thành mỏng, gõ gọn / clacky, cảm nhận rõ bump tactile, Keebtalk / Deskthority);
+  font chữ Wyse cho DCS, font Cherry, font SA riêng.
+- Model: OBJ blank `Row_N_1u` R1–R4 → `assets/keycaps/dcs/`, `convert-keycaps.mjs` (`fromObjAll`, trục z lên) → `dcs-r1..4.glb`;
+  `keycapShape.ts`: `PROFILE.dcs`, `R_OF.dcs` [1,2,3,4,4], `CAD_ROW.dcs` (đo từ GLB), `keycapModel` theo hàng như Cherry / OEM / SA.
+  `KEYCAP_KITS.dcs` (760k, cấp 3 `KEYCAP_LV`, `desc` hiện ở Shopii). Ảnh Shopii: `ONLY=keycap:dcs bun run bake:thumbs`.
+- Font (`scene/models/legendFont.ts`): Cherry = Open Cherry, DCS = Open Gorton (Gorton Modified của SP, chữ trên keycap Wyse cổ),
+  SA = Open Gorton Bold; profile khác vẫn Nunito. Font riêng không có mũi tên → phím mũi tên in Nunito. Bàn build: `CapOverlay` `font`;
+  ảnh đơn (`orderThumb`) nạp `FontFace` (`loadLegendFont`) trước khi vẽ canvas. Font rộng hơn Nunito + DCS lòng chảo trụ làm 2 đầu nhãn
+  dài (BACKSPACE) bị che → `legendSize` co chữ theo bề rộng phím (chừa ~0,95u).
+- Âm (`parts.ts`): `KEYCAP_SOUND` cộng độ ồn / cao theo profile (SA / MT3 trầm hơn, DCS `thin` đanh hơn); `keycapSweet`: keycap mỏng +
+  switch `feel: 'tactile'` = 0,5, thêm top mount = 1 → `SoundProfile.sweet`, `soundMatch` cộng `SWEET_BONUS` 12% × sweet;
+  máy đo âm (`SoundMeter`) hiện dòng "✨ Tiếng ngon".
+
 ## 2026-11-08 (tối)
 
 ### Case nhựa 2 mảnh: hốc vách kín (không thủng sang rãnh rỗng)
@@ -2058,8 +2121,8 @@
 
 - Yêu cầu: "foam 7u đang sai ?" (40% space 7u, ảnh khoanh Ctrl trái + Alt / Ctrl phải hàng dưới).
 - Nguyên nhân: không phải foam (lỗ foam khớp phím). Texture PCB (`makePcbTexture`, PcbSurface.tsx) in hàng via dọc mép trên / dưới
-  + chữ "HOTSWAP | PCB REV.01" góc dưới trái cố định theo mép; layout kín mép (40%) hàng dưới nằm đè lên → nhìn qua lỗ foam
-  phím to thấy chữ + chấm via chen vào footprint, trông như foam khoét lệch.
+  - chữ "HOTSWAP | PCB REV.01" góc dưới trái cố định theo mép; layout kín mép (40%) hàng dưới nằm đè lên → nhìn qua lỗ foam
+    phím to thấy chữ + chấm via chen vào footprint, trông như foam khoét lệch.
 - Đã làm: `underKey(x, y, pad)` (px canvas, theo khung phím có xoay): via nằm trong vùng phím thì bỏ; nhãn thử 4 góc, góc nào
   không đè phím thì in, không góc nào trống thì bỏ nhãn.
 
@@ -2161,4 +2224,4 @@
 - Yêu cầu: "tất nhiên case 40%, 60%, tkl, full size cũng có vật liệu gỗ" (trước chỉ `wood60`).
 - Đã làm (parts.ts): `wood40` (800k), `tklWood` (1.200k), `fullWood` (1.500k) như `wood60` (1 mảnh, tray / O-ring, 4 màu gỗ), thêm
   vào `CASE_LINES` 40% / TKL / Full ("Gỗ"). Dựng bằng code chung (`Walls` + `woodUV`). Ảnh Shopii cần `ONLY=Wood bun run bake:thumbs`
-  + `ONLY=wood40`.
+  - `ONLY=wood40`.

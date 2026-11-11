@@ -7,6 +7,7 @@ import { Button, Muted, Slider, TitleBar, TitleButton, Toggle } from '@/componen
 import { KeyCap, MouseIcon } from '@/components/game/ControlsHint'
 import { cn } from '@/lib/format'
 import { setPerfHud, usePerfHud } from '@/lib/perfStats'
+import { SENS_DEFAULT, SENS_MAX, SENS_MIN, setMouseSens, useMouseSens } from '@/lib/mouseSens'
 import {
   setDevMoney,
   setDevSpells,
@@ -16,6 +17,8 @@ import {
   useDevUnlock,
 } from '@/features/apps/settings/devMoney'
 import { Row, Section } from './SettingsParts'
+import { useSettingsPop } from './SettingsDialog'
+import { sitAtBench } from '@/scene/room/sitAtBench'
 
 /** màu thanh tiêu đề app Cài đặt (`APPS.settings.color`; import apps.ts ở đây thành vòng) */
 const SETTINGS_COLOR = '#66758f'
@@ -65,6 +68,43 @@ function ConfirmExit({ onCancel }: { onCancel: () => void }) {
   )
 }
 
+/** Độ nhạy chuột khi đi lại trong phòng (hệ số × tốc độ xoay nhìn, lưu theo máy) */
+function MouseSensSection() {
+  const sens = useMouseSens((s) => s.sens)
+  return (
+    <Section
+      title="Chuột"
+      info="Tốc độ xoay góc nhìn khi đi lại trong phòng. Thấy chóng mặt thì kéo thấp xuống"
+    >
+      <Row className="flex-col items-stretch gap-1.5">
+        <div className="flex items-center justify-between gap-3 font-bold">
+          <span>Độ nhạy xoay nhìn</span>
+          <span className="flex items-center gap-2">
+            {sens !== SENS_DEFAULT && (
+              <Button
+                size="sm"
+                title="Về độ nhạy mặc định"
+                onClick={() => setMouseSens(SENS_DEFAULT)}
+              >
+                Mặc định
+              </Button>
+            )}
+            <span className="font-head text-lg text-green">{Math.round(sens * 100)}%</span>
+          </span>
+        </div>
+        <Slider
+          value={sens}
+          min={SENS_MIN}
+          max={SENS_MAX}
+          onChange={setMouseSens}
+          aria-label="Độ nhạy xoay nhìn"
+          title="Chỉnh độ nhạy chuột khi đi lại"
+        />
+      </Row>
+    </Section>
+  )
+}
+
 /** Tab Chung: lưu tiến trình, `children` (thêm mục nếu cần), về màn hình đăng nhập (hướng dẫn chọn 1 lần lúc tạo game: người chơi mới / đã từng chơi) */
 export function GameTab({ children }: { children?: ReactNode }) {
   const [saving, setSaving] = useState(false)
@@ -95,6 +135,7 @@ export function GameTab({ children }: { children?: ReactNode }) {
           </Row>
         </Section>
       )}
+      <MouseSensSection />
       {children}
       <Section title="Phiên đăng nhập" info="Tiến trình đã tự lưu trong máy, không bị xoá">
         <Row>
@@ -293,7 +334,12 @@ export function DevTab() {
           size="sm"
           tone="green"
           title="Mở bảng chọn case như Free build; đơn đang làm được cất lại, tiến độ build thử lưu vào save"
-          onClick={() => useGame.setState({ freePick: true })}
+          onClick={() => {
+            // bảng chọn case chỉ hiện khi ngồi ở bàn build: đang đi lại thì đóng Cài đặt, bay về bàn rồi mới hiện
+            useSettingsPop.setState({ open: false })
+            useGame.setState({ freePick: true })
+            if (useGame.getState().walk) sitAtBench()
+          }}
         >
           Chọn case
         </Button>

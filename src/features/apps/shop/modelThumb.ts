@@ -7,9 +7,28 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { KEYCAP_COLORS, KEYCAP_KITS, PLATES, STABS, TOOLS } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { getLayout } from '@/data/layouts'
-import { capGeometry, keycapShape } from '@/scene/models/keycapShape'
+import {
+  capGeometry,
+  keycapModel as cadKeycap,
+  keycapShape,
+  lCapCeiling,
+  lCapGeometry,
+  stemGeometry,
+  stretchCap,
+  capUnder,
+  isCadWide,
+} from '@/scene/models/keycapShape'
+import { keyOutline } from '@/scene/parts/keyShape'
+import { keycapView } from './keycapViews'
+import { keycapMaterial } from '@/scene/models/keycapMaterial'
 import stabModel from '@/data/stabModel.json'
-import { SWITCH_GLB, switchMaterials } from '@/scene/models/Switch'
+import {
+  stemBodyGeos,
+  SWITCH_GLB,
+  switchMaterials,
+  switchSpringGeo,
+  switchSpringMat,
+} from '@/scene/models/Switch'
 import { HOUSING_GLB, STAB_GLB, WIRE_SEAT } from '@/scene/models/Stabilizer'
 import { Y } from '@/data/steps'
 import { boardOutline, outlinePlane, outlineSlab } from '@/scene/parts/boardOutline'
@@ -79,25 +98,78 @@ function setup() {
 
 /** Ảnh mẫu keycap 1u từ CAD gốc; ASA dùng mesh trong game vì chưa có CAD được phép dùng. */
 async function keycapScene(type: string) {
-  const [kit, color] = type.split(':')
+  // `kit:color[:loại phím]` (loại phím: ô "Xem phím" ở khung 3D, `KEYCAP_VIEWS`; ảnh thẻ = phím 1u)
+  const [kit, color, capId] = type.split(':')
   const profile = KEYCAP_KITS[kit]?.profile ?? 'cherry'
-  const col = KEYCAP_COLORS[color] ?? Object.values(KEYCAP_COLORS)[0]
-  const material = new THREE.MeshStandardMaterial({
-    color: col.hex,
-    roughness: 0.55,
-    side: THREE.DoubleSide,
-  })
-  const model = ['cherry', 'oem', 'sa'].includes(profile) ? `${profile}-r3` : profile
-  const group =
-    profile === 'asa'
-      ? new THREE.Group().add(
-          new THREE.Mesh(capGeometry(0.92, 0.92, keycapShape(profile, 2)), material),
-        )
-      : (await keycapModel(model)).clone(true)
+  const material = keycapMaterial(KEYCAP_COLORS[color] ? color : 'white')
+  const view = keycapView(capId)
+  const group = new THREE.Group()
+  // từng phím (căn tâm), đo bề ngang / sâu để xếp nhiều phím
+  const parts: { cap: THREE.Group; w: number; d: number }[] = []
+  for (const part of view.parts) {
+    const cap = new THREE.Group()
+    if ('enter' in part) {
+      // Enter chữ L (ISO / Big-ass): dựng bằng code theo viền phím như bàn build
+      const k = getLayout('60', { enter: part.enter }).keys.find((x) => x.ext)!
+      const shape = keycapShape(profile, k.row)
+      const body = new THREE.Mesh(
+        lCapGeometry(keyOutline(k, 0.04), k.h / 2, shape, profile),
+        material,
+      )
+      cap.add(body)
+      cap.add(new THREE.Mesh(stemGeometry(lCapCeiling(shape)), material))
+      const under = capUnder(k, body)
+      if (under) cap.add(new THREE.Mesh(under, material))
+    } else {
+      const shape = keycapShape(profile, view.row)
+      const name = cadKeycap(profile, view.row, part.w, 1)
+      const dims = { w: part.w, h: 1 }
+      if (name) {
+        const src = await keycapModel(name)
+        const body = stretchCap(src.clone(true), part.w, 1)
+        cap.add(body)
+        // kéo dãn từ 1u: thêm stem stab + gân (model SA / DSA đúng cỡ đã có sẵn)
+        const under = capUnder(dims, body, isCadWide(name))
+        if (under) cap.add(new THREE.Mesh(under, material))
+      } else {
+        // ASA: dựng bằng code + stem MX (+ stem stab, gân) dưới lòng
+        const top = shape.height - shape.dish - 0.03
+        const body = new THREE.Mesh(capGeometry(part.w - 0.08, 0.92, shape), material)
+        cap.add(body)
+        cap.add(new THREE.Mesh(stemGeometry(top), material))
+        const under = capUnder(dims, body)
+        if (under) cap.add(new THREE.Mesh(under, material))
+      }
+    }
+    const box = new THREE.Box3().setFromObject(cap)
+    const c = box.getCenter(new THREE.Vector3())
+    cap.position.set(-c.x, 0, -c.z)
+    const size = box.getSize(new THREE.Vector3())
+    const wrap = new THREE.Group().add(cap)
+    parts.push({ cap: wrap, w: size.x, d: size.z })
+  }
+  // xếp: space từ sau ra trước căn mép trái (cách 0,5u cho khỏi che nhau khi nhìn nghiêng), Enter ngang cạnh nhau cách 0,3u
+  const GAP = view.stack === 'z' ? 0.5 : 0.3
+  if (view.stack === 'x') {
+    let x = -(parts.reduce((s, p) => s + p.w, 0) + GAP * (parts.length - 1)) / 2
+    for (const p of parts) {
+      p.cap.position.x = x + p.w / 2
+      x += p.w + GAP
+    }
+  } else if (view.stack === 'z') {
+    const left = -Math.max(...parts.map((p) => p.w)) / 2
+    let z = -(parts.reduce((s, p) => s + p.d, 0) + GAP * (parts.length - 1)) / 2
+    for (const p of parts) {
+      p.cap.position.set(left + p.w / 2, 0, z + p.d / 2)
+      z += p.d + GAP
+    }
+  }
+  for (const p of parts) group.add(p.cap)
   group.traverse((part) => {
     if ((part as THREE.Mesh).isMesh) (part as THREE.Mesh).material = material
   })
-  group.rotation.set(0.65, -0.55, 0)
+  // ảnh thẻ / phím 1u: xoay nghiêng cho thấy dáng; phím rộng / chữ L để thẳng (khung xem có tab góc nhìn)
+  if (view.id === '1u') group.rotation.set(0.65, -0.55, 0)
   return group
 }
 
@@ -445,6 +517,9 @@ export async function buildScene(kind: ThumbKind, type: string) {
     add(n.pins.geometry, m.metal)
     add(n.top.geometry, m.top)
     add(n.stemTop.geometry, m.stem)
+    // thân stem + chân + khung box: housing trong suốt nhìn xuyên thấy
+    for (const g of stemBodyGeos(type)) add(g, m.stem)
+    add(switchSpringGeo, switchSpringMat)
     group.rotation.set(0.5, -0.6, 0)
   } else {
     const n = await meshes(STAB_GLB)

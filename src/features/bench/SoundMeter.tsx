@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { preloadSwitchSound } from '@/sound'
 import { useGame, currentSound } from '@/store'
-import { MOUNTS, SOUND_WISH, soundLabel, soundMatch } from '@/data/parts'
+import { MOUNTS, SOUND_WISH, SWEET_BONUS, soundLabel, soundMatch } from '@/data/parts'
 import { HudPanel, Muted, SoundBars } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { cornerPing } from '@/data/ping'
@@ -35,6 +35,18 @@ export function SoundMeter() {
       </div>
       <SoundBars {...profile} target={SOUND_WISH[wish].target} size="md" />
       <Muted>Vạch trắng = âm khách muốn</Muted>
+      {!!profile.sweet && (
+        <div className="mt-2 rounded-xl bg-black/25 px-3 py-2 text-xs leading-snug">
+          <b className="text-green">✨ Tiếng ngon</b>: keycap thành mỏng trên switch tactile nghe rõ
+          cú bump, gọn tiếng
+          {profile.sweet >= 1
+            ? ', thêm top mount nên càng ngon (+' + Math.round(SWEET_BONUS * 100) + '% khớp ý)'
+            : ' (+' +
+              Math.round(SWEET_BONUS * 50) +
+              '% khớp ý). Lắp kiểu top mount thì còn ngon hơn'}
+          .
+        </div>
+      )}
       {ping > 0 && (
         <div className="mt-2 rounded-xl bg-black/25 px-3 py-2 text-xs leading-snug">
           <b className="text-yellow">🔔 Vang góc case</b>: viền mỏng +{' '}

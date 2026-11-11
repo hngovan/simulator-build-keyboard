@@ -68,7 +68,7 @@ export const SHOP_LEVELS: ShopLevel[] = [
     perks: [
       'Case 2 mảnh: gasket mount / top mount, dải gasket Poron',
       'Layout HHKB / 65% / 75%',
-      'Stab screw-in, plate thép / PP / PEI, keycap SA / MT3 / ASA',
+      'Stab screw-in, plate thép / PP / PEI, keycap SA / MT3 / ASA / DCS',
       'Chứng chỉ thợ',
     ],
   },
@@ -155,7 +155,7 @@ export const PLATE_LV: Record<string, number> = {
   none: 3,
 }
 const STAB_MOUNT_LV: Record<string, number> = { clip: 1, plate: 2, screw: 3 }
-const KEYCAP_LV: Record<string, number> = { sa: 3, mt3: 3, asa: 3 }
+const KEYCAP_LV: Record<string, number> = { sa: 3, mt3: 3, asa: 3, dcs: 3 }
 /** switch cao cấp (còn lại phổ thông, cấp 1: đủ mọi loại Linear / Tactile / Clicky / Silent) */
 const PREMIUM_SWITCHES = new Set([
   'gateronBlackInk',

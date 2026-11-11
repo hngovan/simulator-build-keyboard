@@ -3,9 +3,10 @@ import { Environment, OrbitControls } from '@react-three/drei'
 import { ENV_HDR } from '@/scene/common/envMap'
 import { Canvas } from '@react-three/fiber'
 import * as THREE from 'three'
-import { ModelViewerFrame } from '@/components/ui'
+import { ModelViewerFrame, OptionSelect } from '@/components/ui'
 import { CameraView, ViewTabs, useViewState } from '@/scene/common/ViewPresets'
 import { buildScene, type ThumbKind } from './modelThumb'
+import { KEYCAP_VIEWS } from './keycapViews'
 
 /** cạnh dài nhất của sản phẩm trong khung xem (đơn vị cảnh) */
 const VIEW_SIZE = 4
@@ -62,6 +63,9 @@ export function ShopProductViewer({
   side?: ReactNode
 }) {
   const view = useViewState()
+  // keycap: xem từng loại phím (Backspace, Shift, Enter thường / ISO / Big-ass, space các cỡ)
+  const [cap, setCap] = useState(0)
+  const capType = kind === 'keycap' ? `${type}:${KEYCAP_VIEWS[cap].id}` : type
   return (
     <ModelViewerFrame
       title={title}
@@ -71,6 +75,17 @@ export function ShopProductViewer({
       side={side}
     >
       <ViewTabs view={view.view} onView={view.pick} />
+      {kind === 'keycap' && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2 rounded-xl bg-black/45 py-1 pr-1 pl-3 backdrop-blur-sm">
+          <span className="text-xs font-extrabold text-muted">Xem phím</span>
+          <OptionSelect
+            className="w-44"
+            options={KEYCAP_VIEWS.map((v) => ({ label: v.label }))}
+            value={cap}
+            onChange={setCap}
+          />
+        </div>
+      )}
       <Canvas camera={{ position: [0, 5, 10], fov: 40 }} onDoubleClick={view.reset}>
         <CameraView view={view.view} nonce={view.nonce} dist={VIEW_DIST} />
         {/* cùng kiểu đèn với khung xem case: môi trường + đèn hắt từ dưới */}
@@ -80,7 +95,7 @@ export function ShopProductViewer({
         <directionalLight position={[5, 8, 7]} intensity={1.8} />
         <directionalLight position={[-5, 3, -4]} intensity={0.8} />
         <directionalLight position={[0, -10, 4]} intensity={0.8} />
-        <ProductModel kind={kind} type={type} />
+        <ProductModel kind={kind} type={capType} />
         <OrbitControls
           makeDefault
           target={[0, 0, 0]}

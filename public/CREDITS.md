@@ -19,16 +19,17 @@ trong thư mục [`licenses/`](licenses/). Danh sách này cũng hiện trong ga
 
 ## MIT
 
-| Model                                   | Bản quyền                        | Nguồn                                                                                 | Giấy phép                                 |
-| --------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------- |
-| Case Bakeneko 60                        | © 2020 kkatano                   | [kkatano/bakeneko-60](https://github.com/kkatano/bakeneko-60)                         | [MIT](licenses/bakeneko-60-MIT.txt)       |
-| Case Bakeneko 65                        | © 2020 kkatano                   | [kkatano/bakeneko-65](https://github.com/kkatano/bakeneko-65)                         | [MIT](licenses/bakeneko-65-MIT.txt)       |
-| Case Blossom + layout Alice (PCB KiCad) | © 2021 DoughnutTheGuy            | [doughnut923/Blossom](https://github.com/doughnut923/Blossom)                         | [MIT](licenses/blossom-MIT.txt)           |
-| Case Planck (thiết kế OLKB)             | © 2016 MajorKoos / KBDParts      | [MajorKoos/KBDParts](https://github.com/MajorKoos/KBDParts)                           | [MIT](licenses/kbdparts-planck-MIT.txt)   |
-| Keycap Cherry 1u (R1–R4)                | © 2017 Constantino Schillebeeckx | [cherry-mx-keycaps](https://github.com/ConstantinoSchillebeeckx/cherry-mx-keycaps)    | [MIT](licenses/cherry-mx-keycaps-MIT.txt) |
-| Keycap SA 1u (R1–R3)                    | © 2015 getclacking               | [SA-profile-keys-3D-models](https://github.com/getclacking/SA-profile-keys-3D-models) | [MIT](licenses/sa-profile-keys-MIT.txt)   |
-| Keycap DSA 1u                           | © 2020 Anh Thang                 | [dsa-keycap](https://github.com/anhthang/dsa-keycap)                                  | [MIT](licenses/dsa-keycap-MIT.txt)        |
-| Keycap XDA 1u                           | © 2018 spooknik                  | [XDA-Keycaps](https://github.com/spooknik/XDA-Keycaps)                                | [MIT](licenses/xda-keycaps-MIT.txt)       |
+| Model                                   | Bản quyền                        | Nguồn                                                                              | Giấy phép                                   |
+| --------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------- |
+| Case Bakeneko 60                        | © 2020 kkatano                   | [kkatano/bakeneko-60](https://github.com/kkatano/bakeneko-60)                      | [MIT](licenses/bakeneko-60-MIT.txt)         |
+| Case Bakeneko 65                        | © 2020 kkatano                   | [kkatano/bakeneko-65](https://github.com/kkatano/bakeneko-65)                      | [MIT](licenses/bakeneko-65-MIT.txt)         |
+| Case Blossom + layout Alice (PCB KiCad) | © 2021 DoughnutTheGuy            | [doughnut923/Blossom](https://github.com/doughnut923/Blossom)                      | [MIT](licenses/blossom-MIT.txt)             |
+| Case Planck (thiết kế OLKB)             | © 2016 MajorKoos / KBDParts      | [MajorKoos/KBDParts](https://github.com/MajorKoos/KBDParts)                        | [MIT](licenses/kbdparts-planck-MIT.txt)     |
+| Keycap Cherry 1u (R1–R4)                | © 2017 Constantino Schillebeeckx | [cherry-mx-keycaps](https://github.com/ConstantinoSchillebeeckx/cherry-mx-keycaps) | [MIT](licenses/cherry-mx-keycaps-MIT.txt)   |
+| Keycap SA 1u (R1–R4)                    | © 2018 Matthew Seabright         | [mjseabright/keycaps](https://github.com/mjseabright/keycaps)                      | [MIT](licenses/mjseabright-keycaps-MIT.txt) |
+| Keycap DCS 1u (R1–R4)                   | © 2020 Fooblitzky                | [DCS_keycaps](https://github.com/Fooblitzky/DCS_keycaps)                           | [MIT](licenses/dcs-keycaps-MIT.txt)         |
+| Keycap DSA 1u–2.75u + phím đứng 2u      | © 2018 Matthew Seabright         | [mjseabright/keycaps](https://github.com/mjseabright/keycaps)                      | [MIT](licenses/mjseabright-keycaps-MIT.txt) |
+| Keycap XDA 1u                           | © 2018 spooknik                  | [XDA-Keycaps](https://github.com/spooknik/XDA-Keycaps)                             | [MIT](licenses/xda-keycaps-MIT.txt)         |
 
 ## Giấy phép khác
 
@@ -55,6 +56,10 @@ Model switch MX (`models/switch/switch.glb`) và stabilizer (`models/stab/stab.g
 
 - **Caveat** (chữ khắc tay dưới mặt bàn) — The Caveat Project Authors, [googlefonts/caveat](https://github.com/googlefonts/caveat),
   SIL Open Font License 1.1 ([văn bản giấy phép](licenses/Caveat-OFL.txt)).
+- **Open Gorton** (chữ keycap DCS kiểu Wyse, SA bản đậm) — © 2020 dakotafelder, [dakotafelder/open-gorton](https://github.com/dakotafelder/open-gorton),
+  MIT ([văn bản giấy phép](licenses/open-gorton-MIT.txt)).
+- **Open Cherry** (chữ keycap Cherry) — © 2020 dakotafelder, [dakotafelder/open-cherry](https://github.com/dakotafelder/open-cherry),
+  MIT ([văn bản giấy phép](licenses/open-cherry-MIT.txt)).
 
 ## Desolder suction effect
 

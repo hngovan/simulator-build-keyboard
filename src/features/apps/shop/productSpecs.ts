@@ -22,6 +22,7 @@ import { SUPPLIES } from '@/data/supplies'
 import type {
   CaseItem,
   KeycapItem,
+  LayoutId,
   PcbItem,
   PlateItem,
   Product,
@@ -36,6 +37,28 @@ import type {
 export type SpecRow = [string, string]
 
 const yesNo = (b: boolean) => (b ? 'Có' : 'Không')
+/** thứ tự cỡ bàn phím nhỏ → lớn (layout đặc biệt cuối) */
+const SIZE_ORDER: LayoutId[] = [
+  'planck',
+  '40',
+  '60',
+  'hhkb',
+  'truehhkb',
+  '65',
+  '75',
+  'frl',
+  'tkl',
+  'tklf13',
+  'full',
+  'alice',
+]
+/** Layout hỗ trợ: tên gọn theo cỡ (40%, 60%, TKL, Full size...), bỏ chú thích trong ngoặc */
+const layoutSizes = (ids: LayoutId[]) =>
+  [...ids]
+    .sort((a, b) => SIZE_ORDER.indexOf(a) - SIZE_ORDER.indexOf(b))
+    .map((l) => LAYOUTS[l].name.replace(/\s*\(.*\)$/, ''))
+    .join(', ')
+
 const layoutNames = (p: Product) => p.layouts?.map((l) => LAYOUTS[l].name).join(', ')
 
 /** Nhãn ngắn dưới tên sản phẩm (khung xem): layout, chất liệu / loại chính */
@@ -129,7 +152,7 @@ export function productSpecs(p: Product, o: ProductOption): SpecRow[] {
         ['Profile', kit.profile.toUpperCase()],
         ['Chất liệu', KEYCAP_MATERIALS[keycapMaterialOf(cap)].name],
         ['Màu', KEYCAP_COLORS[cap.color]?.name ?? cap.color],
-        ['Layout hợp', kit.layouts.map((l) => LAYOUTS[l].name).join(', ')],
+        ['Layout hỗ trợ', layoutSizes(kit.layouts)],
       ]
     }
     case 'supply':

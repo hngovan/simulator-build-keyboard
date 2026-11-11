@@ -6,6 +6,7 @@ import { useSettingsPop } from '@/features/settings/SettingsDialog'
 import { pcEye, screenCenter } from '../models/computerLayout'
 import { BLOCKS, BODY_R, EYE_Y, M, SPOTS, WALK_AREAS } from './roomLayout'
 import { useRoom } from './roomStore'
+import { useMouseSens } from '@/lib/mouseSens'
 
 /** tốc độ đi (m/s); phòng hẹp nên không có chạy */
 const SPEED = 2.2
@@ -296,7 +297,7 @@ export function WalkControls() {
       if (s.locked) {
         if (s.anim || Math.abs(e.movementX) > LOCK_SPIKE || Math.abs(e.movementY) > LOCK_SPIKE)
           return
-        const look = LOCK_LOOK * (1 - s.shownZoom * (1 - ZOOM_MIN))
+        const look = LOCK_LOOK * useMouseSens.getState().sens * (1 - s.shownZoom * (1 - ZOOM_MIN))
         s.yaw -= e.movementX * look
         s.pitch = THREE.MathUtils.clamp(s.pitch - e.movementY * look, -1.5, 1.5)
         return
@@ -308,7 +309,7 @@ export function WalkControls() {
       if (!d.moved && Math.hypot(dx, dy) < DRAG_PX) return
       d.moved = true
       // đang zoom thì nhìn quanh chậm lại theo góc nhìn
-      const look = LOOK * (1 - s.shownZoom * (1 - ZOOM_MIN))
+      const look = LOOK * useMouseSens.getState().sens * (1 - s.shownZoom * (1 - ZOOM_MIN))
       s.yaw -= dx * look
       s.pitch = THREE.MathUtils.clamp(s.pitch - dy * look, -1.35, 1.35)
       d.x = e.clientX

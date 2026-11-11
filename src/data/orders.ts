@@ -37,6 +37,7 @@ import {
   MOUNTS,
   KEYCAP_KITS,
   KEYCAP_COLORS,
+  keycapColorsFor,
   CASE_COLORS,
   SOUND_WISH,
   SIZE_MULT,
@@ -188,7 +189,6 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
     variant = defaultVariant(layout)
   const { keys } = getLayout(layout, variant)
   const wish = pick(Object.keys(SOUND_WISH) as SoundWish[])
-  const keycapColor = pick(Object.keys(KEYCAP_COLORS))
   // 1 bộ keycap (1 profile) cho cả bàn phím, chọn trong các bộ đủ phím cho layout
   const keycapKit = pick(
     atLv(
@@ -201,6 +201,8 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
   // chất liệu keycap: đa số khách đòi rõ, 20% để shop tự chọn
   const keycapMaterial =
     Math.random() < 0.8 ? pick(Object.keys(KEYCAP_MATERIALS) as KeycapMaterial[]) : undefined
+  // màu theo chất liệu: đòi PC thì màu nhuộm trong, còn lại màu đặc
+  const keycapColor = pick(keycapColorsFor(keycapMaterial))
   const type: Order['type'] = featured || Math.random() < 0.5 ? 'kit' : 'full'
   let kit: Kit | null = null
   let caseColor: string | null = null

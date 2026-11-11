@@ -1,6 +1,21 @@
 # Giao diện
 
+## 2026-11-11
+
+### Bỏ con trỏ pixel, dùng con trỏ hệ thống
+
+- Yêu cầu của người dùng: dùng lại con trỏ mặc định.
+- `index.css`: `--cursor-arrow: default`, `--cursor-hand: pointer` (biến giữ nguyên, `useHover` vẫn gán `var(--cursor-hand)`).
+  `public/cursors/` + `scripts/gen-cursors.mjs` còn để lại, chưa dùng.
+
 ## 2026-11-10
+
+### Dev "Chọn case" bấm không hiện gì khi đang đi lại
+
+- Lỗi: Cài đặt → Dev → "Chọn case" chỉ bật `freePick`, mà `App.tsx` chỉ hiện `FreeBuildDialog` khi `!walk` (ngồi bàn build); Esc mở Cài đặt
+  thường lúc đang đi lại nên bấm xong không có gì.
+- `features/settings/SettingsTabs.tsx` (`DevTab`): bấm thì đóng Cài đặt (`useSettingsPop`), bật `freePick`, đang đi lại thì `sitAtBench()`
+  (bay về bàn, ngồi xuống xong bảng chọn case hiện). Giữ điều kiện `!walk` ở App (Free build đi lại vẫn ẩn bảng).
 
 ### Đi lại trong phòng: khoá tâm chuột kiểu Minecraft
 

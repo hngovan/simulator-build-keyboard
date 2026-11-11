@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Clone, useGLTF } from '@react-three/drei'
+import { Clone, RoundedBox, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 
 // Dây điện (dựng bằng code) + ổ cắm tường + công tắc đèn (model), dùng chung cho đèn bàn build, máy tính. Đơn vị mét
@@ -164,6 +164,51 @@ export function LightSwitch(props: JSX.IntrinsicElements['group']) {
       <group position-z={SWITCH_BACK} rotation-y={-Math.PI / 2}>
         <Clone object={scene} castShadow />
       </group>
+    </group>
+  )
+}
+
+const PLUG_SHELL = new THREE.MeshStandardMaterial({ color: '#17181b', roughness: 0.55 })
+const PLUG_METAL = new THREE.MeshStandardMaterial({
+  color: '#c9ccd2',
+  metalness: 0.9,
+  roughness: 0.3,
+})
+/** đầu cắm USB-C (m): lưỡi kim loại 8,3 × 2,5 × 6,6mm, vỏ nhựa bọc 12 × 6,5 × 18mm, chuôi giảm gập 8mm */
+export const USBC_PLUG = { tongue: 0.0066, body: 0.018, relief: 0.008 }
+
+/**
+ * Đầu cắm USB-C dựng bằng code: gốc = mép vỏ nhựa (chỗ áp vào mặt vách), lưỡi kim loại cắm theo +x vào lỗ,
+ * vỏ nhựa + chuôi lùi về −x; dây nối vào đuôi chuôi ở x = −(body + relief)
+ */
+export function UsbCPlug(props: JSX.IntrinsicElements['group']) {
+  const { tongue, body, relief } = USBC_PLUG
+  return (
+    <group {...props}>
+      <RoundedBox
+        args={[tongue + 0.001, 0.0025, 0.0083]}
+        radius={0.0011}
+        smoothness={3}
+        position-x={(tongue - 0.001) / 2}
+        material={PLUG_METAL}
+      />
+      <RoundedBox
+        args={[body, 0.0065, 0.012]}
+        radius={0.0025}
+        smoothness={4}
+        position-x={-body / 2}
+        material={PLUG_SHELL}
+        castShadow
+      />
+      <mesh
+        position-x={-body - relief / 2}
+        rotation-z={Math.PI / 2}
+        material={PLUG_SHELL}
+        castShadow
+      >
+        {/* xoay trục y → −x: đầu trên (mảnh) ở đuôi, đầu dưới (to) áp vỏ */}
+        <cylinderGeometry args={[0.0026, 0.0034, relief, 16]} />
+      </mesh>
     </group>
   )
 }

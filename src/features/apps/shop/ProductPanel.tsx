@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { Badge, OptionChip, QtyInput, SoundBars } from '@/components/ui'
-import { cn, fmt } from '@/lib/format'
+import { CircleAlert } from 'lucide-react'
+import { Badge, ColorDot, OptionChip, QtyInput, SoundBars, Tooltip } from '@/components/ui'
+import { fmt } from '@/lib/format'
 import { useGame } from '@/store'
 import type { Product, ProductOption } from '@/types'
 import { productSpecs, productTags } from './productSpecs'
@@ -9,7 +10,7 @@ type Opt = readonly [ProductOption, number]
 
 /**
  * Panel cột phải khung xem 3D sản phẩm Shopii (dùng chung state với thẻ sản phẩm): tên + nhãn, chọn chất liệu (chip) rồi
- * màu / loại (ô màu to có tên), gói (vật tư nhiều cỡ gói), âm thanh, bảng thông số, mô tả; đáy: số lượng, giá, nút mua
+ * màu / loại (ô màu tròn, tên ở tooltip), gói (vật tư nhiều cỡ gói), âm thanh, bảng thông số; mô tả ở icon ! cạnh tên; đáy: số lượng, giá, nút mua
  */
 export function ProductPanel({
   product,
@@ -68,6 +69,15 @@ export function ProductPanel({
                 −{product.sale}%
               </Badge>
             )}
+            {/* mô tả (chất liệu / profile...): icon ! góc phải, rê xem tooltip nhiều dòng */}
+            <Tooltip wide content={opt.hint ?? product.desc}>
+              <span
+                aria-label={`Mô tả ${product.name}`}
+                className="mt-1 shrink-0 cursor-help text-muted hover:text-ink"
+              >
+                <CircleAlert className="size-5" />
+              </span>
+            </Tooltip>
           </div>
           {tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -110,34 +120,17 @@ export function ProductPanel({
 
         {multiTile && swatches && (
           <Section title={`${groups.length > 1 ? 'Màu' : 'Lựa chọn'} · ${tileLabel(opt)}`}>
-            <div className="grid grid-cols-4 gap-1.5">
+            {/* ô màu tròn như Free build, tên màu ở tooltip + tiêu đề mục */}
+            <div className="flex flex-wrap gap-2">
               {tiles.map(([o, i]) => (
-                <button
+                <ColorDot
                   key={`${o.group ?? ''}:${o.label}`}
-                  type="button"
-                  aria-pressed={tileActive(o)}
-                  title={tileLabel(o)}
+                  color={o.swatch ?? '#888'}
+                  name={tileLabel(o)}
+                  active={tileActive(o)}
                   onClick={() => onTile(o, i)}
-                  className={cn(
-                    'flex min-w-0 flex-col items-center gap-1 rounded-xl p-1.5 transition-colors',
-                    tileActive(o)
-                      ? 'bg-[#4a3f1a] ring-2 ring-yellow ring-inset'
-                      : 'bg-panel-2 hover:bg-line',
-                  )}
-                >
-                  <span
-                    className="h-7 w-full rounded-lg border-2 border-black/40 shadow-[inset_0_2px_0_rgba(255,255,255,0.15)]"
-                    style={{ background: o.swatch }}
-                  />
-                  <span
-                    className={cn(
-                      'w-full truncate text-center text-[11px] font-extrabold',
-                      tileActive(o) && 'text-yellow',
-                    )}
-                  >
-                    {tileLabel(o)}
-                  </span>
-                </button>
+                  className="size-8"
+                />
               ))}
             </div>
           </Section>
@@ -174,8 +167,6 @@ export function ProductPanel({
             ))}
           </div>
         )}
-
-        <p className="text-xs leading-relaxed text-muted">{opt.hint ?? product.desc}</p>
       </div>
       <div className="flex shrink-0 flex-col gap-2 border-t-2 border-black/30 bg-black/10 p-4">
         {qty !== null && (

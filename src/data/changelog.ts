@@ -13,6 +13,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.37',
+    date: '2026-11-11',
+    commits: [],
+    title: 'Keycap DCS, SA / DSA phím rộng thật, switch chi tiết hơn',
+    items: [
+      'Keycap DCS (font Gorton), font Cherry / SA riêng; keycap thành mỏng + switch tactile (+ top mount) tiếng ngon hơn',
+      'SA / DSA có model phím rộng thật (Shift, space 6.25u / 7u...), SA / XDA có lòng + chân stem; chọn chất liệu keycap ở Free build',
+      'Enter ISO / Big-ass bo mép, lòng chảo theo profile, mặt dưới có gân + stem như keycap thật',
+      'Switch: stem Kailh Box, thân stem có chân / ray, nhìn thấy lò xo qua housing trong',
+      'Bàn máy tính đặt bàn phím Planck có dây USB-C; chỉnh độ nhạy chuột khi đi lại; dùng con trỏ chuột hệ thống',
+    ],
+  },
+  {
     version: '0.1.36',
     date: '2026-11-10',
     commits: ['1fe99b9'],

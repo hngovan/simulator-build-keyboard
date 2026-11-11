@@ -769,7 +769,10 @@ export const TINT_COLORS = Object.keys(CASE_COLORS).filter((c) => CASE_COLORS[c]
  */
 export function caseSwatch(col: string) {
   const c = CASE_COLORS[col]
-  if (!c) return col
+  return c ? tintSwatch(c) : col
+}
+/** nền ô màu: màu thường = màu đặc; trong nhuộm = chia đôi đặc / nhạt (dùng chung case PC + keycap PC) */
+export function tintSwatch(c: ColorDef) {
   if (!c.clear) return c.hex
   const tint = `color-mix(in srgb, ${c.hex} 45%, #f4f8ff)`
   // border-box: nền chia đôi phủ cả viền, không thì gradient lặp lại dưới viền → rìa ô lệch màu
@@ -2273,9 +2276,54 @@ export const KEYCAP_COLORS: Record<string, KeycapColor> = {
   mint: { name: 'Bạc hà', hex: '#a8e0cf', legend: '#24584a' },
   // xanh lá đậm chữ trắng, 1 màu cả bộ (kiểu GMK xanh rêu)
   green: { name: 'Xanh lá', hex: '#1d3522', legend: '#f2efe8' },
+  // keycap PC trong suốt nhuộm màu (chỉ chất liệu PC, `keycapColorsFor`): nhìn xuyên thấy switch bên dưới
+  clear: { name: 'Trong suốt', hex: '#e8f1fb', legend: '#2a2a2e', clear: true },
+  clearSmoke: { name: 'Khói trong', hex: '#3a3d45', legend: '#f2efe8', clear: true },
+  clearBlue: { name: 'Xanh dương trong', hex: '#3d72d6', legend: '#f2efe8', clear: true },
+  clearRed: { name: 'Đỏ trong', hex: '#c8323e', legend: '#f2efe8', clear: true },
+  clearGreen: { name: 'Xanh lá trong', hex: '#3fa064', legend: '#f2efe8', clear: true },
+  clearPurple: { name: 'Tím trong', hex: '#7c52c4', legend: '#f2efe8', clear: true },
+  clearPink: { name: 'Hồng trong', hex: '#f08cb0', legend: '#5a2a3a', clear: true },
+  clearYellow: { name: 'Vàng trong', hex: '#e9b62e', legend: '#3a2a10', clear: true },
 }
 
-export type KeycapProfile = 'cherry' | 'oem' | 'sa' | 'dsa' | 'xda' | 'mt3' | 'asa' | 'opk'
+/** màu bán theo chất liệu keycap: PC = màu nhuộm trong, còn lại = màu đặc */
+export const keycapColorsFor = (material: KeycapMaterial | undefined) =>
+  Object.keys(KEYCAP_COLORS).filter((c) => !!KEYCAP_COLORS[c].clear === (material === 'pc'))
+
+/** ô màu keycap: màu trong nhuộm chia đôi đặc / nhạt như case PC (`tintSwatch`) */
+export const keycapSwatch = (col: string) =>
+  KEYCAP_COLORS[col] ? tintSwatch(KEYCAP_COLORS[col]) : col
+
+export type KeycapProfile = 'cherry' | 'oem' | 'sa' | 'dsa' | 'xda' | 'mt3' | 'asa' | 'opk' | 'dcs'
+
+/**
+ * Keycap đổi tiếng gõ (cộng vào độ ồn / độ cao): keycap cao, thành dày (SA, MT3) vang trầm hơn; thành mỏng (DCS) đanh, gọn, cao hơn.
+ * `thin` = thành mỏng: đi với switch tactile nghe rõ cú bump, gõ "ngon" hơn (top mount càng ngon, `keycapSweet`)
+ */
+export const KEYCAP_SOUND: Record<KeycapProfile, { dl: number; dp: number; thin?: boolean }> = {
+  cherry: { dl: 0, dp: 0 },
+  oem: { dl: 0.01, dp: 0.02 },
+  sa: { dl: 0.03, dp: -0.05 },
+  dsa: { dl: 0, dp: 0.02 },
+  xda: { dl: 0.01, dp: 0.01 },
+  mt3: { dl: 0.03, dp: -0.05 },
+  asa: { dl: 0.02, dp: -0.03 },
+  opk: { dl: 0.02, dp: -0.02 },
+  dcs: { dl: 0.02, dp: 0.04, thin: true },
+}
+
+/** keycap thành mỏng + switch tactile: 0,5; thêm top mount (plate treo vào case trên, cú bump vang gọn): 1 */
+export function keycapSweet(
+  profile: KeycapProfile | undefined,
+  switchType: string,
+  mount: string | null,
+) {
+  if (!profile || !KEYCAP_SOUND[profile].thin || SWITCHES[switchType]?.feel !== 'tactile') return 0
+  return mount === 'top' ? 1 : 0.5
+}
+/** điểm khớp âm cộng thêm khi gõ "ngon" (`keycapSweet` = 1) */
+export const SWEET_BONUS = 0.12
 
 /** Tên bộ keycap không kèm cỡ: "Cherry Base (40/60/HHKB/Planck)" → "Cherry" */
 export const keycapKitShort = (name: string) => name.replace(/\s*\b(Full|Base)\b.*$/i, '')
@@ -2285,9 +2333,14 @@ export const KEYCAP_MATERIALS: Record<
   KeycapMaterial,
   { name: string; mult: number; desc: string }
 > = {
-  pbt: { name: 'PBT', mult: 0.8, desc: 'nhựa PBT nhám, in dye-sub, giá mềm nhất' },
+  pbt: { name: 'PBT', mult: 0.8, desc: 'nhựa PBT nhám, in dye-sub' },
   mix: { name: 'Mix PBT + ABS', mult: 0.9, desc: 'alpha PBT, mod ABS' },
   abs: { name: 'ABS', mult: 1, desc: 'nhựa ABS doubleshot, mịn, chữ sắc nét nhất' },
+  pc: {
+    name: 'PC trong suốt',
+    mult: 1.1,
+    desc: 'nhựa PC trong suốt nhuộm màu, nhìn xuyên thấy switch, hợp bàn phím có led',
+  },
 }
 /** chất liệu của 1 bộ keycap (bản lưu cũ = PBT) */
 export const keycapMaterialOf = (item: { material?: KeycapMaterial }) => item.material ?? 'pbt'
@@ -2301,6 +2354,8 @@ export const KEYCAP_KITS: Record<
     layouts: LayoutId[]
     /** bộ cũ đã bỏ khỏi Shopii / đơn mới (giữ để bản lưu cũ còn đọc được) */
     hidden?: boolean
+    /** mô tả thêm ở Shopii */
+    desc?: string
   }
 > = {
   // bộ Cherry Base cũ (chỉ 40/60/HHKB/Planck) trùng với Cherry Full → bỏ, chỉ còn 1 bộ Cherry
@@ -2353,6 +2408,13 @@ export const KEYCAP_KITS: Record<
     profile: 'opk',
     price: 780,
     layouts: Object.keys(LAYOUTS) as LayoutId[],
+  },
+  dcs: {
+    name: 'DCS Full',
+    profile: 'dcs',
+    price: 760,
+    layouts: Object.keys(LAYOUTS) as LayoutId[],
+    desc: 'Profile DCS của Signature Plastics (kiểu bàn phím terminal Wyse cổ): cao ngang Cherry, mặt trụ, thành mỏng, chữ font Gorton kiểu Wyse. Thành mỏng nên tiếng gọn, đanh; lắp trên switch tactile nghe rõ cú bump, đi với top mount thì tiếng ngon nhất',
   },
 }
 
@@ -2552,7 +2614,10 @@ function soundProfile(
     foam = false,
     caseFoam = false,
     ring,
+    keycap,
   }: {
+    /** profile keycap đang dùng (thành dày / mỏng đổi tiếng) */
+    keycap?: KeycapProfile
     caseId?: string
     lubeFrac?: number
     lubeType?: string | null
@@ -2568,8 +2633,9 @@ function soundProfile(
   const p = PLATES[plate] ?? zero
   const m = (mount && MOUNTS[mount]) || zero
   const c = (caseId && CASE_MATERIALS[CASES[caseId].material]) || zero
-  let loud = sw.loud + p.dl + m.dl + c.dl
-  let pitch = sw.pitch + p.dp + m.dp + c.dp
+  const k = (keycap && KEYCAP_SOUND[keycap]) || zero
+  let loud = sw.loud + p.dl + m.dl + c.dl + k.dl
+  let pitch = sw.pitch + p.dp + m.dp + c.dp + k.dp
   // foam Poron giữa PCB và plate: bớt rung vang, tiếng trầm thock hơn
   if (foam) {
     loud -= 0.05
@@ -2605,6 +2671,7 @@ function soundProfile(
     sound: sw.sound,
     dl: loud - sw.loud,
     dp: pitch - sw.pitch,
+    sweet: keycapSweet(keycap, switchType, mount),
   }
 }
 
@@ -2622,12 +2689,16 @@ export function buildSound(
     foam: !!build?.foam,
     caseFoam: !!build?.caseFoam,
     ring: typeof build?.ring === 'string' ? build.ring : undefined,
+    keycap: inv.keycap ? KEYCAP_KITS[inv.keycap.kit]?.profile : undefined,
   })
 }
 
 export function soundMatch(profile: SoundProfile, wish: SoundWish) {
   const [l, p] = SOUND_WISH[wish].target
-  return clamp(1 - Math.hypot(profile.loud - l, profile.pitch - p) / 0.5)
+  // keycap mỏng + tactile (+ top mount): tiếng ngon, khách nghe sướng tai hơn dù lệch ý chút
+  return clamp(
+    1 - Math.hypot(profile.loud - l, profile.pitch - p) / 0.5 + (profile.sweet ?? 0) * SWEET_BONUS,
+  )
 }
 
 export function soundLabel(profile: SoundProfile) {
@@ -2859,16 +2930,16 @@ export function buildCatalog(): Product[] {
       cat: 'keycap',
       // tên gọn: bỏ chữ "Keycap" và cỡ bộ (Full / Base hiện thành nhãn trên ảnh)
       name: `Keycap ${keycapKitShort(kit.name)}`,
-      desc: `Profile ${kit.profile.toUpperCase()}, có 3 chất liệu: PBT / ABS / mix PBT + ABS`,
+      desc: `${kit.desc ? `${kit.desc}. ` : `Profile ${kit.profile.toUpperCase()}, `}có 4 chất liệu: PBT / ABS / mix PBT + ABS / PC trong suốt nhiều màu`,
       layouts: kit.layouts,
       // chất liệu (group) × màu: thẻ / giỏ hàng chọn riêng chất liệu rồi màu
       options: (
         Object.entries(KEYCAP_MATERIALS) as [KeycapMaterial, (typeof KEYCAP_MATERIALS)['pbt']][]
       ).flatMap(([m, mat]) =>
-        Object.entries(KEYCAP_COLORS).map(([c, col]) => ({
+        keycapColorsFor(m).map((c) => ({
           group: mat.name,
-          label: col.name,
-          swatch: col.hex,
+          label: KEYCAP_COLORS[c].name,
+          swatch: keycapSwatch(c),
           price: Math.round((kit.price * mat.mult) / 10) * 10,
           item: { kit: k, color: c, material: m },
           hint: `Profile ${kit.profile.toUpperCase()}, ${mat.desc}`,

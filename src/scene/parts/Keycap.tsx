@@ -11,9 +11,17 @@ import {
   capGeometry,
   keycapShape,
   keycapModel,
+  lCapCeiling,
   lCapGeometry,
+  stemGeometry,
   stretchCap,
+  capUnder,
+  isCadWide,
+  LEGEND_Z,
+  legendPlane,
 } from '../models/keycapShape'
+import { legendFontUrl } from '../models/legendFont'
+import { keycapMatParams, keycapMaterial } from '../models/keycapMaterial'
 import { STEP_LOW, isStepped, keyOutline } from './keyShape'
 
 /** sau bao lâu không bấm phím nào thì viền đỏ các phím chưa test (ms) */
@@ -52,8 +60,6 @@ function UntestedOutline({ w, h, y }: { w: number; h: number; y: number }) {
   )
 }
 
-/** chữ in lệch về phía sau mặt keycap */
-const LEGEND_Z = -0.1
 /**
  * Mọi ký tự có thể in trên keycap (ASCII in được + mũi tên): truyền `characters` cho Text thì drei suspend tới khi font + đủ glyph
  * dựng xong → Suspense của bàn build giữ màn chờ, vào bước lắp keycap là chữ có sẵn (không lắp xong mới hiện chữ)
@@ -61,40 +67,24 @@ const LEGEND_Z = -0.1
 const LEGEND_CHARS =
   Array.from({ length: 94 }, (_, i) => String.fromCharCode(33 + i)).join('') + '→←'
 
+/** font riêng của profile (Open Cherry / Open Gorton) chỉ có ASCII, không có mũi tên */
+const ASCII_CHARS = LEGEND_CHARS.slice(0, 94)
+
 /**
- * Mặt phẳng in chữ khớp mặt keycap: bắn tia xuống lưới điểm quanh vùng chữ, khớp độ cao theo z (nghiêng theo hàng)
- * rồi nâng lên trên điểm cao nhất. Keycap lòng chảo sâu / nghiêng (SA, MT3...) trước bị mặt keycap che mất nửa chữ
+ * Cỡ chữ: nhãn dài co lại cho lọt phần giữa mặt keycap (2 đầu phím rộng lòng chảo cong lên, chữ tràn ra bị che),
+ * chừa ~0,95u; font riêng (Gorton / Cherry) chữ rộng ~0,75 em, Nunito ~0,62 em
  */
-function legendPlane(cap: THREE.Object3D) {
-  cap.updateMatrixWorld(true)
-  const ray = new THREE.Raycaster()
-  const down = new THREE.Vector3(0, -1, 0)
-  const pts: [number, number][] = []
-  for (const x of [-0.16, 0, 0.16])
-    for (const dz of [-0.17, -0.08, 0, 0.08, 0.15]) {
-      ray.set(new THREE.Vector3(x, 5, LEGEND_Z + dz), down)
-      const hit = ray.intersectObject(cap, true)[0]
-      if (hit) pts.push([dz, hit.point.y])
-    }
-  if (pts.length < 4) return undefined
-  // khớp đường thẳng y = a + b·dz (bình phương nhỏ nhất)
-  const n = pts.length
-  const mz = pts.reduce((s, p) => s + p[0], 0) / n
-  const my = pts.reduce((s, p) => s + p[1], 0) / n
-  const b =
-    pts.reduce((s, p) => s + (p[0] - mz) * (p[1] - my), 0) /
-    (pts.reduce((s, p) => s + (p[0] - mz) ** 2, 0) || 1)
-  const a = my - b * mz
-  // nâng lên trên điểm cao nhất so với đường khớp (lòng chảo cong), cách mặt 0.012
-  const over = Math.max(...pts.map(([z, y]) => y - (a + b * z)))
-  return { y: a + over + 0.012, tilt: Math.atan(-b) }
-}
+const legendSize = (k: Key, wide: boolean) =>
+  k.label.length > 1
+    ? Math.min(0.2, Math.max(k.w - 0.95, 0.75) / (k.label.length * (wide ? 0.75 : 0.62)))
+    : 0.3
 
 /** Nunito không có glyph ↑ ↓ (hiện ô vuông) → in '→' xoay */
 const ARROW_SPIN: Record<string, number> = { '↑': Math.PI / 2, '↓': -Math.PI / 2 }
 
 function CapOverlay({
   k,
+  profile,
   color,
   height,
   dish,
@@ -104,6 +94,7 @@ function CapOverlay({
   legend,
 }: {
   k: Key
+  profile: KeycapProfile
   color: string
   height: number
   dish: number
@@ -114,6 +105,9 @@ function CapOverlay({
   legend?: { y: number; tilt: number }
 }) {
   const col = KEYCAP_COLORS[color]
+  const arrow = ARROW_SPIN[k.label] !== undefined || /[←→]/.test(k.label)
+  // font riêng theo profile (Cherry / DCS kiểu Wyse / SA), mũi tên vẫn Nunito
+  const font = arrow ? undefined : legendFontUrl(profile)
   return (
     <>
       {k.label && (
@@ -122,9 +116,10 @@ function CapOverlay({
           rotation-x={-Math.PI / 2 + (legend?.tilt ?? 0)}
         >
           <Text
-            characters={LEGEND_CHARS}
+            {...(font ? { font } : {})}
+            characters={font ? ASCII_CHARS : LEGEND_CHARS}
             rotation-z={ARROW_SPIN[k.label] ?? 0}
-            fontSize={k.label.length > 1 ? 0.2 : 0.3}
+            fontSize={legendSize(k, !!font)}
             color={col.legend}
           >
             {ARROW_SPIN[k.label] === undefined ? k.label : '→'}
@@ -157,16 +152,12 @@ function NativeCap({
   testing: boolean
   tested: boolean
 }) {
-  const model = keycapModel(profile, k.row)
+  const model = keycapModel(profile, k.row, k.w, k.h)
   const source = useGLTF(`/models/keycaps/${model}.glb`).scene
   const scene = useMemo(() => {
     // phím rộng: kéo dãn phần giữa, giữ mép như keycap đúc thật
     const copy = stretchCap(source.clone(true), k.w, k.h)
-    const material = new THREE.MeshStandardMaterial({
-      color: KEYCAP_COLORS[color].hex,
-      roughness: 0.55,
-      side: THREE.DoubleSide,
-    })
+    const material = keycapMaterial(color)
     copy.traverse((part) => {
       if ((part as THREE.Mesh).isMesh) {
         const mesh = part as THREE.Mesh
@@ -193,11 +184,16 @@ function NativeCap({
     return { height, dish: Number.isFinite(center) ? height - center : shape.dish }
   }, [source, shape.dish])
   const legend = useMemo(() => legendPlane(scene), [scene])
+  // phím có stab mà model kéo dãn từ 1u: thêm 2 stem stab + gân gia cố dưới lòng (model SA / DSA đúng cỡ đã có sẵn)
+  const under = useMemo(() => capUnder(k, scene, isCadWide(model)), [k, scene, model])
+  const underMat = useMemo(() => keycapMaterial(color), [color])
   return (
     <>
       <primitive object={scene} />
+      {under && <mesh geometry={under} material={underMat} />}
       <CapOverlay
         k={k}
+        profile={profile}
         color={color}
         height={height}
         dish={dish}
@@ -214,7 +210,7 @@ function NativeCap({
 export function KeycapPreload({ kit, keys }: { kit?: string; keys: Key[] }) {
   useEffect(() => {
     const profile = KEYCAP_KITS[kit ?? 'base']?.profile ?? 'cherry'
-    for (const model of new Set(keys.map((k) => keycapModel(profile, k.row))))
+    for (const model of new Set(keys.map((k) => keycapModel(profile, k.row, k.w, k.h))))
       if (model) useGLTF.preload(`/models/keycaps/${model}.glb`)
   }, [kit, keys])
   return null
@@ -233,17 +229,14 @@ export function Keycap({ k, color, kit }: { k: Key; color: string; kit?: string 
   const stepped = isStepped(k)
   // Enter chữ L (ISO / Big-ass): chưa có CAD → dựng theo viền phím, mọi profile
   const lGeo = useMemo(
-    () => (k.ext ? lCapGeometry(keyOutline(k, 0.04), k.h / 2, shape) : null),
-    [k, shape],
+    () => (k.ext ? lCapGeometry(keyOutline(k, 0.04), k.h / 2, shape, profile) : null),
+    [k, shape, profile],
   )
+  // đo lòng keycap để gân / stem stab bám vào trần + vách (`capUnder`)
+  const capProbe = useMemo(() => new THREE.Mesh(lGeo ?? geometry), [lGeo, geometry])
+  const under = useMemo(() => capUnder(k, capProbe), [k, capProbe])
   useEffect(() => () => lGeo?.dispose(), [lGeo])
-  const capMat = (
-    <meshStandardMaterial
-      color={KEYCAP_COLORS[color].hex}
-      roughness={0.55}
-      side={THREE.DoubleSide}
-    />
-  )
+  const capMat = <meshStandardMaterial {...keycapMatParams(color)} />
   useFrame((_, dt) => lerpTo(ref, 'y', pressed ? -0.15 : 0, dt, 30))
   return (
     <group ref={ref}>
@@ -255,15 +248,16 @@ export function Keycap({ k, color, kit }: { k: Key; color: string; kit?: string 
       )}
       {lGeo && !stepped ? (
         <>
+          {/* stem MX dưới lòng keycap (dựng bằng code nên không có sẵn như model CAD) */}
+          <mesh geometry={stemGeometry(lCapCeiling(shape))}>{capMat}</mesh>
+          {/* Enter chữ L: stab dọc + gân */}
+          {under && <mesh geometry={under}>{capMat}</mesh>}
           <mesh geometry={lGeo} castShadow receiveShadow>
-            <meshStandardMaterial
-              color={KEYCAP_COLORS[color].hex}
-              roughness={0.55}
-              side={THREE.DoubleSide}
-            />
+            <meshStandardMaterial {...keycapMatParams(color)} />
           </mesh>
           <CapOverlay
             k={k}
+            profile={profile}
             color={color}
             height={shape.height}
             dish={0}
@@ -272,22 +266,21 @@ export function Keycap({ k, color, kit }: { k: Key; color: string; kit?: string 
             tested={tested}
           />
         </>
-      ) : keycapModel(profile, k.row) ? (
+      ) : keycapModel(profile, k.row, k.w, k.h) ? (
         // model chưa tải xong thì chỉ phím này hiện trễ, không treo Suspense cả bàn build (cả cảnh nháy màn chờ)
         <Suspense fallback={null}>
           <NativeCap k={k} color={color} profile={profile} testing={testing} tested={tested} />
         </Suspense>
       ) : (
         <>
+          <mesh geometry={stemGeometry(shape.height - shape.dish - 0.03)}>{capMat}</mesh>
+          {under && <mesh geometry={under}>{capMat}</mesh>}
           <mesh geometry={geometry} castShadow receiveShadow>
-            <meshStandardMaterial
-              color={KEYCAP_COLORS[color].hex}
-              roughness={0.55}
-              side={THREE.DoubleSide}
-            />
+            <meshStandardMaterial {...keycapMatParams(color)} />
           </mesh>
           <CapOverlay
             k={k}
+            profile={profile}
             color={color}
             height={shape.height}
             dish={shape.dish}

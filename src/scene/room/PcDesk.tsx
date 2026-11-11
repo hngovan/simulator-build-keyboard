@@ -2,14 +2,25 @@ import { useEffect, useMemo, useState } from 'react'
 import { RoundedBox, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame } from '@/store'
+import { useThree } from '@react-three/fiber'
+import { useSceneLoading } from '../common/loadingStore'
+import { warmUp } from '../common/warmup'
+import { getLayout } from '@/data/layouts'
+import { DTB_MM, Y, dtbSpot } from '@/data/steps'
+import { MM } from '../models/Switch'
+import CASE_USB from '@/data/caseUsb.json'
+import { buildKeyboardModel, caseSpec } from '@/features/apps/messenger/orderThumb'
 import { Monitor, PcTower } from '../models/Computer'
 import { DESK, MOUSE_PAD, PC_DESK } from './roomLayout'
 import { RoomSpot } from './RoomSpot'
-import { C13_LEN, Cable, Outlet, PowerInlet, plugExit } from './Wiring'
+import { C13_LEN, Cable, Outlet, PowerInlet, USBC_PLUG, UsbCPlug, plugExit } from './Wiring'
 import { topreTexture } from './topreArt'
 
+/** 1u = 19,05mm */
+const U_M = 0.01905
+
 // Bàn máy tính sát bên trái bàn build (theo kiểu PC Building Simulator): bàn có hộc = model người dùng đưa (`DeskBody`),
-// lót chuột 90 × 40cm in hình Topre, màn hình 27" (bấm → vào máy tính), bàn phím 60% + chuột;
+// lót chuột 90 × 40cm in hình Topre, màn hình 27" (bấm → vào máy tính), bàn phím Planck + chuột;
 // thùng CPU đặt dưới gầm bàn, dây kéo lên màn hình / bàn phím. Đơn vị mét, gốc = sàn dưới tâm bàn,
 // chiều dài bàn theo z, mép trước quay ra phòng (+x)
 
@@ -102,9 +113,7 @@ function DeskGear({
   )
 }
 
-const KEYBOARD_GLB = '/models/desk/realforce-87u.glb'
 const MOUSE_GLB = '/models/desk/deathadder.glb'
-useGLTF.preload(KEYBOARD_GLB)
 useGLTF.preload(MOUSE_GLB)
 
 /** Lót chuột vải 90 × 40cm in hình biển hiệu Topre (ảnh mẫu người dùng, vẽ lại bằng canvas) */
@@ -150,20 +159,144 @@ function MousePad(props: JSX.IntrinsicElements['group']) {
   )
 }
 
+/** keycap SA bàn phím trên bàn máy tính: phím chữ xám đậm, phím chức năng tối hơn, chữ trắng ngà */
+const DESK_CAP = { alpha: '#34363c', mod: '#222327', legend: '#e8e4da' }
+
+/** chỗ đặt bàn phím trên bàn (hệ bàn), xoay π/2: hệ bàn phím (x, y, z) → hệ bàn (z, y, −x), mặt trước (+z) ra phòng */
+const KB_AT: [number, number, number] = [0.11, DESK.h + 0.004, 0.06]
+const toDesk = ([x, y, z]: [number, number, number]): [number, number, number] => [
+  KB_AT[0] + z,
+  KB_AT[1] + y,
+  KB_AT[2] - x,
+]
+
+/**
+ * Lỗ USB-C vách sau case Planck (hệ bàn phím, mét, theo `caseUsb.json` như bước DTB): `[x, y, z]` mép ngoài vách sau.
+ * (báo lên PcDesk khi dựng xong để vẽ dây)
+ */
+type Port = [number, number, number]
+/** daughterboard ai03 Unified C3 (như bàn build `Daughterboard.tsx`) + trụ đồng kê */
+const DTB_GLB = '/models/dtb/unified-c3.glb'
+useGLTF.preload(DTB_GLB)
+const POST = new THREE.MeshStandardMaterial({ color: '#b8b2a8', metalness: 0.7, roughness: 0.35 })
+
+/** Bàn phím Planck nhôm đen trên bàn máy tính: dựng bằng `buildKeyboardModel` (đơn vị u → mét), căn giữa, đáy ở y = 0 */
+type DtbNodes = Record<string, THREE.Object3D>
+/** bàn phím đã dựng (dùng lại khi vào lại phòng: không phải dựng / chờ lại) */
+let built: Promise<{ model: THREE.Group; port: Port }> | null = null
+
+/** Dựng 1 lần: bàn phím + DTB trong case, căn giữa, đáy ở y = 0; `port` = chỗ cắm đầu USB-C (hệ bàn phím, mét) */
+function buildDeskPlanck(dtbNodes: DtbNodes) {
+  built ??= buildKeyboardModel(
+    {
+      ...caseSpec('planckAlu', 'black'),
+      keycapKit: 'sa',
+      capOf: (k) => (k.label.length > 1 || !k.label ? DESK_CAP.mod : DESK_CAP.alpha),
+      legend: DESK_CAP.legend,
+    },
+    false,
+  ).then((obj) => {
+    // daughterboard trong case như lúc build: đúng chỗ `dtbSpot` (cổng USB-C sát lỗ vách sau), kê trụ nếu lỗ nằm cao
+    const lay = getLayout('planck', {})
+    const at = dtbSpot('planck/case', lay.width, lay.depth, lay.origin, [])
+    if (at) {
+      const dtb = new THREE.Group()
+      dtb.position.set(at.x, at.y, at.z)
+      dtb.rotation.x = at.tilt
+      const pcb = new THREE.Group()
+      pcb.scale.setScalar(MM)
+      for (const n of ['pcb', 'usb', 'parts', 'jst']) {
+        const m = dtbNodes[n] as THREE.Mesh
+        pcb.add(new THREE.Mesh(m.geometry, m.material))
+      }
+      dtb.add(pcb)
+      const post = at.y - at.floor
+      if (post > 0.01)
+        for (const [hx, hz] of DTB_MM.holes) {
+          const p = new THREE.Mesh(new THREE.CylinderGeometry(2.2 * MM, 2.2 * MM, post, 16), POST)
+          p.position.set(hx * MM, -post / 2, hz * MM)
+          dtb.add(p)
+        }
+      obj.add(dtb)
+    }
+    obj.scale.setScalar(U_M)
+    obj.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = true
+    })
+    const model = new THREE.Group()
+    model.add(obj)
+    model.updateMatrixWorld(true)
+    const box = new THREE.Box3().setFromObject(model)
+    obj.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2)
+    // đầu cắm ngay tâm cổng USB-C của DTB (u → mét), mặt ngoài vách sau = mép sau khung bao;
+    // không có DTB thì lấy tâm lỗ vách (`caseUsb.json`)
+    const hole = (CASE_USB as Record<string, { hole: number[] }>)['planck/case'].hole
+    const [ux, uy] = at
+      ? [at.x, at.y + DTB_MM.usb.y * MM]
+      : [hole[0] * MM - lay.origin[0], Y.floorBot + hole[1] * MM]
+    const port: Port = [
+      ux * U_M + obj.position.x,
+      uy * U_M + obj.position.y,
+      -(box.max.z - box.min.z) / 2,
+    ]
+    return { model, port }
+  })
+  return built
+}
+
+/**
+ * Bàn phím Planck trên bàn máy tính. Lần đầu dựng: đếm vào `useSceneLoading.pending` + biên dịch shader trước (`warmUp`) để
+ * màn chờ vào game giữ tới khi bàn phím hiện đủ, không vào phòng rồi mới thấy bàn phím hiện ra
+ */
+function DeskPlanck({ onPort }: { onPort: (p: Port) => void }) {
+  const dtbNodes = useGLTF(DTB_GLB).nodes
+  const gl = useThree((s) => s.gl)
+  const camera = useThree((s) => s.camera)
+  const scene = useThree((s) => s.scene)
+  const [model, setModel] = useState<THREE.Object3D | null>(null)
+  useEffect(() => {
+    let alive = true
+    let open = true
+    const done = () => {
+      if (!open) return
+      open = false
+      useSceneLoading.setState((s) => ({ pending: s.pending - 1 }))
+    }
+    useSceneLoading.setState((s) => ({ pending: s.pending + 1 }))
+    void buildDeskPlanck(dtbNodes)
+      .then(async (b) => {
+        await warmUp(gl, b.model, camera, scene)
+        if (!alive) return
+        onPort(b.port)
+        setModel(b.model)
+      })
+      .finally(done)
+    return () => {
+      alive = false
+      done()
+    }
+  }, [onPort, dtbNodes, gl, camera, scene])
+  return (
+    <group position={KB_AT} rotation-y={Math.PI / 2}>
+      {model && <primitive object={model} />}
+    </group>
+  )
+}
+
 export function PcDesk(props: JSX.IntrinsicElements['group']) {
   const zoomToPC = useGame((s) => s.zoomToPC)
   const deskTop = DESK.h
+  // lỗ USB bàn phím (hệ bàn), dây cắm vào đó
+  const [port, setPort] = useState<Port | null>(null)
+  const plug = port && toDesk(port)
+  // đuôi chuôi đầu cắm USB-C (dây nối vào đây)
+  const tail = plug ? plug[0] - USBC_PLUG.body - USBC_PLUG.relief : 0
   return (
     <group {...props}>
       <DeskBody />
       <MousePad position={[0.1, deskTop, -0.05]} />
-      {/* bàn phím Topre Realforce 87U (TKL dài 36,5cm) + chuột Razer DeathAdder (12,7cm), mặt trước quay ra phòng */}
-      <DeskGear
-        url={KEYBOARD_GLB}
-        length={0.365}
-        position={[0.11, deskTop + 0.004, 0.06]}
-        rotation-y={Math.PI / 2}
-      />
+      {/* bàn phím Planck nhôm dựng bằng code (y như đồ build trong game) + chuột Razer DeathAdder (12,7cm), mặt trước quay ra phòng */}
+      <DeskPlanck onPort={setPort} />
       <DeskGear
         url={MOUSE_GLB}
         length={0.127}
@@ -182,28 +315,41 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
       <group position={CPU_AT} rotation-y={Math.PI / 2}>
         <PcTower />
       </group>
-      {/* dây: CPU → lỗ luồn dây mép sau bàn → chân màn hình; CPU → bàn phím; CPU → ổ điện tường */}
+      {/* dây: CPU → khe sau bàn vắt qua mép sau → chân màn hình; CPU → bàn phím; CPU → ổ điện tường */}
       <Cable
         points={[
           [-0.22, 0.3, -0.475],
           [-0.3, 0.45, -0.3],
-          [-0.33, deskTop - 0.05, -0.12],
-          [-0.33, deskTop + 0.01, -0.05],
-          [-0.26, deskTop + 0.02, 0],
-          [-PC_DESK.d / 2 + 0.17 - 0.04, deskTop + 0.06, 0.01],
+          // khe giữa bàn và tường (mép sau bàn ở x −0,35) → vắt qua mép sau → lưng cổ chân đế (đế cao 3,5cm)
+          [-0.37, deskTop - 0.1, -0.14],
+          [-0.37, deskTop - 0.02, -0.05],
+          [-0.362, deskTop + 0.006, -0.02],
+          [-0.33, deskTop + 0.004, -0.005],
+          [-0.3, deskTop + 0.04, 0.005],
+          [-PC_DESK.d / 2 + 0.17 - 0.04, deskTop + 0.07, 0.01],
         ]}
       />
-      <Cable
-        r={0.0025}
-        points={[
-          [-0.22, 0.25, -0.435],
-          [-0.31, 0.5, -0.2],
-          [-0.33, deskTop - 0.02, -0.15],
-          [-0.3, deskTop + 0.008, -0.12],
-          [0.0, deskTop + 0.006, -0.02],
-          [0.04, deskTop + 0.012, 0.06],
-        ]}
-      />
+      {/* dây bàn phím: CPU → gầm bàn sang trái → khe sau bàn vắt qua mép sau ngoài chân đế màn hình (chân đế chữ V tới z ±0,2)
+          → vòng ra trước mũi chân đế → đầu cắm USB-C (`UsbCPlug`) cắm vào lỗ vách sau Planck */}
+      {plug && (
+        <Cable
+          r={0.0025}
+          points={[
+            [-0.22, 0.25, -0.435],
+            [-0.31, 0.5, -0.2],
+            [-0.37, deskTop - 0.12, 0.12],
+            [-0.37, deskTop - 0.03, 0.27],
+            [-0.362, deskTop + 0.005, 0.27],
+            [-0.33, deskTop + 0.003, 0.27],
+            [-0.15, deskTop + 0.003, 0.24],
+            [-0.06, deskTop + 0.006, plug[2] + 0.05],
+            [tail - 0.035, deskTop + 0.006, plug[2] + 0.008],
+            [tail - 0.008, plug[1], plug[2]],
+            [tail + 0.002, plug[1], plug[2]],
+          ]}
+        />
+      )}
+      {plug && <UsbCPlug position={plug} />}
       {/* dây nguồn: đầu C13 cắm lưng CPU → thòng xuống sàn → lên phích CEE ở ổ tường */}
       <PowerInlet position={C13_AT} />
       <Cable

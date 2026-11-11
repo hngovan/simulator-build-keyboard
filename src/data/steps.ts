@@ -1194,10 +1194,13 @@ export const FOOT_R = 0.21
 export const FOOT_DEPTH = 0.042
 
 // Khoảng cách từ tâm phím tới 2 chân stab
-/** nửa khoảng cách 2 chân stab (u): phím ≥ 7u (space 7u / 10u) dùng dây 7u (chân cách tâm 3u), 6–6.75u theo cỡ phím */
+/**
+ * nửa khoảng cách 2 chân stab (u) theo datasheet Cherry: 2–2.75u 23,876mm (±0,62u); 3u / 6u / 6.25u đặt cách mép 0,5u
+ * ((cỡ − 1) / 2: 3u ±1u = 38,1mm, 6.25u ±2,625u = 100mm); ≥ 7u (space 7u / 10u) dùng dây 7u 114,3mm (±3u)
+ */
 export const stabSpan = (k: Key) => {
   const len = Math.max(k.w, k.h)
-  return len >= 7 ? 3 : len >= 6 ? (len - 1) / 2 : 0.62
+  return len >= 7 ? 3 : len >= 3 ? (len - 1) / 2 : 0.62
 }
 
 const MM_U = 1 / 19.05

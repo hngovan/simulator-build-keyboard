@@ -76,7 +76,7 @@ vào `window.__r3f` để debug trong console.
   hiện khi khác nhau); ô đổ xuống khác: `OptionSelect`; `OptionChip` chỉ cho bộ lọc / picker khung 3D; tab lọc đầu app
   (bảng xếp hạng, Kho) dùng `TabChip` (đang chọn = khối vàng đặc). App dạng danh sách theo khuôn bảng xếp hạng: đầu icon vàng +
   tiêu đề + ⓘ, khung `bg-black/15` có hàng tiêu đề cột, dòng `bg-panel-2` (dòng của mình / đang làm viền vàng), giá trị xanh bên phải.
-- Con trỏ: pixel 8-bit `public/cursors/` (`node scripts/gen-cursors.mjs`), biến `--cursor-arrow` / `--cursor-hand` trong `index.css`; vật 3D bấm được
+- Con trỏ: con trỏ hệ thống (biến `--cursor-arrow` / `--cursor-hand` trong `index.css`, bỏ bản pixel `public/cursors/`); vật 3D bấm được
   dùng `useHover` (gán `var(--cursor-hand)`), không gán `'pointer'` / `'auto'` thẳng.
 - Tooltip: chỉ cần ghi `title="..."` (1 dòng ngắn), `GlobalTooltip` tự vẽ kiểu game (căn giữa phần tử, `data-tip-align="start"` = căn mép trái); không dùng dòng phụ trong tooltip.
   Nội dung nhiều dòng (mô tả, gạch đầu dòng): `<Tooltip wide content={...}>`. Cả 2 đo kích thước rồi đặt bằng `placeTip` (tự lật, nằm trong

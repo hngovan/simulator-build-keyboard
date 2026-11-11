@@ -29,12 +29,17 @@ import { WEIGHT_METALS, WOOD_TEX, prepWood, woodTexFor, woodUV } from '@/scene/m
 import { boardOutline, outlineSlab } from '@/scene/parts/boardOutline'
 import {
   capGeometry,
+  stemGeometry,
   keycapModel,
   keycapShape,
+  LEGEND_Z,
+  legendPlane,
   lCapGeometry,
   stretchCap,
 } from '@/scene/models/keycapShape'
 import { STEP_LOW, isStepped, keyOutline } from '@/scene/parts/keyShape'
+import { loadLegendFont } from '@/scene/models/legendFont'
+import { keycapMaterial } from '@/scene/models/keycapMaterial'
 import type { FormFactor, Key, LayoutId, Order, Variant } from '@/types'
 import { bakedThumb, cachedThumb, glbMeshes, glbScene } from '../shop/modelThumb'
 import { caseKey } from '../shop/productThumb'
@@ -131,7 +136,42 @@ export interface KeyboardSpec {
   accent: string
   /** phối màu riêng từng phím (hex), không trả về thì theo màu chính / màu nhấn (bàn phím chưng trên kệ) */
   capOf?: (k: Key) => string | undefined
+  /** màu chữ in trên keycap (không có = keycap trơn; bỏ qua ở bản `lite`) */
+  legend?: string
 }
+
+/** Ảnh chữ trên keycap (canvas, nền trong): dùng lại theo nhãn + màu */
+const legendTex = new Map<string, THREE.Texture>()
+function legendTexture(label: string, color: string, family = 'Nunito') {
+  // phím mũi tên: font keycap riêng không có glyph → Nunito
+  const fam = /[←→↑↓]/.test(label) ? 'Nunito' : family
+  const key = `${label}|${color}|${fam}`
+  const hit = legendTex.get(key)
+  if (hit) return hit
+  const size = 128
+  const c = document.createElement('canvas')
+  c.width = c.height = size
+  const g = c.getContext('2d')!
+  g.fillStyle = color
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  // nhãn dài (Shift, Enter...) chữ nhỏ, co tiếp nếu vẫn tràn ô
+  let px = label.length > 1 ? 34 : 56
+  g.font = `bold ${px}px ${fam}, Nunito, system-ui, sans-serif`
+  while (g.measureText(label).width > size * 0.9 && px > 14) {
+    px -= 2
+    g.font = `bold ${px}px ${fam}, Nunito, system-ui, sans-serif`
+  }
+  g.fillText(label, size / 2, size / 2)
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 4
+  legendTex.set(key, t)
+  return t
+}
+/** cỡ ô chữ (u) */
+const LEGEND_BOX = 0.5
+const legendQuad = new THREE.PlaneGeometry(LEGEND_BOX, LEGEND_BOX).rotateX(-Math.PI / 2)
 
 /**
  * Bàn phím của đơn: case / keycap theo đơn. Keycap 1 màu cả bộ (phím chức năng cùng màu chữ cái) cho khớp
@@ -196,6 +236,8 @@ export async function buildKeyboardModel(
 ) {
   const { caseId, color, keycapKit } = spec
   const profile = KEYCAP_KITS[keycapKit].profile
+  // font chữ keycap theo profile (Cherry / DCS / SA có font riêng): nạp trước khi vẽ chữ lên canvas
+  const legendFamily = spec.legend ? await loadLegendFont(profile) : 'Nunito'
   const { keys, width, depth, origin, outline } = getLayout(spec.layout, spec.variant)
   const def = CASES[caseId]
   const group = new THREE.Group()
@@ -350,10 +392,9 @@ export async function buildKeyboardModel(
   }
 
   // keycap: màu chính theo yêu cầu khách, phím chức năng phối màu nhấn (màu chữ hoặc 1 màu khác)
-  const main = KEYCAP_COLORS[spec.keycapColor]
   const accent = spec.accent
   const side = THREE.DoubleSide
-  const mainMat = new THREE.MeshStandardMaterial({ color: main.hex, roughness: 0.55, side })
+  const mainMat = keycapMaterial(spec.keycapColor)
   const accentMat = new THREE.MeshStandardMaterial({ color: accent, roughness: 0.55, side })
   const isMod = (label: string) => label.length > 1 || label === ''
   const ownMats = new Map<string, THREE.MeshStandardMaterial>()
@@ -362,16 +403,18 @@ export async function buildKeyboardModel(
       ownMats.set(hex, new THREE.MeshStandardMaterial({ color: hex, roughness: 0.55, side }))
     return ownMats.get(hex)!
   }
+  // chỗ in chữ đo 1 lần mỗi model keycap 1u
+  const planes = new Map<string, ReturnType<typeof legendPlane>>()
   for (const k of caseOnly ? [] : keys) {
     const own = spec.capOf?.(k)
     const mat = own ? capMat(own) : isMod(k.label) && k.code !== 'Space' ? accentMat : mainMat
     // cả bàn 1 profile: model CAD 1u (phím rộng kéo dãn), ASA chưa có CAD thì dựng theo thông số
-    const model = lite ? null : keycapModel(profile, k.row)
+    const model = lite ? null : keycapModel(profile, k.row, k.w, k.h)
     let cap: THREE.Object3D
     // Caps stepped: bậc thấp theo viền cả phím, phần nhô là keycap thường cỡ ô chính (như bàn build)
     if (isStepped(k)) {
       const low = new THREE.Mesh(
-        lCapGeometry(keyOutline(k, 0.04), k.h / 2, keycapShape(profile, k.row)),
+        lCapGeometry(keyOutline(k, 0.04), k.h / 2, keycapShape(profile, k.row), profile),
         mat,
       )
       low.scale.y = STEP_LOW
@@ -381,20 +424,42 @@ export async function buildKeyboardModel(
     // Enter chữ L (ISO / Big-ass): dựng theo viền phím như bàn build
     if (k.ext && !isStepped(k))
       cap = new THREE.Mesh(
-        lCapGeometry(keyOutline(k, 0.04), k.h / 2, keycapShape(profile, k.row)),
+        lCapGeometry(keyOutline(k, 0.04), k.h / 2, keycapShape(profile, k.row), profile),
         mat,
       )
     else if (model) {
       cap = (await glbScene(`/models/keycaps/${model}.glb`)).clone(true)
+      if (spec.legend && !planes.has(model)) planes.set(model, legendPlane(cap))
       cap.traverse((part) => {
         if ((part as THREE.Mesh).isMesh) (part as THREE.Mesh).material = mat
       })
       stretchCap(cap, k.w, k.h)
-    } else
-      cap = new THREE.Mesh(capGeometry(k.w - 0.08, k.h - 0.08, keycapShape(profile, k.row)), mat)
+    } else {
+      const shape = keycapShape(profile, k.row)
+      cap = new THREE.Mesh(capGeometry(k.w - 0.08, k.h - 0.08, shape), mat)
+      // stem MX dưới lòng (keycap dựng bằng code); bản `lite` chỉ nhìn từ xa nên bỏ
+      if (!lite) cap.add(new THREE.Mesh(stemGeometry(shape.height - shape.dish - 0.03), mat))
+    }
     cap.position.set(k.cx, 0.36, k.cz)
     cap.rotation.y = k.rot
     board.add(cap)
+    // chữ: mặt phẳng nghiêng theo mặt keycap (như bàn build), lệch về phía sau
+    const plane = model ? planes.get(model) : undefined
+    if (spec.legend && k.label && plane) {
+      const mat = new THREE.MeshBasicMaterial({
+        map: legendTexture(k.label, spec.legend, legendFamily),
+        transparent: true,
+        depthWrite: false,
+      })
+      const lg = new THREE.Group()
+      lg.position.set(k.cx, 0.36, k.cz)
+      lg.rotation.y = k.rot
+      const q = new THREE.Mesh(legendQuad, mat)
+      q.position.set(0, plane.y, LEGEND_Z)
+      q.rotation.x = plane.tilt
+      lg.add(q)
+      board.add(lg)
+    }
   }
   // khối chặn liền case ở chỗ trống hàng dưới (HHKB, WKL...)
   // case CAD cao hơn: khối chặn tới BLOCKER_TOP; case dựng bằng code thì ngang mép trên case

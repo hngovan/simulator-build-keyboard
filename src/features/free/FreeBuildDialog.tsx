@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
-import { Button, HudCard, Muted, OptionChip, OptionSelect } from '@/components/ui'
+import { Button, ColorDot, HudCard, Muted, OptionChip, OptionSelect } from '@/components/ui'
 import { cn } from '@/lib/format'
 import { LAYOUTS, VARIANT_NAME, variantLabel, variantShort } from '@/data/layouts'
 import {
@@ -11,6 +11,9 @@ import {
   caseSwatch,
   KEYCAP_COLORS,
   KEYCAP_KITS,
+  KEYCAP_MATERIALS,
+  keycapColorsFor,
+  keycapSwatch,
   MOUNTS,
   PCB_TYPES,
   PLATES,
@@ -20,9 +23,12 @@ import {
   plateIds,
 } from '@/data/parts'
 import { FEET_IDS, ORING_IDS, SOLDER_IDS, SUPPLIES } from '@/data/supplies'
-import type { FormFactor, LayoutId, Variant, VariantKey } from '@/types'
+import type { FormFactor, KeycapMaterial, LayoutId, Variant, VariantKey } from '@/types'
 import { useGame } from '@/store'
 import { freeKits, freeLayouts, startFreeBuild } from './freeBuild'
+
+/** chất liệu keycap chọn được (mọi bộ đều có PBT / mix / ABS như Shopii) */
+const KC_MATS = Object.keys(KEYCAP_MATERIALS) as KeycapMaterial[]
 
 /** thứ tự nhóm cỡ case trong bảng */
 // nhóm case theo cỡ từ nhỏ tới lớn (Planck ortho 12 × 4 ngay sau 40%)
@@ -42,7 +48,6 @@ const FF_NAME: Record<FormFactor, string> = {
 const PLATE_IDS = plateIds()
 const STAB_IDS = Object.keys(STABS)
 const SWITCH_IDS = Object.keys(SWITCHES)
-const KC_COLORS = Object.keys(KEYCAP_COLORS)
 /** tên bộ keycap gọn: bỏ "Full" / "(mọi layout)", chỉ còn profile (Cherry, OEM, SA...) */
 const kitName = (id: string) =>
   KEYCAP_KITS[id].name.replace(/\s*\(.*\)/, '').replace(/\s+Full$/, '')
@@ -89,7 +94,7 @@ const aluPick = (ids: string[], finish: string, pieces: number, usb = false) => 
   )
 }
 
-/** ô màu bấm chọn (case, keycap, feet, O-ring) */
+/** ô màu bấm chọn (case, keycap, feet, O-ring): ô tròn dùng chung `ColorDot` */
 function Swatch({
   hex,
   name,
@@ -101,18 +106,7 @@ function Swatch({
   active: boolean
   onClick: () => void
 }) {
-  return (
-    <button
-      type="button"
-      title={name}
-      onClick={onClick}
-      className={cn(
-        'size-6 rounded-full border-2 shadow-[0_2px_0_rgba(0,0,0,0.45)] transition-transform hover:-translate-y-px',
-        active ? 'border-yellow' : 'border-black/40',
-      )}
-      style={{ background: hex }}
-    />
-  )
+  return <ColorDot color={hex} name={name} active={active} onClick={onClick} />
 }
 
 /** 1 hàng lựa chọn: nhãn trái + nội dung */
@@ -138,7 +132,11 @@ export function FreeBuildDialog() {
   const [stab, setStab] = useState(0)
   const [sw, setSw] = useState(0)
   const [kit, setKit] = useState('')
-  const [kcColor, setKcColor] = useState(KC_COLORS[0])
+  const [kcMat, setKcMat] = useState(0)
+  // màu keycap theo chất liệu (PC = màu nhuộm trong); đổi chất liệu mà màu không còn bán thì lấy màu đầu
+  const kcColors = keycapColorsFor(KC_MATS[kcMat])
+  const [kcColorPick, setKcColor] = useState(kcColors[0])
+  const kcColor = kcColors.includes(kcColorPick) ? kcColorPick : kcColors[0]
   // feet / thiếc / O-ring là vật tư đang chọn trong store (bàn build đổi tiếp được)
   const feet = useGame((s) => s.feetPick)
   const solder = useGame((s) => s.solderPick)
@@ -248,6 +246,7 @@ export function FreeBuildDialog() {
       switchType: SWITCH_IDS[sw],
       keycapKit: kitId,
       keycapColor: kcColor,
+      keycapMaterial: KC_MATS[kcMat],
     })
   }
 
@@ -482,10 +481,10 @@ export function FreeBuildDialog() {
                   ))}
                 </Line>
                 <Line label="Màu keycap">
-                  {KC_COLORS.map((c) => (
+                  {kcColors.map((c) => (
                     <Swatch
                       key={c}
-                      hex={KEYCAP_COLORS[c].hex}
+                      hex={keycapSwatch(c)}
                       name={KEYCAP_COLORS[c].name}
                       active={kcColor === c}
                       onClick={() => setKcColor(c)}
@@ -635,6 +634,12 @@ export function FreeBuildDialog() {
                     options={kits.map((id) => ({ label: kitName(id) }))}
                     value={Math.max(0, kits.indexOf(kitId))}
                     onChange={(i) => setKit(kits[i])}
+                  />
+                  <OptionSelect
+                    className="w-36"
+                    options={KC_MATS.map((m) => ({ label: KEYCAP_MATERIALS[m].name }))}
+                    value={kcMat}
+                    onChange={setKcMat}
                   />
                 </Line>
                 {pcb === 'solder' && (

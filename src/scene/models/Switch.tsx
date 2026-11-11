@@ -1,6 +1,8 @@
 import { useGLTF } from '@react-three/drei'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import * as THREE from 'three'
 import { SWITCHES } from '@/data/parts'
+import { springGeometry } from './spring'
 
 export const MM = 1 / 19.05 // 1u = 19.05mm
 
@@ -16,15 +18,19 @@ export const SWITCH_CAD = {
   body: { halfX: 3.5, halfZ: 2.65, bottom: 0.2, top: 6.1 },
   stemTop: 9.93,
   /** 2 chân stem (leg) ở mặt trước, chạm lá đồng */
-  legs: { x: 2.4, z: 2.0, bottom: -2.6 },
+  legs: { x: 2.4, z: 2.0, bottom: -3.3 },
 }
 
 // Màu housing [trên, dưới, độ trong housing trên, kim tuyến]
 // kim tuyến: true = chỉ housing trên; 'full' = cả housing dưới cũng trong suốt (cùng độ trong) + kim tuyến;
 // 'clear' = cả housing dưới cũng trong suốt, không kim tuyến
 const HOUSING: Record<string, [string, string, number, (true | 'full' | 'clear')?]> = {
-  // trên PC trong, dưới trắng đục (stem box xanh navy)
+  // Kailh Box: trên PC trong, dưới trắng đục (stem box theo màu switch)
   kailhBoxNavy: ['#eef3f6', '#f4f4f2', 0.35],
+  kailhBoxRed: ['#eef3f6', '#f4f4f2', 0.35],
+  kailhBoxBrown: ['#eef3f6', '#f4f4f2', 0.35],
+  kailhBoxWhite: ['#eef3f6', '#f4f4f2', 0.35],
+  kailhBoxJade: ['#eef3f6', '#f4f4f2', 0.35],
   // trên đen khói trong, dưới đen
   gateronBlackInk: ['#1a1a1e', '#1a1a1e', 0.6],
   // toàn thân kem đục (cả stem)
@@ -164,31 +170,102 @@ export function switchMaterials(type: string): SwitchMats {
 }
 
 const { body, legs } = SWITCH_CAD
-/** thân trượt của stem (mm), dùng chung cho switch đã mở bày ở bàn lube */
-export const bodyGeo = new THREE.BoxGeometry(
-  body.halfX * 2,
-  body.top - body.bottom,
-  body.halfZ * 2,
-).translate(0, (body.top + body.bottom) / 2, 0)
-const legGeo = new THREE.BoxGeometry(1.1, body.bottom - legs.bottom, 0.8).translate(
-  0,
-  (body.bottom + legs.bottom) / 2,
-  0,
-)
-const postGeo = new THREE.CylinderGeometry(1.4, 1.4, 3, 16).translate(0, body.bottom - 1.5, 0)
-/** stem box Kailh (mm): khung vuông bao quanh đầu chữ thập, mép trên thấp hơn đỉnh chữ thập chút */
-const BOX_STEM = { outer: 5.6, wall: 0.55, bottom: 6.1, top: 9.6 }
-const boxStemGeos = (() => {
-  const { outer, wall, bottom, top } = BOX_STEM
-  const h = top - bottom
-  const y = (top + bottom) / 2
-  const off = (outer - wall) / 2
-  return [
-    new THREE.BoxGeometry(outer, h, wall).translate(0, y, off),
-    new THREE.BoxGeometry(outer, h, wall).translate(0, y, -off),
-    new THREE.BoxGeometry(wall, h, outer - 2 * wall).translate(off, y, 0),
-    new THREE.BoxGeometry(wall, h, outer - 2 * wall).translate(-off, y, 0),
+/**
+ * Thân stem MX (mm) theo stem thật: khối chữ nhật đặc đỡ chữ thập; dưới đáy có cột giữa (center pole, lò xo lồng quanh,
+ * đầu vuốt nhọn), mặt sau (phía lá đồng, -z) có khung chân (leg): 2 càng chạy xuống quá đáy + tấm nối; 2 mặt bên có
+ * thanh dẫn hướng (rail). Dùng chung cho bàn build, Shopii, bàn lube (instanced); gờ tactile thêm riêng `tactileGeo`
+ */
+const STEM_BODY = {
+  /** cột giữa: bán kính, đáy, dài phần vuốt nhọn, bán kính đầu */
+  pole: { r: 1.0, bottom: -3.7, tip: 0.9, tipR: 0.55 },
+  /** khung chân mặt sau: tâm 2 càng theo x, bề ngang càng (x), dày (z), đáy tấm nối */
+  leg: { x: 2.85, w: 0.75, t: 0.6, plate: -1.1 },
+  /** thanh dẫn hướng 2 mặt bên: nhô ra (x), rộng (z), đáy, đỉnh */
+  rail: { t: 0.35, w: 1.3, bottom: 0.7, top: 5.2 },
+}
+const box = (w: number, h: number, d: number, x: number, y: number, z: number) =>
+  new THREE.BoxGeometry(w, h, d).translate(x, y, z)
+const legZ = -body.halfZ + STEM_BODY.leg.t / 2
+export const bodyGeo = (() => {
+  const { pole, leg, rail } = STEM_BODY
+  const { halfX, halfZ, top, bottom } = body
+  const parts: THREE.BufferGeometry[] = [
+    box(halfX * 2, top - bottom, halfZ * 2, 0, (top + bottom) / 2, 0),
   ]
+  // cột giữa + đầu vuốt nhọn
+  const shaft = bottom - (pole.bottom + pole.tip)
+  parts.push(
+    new THREE.CylinderGeometry(pole.r, pole.r, shaft, 16).translate(0, bottom - shaft / 2, 0),
+    new THREE.CylinderGeometry(pole.r, pole.tipR, pole.tip, 16).translate(
+      0,
+      pole.bottom + pole.tip / 2,
+      0,
+    ),
+  )
+  // khung chân: 2 càng xuống tới `legs.bottom` + tấm nối dưới đáy thân
+  for (const s of [-1, 1])
+    parts.push(box(leg.w, bottom - legs.bottom, leg.t, s * leg.x, (bottom + legs.bottom) / 2, legZ))
+  parts.push(box(leg.x * 2, bottom - leg.plate, leg.t, 0, (bottom + leg.plate) / 2, legZ))
+  // thanh dẫn hướng 2 mặt bên
+  for (const s of [-1, 1])
+    parts.push(
+      box(
+        rail.t,
+        rail.top - rail.bottom,
+        rail.w,
+        s * (halfX + rail.t / 2),
+        (rail.top + rail.bottom) / 2,
+        0,
+      ),
+    )
+  const g = mergeGeometries(parts)!
+  for (const p of parts) p.dispose()
+  return g
+})()
+/** gờ tactile / clicky ở đầu 2 càng chân, nhô về phía lá đồng (-z) */
+const tactileGeo = (() => {
+  const { leg } = STEM_BODY
+  const parts = [-1, 1].map((s) =>
+    box(leg.w, 0.9, 0.55, s * leg.x, legs.bottom + 0.9, legZ - leg.t / 2 - 0.27),
+  )
+  const g = mergeGeometries(parts)!
+  for (const p of parts) p.dispose()
+  return g
+})()
+/**
+ * stem box Kailh (mm): cột vuông bo góc to bao trọn chữ thập (như stem Box thật), chữ thập thụt trong lòng hộp,
+ * mép hộp cao hơn đỉnh chữ thập; lòng hộp vừa trụ stem keycap Ø5,5. Đứng trên mặt housing trên (6,31) cho khỏi xuyên
+ * housing trong suốt. `floor` = đáy hốc
+ */
+const BOX_STEM = { outer: 7.0, wall: 0.65, r: 1.3, rIn: 0.5, bottom: 6.35, top: 10.15, floor: 7.0 }
+function roundRect<T extends THREE.Path>(s: T, half: number, r: number): T {
+  s.moveTo(-half + r, -half)
+  s.lineTo(half - r, -half)
+  s.quadraticCurveTo(half, -half, half, -half + r)
+  s.lineTo(half, half - r)
+  s.quadraticCurveTo(half, half, half - r, half)
+  s.lineTo(-half + r, half)
+  s.quadraticCurveTo(-half, half, -half, half - r)
+  s.lineTo(-half, -half + r)
+  s.quadraticCurveTo(-half, -half, -half + r, -half)
+  return s
+}
+const boxStemGeos = (() => {
+  const { outer, wall, r, rIn, bottom, top, floor } = BOX_STEM
+  const half = outer / 2
+  const ring = roundRect(new THREE.Shape(), half, r)
+  ring.holes.push(roundRect(new THREE.Path(), half - wall, rIn))
+  // Extrude theo +z rồi xoay cho trục đùn thành +y
+  const walls = new THREE.ExtrudeGeometry(ring, { depth: top - bottom, bevelEnabled: false })
+    .rotateX(-Math.PI / 2)
+    .translate(0, bottom, 0)
+  const base = new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), half - wall + 0.01, rIn), {
+    depth: floor - bottom,
+    bevelEnabled: false,
+  })
+    .rotateX(-Math.PI / 2)
+    .translate(0, bottom, 0)
+  return [walls, base]
 })()
 
 /** Housing trên (mm) */
@@ -210,6 +287,19 @@ export function SwitchBottom({ type, pins = true }: { type: string; pins?: boole
   )
 }
 
+/**
+ * Phần stem game tự dựng (file CAD chỉ có đầu chữ thập): thân + cột giữa + chân + rail (+ gờ tactile, khung box Kailh), mm.
+ * Dùng chung cho bàn build và ảnh / khung xem 3D Shopii (housing trong suốt thì thấy thân stem bên trong)
+ */
+export function stemBodyGeos(type: string) {
+  const sw = SWITCHES[type]
+  return [
+    bodyGeo,
+    ...(sw && sw.feel !== 'linear' ? [tactileGeo] : []),
+    ...(sw?.box ? boxStemGeos : []),
+  ]
+}
+
 /** Stem đầy đủ: đầu chữ thập từ CAD + thân trượt + 2 chân + chốt lò xo (mm) */
 export function SwitchStem({ type, lubed = false }: { type: string; lubed?: boolean }) {
   const { stemTop } = useSwitchParts()
@@ -218,16 +308,28 @@ export function SwitchStem({ type, lubed = false }: { type: string; lubed?: bool
   return (
     <group>
       <mesh geometry={stemTop} material={mat} castShadow />
-      <mesh geometry={bodyGeo} material={mat} castShadow />
-      {[-legs.x, legs.x].map((x) => (
-        <mesh key={x} geometry={legGeo} material={mat} position={[x, 0, legs.z]} />
+      {stemBodyGeos(type).map((g, i) => (
+        <mesh key={i} geometry={g} material={mat} castShadow />
       ))}
-      <mesh geometry={postGeo} material={mat} />
-      {SWITCHES[type]?.box &&
-        boxStemGeos.map((g, i) => <mesh key={i} geometry={g} material={mat} castShadow />)}
     </group>
   )
 }
+
+/** lò xo trong switch đã đóng (mm): lồng quanh cột giữa stem, đáy trên sàn hốc housing dưới, đỉnh chạm đáy thân stem */
+export const SPRING_IN = { r: 2.3, bottom: -3.6, top: 0.2, turns: 5, wire: 0.25 }
+export const switchSpringGeo = springGeometry(
+  SPRING_IN.r,
+  SPRING_IN.top - SPRING_IN.bottom,
+  SPRING_IN.turns,
+  SPRING_IN.wire,
+).translate(0, SPRING_IN.bottom, 0)
+export const switchSpringMat = new THREE.MeshStandardMaterial({
+  color: '#d6dae0',
+  metalness: 1,
+  roughness: 0.3,
+})
+/** housing trên trong suốt → nhìn thấy lò xo bên trong (housing đục thì khỏi vẽ cho nhẹ bàn phím) */
+export const switchSeeThrough = (type: string) => (HOUSING[type] ?? HOUSING.gateronYellow)[2] < 1
 
 /** Switch hoàn chỉnh lắp trên plate (đơn vị u, gốc = mặt trên plate) */
 export function SwitchMesh({ type }: { type: string }) {
@@ -236,6 +338,7 @@ export function SwitchMesh({ type }: { type: string }) {
       <SwitchBottom type={type} />
       <SwitchTop type={type} />
       <SwitchStem type={type} />
+      {switchSeeThrough(type) && <mesh geometry={switchSpringGeo} material={switchSpringMat} />}
     </group>
   )
 }
