@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.38',
     date: '2026-11-12',
-    commits: [],
+    commits: ['8272e95'],
     title: 'Free build: bảng chọn mới, màu tự do, hàng dưới WK space 7u',
     items: [
       'Bảng chọn Free build dạng lưới ô, có khung xem trước bàn phím 3D (đã tắt đổ bóng)',
