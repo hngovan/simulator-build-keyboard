@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Environment, OrbitControls } from '@react-three/drei'
+import { Environment, OrbitControls } from '@react-three/drei'
 import { ENV_HDR } from '@/scene/common/envMap'
 import type * as THREE from 'three'
 import { LAYOUTS, getLayout } from '@/data/layouts'
-import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS } from '@/data/parts'
+import { CASES, KEYCAP_KITS, caseColorOf, keycapColorOf } from '@/data/parts'
 import { ModelViewerFrame, Toggle } from '@/components/ui'
 import { CameraView, ViewTabs, useViewState } from '@/scene/common/ViewPresets'
 import type { Order } from '@/types'
 import { buildKeyboardModel, caseSpec, orderSpec, type KeyboardSpec } from './orderThumb'
 
 /** Bàn phím 3D dựng từ spec: dựng xong mới hiện */
-function KeyboardModel({ spec, caseOnly }: { spec: KeyboardSpec; caseOnly?: boolean }) {
+export function KeyboardModel({ spec, caseOnly }: { spec: KeyboardSpec; caseOnly?: boolean }) {
   const [obj, setObj] = useState<{ spec: KeyboardSpec; model: THREE.Object3D } | null>(null)
   useEffect(() => {
     let alive = true
@@ -62,12 +62,12 @@ export function KeyboardViewer({
         subtitle ?? (
           <>
             {LAYOUTS[spec.layout].name} · Case {CASES[spec.caseId].name} (
-            {CASE_COLORS[spec.color]?.name})
+            {caseColorOf(spec.color).name})
             {!caseOnly && (
               <>
                 {' '}
                 · Keycap {KEYCAP_KITS[spec.keycapKit].name} màu{' '}
-                {KEYCAP_COLORS[spec.keycapColor].name}
+                {keycapColorOf(spec.keycapColor).name}
               </>
             )}
           </>
@@ -78,21 +78,16 @@ export function KeyboardViewer({
     >
       {/* camera lùi theo bề rộng layout (60% = 15u → [0, 10.5, 15]) để TKL / full không bị cắt 2 bên */}
       <ViewTabs view={view.view} onView={view.pick} />
-      <Canvas
-        shadows
-        camera={{ position: [0, 0.7 * viewW, viewW], fov: 40 }}
-        onDoubleClick={view.reset}
-      >
+      <Canvas camera={{ position: [0, 0.7 * viewW, viewW], fov: 40 }} onDoubleClick={view.reset}>
         <CameraView view={view.view} nonce={view.nonce} dist={Math.hypot(0.7, 1) * viewW} />
         {/* sáng như studio chụp sản phẩm: môi trường phòng + đèn chính + đèn hắt từ dưới (xem đáy case không tối) */}
         <Environment files={ENV_HDR} />
         <hemisphereLight args={['#ffffff', '#8a90a0', 0.9]} />
         <ambientLight intensity={0.5} />
-        <directionalLight position={[6, 14, 8]} intensity={1.6} castShadow />
+        <directionalLight position={[6, 14, 8]} intensity={1.6} />
         <directionalLight position={[-8, 6, -6]} intensity={0.7} />
         <directionalLight position={[0, -10, 4]} intensity={0.8} />
         <KeyboardModel spec={spec} caseOnly={caseOnly} />
-        <ContactShadows position-y={-0.95} opacity={0.5} scale={40} blur={2.5} />
         <OrbitControls makeDefault minDistance={4} maxDistance={40} />
       </Canvas>
     </ModelViewerFrame>

@@ -398,6 +398,13 @@ function Objective({ step, canFlip }: { step: StepId; canFlip: boolean }) {
           title={open ? 'Thu gọn hướng dẫn' : 'Mở hướng dẫn'}
           className="flex items-center gap-2 font-head text-xl font-extrabold text-yellow transition-opacity hover:opacity-85 max-md:text-lg max-md:whitespace-nowrap"
         >
+          {/* đang ở bước thứ mấy trong cả quy trình */}
+          <span
+            title="Bước đang làm / tổng số bước"
+            className="rounded-lg bg-yellow px-1.5 text-sm leading-6 text-[#3a2b00] tabular-nums"
+          >
+            {build.stepIdx + 1}/{ctx.steps.length}
+          </span>
           <span>
             {stepTitle(step, s.order, ctx.steps)}{' '}
             {total > 1 && (

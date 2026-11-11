@@ -4,7 +4,8 @@ import { SUPPLIES } from '@/data/supplies'
 import {
   CASES,
   CASE_COLORS,
-  KEYCAP_COLORS,
+  caseColorOf,
+  keycapColorOf,
   KEYCAP_KITS,
   KEYCAP_MATERIALS,
   MOUNTS,
@@ -32,7 +33,7 @@ function KitBox({ order, compact }: { order: Order; compact?: boolean }) {
   const items = [
     // tên case chung đã có chữ "Case" (vd "Case 75% mica") thì không thêm nữa
     k.case &&
-      `${/^case /i.test(CASES[k.case.id].name) ? '' : 'Case '}${CASES[k.case.id].name} (${CASE_COLORS[k.case.color].name})`,
+      `${/^case /i.test(CASES[k.case.id].name) ? '' : 'Case '}${CASES[k.case.id].name} (${caseColorOf(k.case.color).name})`,
     k.pcb && `PCB ${pcbLabel(k.pcb)}`,
     k.plate && `Plate ${PLATES[k.plate.material].name}`,
     k.stab && `Stab ${STABS[k.stab.type].name}`,
@@ -75,7 +76,7 @@ export function OrderSpec({
       [
         order.keycapKit && KEYCAP_KITS[order.keycapKit].profile.toUpperCase(),
         order.keycapMaterial && KEYCAP_MATERIALS[order.keycapMaterial].name,
-        KEYCAP_COLORS[order.keycapColor].name,
+        keycapColorOf(order.keycapColor).name,
       ]
         .filter(Boolean)
         .join(' · '),

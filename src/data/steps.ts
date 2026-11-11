@@ -15,7 +15,7 @@ import type {
   BatterySpot,
   LayoutId,
 } from '@/types'
-import { blockerGaps, getLayout } from './layouts'
+import { blockerGaps, getLayout, offUniversal } from './layouts'
 import { CASES, STABS, TOOLS, caseModelOf, isPlasticCase, isPlateless } from './parts'
 import { BATTERY_IDS, BATTERY_T, SUPPLIES } from './supplies'
 import CASE_FEET from './caseFeet.json'
@@ -1243,8 +1243,7 @@ export function keyCutouts(k: Key): [number, number][][] {
 /** lỗ cắt plate dùng để dò chỗ khoét vít tray: plate universal (gộp mọi variant) nếu có, không thì theo phím */
 export const plateCutoutsFor = (layout: string, keys: Key[], outline?: unknown) =>
   // Enter ISO / Big-ass (phím chữ L): switch Enter lệch chỗ ANSI → plate universal không khớp, cắt theo phím
-  (!outline && !keys.some((k) => k.ext || k.code === 'IntlBackslash') && plateUniversal[layout]) ||
-  keys.flatMap(keyCutouts)
+  (!outline && !offUniversal(keys) && plateUniversal[layout]) || keys.flatMap(keyCutouts)
 
 /** vòng tròn tâm (x, z) bán kính r không chạm lỗ cắt nào (không nằm trong lỗ, cách mọi cạnh ≥ r) */
 export function clearOfCutouts(loops: [number, number][][], x: number, z: number, r: number) {

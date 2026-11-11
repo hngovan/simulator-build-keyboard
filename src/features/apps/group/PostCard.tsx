@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { ChevronDown, MessageCircle, MessageSquareText, ThumbsUp } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { NameAvatar } from '@/components/game/CustomerAvatar'
-import { itemName } from '@/data/parts'
+import { KEYCAP_KITS, itemName, keycapMaterialOf } from '@/data/parts'
 import { cn, fmt } from '@/lib/format'
-import type { GroupPost } from '@/types'
+import type { GroupPost, KeycapItem } from '@/types'
 import { ProductImage } from '../shop/ProductImage'
 import { InboxChat } from './InboxChat'
 import { Tag } from './Tag'
@@ -20,6 +20,13 @@ export function PostCard({ post }: { post: GroupPost }) {
   const [desc, ...tags] = post.caption.split(' · ')
   const name = itemName(post.product.cat, post.opt.item)
   const price = fmt(deal?.price ?? post.price)
+  // loại món (kiểu switch, profile + chất liệu keycap): dòng chữ mờ dưới tên, không dán nhãn lên ảnh nhỏ
+  const cap = post.opt.item as KeycapItem
+  const meta =
+    post.product.cat === 'keycap'
+      ? [KEYCAP_KITS[cap.kit ?? 'base']?.profile.toUpperCase(), keycapMaterialOf(cap).toUpperCase()]
+      : [post.product.badge]
+  const kind = meta.filter(Boolean).join(' · ')
   return (
     <div className={cn('shrink-0 rounded-xl bg-panel-2 p-3', post.sold && 'opacity-70')}>
       <div
@@ -53,6 +60,7 @@ export function PostCard({ post }: { post: GroupPost }) {
                 swatch={post.opt.swatch}
                 item={post.opt.item}
                 className="h-24"
+                plain
               />
             </div>
             <div className="min-w-0">
@@ -77,6 +85,7 @@ export function PostCard({ post }: { post: GroupPost }) {
                 ))}
               </div>
               <div className="font-head font-extrabold">{name}</div>
+              {kind && <div className="text-xs font-bold text-muted">{kind}</div>}
               <div>
                 <s className="text-muted">{fmt(post.opt.price)}</s>{' '}
                 <span className="font-head text-lg font-extrabold text-[#ff8c5a]">{price}</span>

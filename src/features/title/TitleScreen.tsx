@@ -3,6 +3,7 @@ import { Music } from 'lucide-react'
 import { useGame } from '@/store'
 import { playUiHover, playUiSelect } from '@/sound'
 import { Button } from '@/components/ui'
+import { KeyCap } from '@/components/game/ControlsHint'
 import { WORKSPACE_ART } from '@/components/art/workspace'
 import { GameLogo } from '@/components/art/GameLogo'
 import { Changelog, TitleModal } from './Changelog'
@@ -219,6 +220,14 @@ export function TitleScreen() {
         )}
       </button>
 
+      {/* góc dưới trái: phím điều khiển menu */}
+      <div className="absolute bottom-5 left-5 flex items-center gap-2 font-head text-base font-bold text-white [text-shadow:0_2px_4px_#000] max-md:hidden">
+        <KeyCap>↑</KeyCap>
+        <KeyCap>↓</KeyCap>
+        <span className="mr-2">Chọn</span>
+        <KeyCap>Enter</KeyCap>
+        <span>Vào</span>
+      </div>
       {/* đáy giữa màn: Facebook tác giả */}
       <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center">
         <a

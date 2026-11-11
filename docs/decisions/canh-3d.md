@@ -2225,3 +2225,13 @@
 - Đã làm (parts.ts): `wood40` (800k), `tklWood` (1.200k), `fullWood` (1.500k) như `wood60` (1 mảnh, tray / O-ring, 4 màu gỗ), thêm
   vào `CASE_LINES` 40% / TKL / Full ("Gỗ"). Dựng bằng code chung (`Walls` + `woodUV`). Ảnh Shopii cần `ONLY=Wood bun run bake:thumbs`
   - `ONLY=wood40`.
+
+## 2026-11-12 — Case 65% nhựa 2 mảnh
+
+- Yêu cầu: "sao case 65% ko có option 2 mảnh?" → "case model 65% tự vẽ thì cứ thêm cho tôi option 2 mảnh".
+- Lý do thiếu: không có giới hạn trong code, chỉ thiếu dữ liệu (65% thêm sau, chỉ có `case65Plastic` / `case65Pc` 1 mảnh).
+- Đã làm (parts.ts): `case65PlasticTwo` (ABS 2 mảnh, 650k) + `case65PcTwo` (PC 2 mảnh, 1.350k) theo khuôn `case75PlasticTwo` / `case75Pc`
+  (vít đáy, gasket / top / bottom, giá ~1,6× / ~2,1× bản 1 mảnh như 75%), thêm vào `CASE_LINES` "Case 65%". Cấp mở khoá tự tính (`caseLv` = 3).
+  Vỏ dùng chung `absTwoShellGeometry`, không sửa code dựng hình. Free build tự gộp vào dòng "Case 65% nhựa" (chọn số mảnh).
+- Kiểm tra: `buildContext` cả 3 mount ra đúng dãy bước như bản 75%; chụp ảnh Shopii `ONLY=case65PlasticTwo` / `ONLY=case65PcTwo` (19 ảnh).
+- Chưa làm: nhôm / mica 2 mảnh cho 65% (người dùng chỉ hỏi case tự vẽ → làm nhựa trước).

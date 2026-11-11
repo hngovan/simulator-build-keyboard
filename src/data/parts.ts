@@ -1,3 +1,4 @@
+import { contrastOn, isHex } from '@/lib/color'
 import { LAYOUTS, getLayout } from './layouts'
 import { SUPPLIES, type SupplyDef } from './supplies'
 import { BLOSSOM_GASKETS } from './generated/plateBlossom'
@@ -108,7 +109,7 @@ interface ColorDef {
   /** PC trong nhuộm màu (case PC): vỏ trong mờ ánh màu, ô màu chia đôi đặc / trong */
   clear?: boolean
 }
-interface KeycapColor extends ColorDef {
+export interface KeycapColor extends ColorDef {
   legend: string
 }
 export interface ToolDef {
@@ -760,6 +761,13 @@ export const CASE_COLORS: Record<string, ColorDef> = {
   clearYellow: { name: 'Vàng trong', hex: '#e9b62e', clear: true },
 }
 
+/** màu case theo id có sẵn hoặc mã hex tự chọn (`#rrggbb`: Free build chọn màu tự do, case khách gửi màu ngẫu nhiên) → tên = mã hex */
+export const caseColorOf = (c: string): ColorDef =>
+  CASE_COLORS[c] ?? { name: c.toUpperCase(), hex: isHex(c) ? c : '#888888' }
+/** chất liệu case nhận màu hex bất kỳ cho case khách gửi (đục: nhôm / ABS); trong / gỗ giữ bảng màu riêng */
+export const freeColorCase = (c: { material: string; bottom?: unknown }) =>
+  !c.bottom && ['abs', 'anod', 'ecoat'].includes(c.material)
+
 /** màu PC trong nhuộm (chỉ case PC: nhựa ABS đục, không làm trong được) */
 export const TINT_COLORS = Object.keys(CASE_COLORS).filter((c) => CASE_COLORS[c].clear)
 
@@ -839,6 +847,8 @@ export const CASE_LINES: { name: string; variants: [id: string, label: string][]
     variants: [
       ['case65Plastic', 'Nhựa ABS 1 mảnh'],
       ['case65Pc', 'Nhựa PC 1 mảnh'],
+      ['case65PlasticTwo', 'Nhựa ABS 2 mảnh'],
+      ['case65PcTwo', 'Nhựa PC 2 mảnh'],
     ],
   },
   {
@@ -931,6 +941,10 @@ export const CASE_MATERIALS: Record<string, SoundMod> = {
  * case 2 chất liệu (nắp PC đáy nhôm) không tính */
 export const isPlasticCase = (c?: { material: string; model?: string; bottom?: unknown }) =>
   !!c && !c.model && !c.bottom && (c.material === 'abs' || c.material === 'pc')
+
+/** case chọn được màu case dưới riêng: 2 mảnh cùng chất liệu (mica xếp lớp / đáy chất liệu riêng `bottom` thì không) */
+export const caseTwoTone = (c?: { pieces: 1 | 2; material: string; bottom?: unknown }) =>
+  !!c && c.pieces === 2 && !c.bottom && c.material !== 'mica'
 
 // screwSide: 'top' = vít xuyên từ trên (case mica xếp lớp), 'bottom' = vít ở đáy case
 // Thông số Tofu60 Redux tham khảo trang sản phẩm Redux V2 của KBDfans (tray 5 standoff / O-ring)
@@ -1716,6 +1730,28 @@ export const CASES: Record<string, CaseDef> = {
     colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
     desc: 'Nhựa PC trong / mờ, xuyên đèn',
   },
+  case65PlasticTwo: {
+    name: 'Case 65% nhựa ABS 2 mảnh',
+    ff: '65',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'abs',
+    mounts: ['gasket', 'top', 'bottom'],
+    price: 650,
+    colors: ['black', 'white', 'yellow', 'green', 'red', 'purple', 'latte', 'brown', 'navy'],
+    desc: 'Nhựa ABS đúc 2 mảnh, vít M2 bắt vào trụ nhựa cấy ren đồng: gasket / top / bottom mount giá mềm',
+  },
+  case65PcTwo: {
+    name: 'Case 65% nhựa PC 2 mảnh',
+    ff: '65',
+    pieces: 2,
+    screwSide: 'bottom',
+    material: 'pc',
+    mounts: ['gasket', 'top', 'bottom'],
+    price: 1350,
+    colors: ['clear', 'frost', 'smoke', ...TINT_COLORS],
+    desc: 'Polycarbonate trong / mờ, xuyên đèn, vít ở đáy',
+  },
   repent75: {
     name: 'Repent75',
     ff: '75',
@@ -2285,6 +2321,17 @@ export const KEYCAP_COLORS: Record<string, KeycapColor> = {
   clearPurple: { name: 'Tím trong', hex: '#7c52c4', legend: '#f2efe8', clear: true },
   clearPink: { name: 'Hồng trong', hex: '#f08cb0', legend: '#5a2a3a', clear: true },
   clearYellow: { name: 'Vàng trong', hex: '#e9b62e', legend: '#3a2a10', clear: true },
+}
+
+/** hậu tố mã hex keycap tự chọn = nhựa trong nhuộm màu (keycap PC ở Free build): `#rrggbb` + `CLEAR_TAG` */
+export const CLEAR_TAG = '8c'
+/** màu keycap theo id có sẵn hoặc mã hex tự chọn ở Free build (`#rrggbb`, thêm `CLEAR_TAG` = PC trong nhuộm): tên = mã hex, chữ tự tương phản */
+export function keycapColorOf(c: string): KeycapColor {
+  if (KEYCAP_COLORS[c]) return KEYCAP_COLORS[c]
+  const hex = c.slice(0, 7)
+  if (!isHex(hex)) return KEYCAP_COLORS.white
+  const clear = c.length === 9
+  return { name: hex.toUpperCase() + (clear ? ' trong' : ''), hex, legend: contrastOn(hex), clear }
 }
 
 /** màu bán theo chất liệu keycap: PC = màu nhuộm trong, còn lại = màu đặc */
@@ -2971,7 +3018,7 @@ export function itemName(cat: ShopCategory, item: unknown): string {
   switch (cat) {
     case 'case': {
       const it = item as CaseItem
-      return `${CASES[it.id].name} (${CASE_COLORS[it.color].name})`
+      return `${CASES[it.id].name} (${caseColorOf(it.color).name})`
     }
     case 'supply':
     case 'spell': {
@@ -3003,7 +3050,7 @@ export function itemName(cat: ShopCategory, item: unknown): string {
     }
     case 'keycap': {
       const it = item as KeycapItem
-      return `Keycap ${keycapKitShort(KEYCAP_KITS[it.kit].name)} ${KEYCAP_MATERIALS[keycapMaterialOf(it)].name} ${KEYCAP_COLORS[it.color].name}`
+      return `Keycap ${keycapKitShort(KEYCAP_KITS[it.kit].name)} ${KEYCAP_MATERIALS[keycapMaterialOf(it)].name} ${keycapColorOf(it.color).name}`
     }
   }
 }
@@ -3279,6 +3326,8 @@ export function caseFits(def: CaseDef, layout: LayoutId, variant?: Variant) {
   // Enter ISO / Big-ass: chỉ case dựng bằng code (case CAD nắp / plate cắt sẵn cụm Enter ANSI)
   if (variant?.enter && variant.enter !== 'ansi' && def.model) return false
   if (layout === 'hhkb' && variant?.space === '10u' && def.pieces !== 2) return false
+  // hàng dưới WK space 7u: chỉ case dựng bằng code (nắp / plate case CAD cắt sẵn hàng dưới WK 6.25u hoặc WKL)
+  if (variant?.bottom === 'wk7' && def.model) return false
   const lay = LAYOUTS[layout]
   const ff = def.ff === lay.ff || (!def.model && !!lay.fits?.includes(def.ff))
   // layout `strict` (TKL F13): case CAD phải ghi đích danh, case dựng bằng code thì tự khớp theo phím

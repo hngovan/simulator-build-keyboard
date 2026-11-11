@@ -182,16 +182,27 @@ const bottomRow = (v: Variant): Item[] =>
         1,
         ['Ctrl', 1.5, 'ControlRight'],
       ]
-    : [
-        ['Ctrl', 1.25, 'ControlLeft'],
-        ['Win', 1.25, 'MetaLeft'],
-        ['Alt', 1.25, 'AltLeft'],
-        ['', 6.25, 'Space'],
-        ['Alt', 1.25, 'AltRight'],
-        ['Win', 1.25, 'MetaRight'],
-        ['Menu', 1.25, 'ContextMenu'],
-        ['Ctrl', 1.25, 'ControlRight'],
-      ]
+    : v.bottom === 'wk7'
+      ? // WK space 7u (Tsangan có Win): như WKL nhưng 2 ô trống thành phím Win 1u
+        [
+          ['Ctrl', 1.5, 'ControlLeft'],
+          ['Win', 1, 'MetaLeft'],
+          ['Alt', 1.5, 'AltLeft'],
+          ['', 7, 'Space'],
+          ['Alt', 1.5, 'AltRight'],
+          ['Win', 1, 'MetaRight'],
+          ['Ctrl', 1.5, 'ControlRight'],
+        ]
+      : [
+          ['Ctrl', 1.25, 'ControlLeft'],
+          ['Win', 1.25, 'MetaLeft'],
+          ['Alt', 1.25, 'AltLeft'],
+          ['', 6.25, 'Space'],
+          ['Alt', 1.25, 'AltRight'],
+          ['Win', 1.25, 'MetaRight'],
+          ['Menu', 1.25, 'ContextMenu'],
+          ['Ctrl', 1.25, 'ControlRight'],
+        ]
 
 const alpha60 = (v: Variant): Item[][] => [
   ...enterCluster(v, [
@@ -485,12 +496,23 @@ const rows75 = (v: Variant): RowSpec[] => [
         ],
       ]),
       [
-        ['Ctrl', 1.25, 'ControlLeft'],
-        ['Win', 1.25, 'MetaLeft'],
-        ['Alt', 1.25, 'AltLeft'],
-        ['', 6.25, 'Space'],
-        ['Alt', 1.25, 'AltRight'],
-        ['Ctrl', 1.25, 'ControlRight'],
+        // WK space 7u: Ctrl 1.5 + Win 1 + Alt 1.5 + space 7 + Alt 1.5 (cũng 12.5u)
+        ...((v.bottom === 'wk7'
+          ? [
+              ['Ctrl', 1.5, 'ControlLeft'],
+              ['Win', 1, 'MetaLeft'],
+              ['Alt', 1.5, 'AltLeft'],
+              ['', 7, 'Space'],
+              ['Alt', 1.5, 'AltRight'],
+            ]
+          : [
+              ['Ctrl', 1.25, 'ControlLeft'],
+              ['Win', 1.25, 'MetaLeft'],
+              ['Alt', 1.25, 'AltLeft'],
+              ['', 6.25, 'Space'],
+              ['Alt', 1.25, 'AltRight'],
+              ['Ctrl', 1.25, 'ControlRight'],
+            ]) as Item[]),
         0.5,
         ['←', 1, 'ArrowLeft'],
         ['↓', 1, 'ArrowDown'],
@@ -595,7 +617,7 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     ff: '60',
     variants: {
       backspace: ['2u', 'split', 'row2'],
-      bottom: ['wk', 'wkl'],
+      bottom: ['wk', 'wk7', 'wkl'],
       lshift: ['2.25u', 'split'],
       caps: ['normal', 'stepped'],
       rshift: ['2.75u', 'split'],
@@ -645,7 +667,7 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     ff: 'tkl',
     variants: {
       backspace: ['2u', 'split', 'row2'],
-      bottom: ['wk', 'wkl'],
+      bottom: ['wk', 'wk7', 'wkl'],
       lshift: ['2.25u', 'split'],
       caps: ['normal', 'stepped'],
       enter: ENTERS,
@@ -670,7 +692,7 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     ff: 'full',
     variants: {
       backspace: ['2u', 'split', 'row2'],
-      bottom: ['wk', 'wkl'],
+      bottom: ['wk', 'wk7', 'wkl'],
       lshift: ['2.25u', 'split'],
       caps: ['normal', 'stepped'],
       enter: ENTERS,
@@ -682,6 +704,7 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     ff: '65',
     variants: {
       backspace: ['2u', 'split', 'row2'],
+      bottom: ['wk', 'wk7'],
       lshift: ['2.25u', 'split'],
       caps: ['normal', 'stepped'],
       enter: ENTERS,
@@ -704,7 +727,7 @@ export const LAYOUTS: Record<LayoutId, LayoutDef> = {
     ff: 'frl',
     variants: {
       backspace: ['2u', 'split', 'row2'],
-      bottom: ['wk', 'wkl'],
+      bottom: ['wk', 'wk7', 'wkl'],
       lshift: ['2.25u', 'split'],
       caps: ['normal', 'stepped'],
     },
@@ -754,7 +777,11 @@ const VARIANT_INFO: Record<VariantKey, Record<string, string>> = {
     split: 'Split backspace (1u + 1u)',
     row2: 'Backspace hàng 2 (thay \\|, hàng số \\| + Del 1u)',
   },
-  bottom: { wk: 'Hàng dưới WK (có phím Win)', wkl: 'Hàng dưới WKL (không Win, space 7u)' },
+  bottom: {
+    wk: 'Hàng dưới WK (có phím Win, space 6.25u)',
+    wk7: 'Hàng dưới WK space 7u (Win 1u)',
+    wkl: 'Hàng dưới WKL (không Win, space 7u)',
+  },
   rshift: { '2.75u': 'Shift phải 2.75u', split: 'Split shift phải (1.75u + Fn)' },
   lshift: { '2.25u': 'Shift trái 2.25u', split: 'Shift trái ISO (1.25u + <>)' },
   caps: { normal: 'Caps Lock thường', stepped: 'Caps Lock stepped (bậc 1.25u + 0.5u)' },
@@ -776,20 +803,31 @@ export const variantLabel = (k: VariantKey, val: string) => VARIANT_INFO[k][val]
 /** tên từng lựa chọn kiểu layout (nhãn dòng ở bảng Free build) */
 export const VARIANT_NAME: Record<VariantKey, string> = {
   backspace: 'Kiểu backspace',
-  bottom: 'Kiểu layout',
+  bottom: 'Layout row cuối',
   rshift: 'Kiểu shift phải',
   lshift: 'Kiểu shift trái',
   caps: 'Kiểu Caps Lock',
   // 40% / HHKB: kiểu space = cả hàng dưới
-  space: 'Kiểu layout',
+  space: 'Layout row cuối',
   enter: 'Kiểu enter',
 }
 /** nhãn ngắn cho nút chọn (lựa chọn chỉ 2 kiểu hiện thành nút) */
 const VARIANT_SHORT: Partial<Record<VariantKey, Record<string, string>>> = {
   caps: { normal: 'Thường', stepped: 'Stepped (bậc 1.25u + 0.5u)' },
+  bottom: { wk: 'WK space 6.25u', wk7: 'WK space 7u', wkl: 'WKL' },
 }
 export const variantShort = (k: VariantKey, val: string) =>
   VARIANT_SHORT[k]?.[val] ?? variantLabel(k, val)
+
+/** plate universal (ai03, sinh sẵn) không có lỗ cho các phím này → cắt lỗ plate theo phím: Enter ISO / Big-ass + Caps stepped (`ext`),
+ * Shift trái ISO (phím <>), hàng dưới WK space 7u (Win 1u) */
+export const offUniversal = (keys: Key[]) =>
+  keys.some(
+    (k) =>
+      k.ext ||
+      k.code === 'IntlBackslash' ||
+      ((k.code === 'MetaLeft' || k.code === 'MetaRight') && k.w === 1),
+  )
 
 export const variantText = (v: Variant) =>
   (Object.entries(v) as [VariantKey, string][]).map(([k, val]) => VARIANT_INFO[k][val])

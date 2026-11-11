@@ -7,7 +7,7 @@ import {
   CASES,
   CASE_COLORS,
   CATS,
-  KEYCAP_COLORS,
+  keycapColorOf,
   KEYCAP_KITS,
   KEYCAP_MATERIALS,
   MOUNTS,
@@ -95,7 +95,7 @@ function wantText(cat: PartCategory, o: Order) {
       return [
         o.keycapKit && KEYCAP_KITS[o.keycapKit].profile.toUpperCase(),
         o.keycapMaterial && KEYCAP_MATERIALS[o.keycapMaterial].name,
-        KEYCAP_COLORS[o.keycapColor].name,
+        keycapColorOf(o.keycapColor).name,
       ]
         .filter(Boolean)
         .join(' · ')

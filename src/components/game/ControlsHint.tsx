@@ -53,7 +53,7 @@ export function KeyCap({ children, off }: { children: ReactNode; off?: boolean }
  */
 export function ControlsHint({ children }: { children: ReactNode }) {
   return (
-    <div className="pointer-events-none fixed inset-x-3 bottom-4 z-[5] flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-head text-xl font-bold text-ink select-none [text-shadow:0_2px_4px_#000,0_0_2px_#000] max-md:hidden">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[5] flex flex-wrap items-center justify-center gap-x-2 gap-y-1 bg-gradient-to-t from-black/55 to-transparent px-3 pt-8 pb-4 font-head text-xl font-bold text-ink select-none [text-shadow:0_2px_4px_#000,0_0_2px_#000] max-md:hidden">
       {children}
     </div>
   )

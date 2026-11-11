@@ -1,3 +1,4 @@
+import { randomHex } from '@/lib/color'
 import type {
   SwitchKind,
   GroupPost,
@@ -39,6 +40,7 @@ import {
   KEYCAP_COLORS,
   keycapColorsFor,
   CASE_COLORS,
+  freeColorCase,
   SOUND_WISH,
   SIZE_MULT,
   buildCatalog,
@@ -234,7 +236,9 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
     if (send.case) mount = pick(atLv(c.mounts, (m) => mountLv(m) <= lv))
     kit = {
       packaging: pick(PACKAGING),
-      ...(send.case ? { case: { id: caseId, color: pick(c.colors) } } : {}),
+      ...(send.case
+        ? { case: { id: caseId, color: freeColorCase(c) ? randomHex() : pick(c.colors) } }
+        : {}),
       ...(send.pcb ? { pcb: kitPcb(layout, lv) } : {}),
       ...(send.plate
         ? { plate: { layout, material: pick(atLv(plateIds(), (m) => plateLv(m) <= lv)) } }

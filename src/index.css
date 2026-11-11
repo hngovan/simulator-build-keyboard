@@ -79,6 +79,22 @@
     @apply cursor-not-allowed;
   }
 
+  /* đi bằng bàn phím (Tab): viền vàng quanh phần tử đang chọn; bấm chuột thì không hiện */
+  :focus-visible {
+    outline: 2px solid var(--color-yellow);
+    outline-offset: 2px;
+  }
+  /* máy bật "giảm chuyển động": tắt hiệu ứng lặp / nhảy */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   /* Thanh cuộn mảnh, hợp nền tối. Chỉ áp cho Firefox: đặt scrollbar-color ở trình duyệt
      hỗ trợ ::-webkit-scrollbar sẽ làm Chrome bỏ qua phần style bên dưới. */
   @supports not selector(::-webkit-scrollbar) {

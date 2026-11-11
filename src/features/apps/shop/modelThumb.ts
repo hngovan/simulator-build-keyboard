@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
-import { KEYCAP_COLORS, KEYCAP_KITS, PLATES, STABS, TOOLS } from '@/data/parts'
+import { KEYCAP_KITS, PLATES, STABS, TOOLS } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { getLayout } from '@/data/layouts'
 import {
@@ -101,7 +101,7 @@ async function keycapScene(type: string) {
   // `kit:color[:loại phím]` (loại phím: ô "Xem phím" ở khung 3D, `KEYCAP_VIEWS`; ảnh thẻ = phím 1u)
   const [kit, color, capId] = type.split(':')
   const profile = KEYCAP_KITS[kit]?.profile ?? 'cherry'
-  const material = keycapMaterial(KEYCAP_COLORS[color] ? color : 'white')
+  const material = keycapMaterial(color)
   const view = keycapView(capId)
   const group = new THREE.Group()
   // từng phím (căn tâm), đo bề ngang / sâu để xếp nhiều phím

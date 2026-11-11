@@ -217,8 +217,8 @@ vào `window.__r3f` để debug trong console.
   (`fixKitLayout` persistence.ts: đổi layout / variant / PCB + plate kit + kho; build dở dời dữ liệu phím theo tên phím vì id = thứ tự phím; phím mới mà build đã qua bước lắp thì `fillAddedKeys` lắp nốt switch từ kho / hàn / keycap,
   vì lịch sử hoàn tác đã xoá nên không quay lại bước được).
 - Free build (menu tiêu đề, `startFree`, `free` không lưu): không ghi save / bảng xếp hạng / thua / lên cấp, đủ dụng cụ + vật tư 999. Vào là ngồi bàn build,
-  bảng chọn case `FreeBuildDialog` (`freePick`, case + màu, layout, mount, PCB, plate, stab) → `startFreeBuild` (`features/free/freeBuild.ts`: đơn `Order.free`
-  kit đủ linh kiện, dư switch / stab, thùng nằm sẵn trên bàn, vào build luôn); bảng "Màu case" `FreeCasePanel` trên bàn; giao = dọn bàn, mở lại bảng chọn
+  bảng cấu hình 3 cột `FreeBuildDialog` (`freePick`; trái loại case `CaseList`, giữa xem trước 3D `FreePreview`, phải lưới ô `FreeTiles` → bấm ô vào màn chọn riêng `FreePicker`; lựa chọn ở store `useFreeForm` `features/free/freeForm.ts`) → `startFreeBuild` (`features/free/freeBuild.ts`: đơn `Order.free`
+  kit đủ linh kiện, dư switch / stab, thùng nằm sẵn trên bàn, vào build luôn); bảng "Màu case" `FreeCasePanel` trên bàn (case 2 mảnh `caseTwoTone` chọn riêng màu case trên / dưới: `CaseItem.botColor`, cả ở bảng chọn `CaseColorTile`); giao = dọn bàn, mở lại bảng chọn
   (bàn trống có nút "Chọn case"). Shopii vẫn mở khoá + miễn phí ("Lấy luôn" = `freeTake`, thay món đơn đang build).
 - Đơn có thể đòi đích danh `switchType` / `caseId` / `stabType` / `plateMaterial` (món khách không gửi), `checkInventory` bắt đúng; thiếc / vật tư không bị đòi.
 - Keycap có chất liệu `material` (PBT / ABS / Mix, `KEYCAP_MATERIALS`; option Shopii `group` = chất liệu, `label` = màu, giỏ hàng 2 ô `OptionPick`), đơn có thể đòi `keycapMaterial` (`keycapCheck`); bộ `KEYCAP_KITS.base` ẩn (`hidden`).
@@ -341,4 +341,9 @@ vào `window.__r3f` để debug trong console.
   đang làm bước lắp → không khung / không tối, xong / tuỳ chọn → chỉ viền `bench-next` (`test-done`, `bench-pack`, `Spotlight passive` không chặn bấm), đang test → lời dẫn gõ phím; test bắt buộc với đơn hướng dẫn. Không còn lời dẫn "lần đầu gặp bước" kiểu cũ. Lần đầu tới bước vặn vít (mọi đơn): `BitTour` (`tour:bit`) tối màn sáng `bit-picker` tới khi chọn đúng đầu; lần đầu bước test: `TestTour` (`tour:test`, `hud-sound` → `bench-objective`). Bước vặn vít vào bắt đủ vít tự sang bước nên tour không sáng nút. Sau đóng gói đơn hướng dẫn (`tour:ship`): cầm thùng → kệ giao hàng → `PayTour` thu tiền ở Mezzenger (`collect-pay`) → lịch kết thúc ngày. Đi lại: `roomGuideSteps.ts` (lời dẫn + đích) → `RoomGuide` (HUD + la bàn `useRoom.guideDir / guideDist`) + `scene/room/GuideMarker` (mũi tên 3D xuyên tường, qua cửa phòng trước).
 - Pin Li-Po (case dựng bằng code nhựa / nhôm ≤ 60%): vật tư `BATTERY_IDS` 1000–5000mAh (dày 3mm), hốc sàn `ctx.battery` (`batterySpot`: né DTB + dây, trụ tray / vấu bottom mount nhựa, USB-C trên PCB;
   nhôm khoét `tub`, nhựa bỏ gân `batteryKeepout`), bước tuỳ chọn `battery` sau `jst` (board dựng: đặt pin `placeBattery` (`batteryFits`) → cầm dây `useBatPick` → jack PCB `plugBattery`), `scene/parts/Battery.tsx`, save rev 12.
+- Màu tự do: màu case / keycap là id có sẵn **hoặc** mã hex `#rrggbb` (Free build chọn bằng `components/ui/ColorInput`: bảng màu + gõ hex / rgb, `lib/color.ts`
+  `parseColor` / `randomHex`; không còn hàng ô màu có sẵn ở Free build). Đọc màu của món đồ luôn qua `caseColorOf(c)` / `keycapColorOf(c)` (parts.ts), không tra thẳng
+  `CASE_COLORS[c]` / `KEYCAP_COLORS[c]` (tên màu tự do = mã hex; keycap PC = hex + `CLEAR_TAG` = nhựa trong nhuộm). Case khách gửi chất liệu đục (`freeColorCase`) lấy màu `randomHex()`.
+- Hàng dưới `bottom: 'wk7'` (WK space 7u, Win 1u; 60 / 65 / TKL / full): chỉ case dựng bằng code (`caseFits`), plate cắt lỗ theo phím (`offUniversal`). Bảng chọn layout Free build
+  (`LayoutPicker`): dòng "Kiểu layout" = WK / WKL (tách từ `variant.bottom`) + HHKB / True HHKB, dòng "Layout row cuối" ngay dưới (space 6.25u / 7u).
 - Layout có `fits` (Planck: `['40']`): case cỡ khác không có model CAD cũng vừa (`caseFits`).

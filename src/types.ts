@@ -103,6 +103,8 @@ export interface Paid {
 export interface CaseItem extends Paid {
   id: string
   color: string
+  /** màu case dưới (case 2 mảnh, chỉ Free build chọn được); thiếu = cùng màu case trên */
+  botColor?: string
   /** hàng pass ở Hội Phím Cơ có lỗi thật (trầy, bóng, stab tick...): bị trừ điểm khi giao */
   flaw?: string
 }

@@ -4,7 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import { Text } from '@/scene/common/Text3D'
 import * as THREE from 'three'
 import { useGame } from '@/store'
-import { KEYCAP_COLORS, KEYCAP_KITS, type KeycapProfile } from '@/data/parts'
+import { KEYCAP_KITS, keycapColorOf, type KeycapProfile } from '@/data/parts'
 import type { Key } from '@/types'
 import { lerpTo } from '../common/anim'
 import {
@@ -104,7 +104,7 @@ function CapOverlay({
   /** chỗ in chữ đo trên mặt keycap thật: độ cao + góc nghiêng (không có = mặt phẳng ngang ở đáy lòng chảo) */
   legend?: { y: number; tilt: number }
 }) {
-  const col = KEYCAP_COLORS[color]
+  const col = keycapColorOf(color)
   const arrow = ARROW_SPIN[k.label] !== undefined || /[←→]/.test(k.label)
   // font riêng theo profile (Cherry / DCS kiểu Wyse / SA), mũi tên vẫn Nunito
   const font = arrow ? undefined : legendFontUrl(profile)

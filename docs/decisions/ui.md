@@ -1,5 +1,46 @@
 # Giao diện
 
+## 2026-11-12
+
+### Free build: bảng cấu hình 3 cột kiểu bento + xem trước 3D
+
+- Yêu cầu (nhiều vòng): bảng Free build rối → bento grid; mỗi ô 1 component, bấm ô nào chỉ chọn món đó, không lẫn; có xem trước 3D; bấm thẻ case là chọn
+  luôn (không phải bấm ô màu); hàng lọc đứng yên khi cuộn; loại case (lựa chọn chính) 1 bên, xem trước ở giữa, lựa chọn phụ (màu...) bên kia; ô có icon.
+- Bố cục (`FreeBuildDialog`): trái `CaseList` (lọc cỡ đứng yên + thẻ case, bấm thẻ = `chooseCaseAuto` giữ màu đang chọn; thẻ case dựng bằng code
+  bấm số mảnh / chất liệu cũng chọn luôn) · giữa `FreePreview` (Canvas riêng, `KeyboardModel` của OrderViewer, dựng lại khi đổi case / màu / layout / keycap)
+  · phải lưới ô `FreeTiles` (màu case chọn ngay trên ô; layout, mount, PCB, plate, stab, switch, keycap, feet có icon + giá trị đang chọn), bấm 1 ô thì
+  cột phải thành màn chọn riêng `FreePicker` (nút quay lại, hàng lọc switch đứng yên, chỉ danh sách cuộn).
+- Danh sách case = dòng gọn (tên + dòng phụ, `CaseRowButton`); số mảnh / chất liệu / cổng USB của dòng "Case 60%" dựng bằng code tách ra khu
+  `CaseOptions` đứng yên dưới danh sách, chỉ hiện khi đang chọn dòng đó (case CAD thì ẩn). Thứ tự ô phải: màu case → switch → keycap (ô to `big`) →
+  layout → mount / PCB / plate / stab (ô nhỏ) → feet.
+- Ô / dòng chọn trong bảng Free build không viền (người dùng: "bỏ viền mấy ô chọn ok hơn"): đang chọn = nền vàng sẫm `#4a4320` + chữ vàng, rê chuột = nền sáng hơn.
+- Nền khung xem 3D kiểu kính mờ (yêu cầu: glassmorphism cho thoáng): gradient trắng trong 14% → 3%, viền `white/15`, `backdrop-blur`; bảng
+  `HudCard` của Free build trong hơn (`bg-panel/70` + blur, nền tối 45%) để thấy bàn build mờ phía sau. Chỉ áp ở bảng này.
+- Sau đó đổi kính mờ → acrylic (yêu cầu: "đổi qua acrylic material làm nhoè đi"): `ACRYLIC` trong FreePreview = `backdrop-blur-[44px]` + saturate 150 + lớp màu
+  `#2a3344/45` + hạt nhiễu SVG `NOISE` (overlay 8%); bảng `bg-panel/60` blur nhẹ.
+- Nút chọn nhỏ trong bảng (lọc cỡ / loại switch, số mảnh, chất liệu, layout, keycap) dùng `Chip` riêng của FreePickers thay `OptionChip`: không viền, đang chọn =
+  khối vàng đặc (yêu cầu: bỏ border khi selected ở hàng lọc + khu chọn dưới danh sách case). `OptionChip` dùng chung giữ nguyên.
+- Nền khung xem sáng hơn + chủ đề bàn phím (yêu cầu: "background sáng sáng chút chủ đề keeb"): lớp màu acrylic đổi sang xanh xám sáng (gradient), thêm hoạ tiết
+  lưới keycap so le `KEYCAPS` (SVG nét trắng 16%, mask mờ dần vào giữa).
+- Lựa chọn dời từ useState sang store `useFreeForm` (`freeForm.ts`: `derive`, `chooseCase`, `setFam`, `pick40`, `buildFree`), giữ trong phiên; mở bảng
+  tự chọn sẵn case 60% đầu (`pickDefaultCase`) nên Build bấm được ngay. Bỏ đóng / mở nhóm cỡ, bỏ thu gọn cài đặt, bỏ ô đổ xuống lọc cỡ.
+
+### Thử làm lại UI kiểu HUD game sim PC — đã bỏ, giữ giao diện cũ
+
+- Yêu cầu ban đầu: thiết kế lại UI / UX cho chuyên nghiệp. Đã thử đổi toàn bộ sang panel tối phẳng viền mảnh, font Be Vietnam Pro + Barlow Semi Condensed,
+  bo góc nhỏ, chữ hoa. Người dùng xem xong: "muốn dùng UI như cũ hơn nhưng cải thiện lại trải nghiệm UI / UX" → trả toàn bộ về bản cũ.
+- **Không làm lại**: không đổi bảng màu / font (Baloo 2 + Nunito) / kiểu nút khối bóng đổ / viền dày / bo góc lớn / thanh tiêu đề cửa sổ màu theo app.
+  Cải thiện chỉ làm ở mức trải nghiệm (thông tin, dễ đọc, thao tác), giữ nguyên phong cách.
+
+### Cải thiện trải nghiệm nhỏ (giữ phong cách cũ)
+
+- Hội Phím Cơ: nhãn vàng / xanh dán trên ảnh bài pass (ảnh chỉ 90px, che ảnh) → dòng chữ mờ dưới tên món ("Linear", "CHERRY · PBT").
+  `ProductImage` thêm prop `plain`, `PostCard` tự ghi dòng `kind`. Thẻ Shopii (ảnh to) giữ nhãn trên ảnh.
+- Bàn build: khung mục tiêu giữa đáy thêm ô vàng số bước `n/N` trước tên bước (`BenchHud`), thu gọn panel "Các bước build" vẫn biết đang ở đâu.
+- Màn tiêu đề: gợi ý phím ↑ ↓ Chọn / Enter Vào ở góc dưới trái (`KeyCap`).
+- `ControlsHint`: dải tối mờ dần sau dòng hướng dẫn đáy màn (vẫn không khung) cho dễ đọc trên cảnh sáng (lót chuột, sàn gỗ).
+- `index.css`: viền vàng `:focus-visible` khi đi bằng Tab; `prefers-reduced-motion` thì tắt hiệu ứng lặp.
+
 ## 2026-11-11
 
 ### Bỏ con trỏ pixel, dùng con trỏ hệ thống
@@ -1671,3 +1712,54 @@ content-start`, khung kéo từ `top-4` tới trên taskbar (`bottom-[calc(var(-
   1 mảnh / 2 mảnh (`setPieces`: giữ chất liệu nếu có, không thì chất liệu đầu), hàng 2 chất liệu của số mảnh đó = `OptionSelect`
   (`w-52`), hàng 3 (chỉ khi có) Daughterboard / Cổng C trên PCB tách riêng, hàng cuối ô màu, mọi hàng canh phải; mỗi nhóm cỡ là 1 khối
   khung (`rounded-2xl border-2 border-white/10 bg-black/20`, đầu nhóm trong khung, không vạch trái).
+
+## 2026-11-12 — Tắt đổ bóng khung xem thử phím
+
+- Yêu cầu: "hình như đang có ánh sáng đổ bóng khi preview phím à?" → "tắt đi được ko".
+- Đã làm: `features/free/FreePreview.tsx` + `features/apps/messenger/OrderViewer.tsx` (cùng bộ đèn) bỏ `shadows` của Canvas, `castShadow` đèn chính
+  và `<ContactShadows>` dưới đáy. Đèn / Environment giữ nguyên. Không thêm lại bóng ở 2 khung này.
+
+## 2026-11-12 — Free build: chọn màu case trên / case dưới riêng
+
+- Yêu cầu: "cho chọn màu top và bot ở chế độ freebuild".
+- Đã làm:
+  - `CaseItem.botColor?` (types.ts): màu case dưới, thiếu = theo màu case trên. `caseTwoTone(def)` (parts.ts): case 2 mảnh cùng chất liệu
+    (bỏ mica xếp lớp + case có `bottom` riêng như nắp PC đáy nhôm).
+  - Bàn build `Case.tsx`: `bottomMat` + đáy case CAD 2 mảnh (`CaseModel part="bottom"`) tô `botColor`. Xem trước / ảnh `orderThumb.ts`:
+    `KeyboardSpec.botColor` → `bottomMat` riêng.
+  - Bảng chọn Free build: `CaseColorTile` (FreeTiles.tsx) 2 hàng "Màu case trên" / "Màu case dưới" khi `caseTwoTone`; `freeForm.pick.botColor`,
+    `chooseCase(caseId, color, botColor?)` giữ màu dưới khi đổi case nếu case mới có màu đó. Trên bàn: `FreeCasePanel` 2 hàng,
+    `setFreeCaseColor(color, part)`.
+- Lưu ý: case nhựa 2 mảnh case trên trùm ngoài case dưới → màu dưới chỉ thấy ở mặt đáy + lòng case. Chỉ Free build (+ Dev "Build thử") chọn được;
+  đơn khách / Shopii vẫn 1 màu.
+- Kiểm tra: chụp bàn build `case65PlasticTwo` trên trắng / dưới đỏ (bước tháo vít, case lật úp): đáy đỏ, vành trắng.
+
+## 2026-11-12 — Free build: màu tự do (case + keycap), case khách gửi màu ngẫu nhiên
+
+- Yêu cầu: "thay vì chọn màu cố định → đổi thành color picker, có thể nhập hex or rgb; màu kh gửi build cũng là random cho khoẻ";
+  "bỏ cái chọn màu có sẵn đi"; "màu keycap cũng vậy".
+- Đã làm:
+  - `lib/color.ts`: `isHex`, `parseColor` (nhận `#rgb` / `#rrggbb` / `rgb(r, g, b)` / `r, g, b`), `randomHex`, `contrastOn`.
+    `components/ui/ColorInput.tsx`: ô tròn mở bảng màu hệ thống + ô gõ mã màu (sai thì viền đỏ, không đổi màu).
+  - Màu case = id có sẵn **hoặc** mã hex: `caseColorOf(c)` (parts.ts) thay mọi chỗ `CASE_COLORS[c]` đọc màu của món đồ (vật liệu bàn build,
+    `orderThumb`, tên trong đơn / kho / Shopii; tên màu tự do = mã hex).
+  - Màu keycap tự do: `keycapColorOf(c)`; keycap PC = mã hex + đuôi `CLEAR_TAG` (`#rrggbb8c`) = nhựa trong nhuộm màu đó, chữ tự tương phản.
+  - Bảng chọn Free build (`CaseColorTile`, ô keycap `FreePickers`) + bảng "Màu case" trên bàn (`FreeCasePanel`): chỉ còn `ColorInput`,
+    **bỏ hàng ô màu có sẵn** (theo người dùng). Màu mặc định lúc mở vẫn là màu đầu của case (PC: trong suốt, gỗ: vân gỗ).
+  - Case khách gửi (đơn kit, `orders.ts`): chất liệu đục (`freeColorCase`: ABS / nhôm anod / E-coat) lấy `randomHex()`; PC / acrylic / mica / gỗ
+    giữ bảng màu riêng (cần độ trong / vân gỗ). `order.caseColor` (khách đòi màu case shop phải mua) vẫn theo màu Shopii bán.
+- Lưu ý: không còn chọn lại được "trong suốt" / vân gỗ sau khi đã đổi sang mã hex (PC + hex = mờ ánh màu); đơn khách / Shopii keycap vẫn màu cố định.
+  Ảnh case màu hex không có ảnh chụp sẵn → dựng ảnh lúc chạy (`cachedThumb`).
+
+## 2026-11-12 — Hàng dưới WK space 7u + sắp lại bảng chọn layout Free build
+
+- Yêu cầu: "case 60% và 65% fullsize đang thiếu option wk + 7u"; "kiểu layout nằm ở trên: chỉ cần ghi wk, wkl, hhkb, true hhkb → chọn layout cụ thể bên dưới".
+- Đã làm:
+  - layouts.ts: `bottom: 'wk7'` (Ctrl 1.5 + Win 1 + Alt 1.5 + space 7 + Alt 1.5 + Win 1 + Ctrl 1.5) cho 60 / TKL / full (`bottomRow`);
+    65% thêm `bottom: ['wk', 'wk7']` (hàng dưới trong `rows75`: 1.5 + 1 + 1.5 + 7 + 1.5, vẫn 12.5u). TKL F13 / FRL / 75% chưa thêm.
+  - Chỉ case dựng bằng code (`caseFits`: case CAD cắt sẵn WK 6.25u / WKL). Plate universal không có lỗ Win 1u → `offUniversal(keys)`
+    (gộp điều kiện cũ phím chữ L / Shift ISO) cắt lỗ theo phím (Board.tsx + steps.ts).
+  - `FreePickers` `LayoutPicker`: dòng đầu "Kiểu layout" = WK / WKL (tách từ `variant.bottom`) + HHKB / True HHKB (layout riêng, ghi gọn);
+    dòng "Layout row cuối" ngay dưới chỉ còn kiểu space của WK (6.25u / 7u), WKL thì ẩn; nhiều layout có WK (TKL + TKL F13) thì nút kèm tên layout.
+- Kiểm tra: `buildContext` 180 tổ hợp case dựng bằng code × mount × PCB với `wk7` không lỗi; chụp bảng chọn 60%.
+- Lưu ý: `randomVariant` giờ cũng bốc `wk7` cho đơn khách (60 / 65 / TKL / full).

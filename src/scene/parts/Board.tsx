@@ -43,6 +43,7 @@ import { SolderPad } from './SolderPad'
 import { HintArrow } from '../stations/StationKit'
 import { plate60Cutouts } from '@/data/generated/plate60'
 import { plateUniversal } from '@/data/generated/plateUniversal'
+import { offUniversal } from '@/data/layouts'
 import { BLOSSOM_PLATE } from '@/data/generated/plateBlossom'
 
 /**
@@ -336,7 +337,8 @@ export function Board() {
     (ctx.variant.caps ?? 'normal') === 'normal'
   // Enter ISO / Big-ass (phím chữ L): switch Enter lệch chỗ ANSI → bỏ plate universal, cắt lỗ theo phím
   // Shift trái ISO (phím <>), Caps stepped (`ext` cùng hàng): plate universal không có → cũng cắt theo phím
-  const lShape = ctx.keys.some((k) => k.ext || k.code === 'IntlBackslash')
+  // hàng dưới WK space 7u (Win 1u): cũng không có trong plate universal (`offUniversal`)
+  const lShape = offUniversal(ctx.keys)
   // tray mount: vít xuyên plate + PCB bắt vào trụ đồng đáy case (vị trí đã dò không chạm lỗ switch / stab)
   const trayHoles = ctx.mount === 'tray' ? ctx.screws.trayScrew : NO_HOLES
   // rãnh tròn mép PCB chỗ trụ đỡ O-ring trong case (r + khe 0,02u), cố định theo case nên PCB lúc nào cũng khoét sẵn

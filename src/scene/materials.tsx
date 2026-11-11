@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { useTexture } from '@react-three/drei'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
-import { CASE_COLORS } from '@/data/parts'
+import { caseColorOf } from '@/data/parts'
 
 // Texture vẽ bằng canvas để không cần file ảnh
 function canvasTexture(
@@ -103,7 +103,7 @@ function WoodMaterial({
   return (
     <meshStandardMaterial
       {...maps}
-      color={WOOD_TEX[color] ? '#ffffff' : CASE_COLORS[color].hex}
+      color={WOOD_TEX[color] ? '#ffffff' : caseColorOf(color).hex}
       emissive={emissive}
       side={side}
     />
@@ -139,7 +139,7 @@ export function CaseMaterial({
   /** model case CAD (STL in 3D) có mặt lật chiều: vẽ cả 2 mặt cho khỏi thủng / trong suốt */
   doubleSide?: boolean
 }) {
-  const hex = CASE_COLORS[color].hex
+  const hex = caseColorOf(color).hex
   const side = doubleSide ? THREE.DoubleSide : THREE.FrontSide
   const emissive = hover ? '#0f4a22' : '#000000'
   switch (material) {

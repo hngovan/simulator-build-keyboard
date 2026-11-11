@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
 import * as THREE from 'three'
 import { BLOCKER_SKIN, BLOCKER_TOP, blockerGaps, getLayout, keyRegions } from '@/data/layouts'
-import { CASES, CASE_COLORS, KEYCAP_COLORS, KEYCAP_KITS, caseFits, caseModelOf } from '@/data/parts'
+import {
+  CASES,
+  CASE_COLORS,
+  caseColorOf,
+  KEYCAP_COLORS,
+  keycapColorOf,
+  KEYCAP_KITS,
+  caseFits,
+  caseModelOf,
+  caseTwoTone,
+} from '@/data/parts'
 import {
   CASE_MARGIN,
   CASE_WALL,
@@ -95,7 +105,7 @@ function woodMaterial(color: string) {
         const maps = prepWood(Object.fromEntries(entries))
         return new THREE.MeshStandardMaterial({
           ...maps,
-          color: WOOD_TEX[color] ? '#ffffff' : (CASE_COLORS[color]?.hex ?? '#ffffff'),
+          color: WOOD_TEX[color] ? '#ffffff' : caseColorOf(color).hex,
         })
       }),
     )
@@ -110,7 +120,7 @@ async function shellMaterial(material: string, color: string) {
   const clear = color === 'clear' || tinted || material === 'acrylic' || material === 'mica'
   const pc = material === 'pc'
   return new THREE.MeshPhysicalMaterial({
-    color: CASE_COLORS[color]?.hex ?? '#888',
+    color: caseColorOf(color).hex,
     roughness: material === 'anod' ? 0.35 : material === 'acrylic' ? 0.08 : pc ? 0.35 : 0.55,
     metalness: material === 'anod' ? 0.6 : 0,
     // PC mờ: trong mờ như bàn build (thấy lờ mờ bên trong)
@@ -130,6 +140,8 @@ export interface KeyboardSpec {
   caseId: string
   /** màu case */
   color: string
+  /** màu case dưới (case 2 mảnh, `caseTwoTone`); thiếu = cùng màu case trên */
+  botColor?: string
   keycapKit: string
   keycapColor: string
   /** màu keycap phím chức năng */
@@ -179,7 +191,7 @@ const legendQuad = new THREE.PlaneGeometry(LEGEND_BOX, LEGEND_BOX).rotateX(-Math
  */
 export function orderSpec(order: Order): KeyboardSpec {
   const { caseId, color, keycapKit } = orderLook(order)
-  const accent = KEYCAP_COLORS[order.keycapColor].hex
+  const accent = keycapColorOf(order.keycapColor).hex
   return {
     layout: order.layout,
     variant: order.variant,
@@ -245,7 +257,9 @@ export async function buildKeyboardModel(
   // case 2 tông: đáy chất liệu / màu riêng
   const bottomMat = def.bottom
     ? await shellMaterial(def.bottom.material, def.bottom.color)
-    : caseMat
+    : caseTwoTone(def) && spec.botColor && spec.botColor !== color
+      ? await shellMaterial(def.material, spec.botColor)
+      : caseMat
   const caseModel = caseModelOf(def, spec.layout, spec.variant)
   if (caseModel) {
     const n = await glbMeshes(`/models/keyboards/${caseModel}.glb`)

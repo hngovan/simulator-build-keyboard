@@ -25,6 +25,8 @@ import type { KeycapMaterial, LayoutId, Order, SoundWish, ToolKind, Variant } fr
 export interface FreeBuildOpts {
   caseId: string
   color: string
+  /** màu case dưới (case 2 mảnh), thiếu = cùng màu case trên */
+  botColor?: string
   layout: LayoutId
   /** kiểu layout (space / backspace / hàng dưới / shift phải); thiếu thì lấy kiểu đầu */
   variant?: Variant
@@ -125,7 +127,7 @@ export function startFreeBuild(o: FreeBuildOpts) {
     type: 'kit',
     kit: {
       packaging: 'Free build',
-      case: { id: o.caseId, color: o.color },
+      case: { id: o.caseId, color: o.color, botColor: o.botColor },
       pcb: { layout: o.layout, type: o.pcb },
       plate: { layout: o.layout, material: o.plate },
       stab: keys.some((k) => k.stab) ? { type: o.stab, ...stabNeed(keys) } : null,
@@ -177,11 +179,11 @@ export function startFreeBuild(o: FreeBuildOpts) {
   useGame.getState().startBuild()
 }
 
-/** đổi màu case ngay trên bàn (không đổi bước) */
-export function setFreeCaseColor(color: string) {
+/** đổi màu case ngay trên bàn (không đổi bước); `part = 'bottom'` = màu case dưới của case 2 mảnh */
+export function setFreeCaseColor(color: string, part: 'top' | 'bottom' = 'top') {
   const s = useGame.getState()
   if (!s.order?.free || !s.inventory.case) return
-  const item = { ...s.inventory.case, color }
+  const item = { ...s.inventory.case, ...(part === 'bottom' ? { botColor: color } : { color }) }
   useGame.setState({
     inventory: { ...s.inventory, case: item },
     order: { ...s.order, kit: s.order.kit && { ...s.order.kit, case: item } },

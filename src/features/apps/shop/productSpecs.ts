@@ -1,9 +1,9 @@
 import { LAYOUTS } from '@/data/layouts'
 import {
   CASES,
-  CASE_COLORS,
+  caseColorOf,
   CASE_MATERIALS,
-  KEYCAP_COLORS,
+  keycapColorOf,
   KEYCAP_KITS,
   KEYCAP_MATERIALS,
   MOUNTS,
@@ -105,7 +105,7 @@ export function productSpecs(p: Product, o: ProductOption): SpecRow[] {
       const def = CASES[c.id]
       return [
         ['Chất liệu', CASE_MATERIALS[def.material].name],
-        ['Màu', CASE_COLORS[c.color]?.name ?? c.color],
+        ['Màu', caseColorOf(c.color).name],
         ['Số mảnh', def.pieces === 2 ? '2 mảnh (trên + dưới)' : '1 mảnh'],
         ['Tương thích PCB / plate', layoutNames(p) ?? def.ff],
         ['Kiểu lắp', def.mounts.map((m) => MOUNTS[m].name).join(', ')],
@@ -151,7 +151,7 @@ export function productSpecs(p: Product, o: ProductOption): SpecRow[] {
       return [
         ['Profile', kit.profile.toUpperCase()],
         ['Chất liệu', KEYCAP_MATERIALS[keycapMaterialOf(cap)].name],
-        ['Màu', KEYCAP_COLORS[cap.color]?.name ?? cap.color],
+        ['Màu', keycapColorOf(cap.color).name],
         ['Layout hỗ trợ', layoutSizes(kit.layouts)],
       ]
     }

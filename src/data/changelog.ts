@@ -13,6 +13,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.38',
+    date: '2026-11-12',
+    commits: [],
+    title: 'Free build: bảng chọn mới, màu tự do, hàng dưới WK space 7u',
+    items: [
+      'Bảng chọn Free build dạng lưới ô, có khung xem trước bàn phím 3D (đã tắt đổ bóng)',
+      'Màu case + keycap ở Free build chọn tự do: bảng màu hoặc gõ mã hex / rgb; case 2 mảnh chọn riêng màu case trên / case dưới',
+      'Case khách gửi (ABS / nhôm) có màu ngẫu nhiên bất kỳ',
+      'Case 65% nhựa ABS / PC 2 mảnh (gasket / top / bottom mount)',
+      'Hàng dưới WK space 7u (Win 1u) cho 60% / 65% / TKL / full; bảng chọn layout: kiểu WK / WKL / HHKB / True HHKB ở trên',
+    ],
+  },
+  {
     version: '0.1.37',
     date: '2026-11-11',
     commits: ['84cf6d5'],

@@ -23,6 +23,7 @@ export function ProductImage({
   panel,
   subtitle,
   tags,
+  plain,
 }: {
   product: Product
   swatch: string
@@ -34,6 +35,8 @@ export function ProductImage({
   subtitle?: ReactNode
   /** nhãn nổi góc dưới phải ảnh (vd số stab nhận được) */
   tags?: ReactNode
+  /** không vẽ nhãn nổi trên ảnh (bài chợ: ảnh nhỏ, nhãn ghi thành dòng chữ cạnh tên món) */
+  plain?: boolean
 }) {
   // tiêu đề khung xem: chỉ tên sản phẩm
   const zoom = { heading: product.name, subtitle, side: panel }
@@ -49,7 +52,7 @@ export function ProductImage({
   const [viewing, setViewing] = useState(false)
   const profile = product.cat === 'keycap' ? KEYCAP_KITS[cap?.kit ?? 'base']?.profile : null
   // nhãn góc dưới trái (loại switch...), cùng kiểu nhãn profile keycap
-  const badge = (
+  const badge = !plain && (
     <>
       {product.badge && (
         <span className="absolute bottom-1 left-1 rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]">
@@ -77,21 +80,23 @@ export function ProductImage({
           )}
           {/* nhãn nổi trên ảnh: profile (vàng) + chất liệu PBT / ABS / Mix (xanh);
               khung hẹp (ảnh bài chợ) không đủ chỗ thì nhãn chất liệu lên dòng trên, không đè nhau */}
-          <div className="absolute inset-x-1 bottom-1 flex flex-wrap-reverse items-end justify-between gap-0.5">
-            <span
-              className="rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]"
-              title={profile ? `Profile keycap: ${profile.toUpperCase()}` : 'Profile keycap'}
-            >
-              {profile?.toUpperCase()}
-            </span>
-            <span
-              className="ml-auto rounded-md border-2 border-black/40 bg-blue px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-[0_2px_0_#0006]"
-              title={`Chất liệu keycap: ${KEYCAP_MATERIALS[keycapMaterialOf(cap ?? {})].name}`}
-            >
-              {/* tên ngắn (PBT / ABS / MIX) để vừa khung nhỏ, tên đủ ở tooltip */}
-              {keycapMaterialOf(cap ?? {}).toUpperCase()}
-            </span>
-          </div>
+          {!plain && (
+            <div className="absolute inset-x-1 bottom-1 flex flex-wrap-reverse items-end justify-between gap-0.5">
+              <span
+                className="rounded-md border-2 border-black/40 bg-yellow px-1.5 py-0.5 text-[11px] font-extrabold tracking-wider text-[#3a2b00] shadow-[0_2px_0_#0006]"
+                title={profile ? `Profile keycap: ${profile.toUpperCase()}` : 'Profile keycap'}
+              >
+                {profile?.toUpperCase()}
+              </span>
+              <span
+                className="ml-auto rounded-md border-2 border-black/40 bg-blue px-1.5 py-0.5 text-[11px] font-extrabold text-white shadow-[0_2px_0_#0006]"
+                title={`Chất liệu keycap: ${KEYCAP_MATERIALS[keycapMaterialOf(cap ?? {})].name}`}
+              >
+                {/* tên ngắn (PBT / ABS / MIX) để vừa khung nhỏ, tên đủ ở tooltip */}
+                {keycapMaterialOf(cap ?? {}).toUpperCase()}
+              </span>
+            </div>
+          )}
         </div>
       </ImageZoom>
     )

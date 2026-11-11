@@ -78,7 +78,7 @@ import {
 } from './caseShell'
 import { Daughterboard, jstStand, usbPort } from './Daughterboard'
 import { BatterySlot } from './Battery'
-import { caseModelOf } from '@/data/parts'
+import { caseModelOf, caseTwoTone } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { MM } from '../models/Switch'
 import { HINT_COLOR, HINT_HOVER } from '../common/hoverOutline'
@@ -1389,6 +1389,8 @@ export function Case({
 }) {
   const ctx = useCtx()
   const color = useGame((s) => s.inventory.case!.color)
+  // case 2 mảnh: màu case dưới riêng (Free build), thiếu thì theo case trên
+  const botPick = useGame((s) => s.inventory.case!.botColor)
   const step = useStep()
   const stepIdx = useStepIdx()
   const { closed, inCase } = useBuild()
@@ -1522,6 +1524,7 @@ export function Case({
   )
   // case 2 tông: đáy chất liệu / màu riêng (vd nắp PC, đáy nhôm)
   const lower = caseDef.bottom
+  const botColor = caseTwoTone(caseDef) ? (botPick ?? color) : color
   const bottomMat = (hover: boolean, doubleSide?: boolean) =>
     lower ? (
       <CaseMaterial
@@ -1533,7 +1536,7 @@ export function Case({
     ) : (
       <CaseMaterial
         material={caseDef.material}
-        color={color}
+        color={botColor}
         hover={hover}
         doubleSide={doubleSide}
       />
@@ -1596,7 +1599,8 @@ export function Case({
               {/* STL in 3D hay có mặt lật chiều → vẽ 2 mặt cho khỏi trong suốt */}
               <CaseMaterial
                 material={caseDef.material}
-                color={color}
+                // case CAD 2 mảnh chỉ vẽ đáy ở đây: theo màu case dưới
+                color={two ? botColor : color}
                 hover={bottom.hover}
                 doubleSide
               />
