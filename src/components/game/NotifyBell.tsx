@@ -55,11 +55,15 @@ export function NotifyBell({ side }: { side: Side }) {
         aria-expanded={open}
         title="Thông báo"
         onClick={() => setOpen(!open)}
-        className="relative grid h-full min-h-8 place-items-center rounded-full bg-[#2c3647] px-2.5 shadow-[inset_0_-3px_0_#0004] hover:bg-[#34405a] [&_svg]:size-4"
+        // cùng kiểu icon app trên taskbar: ô vuông bo góc, không nền (rê chuột / đang mở bảng mới có nền)
+        className={cn(
+          'relative grid size-[42px] place-items-center rounded-xl transition-colors hover:bg-white/10 [&_svg]:size-6',
+          open && 'bg-panel-2',
+        )}
       >
         <Bell className={cn(unread ? 'fill-yellow/40 text-yellow' : 'text-ink')} />
         {unread > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red px-1 text-[11px] leading-none font-extrabold text-white">
+          <span className="absolute top-0.5 right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-red px-1 text-[11px] leading-none font-extrabold text-white">
             {unread > 9 ? '9+' : unread}
           </span>
         )}

@@ -13,6 +13,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.39',
+    date: '2026-11-12',
+    commits: [],
+    title: 'Taskbar gọn hơn',
+    items: [
+      'Icon app trên taskbar chỉ có nền khi đang mở; app thu nhỏ có gạch dưới ngắn',
+      'Góc trái taskbar hiện dự báo thời tiết theo ngày chơi (thay nhãn KeebOS)',
+      'Chuông thông báo thành ô bo góc không nền như icon app',
+    ],
+  },
+  {
     version: '0.1.38',
     date: '2026-11-12',
     commits: ['8272e95'],

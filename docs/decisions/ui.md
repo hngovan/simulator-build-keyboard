@@ -2,6 +2,15 @@
 
 ## 2026-11-12
 
+### Taskbar: icon app chưa mở không có nền
+
+- Yêu cầu: icon taskbar không có nền khi app chưa mở; đang mở mới có nền + gạch dưới; app mở mà đang thu nhỏ thì gạch dưới ngắn hơn.
+- `Taskbar.tsx`: bỏ `bg-panel-2` mặc định (rê chuột `bg-white/10`); đang mở = `bg-panel-2` + gạch vàng `inset-x-3.5`; thu nhỏ (`minimized`) = không nền, gạch `inset-x-[17px]`.
+- Góc trái taskbar: bỏ nhãn "KeebOS", thay bằng dự báo thời tiết kiểu Windows (`Weather` trong Taskbar.tsx: icon + °C + tên, cố định theo ngày chơi `dayRand`,
+  chỉ trang trí, ẩn trên điện thoại như nhãn cũ).
+- Chuông thông báo (`NotifyBell`): bỏ viên tròn nền xám, thành ô 42px bo góc không nền như icon app (rê chuột / đang mở bảng mới có nền), icon 24px.
+- `ColorInput`: nút tròn mở bảng màu bỏ viền + bỏ nhô lên khi rê chuột.
+
 ### Free build: bảng cấu hình 3 cột kiểu bento + xem trước 3D
 
 - Yêu cầu (nhiều vòng): bảng Free build rối → bento grid; mỗi ô 1 component, bấm ô nào chỉ chọn món đó, không lẫn; có xem trước 3D; bấm thẻ case là chọn

@@ -1,9 +1,45 @@
 import { useEffect, useState } from 'react'
+import { Cloud, CloudDrizzle, CloudLightning, CloudRain, CloudSun, Sun } from 'lucide-react'
 import { useGame } from '@/store'
 import { NotifyBell } from '@/components/game/NotifyBell'
 import { cn } from '@/lib/format'
 import type { AppId } from '@/store'
 import { APPS, APP_IDS } from './apps'
+
+/** các kiểu thời tiết: icon + màu icon + tên + khoảng nhiệt độ (°C) */
+const WEATHERS = [
+  { icon: Sun, tone: 'text-yellow', name: 'Nắng đẹp', temp: [30, 35] },
+  { icon: CloudSun, tone: 'text-yellow', name: 'Nắng nhẹ', temp: [27, 32] },
+  { icon: Cloud, tone: 'text-[#c3cbdb]', name: 'Nhiều mây', temp: [25, 29] },
+  { icon: CloudDrizzle, tone: 'text-[#7fb0ff]', name: 'Mưa phùn', temp: [22, 26] },
+  { icon: CloudRain, tone: 'text-[#7fb0ff]', name: 'Mưa rào', temp: [23, 27] },
+  { icon: CloudLightning, tone: 'text-[#b3a1ff]', name: 'Mưa dông', temp: [24, 28] },
+] as const
+
+/** số giả ngẫu nhiên cố định theo ngày chơi (cùng ngày luôn ra cùng thời tiết) */
+const dayRand = (day: number, salt: number) => {
+  const x = Math.sin(day * 127.1 + salt * 311.7) * 43758.5453
+  return x - Math.floor(x)
+}
+
+/** Dự báo thời tiết góc trái taskbar (kiểu Windows): icon + nhiệt độ + tên thời tiết, đổi theo ngày chơi; chỉ để trang trí */
+function Weather() {
+  const day = useGame((s) => s.day)
+  const w = WEATHERS[Math.floor(dayRand(day, 1) * WEATHERS.length)]
+  const temp = Math.round(w.temp[0] + dayRand(day, 2) * (w.temp[1] - w.temp[0]))
+  return (
+    <div
+      title={`Thời tiết hôm nay (ngày ${day})`}
+      className="flex items-center gap-2 justify-self-start rounded-xl px-2 py-1 transition-colors hover:bg-white/10 max-md:hidden"
+    >
+      <w.icon className={cn('size-7 shrink-0', w.tone)} />
+      <span className="flex flex-col leading-tight">
+        <span className="font-head text-base font-extrabold tabular-nums">{temp}°C</span>
+        <span className="text-xs text-muted">{w.name}</span>
+      </span>
+    </div>
+  )
+}
 
 function Clock() {
   const [now, setNow] = useState(new Date())
@@ -34,6 +70,7 @@ function loadOrder(): AppId[] {
 /** Thanh taskbar dưới cùng màn hình máy tính; kéo thả icon để đổi chỗ */
 export function Taskbar() {
   const windows = useGame((s) => s.windows)
+  const minimized = useGame((s) => s.minimized)
   const { openApp } = useGame.getState()
   const [order, setOrder] = useState(loadOrder)
   const [dragging, setDragging] = useState<AppId | null>(null)
@@ -57,9 +94,7 @@ export function Taskbar() {
   return (
     // mobile: 2 hàng (chip trạng thái trên, icon app chia đều vừa 1 hàng dưới), cao theo --taskbar-h
     <div className="absolute inset-x-0 bottom-0 z-[100] grid h-(--taskbar-h) grid-cols-[1fr_auto_1fr] items-center gap-2 border-t-2 border-black/50 bg-[rgba(14,16,24,0.92)] px-2.5 backdrop-blur-md max-md:flex max-md:flex-col max-md:justify-center max-md:gap-1.5 max-md:px-2">
-      <span className="justify-self-start rounded-xl bg-yellow px-3.5 py-2 font-head text-base font-extrabold text-[#3a2b00] shadow-[0_3px_0_#0006] max-md:hidden">
-        ⌨ KeebOS
-      </span>
+      <Weather />
       <div className="flex items-center justify-center gap-2 max-md:order-2 max-md:w-full max-md:gap-1 max-md:overflow-x-auto max-md:pb-0.5 max-md:[scrollbar-width:none]">
         {order.map((id) => (
           // rê chuột hiện tooltip tên app phía trên icon (cùng kiểu tooltip thanh menu bàn build)
@@ -82,9 +117,14 @@ export function Taskbar() {
               onDrop={(e) => e.preventDefault()}
               onDragEnd={save}
               className={cn(
-                'relative grid size-[42px] shrink-0 cursor-grab place-items-center rounded-xl bg-panel-2 transition-[transform,background-color] duration-150 hover:-translate-y-0.5 hover:bg-[#34405a] active:cursor-grabbing max-md:aspect-square max-md:size-auto max-md:w-full',
+                'relative grid size-[42px] shrink-0 cursor-grab place-items-center rounded-xl transition-[transform,background-color] duration-150 hover:-translate-y-0.5 hover:bg-white/10 active:cursor-grabbing max-md:aspect-square max-md:size-auto max-md:w-full',
+                // app chưa mở: chỉ icon, không nền; đang mở: nền ô + gạch vàng dưới; mở nhưng đang thu nhỏ: không nền, gạch ngắn hơn
                 windows.includes(id) &&
-                  'after:absolute after:inset-x-3.5 after:bottom-[3px] after:h-[3px] after:rounded after:bg-yellow',
+                  'after:absolute after:bottom-[3px] after:h-[3px] after:rounded after:bg-yellow',
+                windows.includes(id) &&
+                  (minimized.includes(id)
+                    ? 'after:inset-x-[17px]'
+                    : 'bg-panel-2 after:inset-x-3.5'),
                 dragging === id && 'opacity-40',
               )}
               onClick={() => openApp(id)}
