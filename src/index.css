@@ -25,6 +25,31 @@
   /* trễ 150ms để lần tải nhanh không bị nháy */
   --animate-fade-in: fade-in 0.25s ease-out 0.15s both;
 
+  /* chữ studio đoạn mở đầu: hiện dần, giữ, tan dần */
+  --animate-credits: credits 4.4s ease-in-out 0.6s both;
+  /* màn đen tan dần lúc vào đoạn mở đầu */
+  --animate-fade-out: fade-out 1.2s ease-out both;
+
+  @keyframes credits {
+    0% {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    22%,
+    78% {
+      opacity: 1;
+      transform: none;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
   @keyframes fade-in {
     from {
       opacity: 0;

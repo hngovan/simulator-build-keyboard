@@ -1,55 +1,190 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { RoundedBox, useGLTF } from '@react-three/drei'
 import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
+import { APPS, APP_IDS } from '@/features/desktop/apps'
+import { wallpaperOf, type WallpaperId } from '@/features/desktop/wallpapers'
+import { weatherOf } from '@/features/desktop/weather'
 import { useGame } from '@/store'
 import { useHover } from '../common/useHover'
 import { HINT_COLOR, useHoverOutline } from '../common/hoverOutline'
 import { SCREEN } from './computerLayout'
+import { useIntro } from '@/features/intro/introStore'
 
 // Màn hình (model ASUS) + thùng CPU (dựng bằng code), đơn vị mét; Room nhân M.
 // Bấm màn hình thì về desktop KeebOS; rê chuột vào thì viền xanh
 
-/** Ảnh desktop KeebOS trên màn hình: nền tím xanh, vài icon app, thanh taskbar */
+/** chữ KeebOS mờ góc dưới phải, dùng chung mọi hình nền */
+const logo = (g: CanvasRenderingContext2D, w: number, h: number, color: string) => {
+  g.fillStyle = color
+  g.font = 'bold 120px sans-serif'
+  g.textAlign = 'right'
+  g.textBaseline = 'alphabetic'
+  g.fillText('KeebOS', w - 40, h - 90)
+}
+
+/** Hình nền desktop vẽ gọn bằng canvas, theo đúng hình đang chọn (`features/desktop/Wallpaper.tsx`); thêm hình nền thì thêm ở đây */
+const WALLS: Record<WallpaperId, (g: CanvasRenderingContext2D, w: number, h: number) => void> = {
+  // gradient xanh tím
+  aurora(g, w, h) {
+    const bg = g.createLinearGradient(0, 0, w, h)
+    bg.addColorStop(0, '#1d3b6e')
+    bg.addColorStop(0.55, '#3f2b72')
+    bg.addColorStop(1, '#7a2f6a')
+    g.fillStyle = bg
+    g.fillRect(0, 0, w, h)
+    logo(g, w, h, 'rgba(255,255,255,0.12)')
+  },
+  // trời cam, mặt trời, 2 lớp đồi
+  sunset(g, w, h) {
+    const bg = g.createLinearGradient(0, 0, 0, h)
+    bg.addColorStop(0, '#2a1b4a')
+    bg.addColorStop(0.45, '#8a3a6b')
+    bg.addColorStop(0.75, '#f08a4b')
+    bg.addColorStop(1, '#ffc46b')
+    g.fillStyle = bg
+    g.fillRect(0, 0, w, h)
+    const r = w * 0.15
+    const sun = g.createLinearGradient(0, h * 0.82 - r * 2, 0, h * 0.82)
+    sun.addColorStop(0, '#ffe08a')
+    sun.addColorStop(1, '#ff8a4b')
+    g.fillStyle = sun
+    g.beginPath()
+    g.arc(w / 2, h * 0.82 - r, r, 0, Math.PI * 2)
+    g.fill()
+    g.fillStyle = '#4a2350'
+    g.beginPath()
+    g.ellipse(w * 0.275, h * 1.025, w * 0.375, h * 0.275, 0, 0, Math.PI * 2)
+    g.fill()
+    g.fillStyle = '#331a3e'
+    g.beginPath()
+    g.ellipse(w * 0.75, h * 1.075, w * 0.4, h * 0.275, 0, 0, Math.PI * 2)
+    g.fill()
+    logo(g, w, h, 'rgba(255,255,255,0.15)')
+  },
+  // nền tối, keycap xếp nghiêng + 2 phím màu nhấn
+  keys(g, w, h) {
+    const bg = g.createRadialGradient(w * 0.3, h * 0.2, 0, w * 0.3, h * 0.2, w * 0.8)
+    bg.addColorStop(0, '#1f3a3a')
+    bg.addColorStop(0.7, '#10181f')
+    g.fillStyle = bg
+    g.fillRect(0, 0, w, h)
+    g.save()
+    g.translate(w / 2, h / 2)
+    g.rotate((-18 * Math.PI) / 180)
+    g.fillStyle = 'rgba(255,255,255,0.04)'
+    for (let x = -w; x < w; x += 48) for (let y = -w; y < w; y += 48) g.fillRect(x, y, 40, 40)
+    g.fillStyle = 'rgba(255,204,46,0.7)'
+    g.fillRect(-336, -144, 40, 40)
+    g.fillStyle = 'rgba(46,211,160,0.6)'
+    g.fillRect(144, 96, 88, 40)
+    g.restore()
+    logo(g, w, h, 'rgba(46,211,160,0.15)')
+  },
+}
+
+/**
+ * Ảnh desktop KeebOS trên màn hình: hình nền đang chọn, ô icon app, thanh taskbar (thời tiết, giờ, chuông).
+ * `paint(wall, day, unread, ping)` vẽ lại; `ping` = tên khách thì
+ * thêm thẻ báo tin nhắn mới góc phải trên (đoạn mở đầu người chơi lần đầu, `features/intro`)
+ */
 function screenTexture() {
   const c = document.createElement('canvas')
   c.width = 1024
   c.height = 614
   const g = c.getContext('2d')!
-  const bg = g.createLinearGradient(0, 0, c.width, c.height)
-  bg.addColorStop(0, '#3b2d7a')
-  bg.addColorStop(0.55, '#4b3a8f')
-  bg.addColorStop(1, '#8a3f6e')
-  g.fillStyle = bg
-  g.fillRect(0, 0, c.width, c.height)
-  // icon app cột trái
-  const icons = ['#7c5cff', '#f0532d', '#2f7bf5', '#1fa463', '#f29a2e', '#6b7280']
-  icons.forEach((color, i) => {
-    g.fillStyle = color
-    g.beginPath()
-    g.roundRect(34, 30 + i * 82, 58, 58, 14)
-    g.fill()
-  })
-  // chữ KeebOS mờ góc dưới phải
-  g.fillStyle = 'rgba(255,255,255,0.14)'
-  g.font = 'bold 120px sans-serif'
-  g.textAlign = 'right'
-  g.fillText('KeebOS', c.width - 40, c.height - 90)
-  // taskbar
-  g.fillStyle = '#12141c'
-  g.fillRect(0, c.height - 56, c.width, 56)
-  g.fillStyle = '#f5c518'
-  g.beginPath()
-  g.roundRect(14, c.height - 46, 120, 36, 10)
-  g.fill()
-  g.fillStyle = '#12141c'
-  g.font = 'bold 22px sans-serif'
-  g.textAlign = 'center'
-  g.fillText('KeebOS', 74, c.height - 21)
   const tex = new THREE.CanvasTexture(c)
   tex.colorSpace = THREE.SRGBColorSpace
   tex.anisotropy = 4
-  return tex
+  const paint = (wall: string, day: number, unread: number, ping?: string) => {
+    WALLS[wallpaperOf(wall)](g, c.width, c.height)
+    // icon app cột trái: mỗi app 1 ô, màu đúng như icon trên desktop thật (`APPS[id].color`)
+    APP_IDS.forEach((id, i) => {
+      g.fillStyle = APPS[id].color
+      g.beginPath()
+      g.roundRect(34, 26 + i * 74, 56, 56, 14)
+      g.fill()
+    })
+    // taskbar
+    g.fillStyle = '#12141c'
+    g.fillRect(0, c.height - 56, c.width, 56)
+    const my = c.height - 28
+    g.textBaseline = 'middle'
+    // góc trái: thời tiết của ngày chơi như taskbar thật (chấm tròn = nắng, cụm mây = mây / mưa; nhiệt độ + tên)
+    const w = weatherOf(day)
+    g.fillStyle = w.color
+    g.beginPath()
+    if (w.sun) g.arc(36, my, 13, 0, Math.PI * 2)
+    else {
+      g.arc(26, my + 4, 9, 0, Math.PI * 2)
+      g.arc(36, my - 3, 12, 0, Math.PI * 2)
+      g.arc(46, my + 5, 8, 0, Math.PI * 2)
+      g.rect(26, my + 3, 20, 10)
+    }
+    g.fill()
+    g.textAlign = 'left'
+    g.fillStyle = '#f1f3f8'
+    g.font = 'bold 21px Nunito, sans-serif'
+    g.fillText(`${w.temp}°C`, 64, my - 9)
+    g.fillStyle = '#94a0b8'
+    g.font = '15px Nunito, sans-serif'
+    g.fillText(w.name, 64, my + 12)
+    // góc phải: giờ + chuông thông báo (có thông báo chưa xem: chuông vàng + chấm đỏ)
+    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    g.textAlign = 'right'
+    g.fillStyle = '#f1f3f8'
+    g.font = 'bold 21px Nunito, sans-serif'
+    g.fillText(time, c.width - 18, my + 1)
+    const bx = c.width - 18 - g.measureText(time).width - 30
+    g.fillStyle = unread ? '#ffcc2e' : '#f1f3f8'
+    g.beginPath()
+    g.arc(bx, my - 3, 9, Math.PI, 0)
+    g.lineTo(bx + 13, my + 8)
+    g.lineTo(bx - 13, my + 8)
+    g.closePath()
+    g.fill()
+    g.beginPath()
+    g.arc(bx, my + 11, 4, 0, Math.PI)
+    g.fill()
+    if (unread) {
+      g.fillStyle = '#ff5d5d'
+      g.beginPath()
+      g.arc(bx + 10, my - 10, 6, 0, Math.PI * 2)
+      g.fill()
+    }
+    g.textBaseline = 'alphabetic'
+    if (ping) {
+      // thẻ báo tin nhắn mới: ô màu Mezzenger + tên app + tên khách, chấm đỏ góc thẻ
+      const w = 380
+      const x = c.width - w - 24
+      g.fillStyle = 'rgba(0,0,0,0.4)'
+      g.beginPath()
+      g.roundRect(x, 29, w, 92, 20)
+      g.fill()
+      g.fillStyle = '#1f2633'
+      g.beginPath()
+      g.roundRect(x, 24, w, 92, 20)
+      g.fill()
+      g.fillStyle = APPS.messenger.color
+      g.beginPath()
+      g.roundRect(x + 16, 40, 60, 60, 16)
+      g.fill()
+      g.textAlign = 'left'
+      g.textBaseline = 'middle'
+      g.fillStyle = '#ffcc2e'
+      g.font = 'bold 24px Nunito, sans-serif'
+      g.fillText('Mezzenger', x + 92, 56)
+      g.fillStyle = '#f1f3f8'
+      g.font = 'bold 19px Nunito, sans-serif'
+      g.fillText(`Tin nhắn mới từ ${ping}`, x + 92, 86, w - 108)
+      g.fillStyle = '#ff5d5d'
+      g.beginPath()
+      g.arc(x + w - 8, 32, 10, 0, Math.PI * 2)
+      g.fill()
+    }
+    tex.needsUpdate = true
+  }
+  return { tex, paint }
 }
 
 const BLACK = new THREE.MeshStandardMaterial({ color: '#16181d', roughness: 0.45, metalness: 0.3 })
@@ -70,7 +205,20 @@ const FRAME = new THREE.MeshBasicMaterial({
 useGLTF.preload(MONITOR_GLB)
 
 export function Monitor(props: { position?: [number, number, number]; rotationY?: number }) {
-  const tex = useMemo(() => screenTexture(), [])
+  const { tex, paint } = useMemo(() => screenTexture(), [])
+  // đoạn mở đầu: màn hình báo tin nhắn mới của khách đơn đầu
+  const ping = useIntro((s) => s.ping)
+  const from = useGame((s) => s.offers[0]?.customer ?? 'khách')
+  // hình nền đang chọn ở Cài đặt, thời tiết theo ngày chơi, chuông theo thông báo chưa xem; vẽ lại mỗi 30s cho giờ chạy
+  const wallpaper = useGame((s) => s.wallpaper)
+  const day = useGame((s) => s.day)
+  const unread = useGame((s) => s.unread)
+  useEffect(() => {
+    const draw = () => paint(wallpaper, day, unread, ping ? from : undefined)
+    draw()
+    const timer = setInterval(draw, 30000)
+    return () => clearInterval(timer)
+  }, [paint, wallpaper, day, unread, ping, from])
   const { scene } = useGLTF(MONITOR_GLB)
   const zoomToPC = useGame((s) => s.zoomToPC)
   const [down, setDown] = useState<[number, number] | null>(null)

@@ -317,7 +317,8 @@ vào `window.__r3f` để debug trong console.
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
 - Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`) **chỉ nằm trong tour** (màn tiêu đề / màn chờ tải `BenchLoader` không có Keeb-chan; nền 2 màn = ảnh góc bàn `components/art/workspace.ts`; logo game `components/art/GameLogo.tsx`, icon chip HUD / mục Shopii `components/art/GameIcons.tsx`) (không còn NPC đứng riêng / mẹo máy tính, không có tuỳ chọn
-  ẩn / hiện, không có "Xem lại"; màn tiêu đề: "Hướng dẫn build" = `newGame(name, false)` có tour, "Sự nghiệp → Chơi mới" = `newGame(name, true)` ghi sẵn `ALL_TOURS` (`data/tourIds.ts`);
+  ẩn / hiện, không có "Xem lại"; màn tiêu đề không còn mục "Hướng dẫn build": "Sự nghiệp → Chơi mới" lần đầu trên máy (chưa có bản lưu + chưa có cờ `sbk-intro-seen`) = `newGame(name, false)` chạy đoạn mở đầu
+  (`features/intro`: `useIntro.phase` credits → message → ask, camera `scene/room/IntroCam`: chữ "KeebStudio hân hạnh giới thiệu" trên cảnh phòng → bay vào màn hình máy tính báo tin nhắn mới → popup giữa màn "Hướng dẫn: bạn có muốn biết cách chơi không?" ✗ / ✓; ✓ = bật tour (`guideSeen: []`) + ngồi luôn vào máy tính, ✗ = đi lại tự do), còn lại `newGame(name, true)`; `newGame` luôn ghi sẵn `ALL_TOURS` (`data/tourIds.ts`);
   không còn "Bảng tỉ lệ" trong game, `data/odds.ts` chỉ để README chép). Lớp tour dùng chung `Spotlight.tsx` (+ `spotlightRect.ts` đo `data-tour`).
   Tour lần đầu ngồi máy tính (`features/guide/Tour.tsx`, `TOUR_ID` trong `guideSeen`): làm tối nền, ô sáng viền vàng đúng phần tử `data-tour="..."`
   (prop `tour` của `DesktopIcon` / `TabChip` / `BackButton` / thẻ đơn + nút Nhận đơn Mezzenger), bấm đúng chỗ thì sang bước; Cài đặt → Xem lại.

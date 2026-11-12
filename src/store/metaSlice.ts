@@ -28,6 +28,7 @@ import type { GameState } from '.'
 import { applyAudioSettings } from '@/sound'
 import { useRoom } from '@/scene/room/roomStore'
 import { afterLoad } from '@/scene/common/loadingStore'
+import { useIntro } from '@/features/intro/introStore'
 
 type Screen = 'title' | 'pc' | 'bench'
 export type AppId =
@@ -81,7 +82,7 @@ export interface MetaSlice extends Profile {
   /** mở Hội Phím Cơ ở tab "Bài của tôi" để đăng bán (nút Đăng bán trong app Kho) */
   openSell: () => void
   toast: (text: string, kind?: Toast['kind']) => void
-  /** experienced = đã từng chơi: ghi sẵn mọi tour là đã xem (không hiện hướng dẫn) */
+  /** experienced = đã từng chơi: vào thẳng phòng; chưa thì chạy đoạn mở đầu, cuối đoạn hỏi có cần hướng dẫn (tour) không */
   newGame: (name: string, experienced?: boolean) => void
   /** chế độ Free build đang chơi: không lưu, không bảng xếp hạng, không thua, Shopii mở khoá + miễn phí (không lưu) */
   free: boolean
@@ -334,8 +335,8 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
       dayStart: { money: START.money, rep: START.rep },
       worked: [],
       name: name.trim() || 'Thợ phím',
-      // đã từng chơi: bỏ hết tour Keeb-chan
-      guideSeen: experienced ? [...ALL_TOURS] : [],
+      // tour Keeb-chan tắt sẵn; người chơi lần đầu xem đoạn mở đầu, popup cuối đoạn hỏi có cần hướng dẫn không (`Intro` bật lại tour)
+      guideSeen: [...ALL_TOURS],
       lastSolderPurchase: null,
       // vào game là đứng trong phòng (kiểu PC Building Simulator), bấm màn hình máy tính mới vào desktop
       screen: 'bench',
@@ -361,6 +362,9 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     })
     useRoom.setState({ spot: 'pc', fly: null })
     get().save()
+    // lần đầu chơi: đoạn mở đầu (chữ studio → màn hình máy tính có tin nhắn mới → hỏi hướng dẫn), lời chào để cuối đoạn
+    useIntro.setState({ phase: experienced ? null : 'credits', ping: false })
+    if (!experienced) return
     // chào sau khi phòng 3D tải xong (màn chờ còn che thì chưa)
     afterLoad(() => get().toast(`Chào mừng ${get().name} tới xưởng phím! 🎉`, 'good'))
   },

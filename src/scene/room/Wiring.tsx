@@ -4,7 +4,9 @@ import * as THREE from 'three'
 
 // Dây điện (dựng bằng code) + ổ cắm tường + công tắc đèn (model), dùng chung cho đèn bàn build, máy tính. Đơn vị mét
 
-const CABLE = new THREE.MeshStandardMaterial({ color: '#141414', roughness: 0.7 })
+/** dây + phích / đầu cắm trong phòng đều nhựa trắng (người dùng chọn; trước là đen) */
+const WHITE = '#ecebe6'
+const CABLE = new THREE.MeshStandardMaterial({ color: WHITE, roughness: 0.6 })
 const SWITCH_GLB = '/models/room/light-switch.glb'
 /** mặt sau mặt nạ công tắc lùi sau tâm model 2,5mm: dời ra cho mặt nạ áp sát tường (+0,5mm khỏi chớp hình) */
 const SWITCH_BACK = 0.003
@@ -42,12 +44,15 @@ const SOCKET: [number, number, number] = [0, 0.028, OUTLET_Z + 0.00157]
  * - `eu`: "power plug (european)" (ChoboiAssets): file ×50 (thu 0,02 → thân Ø3,7cm), chân ngang +z, tâm mặt phích (0, 0,48, 0,02),
  *   đuôi dây sau thân chếch xuống → xoay π quanh y cho chân cắm vào tường
  * - `cee`: đầu CEE 7/7 của dây nguồn "[CC0] European Power Plug" (Lara Sophie Schütt), mét, chân xếp dọc +z, tâm mặt (0, 0,018, 0),
- *   dây ra ngang (−x) → xoay π quanh y rồi −π/2 quanh trục chân cho dây thòng xuống
- * `exit` = chỗ dây ra khỏi phích (hệ `Outlet`, so với mặt lỗ cắm): nối `Cable` vào đây
+ *   dây ra ngang (−x), node phích trong file còn xoay sẵn 15° quanh trục chân (`CEE_TILT`) → xoay π quanh y rồi −π/2 + 15° quanh trục chân:
+ *   2 chân nằm ngang đúng lỗ ổ, đuôi dây thòng thẳng xuống
+ * `exit` = tâm mặt đuôi phích, chỗ dây ra (hệ `Outlet`, so với mặt lỗ cắm; đo từ lưới model sau khi xoay): nối `Cable` vào đây,
+ * dây tới theo phương thẳng đứng từ dưới lên
  */
+const CEE_TILT = Math.PI / 12
 const PLUGS = {
   eu: { url: '/models/room/power-plug-eu.glb', exit: [0, -0.0312, 0.0354] },
-  cee: { url: '/models/room/power-cord-cee.glb', exit: [-0.0125, -0.0462, 0.0263] },
+  cee: { url: '/models/room/power-cord-cee.glb', exit: [0, -0.0449, 0.0269] },
 } as const
 export type PlugKind = keyof typeof PLUGS
 Object.values(PLUGS).forEach((p) => useGLTF.preload(p.url))
@@ -66,24 +71,26 @@ function pick(scene: THREE.Object3D, re: RegExp) {
   const c = src!.clone(true)
   src!.matrixWorld.decompose(c.position, c.quaternion, c.scale)
   c.traverse((o) => {
-    if ((o as THREE.Mesh).isMesh) o.castShadow = true
+    const m = o as THREE.Mesh
+    if (!m.isMesh) return
+    m.castShadow = true
+    // vỏ nhựa đen của model → trắng cho khớp dây (chân kim loại / đồng giữ nguyên)
+    const mat = m.material as THREE.MeshStandardMaterial
+    if (/plastic/i.test(mat.name)) {
+      const white = mat.clone()
+      white.color.set(WHITE)
+      white.roughness = 0.5
+      m.material = white
+    }
   })
   return c
 }
 
-/**
- * phích đen cho khớp màu dây (model gốc nhựa trắng, 1 vật liệu texture chung cả chân): nhân màu tối lên texture,
- * chân cắm khuất trong ổ nên tối theo cũng không lộ
- */
-function blackPlug(scene: THREE.Object3D) {
+/** phích `eu`: model gốc nhựa trắng sẵn (khớp dây trắng), chỉ bật đổ bóng */
+function whitePlug(scene: THREE.Object3D) {
   const c = scene.clone(true)
   c.traverse((o) => {
-    const m = o as THREE.Mesh
-    if (!m.isMesh) return
-    m.castShadow = true
-    const mat = (m.material as THREE.MeshStandardMaterial).clone()
-    mat.color.set('#262626')
-    m.material = mat
+    if ((o as THREE.Mesh).isMesh) o.castShadow = true
   })
   return c
 }
@@ -91,11 +98,11 @@ function blackPlug(scene: THREE.Object3D) {
 function Plug({ kind }: { kind: PlugKind }) {
   const { scene } = useGLTF(PLUGS[kind].url)
   const cee = useMemo(() => (kind === 'cee' ? pick(scene, /^CEE/) : null), [scene, kind])
-  const eu = useMemo(() => (kind === 'eu' ? blackPlug(scene) : null), [scene, kind])
+  const eu = useMemo(() => (kind === 'eu' ? whitePlug(scene) : null), [scene, kind])
   return (
     <group position={SOCKET}>
       {cee ? (
-        <group rotation-z={-Math.PI / 2}>
+        <group rotation-z={-Math.PI / 2 + CEE_TILT}>
           <group rotation-y={Math.PI}>
             <group position-y={-0.018}>
               <primitive object={cee} />
@@ -168,7 +175,7 @@ export function LightSwitch(props: JSX.IntrinsicElements['group']) {
   )
 }
 
-const PLUG_SHELL = new THREE.MeshStandardMaterial({ color: '#17181b', roughness: 0.55 })
+const PLUG_SHELL = new THREE.MeshStandardMaterial({ color: WHITE, roughness: 0.55 })
 const PLUG_METAL = new THREE.MeshStandardMaterial({
   color: '#c9ccd2',
   metalness: 0.9,

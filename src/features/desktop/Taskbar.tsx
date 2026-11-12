@@ -1,40 +1,43 @@
 import { useEffect, useState } from 'react'
-import { Cloud, CloudDrizzle, CloudLightning, CloudRain, CloudSun, Sun } from 'lucide-react'
+import {
+  Cloud,
+  CloudDrizzle,
+  CloudLightning,
+  CloudRain,
+  CloudSun,
+  Sun,
+  type LucideIcon,
+} from 'lucide-react'
 import { useGame } from '@/store'
 import { NotifyBell } from '@/components/game/NotifyBell'
 import { cn } from '@/lib/format'
 import type { AppId } from '@/store'
 import { APPS, APP_IDS } from './apps'
+import { weatherOf, type WeatherId } from './weather'
 
-/** các kiểu thời tiết: icon + màu icon + tên + khoảng nhiệt độ (°C) */
-const WEATHERS = [
-  { icon: Sun, tone: 'text-yellow', name: 'Nắng đẹp', temp: [30, 35] },
-  { icon: CloudSun, tone: 'text-yellow', name: 'Nắng nhẹ', temp: [27, 32] },
-  { icon: Cloud, tone: 'text-[#c3cbdb]', name: 'Nhiều mây', temp: [25, 29] },
-  { icon: CloudDrizzle, tone: 'text-[#7fb0ff]', name: 'Mưa phùn', temp: [22, 26] },
-  { icon: CloudRain, tone: 'text-[#7fb0ff]', name: 'Mưa rào', temp: [23, 27] },
-  { icon: CloudLightning, tone: 'text-[#b3a1ff]', name: 'Mưa dông', temp: [24, 28] },
-] as const
-
-/** số giả ngẫu nhiên cố định theo ngày chơi (cùng ngày luôn ra cùng thời tiết) */
-const dayRand = (day: number, salt: number) => {
-  const x = Math.sin(day * 127.1 + salt * 311.7) * 43758.5453
-  return x - Math.floor(x)
+/** icon lucide theo kiểu thời tiết */
+const WEATHER_ICON: Record<WeatherId, LucideIcon> = {
+  sun: Sun,
+  cloudSun: CloudSun,
+  cloud: Cloud,
+  drizzle: CloudDrizzle,
+  rain: CloudRain,
+  storm: CloudLightning,
 }
 
 /** Dự báo thời tiết góc trái taskbar (kiểu Windows): icon + nhiệt độ + tên thời tiết, đổi theo ngày chơi; chỉ để trang trí */
 function Weather() {
   const day = useGame((s) => s.day)
-  const w = WEATHERS[Math.floor(dayRand(day, 1) * WEATHERS.length)]
-  const temp = Math.round(w.temp[0] + dayRand(day, 2) * (w.temp[1] - w.temp[0]))
+  const w = weatherOf(day)
+  const Icon = WEATHER_ICON[w.id]
   return (
     <div
       title={`Thời tiết hôm nay (ngày ${day})`}
       className="flex items-center gap-2 justify-self-start rounded-xl px-2 py-1 transition-colors hover:bg-white/10 max-md:hidden"
     >
-      <w.icon className={cn('size-7 shrink-0', w.tone)} />
+      <Icon className="size-7 shrink-0" style={{ color: w.color }} />
       <span className="flex flex-col leading-tight">
-        <span className="font-head text-base font-extrabold tabular-nums">{temp}°C</span>
+        <span className="font-head text-base font-extrabold tabular-nums">{w.temp}°C</span>
         <span className="text-xs text-muted">{w.name}</span>
       </span>
     </div>

@@ -2,6 +2,36 @@
 
 ## 2026-11-12
 
+### Bỏ mục "Hướng dẫn build", thay bằng đoạn mở đầu cho người chơi lần đầu
+
+- Yêu cầu: bỏ option hướng dẫn ở menu bắt đầu; người chơi lần đầu thấy "KeebStudio / hân hạnh giới thiệu" trên cảnh phòng → quay cảnh màn hình
+  máy tính nhận 1 tin nhắn mới → menu giữa màn "Hướng dẫn: bạn có muốn biết cách chơi trò chơi không?" (✗ / ✓, theo ảnh mẫu) → hướng dẫn.
+- `TitleScreen`: bỏ mục `guide` + kiểu `Mode`; "Chơi mới" gọi `newGame(name, overwrite || introSeen())` (đã có bản lưu hoặc máy đã xem đoạn mở đầu
+  = không chạy lại; cờ theo máy localStorage `sbk-intro-seen`, ghi lúc trả lời popup).
+- `features/intro/introStore.ts` (`useIntro`: `phase` credits / message / ask + `ping`, thời lượng `INTRO`), `Intro.tsx` (lớp phủ `role="dialog"` z-3000:
+  chữ studio `animate-credits`, "Bấm để bỏ qua" (bấm / Enter / Space / Esc nhảy tới popup), popup `HudCard` 2 nút đỏ ✗ (Esc) / xanh ✓ (Enter)).
+- `scene/room/IntroCam.tsx` lái camera: lia phòng `PAN_FROM → PAN_TO` → bay tới `pcEye` (đúng tư thế ngồi máy) → `ping` (tiếng `playNotify` + thẻ
+  "Mezzenger: Tin nhắn mới từ <khách>" vẽ lên màn hình 3D, `Computer.tsx` `screenTexture().paint(ping)`) → `phase = 'ask'`. `WalkControls` nhường
+  camera + không khoá chuột khi `useIntro.phase`; `App` ẩn `RoomHud` lúc intro.
+- `newGame` luôn ghi `guideSeen = ALL_TOURS`; ✓ mới đặt `guideSeen: []` + `goPC()` (tour máy tính chạy ngay từ bước mở Mezzenger, khớp với tin nhắn vừa tới);
+  ✗ thì WalkControls bay từ màn hình ra chỗ đứng (hoạt cảnh đứng dậy sẵn có). Lời chào "Chào mừng..." dời xuống cuối đoạn mở đầu.
+- Lưu ý: sau lần đầu không còn cách bật lại tour (đúng yêu cầu "chỉ lần đầu"); muốn xem lại thì xoá `sbk-intro-seen` + bản lưu.
+- Kiểm tra: Chrome ngầm chạy `newGame('Test', false)`, chụp từng đoạn + bấm ✓.
+
+### Màn hình 3D ngoài phòng: ô icon đúng màu app
+
+- Yêu cầu: "UI ở màn hình chính máy tính ko giống UI ở bên trong nữa" (màn hình 3D trên bàn nhìn từ ngoài).
+- Lần đầu vẽ lại cả desktop thật lên canvas (hình nền đang chọn, icon + tên, cửa sổ đang mở, taskbar thời tiết / chuông / giờ) → người dùng:
+  "chỉ cần hiển thị như ảnh cũ, không cần chi tiết vậy, không cần mở gì ngoài này hiện như thế; chỉ sửa màu icon giống trong màn hình" → đã bỏ hết.
+- Giữ ảnh cũ (`screenTexture` trong `scene/models/Computer.tsx`: nền tím, chữ KeebOS mờ, taskbar + nhãn vàng), chỉ đổi cột ô icon: mỗi app trong
+  `APP_IDS` 1 ô, màu `APPS[id].color` (thêm app tự có ô).
+- Tiếp: "chữ KeebOS ở dưới không còn đúng, giờ đã đổi thành thời tiết" → bỏ nhãn vàng KeebOS góc trái taskbar của ảnh, vẽ thời tiết ngày chơi
+  (chấm tròn = nắng / cụm mây = mây, mưa; nhiệt độ + tên). Số liệu dùng chung `features/desktop/weather.ts` (`weatherOf(day)`), Taskbar cũng lấy từ đây.
+- Tiếp: "bên phải thiếu giờ và icon noti" → góc phải taskbar của ảnh vẽ giờ thật + chuông (có thông báo chưa xem: chuông vàng + chấm đỏ);
+  `Monitor` vẽ lại khi đổi ngày / `unread` và mỗi 30s (`paint(day, unread, ping)`).
+- Tiếp: "background trong màn hình đã đổi nhưng ngoài vẫn mặc định" → ảnh vẽ đúng hình nền đang chọn (`WALLS` trong Computer.tsx: 3 hình vẽ gọn
+  bằng canvas theo `Wallpaper.tsx`, `paint(wall, day, unread, ping)`). Thêm hình nền ở `wallpapers.ts` thì thêm cả `WALLS` (kiểu `Record` nên thiếu là lỗi tsc). **Không** vẽ chi tiết desktop / cửa sổ đang mở lên màn hình 3D.
+
 ### Taskbar: icon app chưa mở không có nền
 
 - Yêu cầu: icon taskbar không có nền khi app chưa mở; đang mở mới có nền + gạch dưới; app mở mà đang thu nhỏ thì gạch dưới ngắn hơn.
@@ -48,6 +78,7 @@
 - Bàn build: khung mục tiêu giữa đáy thêm ô vàng số bước `n/N` trước tên bước (`BenchHud`), thu gọn panel "Các bước build" vẫn biết đang ở đâu.
 - Màn tiêu đề: gợi ý phím ↑ ↓ Chọn / Enter Vào ở góc dưới trái (`KeyCap`).
 - `ControlsHint`: dải tối mờ dần sau dòng hướng dẫn đáy màn (vẫn không khung) cho dễ đọc trên cảnh sáng (lót chuột, sàn gỗ).
+  **Đã bỏ** (2026-11-12): người dùng hỏi "phía dưới màn hình khi đi lại sao lại có nền mờ mờ" → dòng hướng dẫn về không nền, chỉ bóng chữ. Không thêm lại.
 - `index.css`: viền vàng `:focus-visible` khi đi bằng Tab; `prefers-reduced-motion` thì tắt hiệu ứng lặp.
 
 ## 2026-11-11

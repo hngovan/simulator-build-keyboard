@@ -7,6 +7,7 @@ import { pcEye, screenCenter } from '../models/computerLayout'
 import { BLOCKS, BODY_R, EYE_Y, M, SPOTS, WALK_AREAS } from './roomLayout'
 import { useRoom } from './roomStore'
 import { useMouseSens } from '@/lib/mouseSens'
+import { useIntro } from '@/features/intro/introStore'
 
 /** tốc độ đi (m/s); phòng hẹp nên không có chạy */
 const SPEED = 2.2
@@ -67,7 +68,12 @@ function collide(p: THREE.Vector3) {
 
 /** đang có popup / cửa sổ phủ màn: nhả khoá chuột cho bấm popup */
 function blocked() {
-  if (useRoom.getState().calendar || useSettingsPop.getState().open || useGame.getState().pcZoom)
+  if (
+    useRoom.getState().calendar ||
+    useSettingsPop.getState().open ||
+    useGame.getState().pcZoom ||
+    useIntro.getState().phase
+  )
     return true
   return !!document.querySelector(
     '[role="dialog"], [class*="z-[2000]"], [class*="z-[3000]"], [class*="z-[3500]"], [class*="z-[4000]"]',
@@ -347,7 +353,8 @@ export function WalkControls() {
     const s = st.current
     const cam = state.camera
     // đang bay vào màn hình máy tính: PcZoom điều khiển camera
-    if (useGame.getState().pcZoom) return
+    // đoạn mở đầu: IntroCam điều khiển camera (xong thì bay từ màn hình ra chỗ đứng như vừa rời máy tính)
+    if (useGame.getState().pcZoom || useIntro.getState().phase) return
     const dt = Math.min(rawDt, 1 / 30)
     // zoom mượt về mức muốn; bay camera (ngồi / đứng) thì bỏ zoom
     if (s.anim) s.zoom = 0

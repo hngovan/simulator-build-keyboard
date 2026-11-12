@@ -102,7 +102,7 @@ hoặc `three-bvh-csg`. Nguồn và giấy phép của model ghi ở `assets/REA
 
 1. **Title** (`features/title/TitleScreen.tsx`): nền ảnh góc bàn cạnh cửa sổ chụp trong game (phủ mờ), logo game (icon keycap +
    "BUILD KEYBOARD / SIMULATOR") + menu chữ chính giữa màn: "Sự nghiệp" → Tiếp tục (tên, ngày, tiền; chưa có bản lưu thì mờ) / Chơi mới
-   (nhập tên, không hướng dẫn), "Hướng dẫn build" (nhập tên, có tour Keeb-chan), "Free build" (chọn case ở bảng `FreeBuildDialog`, có sẵn đủ đồ, không lưu, `startFree`), "Bảng xếp hạng" (popup bảng server, không còn app trong máy tính);
+   (nhập tên; lần đầu chơi trên máy thì chạy đoạn mở đầu: chữ studio → màn hình máy tính có tin nhắn mới → popup hỏi có cần hướng dẫn không, chọn ✓ thì có tour Keeb-chan), "Free build" (chọn case ở bảng `FreeBuildDialog`, có sẵn đủ đồ, không lưu, `startFree`), "Bảng xếp hạng" (popup bảng server, không còn app trong máy tính);
    ↑ ↓ + Enter, có âm thanh menu, nhạc nền phát ngay. Góc trên trái: bật / tắt nhạc; đáy: Facebook, số phiên bản (bấm xem lịch sử cập nhật).
 2. **Desktop giả lập "KeebOS"** (`screen = 'pc'`): các icon app và taskbar, hiện trong khung đúng mặt kính màn hình 3D (~90%, quanh đó thấy bàn / phòng). Chơi mới mở sẵn
    Mezzenger (vào game là đứng trong phòng cạnh máy tính, bấm màn hình mới vào desktop). Không có icon ra thẳng bàn build: nút **quay lại** góc trên trái (hoặc bấm vùng phòng ngoài màn hình; Esc thì mở Cài đặt)
@@ -229,7 +229,7 @@ Lần đầu ngồi máy tính có **tour** của Keeb-chan: màn tối, chỉ s
 tab mục hàng → ô chọn option đúng (FR4, 70 con, PBT · Trắng) → nút "Thêm vào giỏ" của đúng thẻ, kèm danh sách ✓ món đã mua → Giỏ hàng →
 "Hoả tốc" (đơn hạn dài thì giao chậm cho rẻ) → Đặt hàng → đứng dậy). "Bỏ qua hướng dẫn" để tắt; xem lại ở Cài đặt → Hướng dẫn.
 Tới bàn build (đơn hướng dẫn) tour cũng tối màn: thiếu đồ thì sáng nút đứng dậy, đủ thì nhắc bấm chuột trái vào thùng, rồi giới thiệu khung đơn / bước / việc cần làm,
-lúc đang lắp thì không khung / không tối (mũi tên vàng chỉ vật cần bấm + khung việc cần làm), đóng gói xong thì dẫn cầm thùng ra kệ giao hàng → thu tiền ở Mezzenger → bấm lịch kết thúc ngày; xong bước chỉ sáng nút "Bước tiếp theo" / "Bỏ qua". Màn tiêu đề: "Hướng dẫn build" = có tour, "Sự nghiệp → Chơi mới" = không hướng dẫn. Keeb-chan chỉ xuất hiện trong tour
+lúc đang lắp thì không khung / không tối (mũi tên vàng chỉ vật cần bấm + khung việc cần làm), đóng gói xong thì dẫn cầm thùng ra kệ giao hàng → thu tiền ở Mezzenger → bấm lịch kết thúc ngày; xong bước chỉ sáng nút "Bước tiếp theo" / "Bỏ qua". Không còn mục "Hướng dẫn build" ở màn tiêu đề: "Sự nghiệp → Chơi mới" lần đầu trên máy chạy đoạn mở đầu, popup cuối đoạn hỏi có cần hướng dẫn (✓ = có tour, ✗ = không); các lần sau không hướng dẫn. Keeb-chan chỉ xuất hiện trong tour
 (không còn tuỳ chọn ẩn / hiện, không còn lời dẫn "lần đầu gặp bước"); mọi đơn: lần đầu tới bước vặn vít / bước test có tour 1 lần.
 
 ### Cấp xưởng (mở khoá)

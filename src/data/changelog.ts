@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.40',
+    date: '2026-11-12',
+    commits: [],
+    title: 'Đoạn mở đầu cho người chơi mới',
+    items: [
+      'Bỏ mục "Hướng dẫn build" ở màn bắt đầu: lần đầu bấm "Chơi mới" có đoạn mở đầu (KeebStudio hân hạnh giới thiệu → màn hình máy tính báo tin nhắn mới) rồi hỏi có cần hướng dẫn không',
+      'Màn hình máy tính nhìn từ ngoài: ô icon đúng màu app, hình nền đang chọn, thời tiết, giờ + chuông thông báo',
+      'Dây điện + phích cắm trong phòng đổi màu trắng, dây vào đúng đuôi phích',
+      'Khung chứng chỉ thợ: kính nằm trong lòng khung, chữ tiếng Việt không vỡ dấu',
+    ],
+  },
+  {
     version: '0.1.39',
     date: '2026-11-12',
     commits: ['1bd764c'],

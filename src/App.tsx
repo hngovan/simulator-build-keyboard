@@ -26,6 +26,8 @@ import { useSceneLoading } from '@/scene/common/loadingStore'
 import { applyAudioSettings, startBgm } from '@/sound'
 import { TOUR_ID, Tour } from '@/features/guide/Tour'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
+import { Intro } from '@/features/intro/Intro'
+import { useIntro } from '@/features/intro/introStore'
 
 export default function App() {
   const screen = useGame((s) => s.screen)
@@ -39,6 +41,8 @@ export default function App() {
   const calendar = useRoom((r) => r.calendar)
   // tour hướng dẫn lần đầu ngồi máy tính (xong / bỏ qua thì ghi guideSeen)
   const tourSeen = useGame((s) => s.guideSeen.includes(TOUR_ID))
+  // đoạn mở đầu đang chạy (người chơi lần đầu): ẩn HUD đi lại, camera do IntroCam lái
+  const intro = useIntro((s) => !!s.phase)
   const audio = useGame((s) => s.audio)
   // phòng 3D chưa tải xong lần đầu: chỉ hiện màn chờ, xong mới hiện NPC / thông báo
   const loading = useSceneLoading((s) => !s.settled) && (screen === 'pc' || screen === 'bench')
@@ -80,7 +84,10 @@ export default function App() {
         <>
           {/* HUD đi lại (số thùng ở hành lang, trạng thái) chỉ hiện khi đã tải xong: lúc còn tải màn chờ chỉ phủ mờ */}
           {!zooming &&
+            !intro &&
             (walk ? !loading && <RoomHud /> : hasBuild ? <BenchHud /> : <EmptyBenchHud />)}
+          {/* người chơi lần đầu: chữ studio → màn hình có tin nhắn mới → hỏi hướng dẫn */}
+          {intro && !loading && <Intro />}
           {/* Keeb-chan chỉ nằm trong tour: tour bàn build (đơn hướng dẫn) / lời dẫn lần đầu gặp bước */}
           {!zooming && !walk && !loading && <BenchTour />}
           <ShelfViewer />

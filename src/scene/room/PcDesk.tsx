@@ -358,9 +358,11 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
           [C13_AT[0] - C13_LEN + 0.01, C13_AT[1], C13_AT[2]],
           [C13_AT[0] - C13_LEN - 0.01, C13_AT[1], C13_AT[2]],
           [-0.33, 0.07, -0.48],
-          [PLUG_END[0] + 0.01, PLUG_END[1] - 0.06, PLUG_END[2] + 0.005],
-          [PLUG_END[0] + 0.004, PLUG_END[1] - 0.025, PLUG_END[2] + 0.002],
-          PLUG_END,
+          // đuôi phích chĩa thẳng xuống: dây lên thẳng đứng đúng tâm đuôi, chui vào trong đuôi 3mm
+          [PLUG_END[0] + 0.006, PLUG_END[1] - 0.08, PLUG_END[2]],
+          [PLUG_END[0], PLUG_END[1] - 0.035, PLUG_END[2]],
+          [PLUG_END[0], PLUG_END[1] - 0.012, PLUG_END[2]],
+          [PLUG_END[0], PLUG_END[1] + 0.003, PLUG_END[2]],
         ]}
       />
       {/* ổ cắm trên tường sau (hệ bàn: −x là tường), phích máy tính cắm ổ trên */}

@@ -1,5 +1,29 @@
 # Cảnh 3D & model
 
+## 2026-11-12
+
+### Dây điện + phích cắm trong phòng: trắng, dây khớp đuôi phích
+
+- Yêu cầu: "dây điện nối vào jack cắm đang bị lệch" (phích nguồn máy tính ở ổ tường) + "đổi qua màu trắng các dây + jack cắm".
+- Nguyên nhân lệch: node `CEE 7/7` trong `power-cord-cee.glb` xoay sẵn 15° quanh trục chân → phích cắm nghiêng (2 chân không nằm ngang), đuôi dây chếch
+  15° trong khi dây tới gần như thẳng đứng và lệch tâm đuôi ~1mm.
+- Đã làm (`scene/room/Wiring.tsx`): `CEE_TILT` bù 15° (chân nằm ngang, đuôi chĩa thẳng xuống), `PLUGS.cee.exit` = tâm mặt đuôi đo lại từ lưới;
+  `PcDesk.tsx` đoạn cuối dây nguồn lên thẳng đứng đúng tâm, chui vào đuôi 3mm. Màu: `WHITE` cho `CABLE` (mọi dây `Cable`: màn hình, bàn phím,
+  nguồn, đèn bàn build), vỏ nhựa phích CEE + đầu C13 (`pick` đổi vật liệu tên `*Plastic`), vỏ đầu USB-C (`PLUG_SHELL`); phích `eu` của đèn về
+  nhựa trắng gốc (bỏ `blackPlug`).
+- Lưu ý: dây / phích trong phòng giữ màu trắng (không đổi lại đen). Dây JST / pin trong bàn phím không liên quan.
+- Kiểm tra: chụp ổ tường bàn máy tính trong game (Chrome ngầm): dây vào đúng đuôi phích.
+
+### Khung chứng chỉ thợ: kính vào trong lòng khung, chữ tiếng Việt không vỡ dấu
+
+- Yêu cầu: "khung ảnh và font chữ đang bị lỗi: kính nằm bên ngoài, font chữ Việt bị lỗi" (dấu ề / ắ tách rời khỏi chữ).
+- Nguyên nhân: model `picture-frame.glb` đặt kính 167 × 224mm trước mặt gỗ (z 0.010) trong khi lỗ khung chỉ 153 × 210mm → kính đè lên thanh gỗ;
+  giấy cũng to hơn lỗ nên lòi ở mép vát. Chữ vẽ canvas bằng Georgia, font này thiếu vài chữ có dấu tiếng Việt.
+- Đã làm (`scene/models/diplomaModel.ts`): node kính (`glazing`) co vừa lỗ + lùi vào lòng khung (`GLASS.z` 0.0065), giấy = lỗ + 1mm mỗi bên ngay sau kính
+  (`OPENING` / `PAPER`), canvas 768 × 1050 cho đúng tỉ lệ; font `SERIF` = Times New Roman (đủ dấu tiếng Việt). Không sửa file GLB.
+- Lưu ý: chữ vẽ canvas có tiếng Việt không dùng Georgia. Ảnh Shopii của chứng chỉ (`bake:thumbs`) chưa chụp lại.
+- Kiểm tra: dựng khung trong Chrome ngầm, chụp thẳng + nghiêng.
+
 ## 2026-11-11
 
 ### Switch: stem Kailh Box, thân stem, lò xo trong housing trong; DCS pháp tuyến

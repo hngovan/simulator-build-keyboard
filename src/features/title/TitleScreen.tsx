@@ -8,6 +8,7 @@ import { WORKSPACE_ART } from '@/components/art/workspace'
 import { GameLogo } from '@/components/art/GameLogo'
 import { Changelog, TitleModal } from './Changelog'
 import { Leaderboard } from '@/features/leaderboard/Leaderboard'
+import { introSeen } from '@/features/intro/introStore'
 
 /** trang Facebook tác giả */
 const AUTHOR_FB = 'https://www.facebook.com/mn.HoangEt'
@@ -21,19 +22,11 @@ function FacebookIcon({ className }: { className?: string }) {
   )
 }
 
-/** chế độ khi bắt đầu: sự nghiệp (không hướng dẫn) / hướng dẫn build (tour Keeb-chan đơn đầu tiên) */
-type Mode = 'career' | 'guide'
-
-/** Form nhập tên khi bắt đầu chơi mới */
-function NewGameForm({
-  mode,
-  onCancel,
-  overwrite,
-}: {
-  mode: Mode
-  onCancel: () => void
-  overwrite: boolean
-}) {
+/**
+ * Form nhập tên khi bắt đầu chơi mới. Lần đầu chơi trên máy này (chưa có bản lưu, chưa xem đoạn mở đầu) thì chạy đoạn mở đầu,
+ * cuối đoạn hỏi có cần hướng dẫn không; còn lại vào thẳng phòng, không hướng dẫn
+ */
+function NewGameForm({ onCancel, overwrite }: { onCancel: () => void; overwrite: boolean }) {
   const [name, setName] = useState('')
   const newGame = useGame((s) => s.newGame)
   return (
@@ -42,7 +35,7 @@ function NewGameForm({
       onSubmit={(e) => {
         e.preventDefault()
         playUiSelect()
-        newGame(name, mode === 'career')
+        newGame(name, overwrite || introSeen())
       }}
     >
       <label className="font-head text-lg font-extrabold">Tên thợ build của bạn</label>
@@ -86,7 +79,7 @@ export function TitleScreen() {
   const saveInfo = useGame((s) => s.saveInfo)
   const continueGame = useGame((s) => s.continueGame)
   const startFree = useGame((s) => s.startFree)
-  const [creating, setCreating] = useState<Mode | null>(null)
+  const [creating, setCreating] = useState(false)
   const [dialog, setDialog] = useState<'log' | 'board' | null>(null)
   const musicOff = useGame((s) => !!s.audio.musicOff)
   const setAudio = useGame((s) => s.setAudio)
@@ -99,8 +92,7 @@ export function TitleScreen() {
       off: !saveInfo,
       run: continueGame,
     },
-    { id: 'new', label: 'Chơi mới', sub: true, run: () => setCreating('career') },
-    { id: 'guide', label: 'Hướng dẫn build', run: () => setCreating('guide') },
+    { id: 'new', label: 'Chơi mới', sub: true, run: () => setCreating(true) },
     // không hỏi tên, không đụng bản lưu Sự nghiệp
     { id: 'free', label: 'Free build', run: startFree },
     // bảng xếp hạng server (không cần bản lưu)
@@ -128,7 +120,7 @@ export function TitleScreen() {
         if (dialog) setDialog(null)
         else if (creating) {
           playUiSelect()
-          setCreating(null)
+          setCreating(false)
         }
         return
       }
@@ -185,11 +177,7 @@ export function TitleScreen() {
 
         <div className="flex flex-col items-center">
           {creating ? (
-            <NewGameForm
-              mode={creating}
-              overwrite={!!saveInfo}
-              onCancel={() => setCreating(null)}
-            />
+            <NewGameForm overwrite={!!saveInfo} onCancel={() => setCreating(false)} />
           ) : (
             <nav className="flex flex-col items-center gap-1.5">
               {/* mục lớn "Sự nghiệp" chỉ là tiêu đề nhóm, mục con chữ nhỏ bên dưới */}

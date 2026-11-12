@@ -319,6 +319,25 @@ export function playUiSelect() {
   noiseBurst(ac().currentTime, { freq: 900, q: 1.2, dur: 0.07, gain: 0.6 })
 }
 
+/** Tin nhắn mới (đoạn mở đầu: màn hình máy tính báo tin): 2 nốt chuông ngắn đi lên */
+export function playNotify() {
+  const a = ac()
+  const t = a.currentTime
+  ;[880, 1320].forEach((f, i) => {
+    const osc = a.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.value = f
+    const g = a.createGain()
+    const s = t + i * 0.13
+    g.gain.setValueAtTime(0.0001, s)
+    g.gain.exponentialRampToValueAtTime(0.25, s + 0.015)
+    g.gain.exponentialRampToValueAtTime(0.0001, s + 0.45)
+    osc.connect(g).connect(effectsGain!)
+    osc.start(s)
+    osc.stop(s + 0.47)
+  })
+}
+
 export function playClick(freq = 2500) {
   if (playSfx('assembly/click.wav', 0.48, 0.94 + Math.random() * 0.12)) return
   noiseBurst(ac().currentTime, { freq, q: 3, dur: 0.04, gain: 0.5 })

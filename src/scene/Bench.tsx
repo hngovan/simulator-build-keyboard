@@ -22,6 +22,7 @@ import { warmUp } from './common/warmup'
 import { Room } from './Room'
 import { ROOM_BOUNDS } from './room/roomLayout'
 import { WalkControls } from './room/WalkControls'
+import { IntroCam } from './room/IntroCam'
 import { benchView } from './common/benchPose'
 import { CuttingMat } from './common/CuttingMat'
 import { EmptyBench } from './EmptyBench'
@@ -458,6 +459,8 @@ export function Bench() {
       {/* kéo Shift + chuột trái trượt theo mặt bàn thay vì theo màn hình */}
       <Controls />
       <PcZoom />
+      {/* đoạn mở đầu người chơi lần đầu (đặt sau Controls: chạy sau WalkControls mỗi khung) */}
+      <IntroCam />
       <PerfProbe />
       <AdaptiveDpr />
       {pc && <PcView />}
