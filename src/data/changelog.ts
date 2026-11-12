@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.40',
     date: '2026-11-12',
-    commits: [],
+    commits: ['8e11698'],
     title: 'Đoạn mở đầu cho người chơi mới',
     items: [
       'Bỏ mục "Hướng dẫn build" ở màn bắt đầu: lần đầu bấm "Chơi mới" có đoạn mở đầu (KeebStudio hân hạnh giới thiệu → màn hình máy tính báo tin nhắn mới) rồi hỏi có cần hướng dẫn không',
