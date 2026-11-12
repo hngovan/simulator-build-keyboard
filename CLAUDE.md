@@ -231,7 +231,7 @@ vào `window.__r3f` để debug trong console.
   cầm thùng đặt lên kệ giao hàng trong phòng = `placeShip` → `shipOrder` (cộng tiền / uy tín ngay, `PackedOrder.shipped`; Mezzenger không còn nút gửi),
   "Kết thúc ngày" (`nextDay()`) gửi nốt đơn chưa gửi.
   Kết thúc ngày = bấm lịch treo tường trong phòng (`CalendarDialog`) → popup `EndDayDialog` (tổng kết so `dayStart` tiền / uy tín đầu ngày, lưu Session).
-  Chat khách Mezzenger: tin ngắn `chatIntro` + bảng `OrderSpec` (không liệt kê từng yêu cầu thành tin).
+  Chat khách Mezzenger: tin ngắn `chatIntro` + bảng gọn `OrderSpec brief` (không liệt kê từng yêu cầu thành tin, không ảnh đơn); avatar khách `components/game/FaceAvatar` (mặt nét đơn, `mood` theo trạng thái đơn / số sao; dùng cả ở Danh sách đơn, Đánh giá). Chip yêu cầu ở Danh sách đơn ghi gọn bằng `variantTags` (kiểu chuẩn / khách không dặn thì không ghi).
   Mezzenger là app chat (hội thoại đơn mới / đã nhận / chờ gửi / đã gửi / từ chối, nút icon lọc `FilterMenu` Mới / Đang làm / Xong / Huỷ; trạng thái là vật gắn lên thẻ: chấm đỏ (đơn mới chưa xem, `seeOffer` → `Order.seen`) / ghim / kẹp giấy + hạn / tem bưu kiện / dấu mộc ĐÃ GIAO, HUỶ; đơn đã gửi + từ chối mất khi sang ngày; câu trả lời nhanh = tin gửi khách).
   Từ chối quá `DECLINE_FREE` đơn / ngày thì −1 uy tín; khách để lại đánh giá (`data/reviews.ts`, `Profile.reviews`) → thông báo
   góc phải trên (`ReviewPops`) + app "Đánh giá".
@@ -316,7 +316,7 @@ vào `window.__r3f` để debug trong console.
 - Test phím: PCB hàn còn phím chưa hàn / cháy thì bấm không ăn (`deadKey`, `build.testFaults` → StepList sáng "!" bước hàn để quay lại sửa);
   bước hàn cho "Bỏ dở" khi đã hàn ≥ 1 phím. Giao: phím chết chắc chắn bị khách báo lỗi nút, chưa test hết thì `UNTESTED_FAIL` 5% lỗi 1 nút
   (`DeliveryResult.defects`, sao tối đa 2, đánh giá ghi nút lỗi).
-- Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`) **chỉ nằm trong tour** (màn tiêu đề / màn chờ tải `BenchLoader` không có Keeb-chan; nền 2 màn = ảnh góc bàn `components/art/workspace.ts`; logo game `components/art/GameLogo.tsx`, icon chip HUD / mục Shopii `components/art/GameIcons.tsx`) (không còn NPC đứng riêng / mẹo máy tính, không có tuỳ chọn
+- Keeb-chan (`features/guide`, art `components/art/GuideGirl.tsx`) **chỉ nằm trong tour** (màn tiêu đề / màn chờ tải `BenchLoader` không có Keeb-chan; nền 2 màn = ảnh góc bàn `components/art/workspace.ts`; logo game `components/art/GameLogo.tsx`, icon chip HUD / linh kiện (mục Shopii 20px, ô Free build; vẽ theo hình linh kiện thật, nét mảnh + thân tô nhạt) `components/art/GameIcons.tsx`) (không còn NPC đứng riêng / mẹo máy tính, không có tuỳ chọn
   ẩn / hiện, không có "Xem lại"; màn tiêu đề không còn mục "Hướng dẫn build": "Sự nghiệp → Chơi mới" lần đầu trên máy (chưa có bản lưu + chưa có cờ `sbk-intro-seen`) = `newGame(name, false)` chạy đoạn mở đầu
   (`features/intro`: `useIntro.phase` credits → message → ask, camera `scene/room/IntroCam`: chữ "KeebStudio hân hạnh giới thiệu" trên cảnh phòng → bay vào màn hình máy tính báo tin nhắn mới → popup giữa màn "Hướng dẫn: bạn có muốn biết cách chơi không?" ✗ / ✓; ✓ = bật tour (`guideSeen: []`) + ngồi luôn vào máy tính, ✗ = đi lại tự do), còn lại `newGame(name, true)`; `newGame` luôn ghi sẵn `ALL_TOURS` (`data/tourIds.ts`);
   không còn "Bảng tỉ lệ" trong game, `data/odds.ts` chỉ để README chép). Lớp tour dùng chung `Spotlight.tsx` (+ `spotlightRect.ts` đo `data-tour`).

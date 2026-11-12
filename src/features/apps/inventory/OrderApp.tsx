@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Volume2 } from 'lucide-react'
 import { useGame } from '@/store'
-import { variantText } from '@/data/layouts'
+import { variantTags } from '@/data/layouts'
 import { SUPPLIES } from '@/data/supplies'
 import {
   CASES,
@@ -24,9 +24,6 @@ import {
   itemName,
   partSpent,
   soundLabel,
-  stabNeed,
-  stabStock,
-  stabText,
   switchOk,
   switchWant,
   mountStabIssue,
@@ -34,10 +31,9 @@ import {
 import { Badge, Button, OptionSelect, StepDot, TabChip, Toggle } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
 import { Bar, OrderCard, useOrderEntries, type OrderEntry } from '@/components/game/OrderCard'
-import { CustomerAvatar } from '@/components/game/CustomerAvatar'
+import { FaceAvatar } from '@/components/game/FaceAvatar'
 import { contextFor } from '@/data/steps'
 import type { BuildState, Inventory, Order, PartCategory } from '@/types'
-import { getLayout } from '@/data/layouts'
 import { plateLv } from '@/data/unlocks'
 
 /**
@@ -102,13 +98,13 @@ function wantText(cat: PartCategory, o: Order) {
   }
 }
 
-/** yêu cầu thêm của khách thành chip (biến thể layout, dây O-ring, lube, foam) */
+/** yêu cầu thêm của khách thành chip, ghi gọn bằng thuật ngữ phím cơ (WKL, 7u, No lube, Có foam...); khách không dặn thì không ghi */
 function wishChips(o: Order) {
   return [
-    ...variantText(o.variant),
+    ...variantTags(o.variant),
     o.oring && SUPPLIES[o.oring].name.replace('Dây ', ''),
-    o.lubePref === 'none' ? 'KHÔNG lube switch' : o.lubePref === 'want' && 'Lube switch',
-    o.foam ? 'Foam PCB: khách muốn' : 'Foam PCB: tuỳ shop',
+    o.lubePref === 'none' ? 'No lube' : o.lubePref === 'want' && 'Lube switch',
+    o.foam && 'Có foam',
   ].filter((x): x is string => !!x)
 }
 
@@ -143,17 +139,6 @@ function OrderDetail({ c }: { c: OrderEntry }) {
     inventory.switch && inventory.plate
       ? buildSound(inventory, mount, build, ctx?.keys.length)
       : null
-  const keys = getLayout(order.layout, order.variant).keys
-  // dòng phụ dưới tên món: switch / stab ghi số cần / số đang có
-  const subOf = (cat: PartCategory) => {
-    const sw = inventory.switch
-    if (cat === 'switch' && sw)
-      return `${SWITCHES[sw.type]?.name ?? sw.type} · cần ${Math.max(0, keys.length - placed)} / có ${sw.count}`
-    const st = inventory.stab
-    if (cat === 'stab' && st && keys.some((k) => k.stab))
-      return `cần ${stabText(stabNeed(keys))} · có ${stabText(stabStock(st))}`
-    return null
-  }
   const left = order.budget - spent
   const over = left < 0
   // chọn mount / plateless chỉ khi đơn đang làm chưa vào bàn build
@@ -181,7 +166,6 @@ function OrderDetail({ c }: { c: OrderEntry }) {
           {checks.map((x, i) => {
             // món sai loại / hết (`wrong`) = coi như chưa có: hiện loại khách cần, không hiện tên món đang có
             const has = x.wrong ? undefined : inventory[x.cat]
-            const sub = x.wrong ? null : subOf(x.cat)
             return (
               <div
                 key={x.cat}
@@ -199,11 +183,8 @@ function OrderDetail({ c }: { c: OrderEntry }) {
                   <span className="truncate font-bold">
                     {has ? itemName(x.cat, has) : wantText(x.cat, order)}
                   </span>
-                  {x.ok ? (
-                    sub && <span className="truncate text-xs text-muted">{sub} · đủ</span>
-                  ) : (
-                    <span className="text-xs text-red">{x.msg}</span>
-                  )}
+                  {/* đủ đồ thì không ghi gì thêm (mọi dòng cao bằng nhau), thiếu mới hiện lý do */}
+                  {!x.ok && <span className="text-xs text-red">{x.msg}</span>}
                   {x.cat === 'switch' && active && !provided.switch && (
                     <SwitchPick order={order} current={inventory.switch} build={build} />
                   )}
@@ -370,11 +351,7 @@ export function OrderApp() {
               key={p.order.id}
               className="flex items-center gap-3 rounded-2xl bg-panel-2 px-3 py-2.5"
             >
-              <CustomerAvatar
-                avatar={p.order.avatar}
-                customer={p.order.customer}
-                className="size-11 ring-2 ring-white/15"
-              />
+              <FaceAvatar name={p.order.customer} className="size-11 ring-2 ring-white/15" />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="truncate font-head text-lg font-extrabold">
                   {p.order.customer}

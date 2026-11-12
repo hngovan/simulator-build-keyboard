@@ -2,6 +2,26 @@
 
 ## 2026-11-12
 
+### Bộ icon linh kiện mới, avatar khách mặt nét đơn, Mezzenger + Danh sách đơn gọn hơn (0.1.41)
+
+- Bối cảnh: người dùng xem 2 bản HTML làm lại cả máy tính theo chủ đề keeb (keycap nổi khối → chê "nút nổi block khó chịu"; bản phẳng nhiều khoảng trống
+  kiểu MiSide → áp thử cho Mezzenger rồi bảo **trả lại UI cũ, chỉ giữ avatar**). **Không làm lại**: không đổi Mezzenger / cửa sổ sang kiểu phẳng, không nút keycap nổi khối.
+- Avatar khách: `components/game/FaceAvatar.tsx` (hình tròn pastel theo tên + mặt nét đơn, `mood` smile / flat / happy / sad). Mezzenger theo trạng thái đơn
+  (`moodOf`), Đánh giá theo số sao, Danh sách đơn mặc định. Bỏ `CustomerAvatar` + trường `avatar` của `Order` / `Review` (save cũ thừa trường, không sao).
+  `NameAvatar` (người bán ở chợ, bảng xếp hạng) vẫn dùng ảnh `public/avatars/moods`.
+- Mezzenger: bỏ ảnh bàn phím + khung xem 3D ở đầu hội thoại (`OrderImage`); bảng yêu cầu dùng `OrderSpec brief` (Layout, Switch, Keycap, Mount nếu đòi,
+  "Khách gửi", "Yêu cầu thêm" gộp 1 dòng, Ngân sách; bàn build vẫn bảng đủ); mở đơn mới đứng yên ở đầu, có tin mới thì nhảy thẳng xuống cuối
+  (bỏ cuộn mượt: người dùng thấy khung chat tự trôi); thẻ hội thoại đang chọn bỏ viền vàng, chưa chọn bỏ nền; bong bóng shop `#5540c9` chữ trắng;
+  emote canh `align-text-bottom` (chữ nằm đáy, không lơ lửng giữa emote).
+- Danh sách đơn (`OrderApp`): "Linh kiện cần có" đủ đồ thì không dòng phụ (mọi dòng cao bằng nhau), thiếu mới hiện lý do đỏ. Chip "Yêu cầu của khách" dùng
+  `variantTags` (layouts.ts: nhãn ngắn "WKL · space 7u", "Split backspace"...; kiểu chuẩn Backspace 2u / Enter ANSI / Caps thường không ghi), `No lube` / `Lube switch`,
+  `Có foam` chỉ khi khách dặn (bỏ "Foam PCB: tuỳ shop").
+- Icon linh kiện (`components/art/GameIcons.tsx`): vẽ lại theo hình linh kiện thật, nét mảnh `PART_W` 1.7 + thân tô nhạt `TINT`, chi tiết nét `FINE`.
+  Người dùng chốt từng hình theo ảnh mẫu: case = bàn phím 2 hàng chấm + thanh space; PCB = bo mạch chip + đường mạch gập 45° + lỗ via (vẽ lại, không chép
+  ảnh stock); plate = khung case nhưng lỗ rỗng (2 × 4 lỗ + lỗ space, tô evenodd); switch = nắp hình thang + cổ + đế 2 chân có chốt giữa. Mục hàng Shopii icon
+  20px (`TabChip iconSize`), Giỏ hàng giữ icon lucide cũ. Ô Layout / Mount / Feet ở Free build vẫn icon lucide.
+- Kiểm tra: Chrome ngầm chụp Mezzenger (nhận đơn), Shopii, bảng Free build.
+
 ### Bỏ mục "Hướng dẫn build", thay bằng đoạn mở đầu cho người chơi lần đầu
 
 - Yêu cầu: bỏ option hướng dẫn ở menu bắt đầu; người chơi lần đầu thấy "KeebStudio / hân hạnh giới thiệu" trên cảnh phòng → quay cảnh màn hình

@@ -269,6 +269,7 @@ export function Shopii() {
                 tour={`shopcat-${id}`}
                 icon={SHOP_CAT_ICONS[id]}
                 iconClass="text-[#f5a623]"
+                iconSize="size-5"
                 // đang tìm vẫn sáng mục (tìm trong mục đang chọn)
                 active={!shipView && cat === id}
                 title={saleCats.has(id) ? 'Mục này đang có món sale' : undefined}

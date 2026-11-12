@@ -18,50 +18,17 @@ import { LAYOUTS } from '@/data/layouts'
 import { CASES } from '@/data/parts'
 import { DECLINE_FREE } from '@/data/reviews'
 import { payout } from '@/store/scoring'
-import { Button, Muted, ThumbLoading, ViewHint, type ButtonTone } from '@/components/ui'
-import { CustomerAvatar } from '@/components/game/CustomerAvatar'
+import { Button, Muted, type ButtonTone } from '@/components/ui'
 import { OrderSpec } from '@/components/game/OrderSpec'
 import { chatIntro } from '@/data/orders'
 import { cn } from '@/lib/format'
 import type { Order } from '@/types'
 import type { PackedOrder } from '@/store/persistence'
 import { ChatBubble } from './ChatBubble'
+import { FaceAvatar, type Mood } from '@/components/game/FaceAvatar'
 import { Highlight } from './highlight'
 import { ResultCard } from './ResultCard'
-import { orderLook, useOrderThumb } from './orderThumb'
-import { OrderViewer } from './OrderViewer'
-
-/** Ảnh bàn phím ghép sẵn theo đơn; bấm để mở xem 3D chi tiết (chờ chụp xong thì hiện ô trống) */
-function OrderImage({ order, className }: { order: Order; className?: string }) {
-  const src = useOrderThumb(order)
-  const [open, setOpen] = useState(false)
-  return (
-    <>
-      <button
-        type="button"
-        title="Bấm để xem chi tiết 3D"
-        onClick={() => setOpen(true)}
-        className={cn(
-          'group relative flex shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-black/20',
-          className,
-        )}
-      >
-        {src ? (
-          <img
-            src={src}
-            alt={`Bàn phím ${LAYOUTS[order.layout].name}`}
-            className="h-full w-full object-contain"
-          />
-        ) : (
-          // ảnh đơn đang render lần đầu: khung loading thay icon tạm
-          <ThumbLoading />
-        )}
-        <ViewHint />
-      </button>
-      {open && <OrderViewer order={order} onClose={() => setOpen(false)} />}
-    </>
-  )
-}
+import { orderLook } from './orderThumb'
 
 const ADDRESSES = [
   '12 Nguyễn Trãi, Q.1, TP.HCM',
@@ -104,6 +71,16 @@ const inFilter = (t: Thread, f: Filter) =>
   f === 'all' ||
   (dropped(t) ? f === 'cancel' : FILTERS.find((x) => x[0] === f)![2].includes(t.kind))
 
+/** nét mặt avatar theo trạng thái đơn: huỷ = buồn, đã giao = cười tươi, đang làm = nghiêm túc */
+const moodOf = (t: Thread): Mood =>
+  dropped(t) || t.kind === 'rejected'
+    ? 'sad'
+    : t.kind === 'shipped'
+      ? 'happy'
+      : t.kind === 'accepted'
+        ? 'flat'
+        : 'smile'
+
 // tin nhắn qua lại của từng hành động (shop gửi → khách đáp)
 const MSG = {
   accept: 'Ok shop nhận đơn này nhé 👌',
@@ -126,7 +103,7 @@ function UnreadDot() {
   return (
     <span
       aria-label="Chưa xem"
-      className="pointer-events-none absolute top-1.5 right-1.5 size-3 rounded-full bg-red ring-2 ring-panel-2"
+      className="pointer-events-none absolute top-1.5 right-1.5 size-3 rounded-full bg-red ring-2 ring-panel"
     />
   )
 }
@@ -382,14 +359,14 @@ function ThreadRow({
       data-tour={tour}
       className={cn(
         'relative flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
-        active ? 'bg-[#3a3418] ring-2 ring-yellow ring-inset' : 'bg-panel-2 hover:bg-line',
+        active ? 'bg-[#3a3418]' : 'hover:bg-panel-2',
         cut && 'opacity-60',
         t.kind === 'shipped' && 'opacity-80',
       )}
     >
-      <CustomerAvatar
-        avatar={t.order.avatar}
-        customer={t.order.customer}
+      <FaceAvatar
+        name={t.order.customer}
+        mood={moodOf(t)}
         className="size-10 ring-2 ring-white/15"
       />
       {/* chừa chỗ cho vật gắn ở góc phải */}
@@ -499,12 +476,13 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
   const [askedAddr, setAskedAddr] = useState(false)
   const [score, setScore] = useState(false)
   const body = useRef<HTMLDivElement>(null)
-  // cuộn xuống tin mới nhất khi đổi hội thoại / trạng thái đơn / có tin gửi; không theo object `t`
-  // (dựng lại mỗi lần render, bấm xem ảnh đơn cũng làm khung chat bị cuộn)
-  const threadKey = `${t.order.id}:${t.kind}`
+  // đơn mới vừa mở: đứng yên ở đầu để đọc từ lời chào. Có tin mới (trả lời, đơn đổi trạng thái: ChatView dựng lại theo `key`)
+  // thì nhảy thẳng xuống tin cuối, không hoạt cảnh cuộn (mở hội thoại không còn tự trôi xuống)
+  const unread = t.kind === 'offer' && !sent
   useEffect(() => {
-    body.current?.scrollTo({ top: body.current.scrollHeight, behavior: 'smooth' })
-  }, [sent, askedAddr, score, threadKey])
+    const el = body.current
+    if (el && !unread) el.scrollTop = el.scrollHeight
+  }, [unread, askedAddr, score])
   const packed = t.kind === 'packed' || t.kind === 'shipped' ? t.packed : null
   const shipped = t.kind === 'shipped'
   const { pickup, address } = delivery(order)
@@ -528,9 +506,9 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
         >
           <ChevronLeft className="size-5" />
         </button>
-        <CustomerAvatar
-          avatar={order.avatar}
-          customer={order.customer}
+        <FaceAvatar
+          name={order.customer}
+          mood={moodOf(t)}
           className="size-10 ring-2 ring-white/15"
         />
         <div className="min-w-0 flex-1">
@@ -547,9 +525,6 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
         ref={body}
         className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto rounded-xl bg-black/15 px-3 py-3"
       >
-        <ChatBubble from="in">
-          <OrderImage order={order} className="h-[120px] w-[200px]" />
-        </ChatBubble>
         {/* tin khách ngắn gọn (1–2 ý chính) + bảng tóm tắt yêu cầu cho dễ đọc */}
         {chatIntro(order).map((l, i) => (
           <ChatBubble key={i} from="in">
@@ -557,7 +532,7 @@ function ChatView({ t, onReply, onBack }: { t: Thread; onReply: () => void; onBa
           </ChatBubble>
         ))}
         <ChatBubble from="in" wide>
-          <OrderSpec order={order} compact />
+          <OrderSpec order={order} compact brief />
         </ChatBubble>
         {accepted && <ChatBubble from="out">{MSG.accept}</ChatBubble>}
         {accepted && <ChatBubble from="in">{MSG.accepted(order)}</ChatBubble>}

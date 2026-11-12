@@ -17,7 +17,9 @@ export function ChatBubble({
       className={cn(
         'animate-fade-in rounded-xl px-3 py-2 leading-snug',
         wide ? 'w-[92%]' : 'max-w-[78%]',
-        from === 'in' ? 'self-start rounded-bl-sm bg-panel-2' : 'self-end rounded-br-sm bg-purple',
+        from === 'in'
+          ? 'self-start rounded-bl-sm bg-panel-2'
+          : 'self-end rounded-br-sm bg-[#5540c9] text-white',
       )}
     >
       {withEmotes(children)}

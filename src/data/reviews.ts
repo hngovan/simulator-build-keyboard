@@ -62,7 +62,6 @@ const base = (order: Order, day: number) => ({
   id: `${order.id}-${day}-${Math.random().toString(36).slice(2, 6)}`,
   day,
   customer: order.customer,
-  avatar: order.avatar,
 })
 
 /** uy tín khi giao hàng: sao − 3, trễ mỗi ngày −1, case hỏng trừ thêm `repLoss` */

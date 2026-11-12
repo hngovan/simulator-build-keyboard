@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.41',
+    date: '2026-11-12',
+    commits: [],
+    title: 'Icon linh kiện mới, Mezzenger gọn hơn',
+    items: [
+      'Bộ icon linh kiện vẽ lại theo hình thật (case, PCB, plate, stab, switch, keycap, lube, dụng cụ, chứng chỉ, sách phép) ở Shopii + Free build, mục hàng Shopii icon 20px',
+      'Avatar khách kiểu mặt nét đơn nền pastel, nét mặt đổi theo trạng thái đơn / số sao (Mezzenger, Danh sách đơn, Đánh giá)',
+      'Mezzenger: bỏ ảnh bàn phím đầu hội thoại, bảng yêu cầu rút gọn, mở hội thoại không còn tự cuộn, thẻ hội thoại bỏ viền / nền, tin của shop tím đậm dễ đọc',
+      'Danh sách đơn: đủ đồ thì không ghi dòng phụ, yêu cầu của khách ghi gọn (WKL · space 7u, No lube, Có foam), khách không dặn thì không ghi',
+    ],
+  },
+  {
     version: '0.1.40',
     date: '2026-11-12',
     commits: ['8e11698'],

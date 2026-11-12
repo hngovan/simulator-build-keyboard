@@ -8,6 +8,7 @@ export function TabChip({
   active,
   icon: Icon,
   iconClass,
+  iconSize = 'size-4',
   count,
   title,
   onClick,
@@ -20,6 +21,8 @@ export function TabChip({
   icon?: LucideIcon | GameIcon
   /** màu icon khi chưa chọn (vd vàng cam ở mục hàng Shopii); đang chọn thì theo màu chữ */
   iconClass?: string
+  /** cỡ icon (mặc định 16px; mục hàng Shopii 20px cho rõ chi tiết linh kiện) */
+  iconSize?: string
   /** số món trong mục (Kho) */
   count?: number
   /** tooltip 1 dòng */
@@ -45,7 +48,7 @@ export function TabChip({
         className,
       )}
     >
-      {Icon && <Icon className={cn('size-4 shrink-0', !active && iconClass)} />}
+      {Icon && <Icon className={cn(iconSize, 'shrink-0', !active && iconClass)} />}
       {children}
       {count !== undefined && (
         <span

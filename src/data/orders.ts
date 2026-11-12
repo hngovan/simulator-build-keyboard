@@ -26,7 +26,6 @@ import {
   stabLv,
   switchLv,
 } from './unlocks'
-import { avatarSrc } from './avatars'
 import {
   CASES,
   PLATES,
@@ -79,7 +78,6 @@ const CUSTOMERS = [
   'Chị Ngọc',
   'Bạn Long',
 ]
-const avatarFor = (customer: string) => avatarSrc(CUSTOMERS.indexOf(customer))
 const PACKAGING = ['túi zip', 'hộp giấy', 'thùng carton']
 
 export function estimateCost(
@@ -405,7 +403,6 @@ function randomOrder(layout_?: LayoutId, pay = 1, lv = 1): Order {
     days,
     ...(featured ? { featured: featured.id } : {}),
     customer,
-    avatar: avatarFor(customer),
     layout,
     variant,
     wish,
@@ -449,7 +446,6 @@ export function tutorialOrder(): Order {
     tutorial: true,
     days,
     customer,
-    avatar: avatarFor(customer),
     layout,
     variant: {},
     wish: 'thock',

@@ -316,7 +316,6 @@ export interface Order {
   /** đơn kit theo thiết kế bàn phím mở (Bakeneko 60, Planck...) */
   featured?: string
   customer: string
-  avatar: string
   layout: LayoutId
   variant: Variant
   wish: SoundWish
@@ -693,7 +692,6 @@ export interface Review {
   id: string
   day: number
   customer: string
-  avatar: string
   /** 1–5 sao */
   stars: number
   text: string

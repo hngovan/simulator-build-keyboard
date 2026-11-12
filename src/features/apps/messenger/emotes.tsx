@@ -41,7 +41,7 @@ function Emote({ name, className }: { name: string; className?: string }) {
       alt={name}
       title={name}
       draggable={false}
-      className={cn('inline-block h-[1.7em] w-auto align-middle', className)}
+      className={cn('inline-block h-[1.7em] w-auto align-text-bottom', className)}
     />
   )
 }

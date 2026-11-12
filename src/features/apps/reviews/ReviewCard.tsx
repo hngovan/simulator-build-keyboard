@@ -1,4 +1,4 @@
-import { CustomerAvatar } from '@/components/game/CustomerAvatar'
+import { FaceAvatar } from '@/components/game/FaceAvatar'
 import { cn } from '@/lib/format'
 import type { Review } from '@/types'
 
@@ -18,9 +18,9 @@ const KIND_TEXT = { ship: 'Đã nhận hàng', decline: 'Bị từ chối đơn'
 export function ReviewCard({ r, className }: { r: Review; className?: string }) {
   return (
     <div className={cn('flex shrink-0 gap-3 rounded-xl bg-panel-2 px-3 py-2', className)}>
-      <CustomerAvatar
-        avatar={r.avatar}
-        customer={r.customer}
+      <FaceAvatar
+        name={r.customer}
+        mood={r.stars >= 4 ? 'happy' : r.stars <= 2 ? 'sad' : 'flat'}
         className="size-10 shrink-0 ring-2 ring-white/15"
       />
       <div className="min-w-0 flex-1">

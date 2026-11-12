@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui'
 import { cn, fmt } from '@/lib/format'
 import type { Order } from '@/types'
 import type { JobSession } from '@/store/persistence'
-import { CustomerAvatar } from './CustomerAvatar'
+import { FaceAvatar } from './FaceAvatar'
 
 /** 1 đơn trong danh sách đơn: đang làm / đã nhận (đơn mới chỉ nhận ở Mezzenger, không hiện ở đây) */
 export interface OrderEntry {
@@ -114,11 +114,7 @@ export function OrderCard({
         onClick={toggle}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggle()}
       >
-        <CustomerAvatar
-          avatar={order.avatar}
-          customer={order.customer}
-          className="size-11 ring-2 ring-white/15"
-        />
+        <FaceAvatar name={order.customer} className="size-11 ring-2 ring-white/15" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex min-w-0 items-center gap-1.5">
             <span

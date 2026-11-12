@@ -15,7 +15,6 @@ import {
 } from '@/data/parts'
 import { SUPPLIES } from '@/data/supplies'
 import { topUpSpells } from '@/features/apps/settings/devMoney'
-import { avatarSrc } from '@/data/avatars'
 import type { KeycapMaterial, LayoutId, Order, SoundWish, ToolKind, Variant } from '@/types'
 
 // Free build: chọn case (+ màu, layout, mount, PCB, plate, stab, switch, keycap; feet / thiếc / O-ring = vật tư đang chọn) ở bảng `FreeBuildDialog` rồi vào bàn build luôn với đủ linh kiện,
@@ -118,7 +117,6 @@ export function startFreeBuild(o: FreeBuildOpts) {
     days: 999,
     dueDay: s.day + 999,
     customer: 'Free build',
-    avatar: avatarSrc(0),
     layout: o.layout,
     variant,
     wish: Object.keys(SOUND_WISH)[0] as SoundWish,

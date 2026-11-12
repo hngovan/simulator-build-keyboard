@@ -832,6 +832,32 @@ export const offUniversal = (keys: Key[]) =>
 export const variantText = (v: Variant) =>
   (Object.entries(v) as [VariantKey, string][]).map(([k, val]) => VARIANT_INFO[k][val])
 
+/** nhãn ngắn kiểu dân phím cơ cho chip yêu cầu (WKL, 7u...); kiểu chuẩn mặc định (Backspace 2u, Enter ANSI, Caps thường...) = null, không ghi */
+const VARIANT_TAG: Record<VariantKey, Record<string, string | null>> = {
+  backspace: { '2u': null, split: 'Split backspace', row2: 'Backspace hàng 2' },
+  bottom: { wk: 'WK · space 6.25u', wk7: 'WK · space 7u', wkl: 'WKL · space 7u' },
+  rshift: { '2.75u': null, split: 'Split shift phải' },
+  lshift: { '2.25u': null, split: 'Shift trái ISO' },
+  caps: { normal: null, stepped: 'Caps stepped' },
+  enter: { ansi: null, iso: 'Enter ISO', bae: 'Big-ass Enter' },
+  space: {
+    '6.25u': 'Space 6.25u',
+    '7u': 'Space 7u',
+    '10u': 'Space 10u',
+    hhkb: 'HHKB · space 7u',
+    hhkbSplit: 'HHKB split space 2.75 / 1.5 / 2.75',
+    hhkbSplit3: 'HHKB split space 3 / 1 / 3',
+    hhkbSplit275: 'HHKB split space 2.75 / 1.25 / 3',
+    split: 'Split space 2.25 / 1.25 / 2.75',
+    arrow: 'Split space + mũi tên',
+  },
+}
+/** chip layout của đơn: chỉ các kiểu khác chuẩn, ghi ngắn (vd ["WKL · space 7u", "Split backspace"]) */
+export const variantTags = (v: Variant) =>
+  (Object.entries(v) as [VariantKey, string][])
+    .map(([k, val]) => (val in VARIANT_TAG[k] ? VARIANT_TAG[k][val] : VARIANT_INFO[k][val]))
+    .filter((x): x is string => !!x)
+
 export function randomVariant(layoutId: LayoutId): Variant {
   const v: Variant = {}
   for (const [k, opts] of Object.entries(LAYOUTS[layoutId].variants) as [VariantKey, string[]][])

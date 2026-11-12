@@ -26,18 +26,75 @@ const LUBE_PREF = {
   any: 'Tuỳ shop',
 } as const
 
-/** Khối "Kit khách gửi" trên đầu: chữ xanh, mỗi món 1 dòng = đã có sẵn, không cần mua */
-function KitBox({ order, compact }: { order: Order; compact?: boolean }) {
-  const k = order.kit!
-  // khách chỉ gửi 1 vài món: liệt kê món nào có
-  const items = [
-    // tên case chung đã có chữ "Case" (vd "Case 75% mica") thì không thêm nữa
-    k.case &&
-      `${/^case /i.test(CASES[k.case.id].name) ? '' : 'Case '}${CASES[k.case.id].name} (${caseColorOf(k.case.color).name})`,
+/** tên case chung đã có chữ "Case" (vd "Case 75% mica") thì không thêm nữa */
+const caseName = (id: string) => `${/^case /i.test(CASES[id].name) ? '' : 'Case '}${CASES[id].name}`
+
+/** món khách gửi trong kit (khách chỉ gửi 1 vài món: liệt kê món nào có) */
+function kitItems(order: Order): string[] {
+  const k = order.kit
+  if (!k) return []
+  return [
+    k.case && `${caseName(k.case.id)} (${caseColorOf(k.case.color).name})`,
     k.pcb && `PCB ${pcbLabel(k.pcb)}`,
     k.plate && `Plate ${PLATES[k.plate.material].name}`,
     k.stab && `Stab ${STABS[k.stab.type].name}`,
   ].filter((x): x is string => !!x)
+}
+
+/** Bảng gọn cho hội thoại Mezzenger: vài dòng chính, yêu cầu đích danh gộp 1 dòng (chi tiết đủ ở app Danh sách đơn / bàn build) */
+function briefRows(order: Order): [string, ReactNode][] {
+  const k = order.kit
+  const vt = variantText(order.variant)
+  const rows: [string, ReactNode][] = [
+    ['Layout', `${LAYOUTS[order.layout].name}${vt.length ? ' · ' + vt.join(' · ') : ''}`],
+    ['Switch', switchWant(order) ?? 'Shop tự chọn'],
+    [
+      'Keycap',
+      [
+        order.keycapKit && KEYCAP_KITS[order.keycapKit].profile.toUpperCase(),
+        order.keycapMaterial && KEYCAP_MATERIALS[order.keycapMaterial].name,
+        keycapColorOf(order.keycapColor).name,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    ],
+  ]
+  if (order.mount) rows.push(['Mount', MOUNTS[order.mount].name])
+  const sent = kitItems(order)
+  if (sent.length)
+    rows.push(['Khách gửi', <span className="text-[#9fe6b6]">{sent.join(', ')}</span>])
+  // món khách đòi đích danh (không gửi kèm) + lube / foam: chỉ ghi khi có yêu cầu
+  const extra = [
+    order.oring && SUPPLIES[order.oring].name,
+    !k?.case &&
+      (order.caseId || order.caseColor) &&
+      [
+        order.caseId ? caseName(order.caseId) : 'Case',
+        order.caseColor && CASE_COLORS[order.caseColor].name,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    !k?.pcb && order.pcbType && `PCB ${PCB_TYPES[order.pcbType].name}`,
+    !k?.plate && order.plateMaterial && `Plate ${PLATES[order.plateMaterial].name}`,
+    !k?.stab && order.stabType && `Stab ${STABS[order.stabType].name}`,
+    order.lubePref === 'want' && 'Lube switch',
+    order.lubePref === 'none' && 'Không lube switch',
+    order.foam && 'Lót foam PCB',
+  ].filter((x): x is string => !!x)
+  if (extra.length) rows.push(['Yêu cầu thêm', extra.join(' · ')])
+  rows.push([
+    'Ngân sách',
+    <>
+      <span className="text-green">{fmt(order.budget)}</span> · công{' '}
+      <span className="text-green">{fmt(order.labor)}</span>
+    </>,
+  ])
+  return rows
+}
+
+/** Khối "Kit khách gửi" trên đầu: chữ xanh, mỗi món 1 dòng = đã có sẵn, không cần mua */
+function KitBox({ order, compact }: { order: Order; compact?: boolean }) {
+  const items = kitItems(order)
   return (
     <div
       className={cn(
@@ -59,13 +116,17 @@ function KitBox({ order, compact }: { order: Order; compact?: boolean }) {
 export function OrderSpec({
   order,
   compact,
+  brief,
   mount,
 }: {
   order: Order
   compact?: boolean
+  /** bảng gọn vài dòng chính (hội thoại Mezzenger) */
+  brief?: boolean
   /** kiểu mount đang build (bàn build): luôn hiện dòng Mount, ghi chú nếu khách đòi mount khác */
   mount?: string | null
 }) {
+  if (brief) return <KeyValueTable rows={briefRows(order)} compact={compact} />
   const vt = variantText(order.variant)
   const rows: [string, ReactNode][] = [
     ['Layout', `${LAYOUTS[order.layout].name}${vt.length ? ' · ' + vt.join(' · ') : ''}`],
