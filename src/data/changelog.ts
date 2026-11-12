@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.41',
     date: '2026-11-12',
-    commits: [],
+    commits: ['cbed22d'],
     title: 'Icon linh kiện mới, Mezzenger gọn hơn',
     items: [
       'Bộ icon linh kiện vẽ lại theo hình thật (case, PCB, plate, stab, switch, keycap, lube, dụng cụ, chứng chỉ, sách phép) ở Shopii + Free build, mục hàng Shopii icon 20px',
