@@ -6,6 +6,7 @@ import { Y } from '@/data/steps'
 import { roomGuideTarget, type GuideTarget } from '@/features/guide/roomGuideSteps'
 import { CALENDAR, DOORWAY, FLOOR_Y, HALL, M, PC_DESK, RACK, ROOM, SHIP_SHELF } from './roomLayout'
 import { useRoom } from './roomStore'
+import { useIntro } from '@/features/intro/introStore'
 
 /** chỗ đặt điểm đánh dấu (đơn vị cảnh), lơ lửng trên vật cần bấm */
 const SPOT: Record<GuideTarget, [number, number, number]> = {
@@ -37,7 +38,9 @@ const f = new THREE.Vector3()
 export function GuideMarker() {
   const walk = useGame((s) => s.walk)
   const target = useGame(roomGuideTarget)
-  const at = walk && target ? SPOT[target] : null
+  // đang tập đi lại (sau đoạn mở đầu): không có mũi tên, máy tính có icon tin nhắn riêng (`IntroSpots`)
+  const learning = useIntro((s) => !!s.learn)
+  const at = walk && target && !learning ? SPOT[target] : null
   const ref = useRef<THREE.Mesh>(null)
   const last = useRef({ dir: NaN, dist: NaN })
   useEffect(() => {

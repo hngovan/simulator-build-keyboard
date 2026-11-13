@@ -8,6 +8,8 @@ import { ControlsHint, KeyCap, MouseIcon } from '@/components/game/ControlsHint'
 import { useRoom } from '@/scene/room/roomStore'
 import { boxCustomer, isPackedBox } from '@/store/carrySlice'
 import { RoomGuide } from '@/features/guide/RoomGuide'
+import { LearnPad } from '@/features/intro/LearnHud'
+import { useIntro } from '@/features/intro/introStore'
 
 /** cách điều khiển khi đi lại: 1 dòng chữ to giữa đáy màn hình (đang khoá tâm chuột: rê chuột nhìn, giữ Alt hiện chuột) */
 const HINT_LOCKED = (
@@ -47,6 +49,7 @@ export function RoomHud() {
   const hoverNote = useRoom((r) => r.hoverNote)
   const calendar = useRoom((r) => r.calendar)
   const locked = useRoom((r) => r.locked)
+  const learning = useIntro((s) => !!s.learn)
   // thùng đang chờ ở kệ cuối hành lang: thùng đơn khách gửi tới + thùng kiện Shopii / chợ đã tới
   // (kiện cùng nguồn + cùng tên gộp 1 thùng như trên kệ, `parcelStacks`: đếm theo thùng nhìn thấy, không theo từng kiện)
   const atDoor = useGame(
@@ -94,6 +97,7 @@ export function RoomHud() {
       )}
       {/* Keeb-chan dẫn người mới: bấm màn hình máy tính → nhận kiện → cầm thùng đơn → bàn build */}
       <RoomGuide />
+      <LearnPad />
       {heldWho && !hover && !hoverNote && (
         <div className="pointer-events-none fixed bottom-16 left-1/2 z-[5] -translate-x-1/2 rounded-xl bg-[rgba(14,16,24,0.85)] px-4 py-2 font-head text-lg font-bold text-ink max-md:bottom-3">
           {heldPacked
@@ -101,9 +105,10 @@ export function RoomHud() {
             : `Đang cầm thùng đơn của ${heldWho}: bấm bàn build để đặt, hoặc cất lại kệ cuối hành lang`}
         </div>
       )}
+      {/* đang tập đi lại (sau đoạn mở đầu): không có dòng chữ đáy màn nào (kể cả chữ gợi ý lúc rê vào vật), chỉ vòng tròn / dấu ? / phụ đề */}
       {/* rê vào vật bấm được: dòng hướng dẫn đổi thành "Nhấn [chuột trái] {việc}" (cùng kiểu chữ trắng, không khung) */}
       <ControlsHint>
-        {hoverNote && !calendar ? (
+        {learning ? null : hoverNote && !calendar ? (
           // trỏ vật không bấm được gì (vd bàn build trống): chỉ dòng chữ
           <span>{hoverNote}</span>
         ) : hover && !calendar ? (

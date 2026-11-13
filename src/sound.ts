@@ -674,6 +674,101 @@ function ambientLoop(a: AudioContext) {
   return buffer
 }
 
+// Nhạc đoạn mở đầu (thay nhạc nền lúc chạy `features/intro`): file `public/audio/intro.mp3` nếu có, không thì bản tổng hợp
+// `introTheme`. Lặp tới khi dừng, vào / ra đều tắt dần
+let introMusic: { source: AudioBufferSourceNode; gain: GainNode } | undefined
+let introWanted = false
+let introTrack: Promise<AudioBuffer> | undefined
+
+export function startIntroMusic() {
+  if (introWanted || !activated()) return
+  introWanted = true
+  const a = ac()
+  void a.resume().catch(() => undefined)
+  introTrack ??= fetch('/audio/intro.mp3')
+    .then((res) =>
+      res.ok && res.headers.get('content-type')?.startsWith('audio')
+        ? res.arrayBuffer().then((buf) => a.decodeAudioData(buf))
+        : null,
+    )
+    .catch(() => null)
+    .then((buffer) => buffer ?? introTheme(a))
+  void introTrack.then((buffer) => {
+    if (!introWanted || introMusic) return
+    const source = a.createBufferSource()
+    source.buffer = buffer
+    source.loop = true
+    const gain = a.createGain()
+    gain.gain.setValueAtTime(0, a.currentTime)
+    gain.gain.linearRampToValueAtTime(1, a.currentTime + 1.2)
+    source.connect(gain).connect(musicGain!)
+    source.start()
+    introMusic = { source, gain }
+  })
+}
+
+/** dừng nhạc đoạn mở đầu, tắt dần trong `fade` giây */
+export function stopIntroMusic(fade = 1.5) {
+  introWanted = false
+  if (!introMusic || !ctx) return
+  const { source, gain } = introMusic
+  introMusic = undefined
+  const t = ctx.currentTime
+  gain.gain.cancelScheduledValues(t)
+  gain.gain.setValueAtTime(gain.gain.value, t)
+  gain.gain.linearRampToValueAtTime(0, t + fade)
+  source.onended = () => {
+    source.disconnect()
+    gain.disconnect()
+  }
+  source.stop(t + fade + 0.05)
+}
+
+/**
+ * Nhạc mở đầu tổng hợp, loop 16 giây: 4 hợp âm (Cmaj7 → Am7 → Fmaj7 → G) nền sóng sin ngân dài + chuông rải từng nốt nửa giây một
+ * (đuôi chuông vắt qua điểm nối loop cho liền)
+ */
+function introTheme(a: AudioContext) {
+  const BAR = 4
+  const CHORDS = [
+    [130.81, 164.81, 196.0, 246.94],
+    [110.0, 130.81, 164.81, 196.0],
+    [87.31, 110.0, 130.81, 164.81],
+    [98.0, 123.47, 146.83, 196.0],
+  ]
+  /** thứ tự rải nốt trong 1 hợp âm */
+  const ARP = [0, 2, 1, 3, 2, 3, 1, 2]
+  const rate = a.sampleRate
+  const buffer = a.createBuffer(1, rate * BAR * CHORDS.length, rate)
+  const data = buffer.getChannelData(0)
+  const TAU = Math.PI * 2
+  CHORDS.forEach((chord, c) => {
+    // nền: mỗi hợp âm vào / ra êm 0,8s
+    const start = c * BAR * rate
+    for (let i = 0; i < BAR * rate; i++) {
+      const local = i / rate
+      const env = Math.min(local / 0.8, 1, (BAR - local) / 0.8)
+      const time = (start + i) / rate
+      let v = 0
+      for (const f of chord) v += Math.sin(TAU * f * time) * 0.045
+      data[start + i] += v * env
+    }
+    // chuông: cao hơn 2 quãng tám, tắt dần 1,6s
+    ARP.forEach((n, k) => {
+      const f = chord[n] * 4
+      const at = start + Math.floor(k * 0.5 * rate)
+      const len = Math.floor(1.6 * rate)
+      for (let i = 0; i < len; i++) {
+        const t = i / rate
+        const env = Math.min(t / 0.005, 1) * Math.exp(-t * 3.2)
+        data[(at + i) % data.length] +=
+          (Math.sin(TAU * f * t) + Math.sin(TAU * f * 2 * t) * 0.25) * 0.07 * env
+      }
+    })
+  })
+  return buffer
+}
+
 export function stopBgm() {
   bgmWanted = false
   bgmPending = false

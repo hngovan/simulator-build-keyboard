@@ -3,8 +3,8 @@ import type { ReactNode } from 'react'
 /** nút chuột sáng lên: trái / phải / con lăn */
 type MouseBtn = 'left' | 'right' | 'wheel'
 
-/** Hình chuột nhỏ, sáng phần nút cần bấm (xanh) */
-export function MouseIcon({ btn }: { btn: MouseBtn }) {
+/** Hình chuột nhỏ, sáng phần nút cần bấm (xanh); không `btn` = chỉ hình chuột (rê chuột) */
+export function MouseIcon({ btn }: { btn?: MouseBtn }) {
   const on = '#3ecf6e'
   return (
     <svg viewBox="0 0 20 28" className="h-8 w-6 shrink-0" aria-hidden>

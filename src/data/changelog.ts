@@ -13,6 +13,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.42',
+    date: '2026-11-13',
+    commits: [],
+    title: 'Đoạn mở đầu mới: tập đi lại, Keeb-chan chào, cốt truyện',
+    items: [
+      'Chơi mới lần nào cũng có đoạn mở đầu (phím bất kỳ để bỏ qua, Esc không bỏ qua), nhạc riêng, camera bay vào màn hình rồi lùi về mới hỏi hướng dẫn',
+      'Chọn hướng dẫn: tập nhìn quanh / di chuyển bằng vòng tròn góc màn hình, dấu ? ở bàn build, lịch, kệ nhận hàng bấm ra phụ đề chạy chữ, màn hình máy tính có icon tin nhắn + bong bóng "Tương tác"',
+      'Cốt truyện: đang thất nghiệp thì anh QuýB (bạn cũ) nhắn nhờ build 1 con 60%, từ đó mở xưởng; Keeb-chan chào và hỏi tên xưởng ngay trong game (màn tiêu đề không hỏi tên nữa)',
+      'Màn tiêu đề: hỏi ghi đè bản lưu ngay trong menu chữ, bỏ dòng hướng dẫn phím góc trái',
+      'Hình đỡ răng cưa nhấp nháy khi camera di chuyển (không hạ độ phân giải dưới 1, lọc ảnh model trong phòng), bỏ la bàn trên khung lời dẫn',
+    ],
+  },
+  {
     version: '0.1.41',
     date: '2026-11-12',
     commits: ['cbed22d'],

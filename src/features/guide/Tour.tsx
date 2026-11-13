@@ -156,7 +156,7 @@ function buyPart(
 const STEPS: TourStep[] = [
   {
     target: 'app-messenger',
-    text: 'Chào chủ xưởng mới! Khách đặt phím qua Mezzenger. Bấm vào đây để mở xem đơn nhé!',
+    text: 'Khách đặt phím qua Mezzenger, tin vừa tới nằm trong đó. Bấm vào đây để mở xem đơn nhé!',
   },
   {
     target: 'offer',

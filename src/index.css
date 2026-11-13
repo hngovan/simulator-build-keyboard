@@ -62,6 +62,17 @@
       opacity: 0;
     }
   }
+  /* Keeb-chan vẫy chào (màn chào + đặt tên xưởng): lắc người qua lại quanh chân */
+  --animate-wave: wave 0.9s ease-in-out infinite;
+  @keyframes wave {
+    0%,
+    100% {
+      transform: rotate(-3deg);
+    }
+    50% {
+      transform: rotate(4deg) translateY(-6px);
+    }
+  }
   @keyframes bob {
     50% {
       transform: translateY(-10px) rotate(-4deg);

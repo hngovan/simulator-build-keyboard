@@ -7,7 +7,8 @@ import { pcEye, screenCenter } from '../models/computerLayout'
 import { BLOCKS, BODY_R, EYE_Y, M, SPOTS, WALK_AREAS } from './roomLayout'
 import { useRoom } from './roomStore'
 import { useMouseSens } from '@/lib/mouseSens'
-import { useIntro } from '@/features/intro/introStore'
+import { learnAdd, useIntro } from '@/features/intro/introStore'
+import { PAN_LOOK, PAN_TO } from './introPath'
 
 /** tốc độ đi (m/s); phòng hẹp nên không có chạy */
 const SPEED = 2.2
@@ -306,6 +307,7 @@ export function WalkControls() {
         const look = LOCK_LOOK * useMouseSens.getState().sens * (1 - s.shownZoom * (1 - ZOOM_MIN))
         s.yaw -= e.movementX * look
         s.pitch = THREE.MathUtils.clamp(s.pitch - e.movementY * look, -1.5, 1.5)
+        learnAdd('look', (Math.abs(e.movementX) + Math.abs(e.movementY)) * look)
         return
       }
       const d = s.drag
@@ -318,6 +320,7 @@ export function WalkControls() {
       const look = LOOK * useMouseSens.getState().sens * (1 - s.shownZoom * (1 - ZOOM_MIN))
       s.yaw -= dx * look
       s.pitch = THREE.MathUtils.clamp(s.pitch - dy * look, -1.35, 1.35)
+      learnAdd('look', (Math.abs(dx) + Math.abs(dy)) * look)
       d.x = e.clientX
       d.y = e.clientY
     }
@@ -353,8 +356,24 @@ export function WalkControls() {
     const s = st.current
     const cam = state.camera
     // đang bay vào màn hình máy tính: PcZoom điều khiển camera
-    // đoạn mở đầu: IntroCam điều khiển camera (xong thì bay từ màn hình ra chỗ đứng như vừa rời máy tính)
-    if (useGame.getState().pcZoom || useIntro.getState().phase) return
+    // đoạn mở đầu: IntroCam điều khiển camera (xong thì bay từ chỗ camera đang đứng ra chỗ đứng đi lại)
+    if (useIntro.getState().phase) {
+      if (s.anim) {
+        // hết đoạn mở đầu: đứng ngay dưới chỗ camera vừa nhìn toàn cảnh (phía sau phòng), vẫn nhìn về 2 cái bàn, không bay tới sát máy tính
+        const a = s.anim
+        a.t = 0
+        a.from.copy(cam.position)
+        a.fromQ.copy(cam.quaternion)
+        a.to.set(PAN_TO.x, EYE_Y, PAN_TO.z)
+        collide(a.to)
+        const look = aim(a.to, PAN_LOOK)
+        s.yaw = look.yaw
+        s.pitch = look.pitch
+        a.toQ.setFromEuler(new THREE.Euler(look.pitch, look.yaw, 0, 'YXZ'))
+      }
+      return
+    }
+    if (useGame.getState().pcZoom) return
     const dt = Math.min(rawDt, 1 / 30)
     // zoom mượt về mức muốn; bay camera (ngồi / đứng) thì bỏ zoom
     if (s.anim) s.zoom = 0
@@ -390,6 +409,7 @@ export function WalkControls() {
     if (move.lengthSq()) {
       move.normalize()
       pos.addScaledVector(fwd, move.y * speed).addScaledVector(right, move.x * speed)
+      learnAdd('move', SPEED * dt)
     }
     collide(pos)
     pos.y = EYE_Y

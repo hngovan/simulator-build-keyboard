@@ -23,10 +23,12 @@ import { Bench } from '@/scene/Bench'
 import { PayBanner } from '@/components/game/PayBanner'
 import { onBench } from '@/store/carrySlice'
 import { useSceneLoading } from '@/scene/common/loadingStore'
-import { applyAudioSettings, startBgm } from '@/sound'
+import { applyAudioSettings, startBgm, startIntroMusic, stopBgm, stopIntroMusic } from '@/sound'
 import { TOUR_ID, Tour } from '@/features/guide/Tour'
 import { SettingsDialog } from '@/features/settings/SettingsDialog'
 import { Intro } from '@/features/intro/Intro'
+import { IntroCaption } from '@/features/intro/LearnHud'
+import { Greeting } from '@/features/intro/Greeting'
 import { useIntro } from '@/features/intro/introStore'
 
 export default function App() {
@@ -44,6 +46,8 @@ export default function App() {
   // đoạn mở đầu đang chạy (người chơi lần đầu): ẩn HUD đi lại, camera do IntroCam lái
   const intro = useIntro((s) => !!s.phase)
   const audio = useGame((s) => s.audio)
+  // lượt Sự nghiệp mới chưa đặt tên xưởng (Free build không hỏi)
+  const named = useGame((s) => !!s.name || s.free)
   // phòng 3D chưa tải xong lần đầu: chỉ hiện màn chờ, xong mới hiện NPC / thông báo
   const loading = useSceneLoading((s) => !s.settled) && (screen === 'pc' || screen === 'bench')
   // fast bid ở Hội Phím Cơ: bot ghé bid / bình luận, hết giờ thì chốt bán (kể cả khi không mở tab chợ)
@@ -63,9 +67,16 @@ export default function App() {
   useAppShortcuts()
   useEffect(() => {
     applyAudioSettings(audio)
-    // nhạc nền phát mặc định ở mọi màn (cả màn tiêu đề), tắt bằng nút nhạc / cài đặt âm thanh (`musicOff`)
-    startBgm(audio)
-  }, [audio, screen])
+    // nhạc nền phát mặc định ở mọi màn (cả màn tiêu đề), tắt bằng nút nhạc / cài đặt âm thanh (`musicOff`);
+    // đoạn mở đầu có nhạc riêng, xong mới phát lại nhạc nền
+    if (intro) {
+      stopBgm()
+      startIntroMusic()
+    } else {
+      stopIntroMusic()
+      startBgm(audio)
+    }
+  }, [audio, screen, intro])
   return (
     <>
       {screen === 'title' && <TitleScreen />}
@@ -75,7 +86,9 @@ export default function App() {
         <>
           <Desktop />
           <BenchLoader />
-          {!tourSeen && !loading && !zooming && <Tour />}
+          {/* lượt mới chưa đặt tên: Keeb-chan chào + hỏi tên xưởng trước, xong mới tới tour */}
+          {!named && !loading && !zooming && <Greeting />}
+          {named && !tourSeen && !loading && !zooming && <Tour />}
           {/* đơn hướng dẫn đã gửi: chỉ chỗ thu tiền */}
           {tourSeen && !loading && !zooming && <PayTour />}
         </>
@@ -95,6 +108,7 @@ export default function App() {
           <BenchLoader />
         </>
       )}
+      <IntroCaption />
       <Toasts />
       <GlobalTooltip />
       <PerfHud />

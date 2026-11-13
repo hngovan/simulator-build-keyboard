@@ -10,7 +10,7 @@ import { useGame } from '@/store'
 /**
  * Vật bấm được trong phòng: rê chuột viền xanh + HUD hiện "Nhấn [chuột] {label}", bấm (không phải kéo nhìn) thì `onAct`.
  * Phải đứng gần (`REACH_M` theo mặt sàn) mới rê sáng / bấm được. outline = false: con tự vẽ viền (màn hình máy tính có viền riêng);
- * `outlineScale`: viền dày hơn cho vật mỏng (tờ lịch)
+ * `outlineScale`: viền dày hơn cho vật mỏng (tờ lịch); `block`: chặn tia rê xuyên qua vật này tới vật phía sau (dấu ? lơ lửng trước bàn build)
  */
 export function RoomSpot({
   label,
@@ -18,6 +18,7 @@ export function RoomSpot({
   active = true,
   outline = true,
   outlineScale = 1,
+  block = false,
   children,
   ...props
 }: {
@@ -26,6 +27,7 @@ export function RoomSpot({
   active?: boolean
   outline?: boolean
   outlineScale?: number
+  block?: boolean
   children: ReactNode
 } & Omit<JSX.IntrinsicElements['group'], 'children'>) {
   const ref = useRef<THREE.Group>(null)
@@ -52,12 +54,14 @@ export function RoomSpot({
       {...props}
       onPointerOver={(e: ThreeEvent<PointerEvent>) => {
         if (!active) return
+        if (block) e.stopPropagation()
         bind.onPointerOver(e)
         if (can(e)) useRoom.setState({ hover: label, hoverNote: null })
       }}
       // con tự bắt hover (màn hình máy tính) chặn onPointerOver lan lên: lấy chữ gợi ý theo lúc rê
       onPointerMove={(e: ThreeEvent<PointerEvent>) => {
         if (!active) return
+        if (block) e.stopPropagation()
         const ok = can(e)
         const cur = useRoom.getState().hover
         if (ok && cur !== label) useRoom.setState({ hover: label, hoverNote: null })

@@ -1,3 +1,4 @@
+import { tipFirstClick } from '@/features/intro/introStore'
 import { useEffect, useMemo } from 'react'
 import * as THREE from 'three'
 import { useGame } from '@/store'
@@ -166,7 +167,8 @@ export function WallCalendar(props: JSX.IntrinsicElements['group']) {
       <RoomSpot
         label="Xem lịch / kết thúc ngày"
         outlineScale={2}
-        onAct={() => useRoom.setState({ calendar: true })}
+        // tập đi lại sau đoạn mở đầu: bấm lịch lần đầu chỉ hiện phụ đề giới thiệu (như bấm dấu ? cạnh lịch), lần sau mới mở lịch
+        onAct={() => tipFirstClick('calendar') || useRoom.setState({ calendar: true })}
       >
         {/* bìa cứng sau tờ lịch */}
         <mesh position-z={0.004} castShadow>

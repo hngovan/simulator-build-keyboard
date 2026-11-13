@@ -439,7 +439,8 @@ export function tutorialOrder(): Order {
   const { keys } = getLayout(layout, {})
   const budget = round100(estimateCost(layout, null, keycapKit) * 1.5)
   const labor = Math.round((250 + keys.length * 6 + 80) / 50) * 50
-  const customer = 'Anh Tuấn'
+  // khách đơn hướng dẫn (tên người dùng chọn); thẻ tin nhắn trên màn hình 3D + phụ đề `PC_LINE` đoạn mở đầu ghi cùng tên
+  const customer = 'Anh QuýB'
   const days = 4
   return {
     id: `o${Date.now().toString(36)}tut`,

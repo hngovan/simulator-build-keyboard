@@ -330,7 +330,17 @@ function Model({
   const copy = useMemo(() => {
     const model = scene.clone(true)
     model.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) o.castShadow = o.receiveShadow = !noShadow
+      const mesh = o as THREE.Mesh
+      if (!mesh.isMesh) return
+      o.castShadow = o.receiveShadow = !noShadow
+      // ảnh trên model nhìn xiên / từ xa (tranh treo tường, vân gỗ): lọc bất đẳng hướng cho khỏi nhấp nháy sọc khi camera di chuyển
+      for (const m of [mesh.material].flat()) {
+        const map = (m as THREE.MeshStandardMaterial).map
+        if (map && map.anisotropy < 8) {
+          map.anisotropy = 8
+          map.needsUpdate = true
+        }
+      }
     })
     return model
   }, [scene, noShadow])

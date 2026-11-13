@@ -38,8 +38,9 @@ export function SettingsDialog() {
   if (!open || screen === 'title') return null
   const close = () => useSettingsPop.setState({ open: false })
   return createPortal(
+    // z trên lớp tour (Spotlight 2500, LearnHud 2600) + popup 3000, dưới hỏi lưu khi thoát (3500) / thua game (4000)
     <div
-      className="fixed inset-0 z-[2000] grid animate-fade-in place-items-center bg-black/60 p-4"
+      className="fixed inset-0 z-[3200] grid animate-fade-in place-items-center bg-black/60 p-4"
       onPointerDown={(e) => e.target === e.currentTarget && close()}
     >
       <div className="flex max-h-[min(84vh,680px)] w-[min(94vw,560px)] flex-col overflow-hidden rounded-2xl border-[3px] border-black/40 bg-panel shadow-[0_16px_50px_rgba(0,0,0,0.5)]">

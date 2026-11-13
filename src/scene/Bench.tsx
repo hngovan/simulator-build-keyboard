@@ -22,7 +22,9 @@ import { warmUp } from './common/warmup'
 import { Room } from './Room'
 import { ROOM_BOUNDS } from './room/roomLayout'
 import { WalkControls } from './room/WalkControls'
+import { useIntro } from '@/features/intro/introStore'
 import { IntroCam } from './room/IntroCam'
+import { IntroSpots } from './room/IntroSpots'
 import { benchView } from './common/benchPose'
 import { CuttingMat } from './common/CuttingMat'
 import { EmptyBench } from './EmptyBench'
@@ -374,17 +376,20 @@ function BenchShadows() {
 
 /** trần độ phân giải (màn HiDPI / Windows scale 150%: dpr 2 = vẽ gấp 4 lần số điểm ảnh) */
 const MAX_DPR = Math.min(typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1, 1.5)
-const MIN_DPR = 0.75
+// không xuống dưới 1: vẽ thấp hơn màn hình rồi phóng lên thì nét mảnh (rèm lá, vân gỗ, tranh) nhấp nháy sọc khi camera di chuyển
+const MIN_DPR = Math.min(1, MAX_DPR)
 
 /**
  * Tự hạ / nâng độ phân giải theo FPS thật (drei PerformanceMonitor): tụt dưới ngưỡng thì giảm dần tới MIN_DPR, dư thì nâng
- * lại tới MAX_DPR; lật qua lật lại 3 lần thì chốt mức hiện tại. Tắt khi ngồi máy tính (frameloop demand → FPS thấp giả)
+ * lại tới MAX_DPR; lật qua lật lại 3 lần thì chốt mức hiện tại. Tắt khi ngồi máy tính (frameloop demand → FPS thấp giả) / đang đoạn mở đầu
  */
 function AdaptiveDpr() {
   const setDpr = useThree((s) => s.setDpr)
   const pc = useGame((s) => s.screen === 'pc')
+  // đoạn mở đầu: vừa tải xong cảnh FPS còn thấp giả (biên dịch shader), đổi độ phân giải giữa lúc camera lia thì hình giật
+  const intro = useIntro((s) => !!s.phase)
   useEffect(() => () => setDpr(MAX_DPR), [setDpr])
-  if (pc) return null
+  if (pc || intro) return null
   return (
     <PerformanceMonitor
       factor={1}
@@ -461,6 +466,8 @@ export function Bench() {
       <PcZoom />
       {/* đoạn mở đầu người chơi lần đầu (đặt sau Controls: chạy sau WalkControls mỗi khung) */}
       <IntroCam />
+      {/* tập đi lại sau đoạn mở đầu: dấu ? + bong bóng "Tương tác" ở màn hình máy tính */}
+      <IntroSpots />
       <PerfProbe />
       <AdaptiveDpr />
       {pc && <PcView />}

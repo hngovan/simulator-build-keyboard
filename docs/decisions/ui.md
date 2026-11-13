@@ -1,5 +1,78 @@
 # Giao diện
 
+## 2026-11-13
+
+### Đoạn mở đầu chạy mỗi lần "Chơi mới", bấm phím bất kỳ để bỏ qua
+
+- Yêu cầu: người dùng bấm Chơi mới không thấy đoạn mở đầu nữa (do cờ theo máy `sbk-intro-seen` + chơi mới đè bản lưu thì bỏ qua) → chốt:
+  đoạn mở đầu luôn chạy, bấm phím bất kỳ để bỏ qua. **Không làm lại** kiểu "chỉ lần đầu trên máy".
+- `newGame(name)` bỏ tham số `experienced`, luôn đặt `useIntro.phase = 'credits'`; bỏ `introSeen` / `markIntroSeen` + khoá `sbk-intro-seen`
+  (`introStore.ts`), `TitleScreen` gọi `newGame(name)`.
+- `Intro.tsx`: lúc chưa tới popup, bấm chuột / phím bất kỳ (trừ Shift / Ctrl / Alt / Meta / Tab / phím F và tổ hợp có Ctrl / Alt / Meta) nhảy tới popup
+  hỏi hướng dẫn; chữ gợi ý đáy "Bấm phím bất kỳ để bỏ qua". Popup hỏi hướng dẫn vẫn hiện mỗi lần (✗ Esc / ✓ Enter) nên chơi mới lúc nào cũng bật lại tour được.
+- Đã làm bản HTML đề xuất Keeb-chan tự hỏi thay popup + ngồi lại máy khi chọn ✗ → người dùng **từ chối** ("bản hiện tại khá ổn"), không làm lại.
+
+### Đoạn mở đầu: nhạc riêng + camera lùi về chỗ chữ studio rồi mới hỏi
+
+- Yêu cầu: lúc intro đang phát nhạc nền thường → phải là nhạc của intro; màn hình báo tin nhắn xong camera phải lùi về đúng vị trí lúc hiện chữ
+  "KeebStudio hân hạnh giới thiệu" rồi mới hiện popup hỏi hướng dẫn.
+- Nhạc (`sound.ts`): `startIntroMusic` / `stopIntroMusic` (vào 1,2s, ra tắt dần 1,5s, đi qua `musicGain` nên theo âm lượng / tắt nhạc). Phát file
+  `public/audio/intro.mp3` nếu có, **chưa có file** nên đang dùng bản tổng hợp `introTheme` (loop 16s, 4 hợp âm nền + chuông rải). `App.tsx`: đang intro
+  thì `stopBgm` + nhạc intro, hết intro thì ngược lại.
+- Camera (`IntroCam.tsx`, `INTRO.back` 2s): lia phòng → bay tới màn hình → `ping` → giữ `INTRO.ask` → lùi về `PAN_TO` / `PAN_LOOK` → `phase = 'ask'`;
+  bỏ qua thì đứng luôn ở `PAN_TO`.
+- (Đã đổi ở mục dưới: ✓ không bay vào máy nữa.) Trả lời (`Intro.tsx`): ✓ = `zoomToPC()` (`PcZoom` bay từ chỗ đang đứng vào màn hình rồi vào desktop, thẻ tin nhắn giữ 1,5s), ✗ = đi lại tự do;
+  `WalkControls` lúc intro cập nhật điểm xuất phát của hoạt cảnh đứng dậy theo camera (trước cứ bay từ màn hình ra).
+
+### Sau khi chọn ✓: tập đi lại, dấu ?, bong bóng "Tương tác", Keeb-chan chào + đặt tên xưởng trong game
+
+- Yêu cầu (theo ảnh mẫu người dùng gửi): chọn ✓ xong hiện vòng tròn góc phải dưới "nhìn xung quanh" (chuột) → "di chuyển" (WASD) → hiện hướng dẫn,
+  dấu ? trên bàn build + lịch (bấm ra câu phụ đề chữ to), tới gần màn hình máy tính hiện bong bóng tương tác, bấm thì phụ đề rồi vào máy;
+  vào máy Keeb-chan vẫy chào kiểu màn hội thoại rồi hỏi tên xưởng; màn Chơi mới không còn hỏi tên.
+- `introStore.ts`: `learn` look / move / free, `progress`, `tips`, `caption`, `nearPc`; `learnAdd` (WalkControls cộng góc nhìn `NEED.look` 3,2 rad /
+  quãng đi `NEED.move` 3m), `say()` phụ đề, `INTRO_OFF`.
+- `features/intro/LearnHud.tsx`: `LearnPad` (vòng tròn, viền vàng theo tiến độ, đầy thì xanh) trong `RoomHud`; `IntroCaption` (chữ cam viền kem) trong `App`.
+  Lúc look / move ẩn khung lời dẫn `RoomGuide` + mũi tên `GuideMarker` + dòng điều khiển đáy màn (khi đã khoá chuột).
+- `scene/room/IntroSpots.tsx`: dấu ? (sprite canvas trong `RoomSpot`, câu ở `TIPS`), bong bóng "Tương tác" (drei `Html`, cách màn hình < 2,2m; lúc đó ẩn
+  `RoomGuide` khỏi đè), bắt `pcZoom` bật = phụ đề `PC_LINE` + hết tập. Chỉ có chuột trái, **không thêm phím E** (game không có phím tương tác).
+- `Intro.tsx` ✓: `guideSeen: []` + `learn: 'look'`, không bay vào máy; trả lời xong xin khoá tâm chuột luôn.
+- Tên: `newGame()` không nhận tên, `name: ''`; `TitleScreen` Chơi mới vào thẳng (có bản lưu thì khung hỏi ghi đè, không ô nhập). `features/intro/Greeting.tsx`
+  (App: `screen === 'pc'` + `name` rỗng + không Free build): nền tím chấm bi, Keeb-chan to (ảnh 2D `keeb-chan.webp`, lắc người `animate-wave`: chưa có model 3D /
+  ảnh tay vẫy riêng), khung thoại + thẻ tên, Space / Enter / bấm sang câu, câu 3 ô nhập tên, hết câu cuối mới ghi `name` → tour chạy (✓) hoặc thôi (✗).
+  Chưa đặt tên thì chưa tính lượt chơi (các chỗ `!s.name`: không "Tiếp tục", không gửi bảng xếp hạng). Câu đầu tour bỏ "Chào chủ xưởng mới!".
+- Sửa theo góp ý: hết đoạn mở đầu đứng ngay dưới chỗ camera nhìn toàn cảnh (`PAN_TO`, `scene/room/introPath.ts`; `WalkControls` đổi đích hoạt cảnh,
+  trước bay tới sát máy tính → người dùng chê "đang nhìn toàn cảnh tự nhiên đứng gần máy tính"); vòng tròn to `size-40` cho W A S D khỏi đè viền;
+  lúc look / move bỏ hẳn dòng điều khiển đáy màn (kể cả chưa khoá chuột).
+- Bấm chuột lúc intro đang chạy không còn bỏ qua (người dùng bấm nhầm là popup hiện luôn), chỉ phím mới bỏ qua.
+- Khung lời dẫn đi lại `RoomGuide`: xoá la bàn (mũi tên + "phía trước · 3m") theo yêu cầu, còn mũi tên 3D `GuideMarker`.
+- Màn tiêu đề: bỏ dòng "↑ ↓ Chọn · Enter Vào" góc dưới trái (phím vẫn dùng được). Hỏi ghi đè bản lưu khi "Chơi mới" không còn khung
+  `NewGameForm` (lạc quẻ với menu chữ): đổi luôn menu thành "Chơi mới?" + dòng "Bản lưu xưởng X (ngày N) sẽ bị ghi đè." + 2 mục
+  "Quay lại" (mặc định) / "Chơi mới", cùng kiểu chữ + ↑ ↓ Enter Esc. Chưa có bản lưu thì vào thẳng, không hỏi.
+- Hình nhấp nháy sọc lúc intro / tranh cafe (chưa tái hiện được trên ảnh tĩnh, đoán là răng cưa lúc camera di chuyển): `AdaptiveDpr` không hạ
+  dưới 1 (`MIN_DPR`, trước 0,75) + tắt lúc đang intro; `Model` trong Room.tsx đặt `anisotropy` 8 cho ảnh của model GLB.
+- Tập đi lại: bỏ mũi tên vàng `GuideMarker` suốt lúc `learn`; màn hình máy tính có icon tin nhắn cam (`PcMark` trong IntroSpots, khác dấu ?)
+  hiện sẵn từ đầu bước `free`, tới gần thì đổi thành bong bóng "Tương tác". Phụ đề đổi sang chữ trắng viền đen (cam viền kem khó đọc).
+- Đã thử ảnh Keeb-chan đứng mới (tách nền, hình cắt giấy trong phòng 3D rồi ở màn chào): người dùng chê xấu, **trả lại nhân vật cũ**
+  (`GuideGirl`, `keeb-chan.webp`), gỡ hết ảnh / component thử. Không đặt nhân vật ngoài phòng 3D. Màn chào `Greeting`: thử đặt nhân vật
+  góc trái trên thẻ tên, người dùng bảo đưa lại ra giữa (như ban đầu).
+- Đoạn mở đầu: Esc không còn tính là "phím bất kỳ" để bỏ qua (bấm 2 lần liền là ✗ luôn popup hướng dẫn); ở popup Esc cũng không làm gì (người dùng bảo bỏ, ✗ phải bấm nút), Enter vẫn = ✓.
+- Bong bóng "Tương tác" (drei `Html` = lớp DOM, không bị tường che) hiện xuyên tường khi đứng ngoài hành lang: `nearPc` thêm điều kiện đứng trong phòng (`camera.x > HALL.x1`).
+- Chữ studio đoạn mở đầu khó đọc trên phòng sáng màu: thêm lớp phủ tối `#0d0f16`/60 cả màn hiện / tan cùng nhịp chữ (`animate-credits`) + chữ viền đen 6px.
+- Tập đi lại: bấm màn hình máy tính lần đầu chỉ hiện phụ đề "Có tin nhắn mới từ anh QuýB. Xem nào..." (khách đơn hướng dẫn `tutorialOrder` đổi tên Anh Tuấn → Anh QuýB theo yêu cầu) (`pcFirstClick` trong introStore, gọi ở `zoomToPC`, cờ `useIntro.pcRead`), bấm lần nữa mới bay vào máy (trước: hiện chữ rồi vào luôn).
+- Tập đi lại: bấm thẳng vào tờ lịch lần đầu (dấu ? cạnh lịch chưa xem) cũng chỉ hiện phụ đề giới thiệu rồi bỏ dấu ?, lần sau mới mở lịch (`tipFirstClick('calendar')` trong `WallCalendar`).
+- Dấu ? lộ ô vuông quanh hình tròn khi đứng trước khối mờ chỗ đặt thùng trên bàn (tấm ảnh trong suốt vẫn ghi độ sâu, che khối mờ vẽ sau): sprite `depthWrite={false}` + `renderOrder` 10. Khối mờ giữ nguyên (không ẩn).
+- Tập đi lại: thêm dấu ? thứ 3 trên kệ nhận hàng cuối hành lang (`TipId` `'door'`, `ALL_TIPS`, câu trong `TIPS`).
+- Cốt truyện (người dùng chốt, thay bản "ông chủ scammer hoàn lương" đã thử): người chơi đang thất nghiệp, bạn cũ anh QuýB nhắn nhờ build
+  1 con 60% → nảy ra ý mở xưởng với kinh nghiệm chơi phím lâu năm; **người chơi là chủ xưởng**. Kể ở màn chào `Greeting` (5 câu, câu hỏi tên = `ASK`)
+  - câu dấu ? / `PC_LINE` trong introStore (lời tự nói của người chơi). Tin nhắn đơn hướng dẫn trong Mezzenger chưa viết lại theo truyện.
+- Suốt lúc tập đi lại (`useIntro.learn` còn, cả bước `free`): ẩn khung lời dẫn `RoomGuide` và **mọi** dòng chữ đáy màn của `RoomHud`
+  (dòng điều khiển + chữ gợi ý lúc rê vào vật) theo yêu cầu; chỉ còn vòng tròn, dấu ?, bong bóng "Tương tác", phụ đề.
+- Phụ đề `IntroCaption` chạy chữ dần (`Typed`, `TYPE_MS` 32ms / ký tự, phần chưa hiện vẫn chiếm chỗ); `say(text, ms)` = chạy hết chữ rồi giữ thêm `ms`.
+- Lỗi bấm dấu ? không ra phụ đề: dấu ? lơ lửng trong vùng bấm vô hình của bàn build nên bàn nhận bấm trước rồi chặn. Sửa: sprite dùng
+  `raycast={hitFirst}` (IntroSpots.tsx, báo khoảng cách 0 → luôn đứng đầu) + `RoomSpot` thêm prop `block` (chặn tia rê xuyên tới vật phía sau).
+- Kiểm tra: Chrome ngầm hồ sơ tạm chạy trọn luồng (bỏ qua intro → ✓ → vòng tròn → free → bay vào máy → chào → đặt tên → tour), không lỗi console.
+  Chưa thử được bằng tay: khoá chuột thật, bấm dấu ? bằng tâm ngắm.
+
 ## 2026-11-12
 
 ### Bộ icon linh kiện mới, avatar khách mặt nét đơn, Mezzenger + Danh sách đơn gọn hơn (0.1.41)
@@ -36,6 +109,7 @@
 - `newGame` luôn ghi `guideSeen = ALL_TOURS`; ✓ mới đặt `guideSeen: []` + `goPC()` (tour máy tính chạy ngay từ bước mở Mezzenger, khớp với tin nhắn vừa tới);
   ✗ thì WalkControls bay từ màn hình ra chỗ đứng (hoạt cảnh đứng dậy sẵn có). Lời chào "Chào mừng..." dời xuống cuối đoạn mở đầu.
 - Lưu ý: sau lần đầu không còn cách bật lại tour (đúng yêu cầu "chỉ lần đầu"); muốn xem lại thì xoá `sbk-intro-seen` + bản lưu.
+  (2026-11-13 đã đổi: đoạn mở đầu chạy mỗi lần Chơi mới, xem mục trên.)
 - Kiểm tra: Chrome ngầm chạy `newGame('Test', false)`, chụp từng đoạn + bấm ✓.
 
 ### Màn hình 3D ngoài phòng: ô icon đúng màu app
