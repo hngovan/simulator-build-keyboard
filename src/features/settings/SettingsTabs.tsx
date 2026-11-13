@@ -80,7 +80,7 @@ function MouseSensSection() {
     >
       <Row className="flex-col items-stretch gap-1.5">
         <div className="flex items-center justify-between gap-3 font-bold">
-          <span>Góc nhìn (FOV)</span>
+          <span>Góc nhìn của camera (FOV)</span>
           <span className="flex items-center gap-2">
             {fov !== FOV_DEFAULT && (
               <Button size="sm" title="Về góc nhìn mặc định" onClick={() => setFov(FOV_DEFAULT)}>
@@ -96,7 +96,7 @@ function MouseSensSection() {
           max={FOV_MAX}
           step={1}
           onChange={(v) => setFov(Math.round(v))}
-          aria-label="Góc nhìn khi đi lại"
+          aria-label="Góc nhìn của camera khi đi lại"
           title="Chỉnh góc nhìn (FOV) khi đi lại"
         />
       </Row>
