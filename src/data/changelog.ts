@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.44',
     date: '2026-11-14',
-    commits: [],
+    commits: ['a7e9010'],
     title: 'Cốt truyện mới: thợ cũ của shop QMK làm lại từ đầu',
     items: [
       'Cốt truyện viết lại: bạn từng là thợ build phím của shop QMK, shop dính bê bối nên mất hết khách; anh QuýB (khách cũ) vẫn tin và nhờ build 1 con 60%, từ 7.500k gây dựng lại danh tiếng',
