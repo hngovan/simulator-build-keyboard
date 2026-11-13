@@ -463,8 +463,10 @@ export function tutorialOrder(): Order {
     budget,
     labor,
     lines: [
-      'Chào shop mới! Mình khách quen của chú Ba, build giúp mình 1 con 60% nhé.',
-      'Nghe nói shop mới mở, mình đặt con đơn giản thôi để ủng hộ: shop lo từ A tới Z luôn nha.',
+      // 3 câu đầu = cốt truyện (khách cũ hồi người chơi làm thợ ở shop QMK), `chatIntro` gửi cả 3
+      'Lâu quá không gặp! Mình QuýB đây, khách cũ hồi bạn còn làm thợ bên QMK nè. Dạo này bạn sao rồi?',
+      'Chuyện của shop mình có nghe, nhưng mình biết tay nghề của bạn mà, mấy chuyện đó mình không quan tâm đâu.',
+      'Tiện mình đang muốn có một con 60%, bạn build giúp mình nhé? Lo từ A tới Z luôn nha.',
       `${SOUND_WISH.thock.msg}.`,
       `Switch loại ${SWITCH_KINDS.Linear} là được, hãng nào cũng ok.`,
       `Keycap profile CHERRY chất liệu ${KEYCAP_MATERIALS.pbt.name} màu trắng nha.`,
@@ -498,7 +500,8 @@ const SELLERS = [
  * ngay dưới. `order.lines` (bản dài) vẫn giữ: lấy lời chào / câu case featured ở đây
  */
 export function chatIntro(order: Order): string[] {
-  const out = [order.lines[0]]
+  // đơn hướng dẫn: khách cũ hỏi thăm rồi mới nhờ build (3 câu cốt truyện)
+  const out = order.tutorial ? order.lines.slice(0, 3) : [order.lines[0]]
   // đơn case "hot" (featured): câu giới thiệu case ngay sau lời chào
   if (order.featured && order.lines[1]) out.push(order.lines[1])
   out.push(

@@ -1,17 +1,15 @@
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { INTRO, useIntro } from '@/features/intro/introStore'
+import { INTRO, useIntro, type IntroPhase } from '@/features/intro/introStore'
 import { playNotify } from '@/sound'
 import { useSceneLoading } from '../common/loadingStore'
 import { pcEye, screenCenter } from '../models/computerLayout'
-import { PAN_FROM, PAN_LOOK, PAN_TO } from './introPath'
-
-const smooth = (k: number) => k * k * (3 - 2 * k)
+import { HALL_SHOT, PAN_FROM, PAN_LOOK, PAN_TO, SHELF_SHOT, type IntroShot } from './introPath'
 
 /**
- * Camera đoạn mở đầu (mỗi lần chơi mới): lia phòng → bay tới chỗ nhìn màn hình máy tính (đúng tư thế ngồi máy `pcEye`) → màn hình
- * báo tin nhắn mới (`ping`) → lùi về chỗ hiện chữ studio (`PAN_TO`) → popup hỏi hướng dẫn (`phase = 'ask'`, đứng yên).
+ * Camera đoạn mở đầu (mỗi lần chơi mới): màn đen "NGÀY 1" → cảnh hành lang → cảnh góc kệ (`introPath`) → lia phòng → cắt cảnh sang trước màn hình máy tính (đúng tư thế ngồi máy `pcEye`, không bay) →
+ * màn hình báo tin nhắn mới (`ping`) → cắt cảnh về chỗ hiện chữ studio (`PAN_TO`) → popup hỏi hướng dẫn (`phase = 'ask'`, đứng yên).
  * Lúc này WalkControls nhường camera; bỏ qua (bấm / phím) = `phase` nhảy thẳng sang 'ask', camera đứng luôn ở `PAN_TO`
  */
 export function IntroCam() {
@@ -31,29 +29,41 @@ export function IntroCam() {
     }
     // màn chờ còn che: đứng sẵn ở đầu đường lia
     if (useSceneLoading.getState().settled) t.current += Math.min(raw, 1 / 30)
-    const at = t.current
+    let at = t.current
+    // màn đen "NGÀY 1" → hành lang → góc kệ: mỗi cảnh cắt thẳng sang cảnh kế (không bay), trong cảnh camera trôi chậm đều
+    const cuts: [IntroPhase, number, IntroShot][] = [
+      ['day', INTRO.day, HALL_SHOT],
+      ['hall', INTRO.hall, HALL_SHOT],
+      ['shelf', INTRO.shelf, SHELF_SHOT],
+    ]
+    for (const [name, len, shot] of cuts) {
+      if (at < len) {
+        if (phase !== name) useIntro.setState({ phase: name })
+        camera.position.lerpVectors(shot.from, shot.to, name === 'day' ? 0 : at / len)
+        camera.lookAt(shot.look)
+        return
+      }
+      at -= len
+    }
     if (at < INTRO.credits) {
-      // trôi chậm dần (dừng êm trước khi bay)
+      if (phase !== 'credits') useIntro.setState({ phase: 'credits' })
+      // trôi chậm dần (dừng êm trước khi cắt cảnh)
       const k = at / INTRO.credits
       camera.position.lerpVectors(PAN_FROM, PAN_TO, 1 - (1 - k) * (1 - k))
       camera.lookAt(PAN_LOOK)
       return
     }
-    if (phase === 'credits') useIntro.setState({ phase: 'message' })
-    const arrived = at - INTRO.credits - INTRO.fly
-    // đọc xong tin nhắn: lùi về đúng chỗ hiện chữ studio rồi mới hỏi
-    const leave = arrived - INTRO.ping - INTRO.ask
-    const k =
-      leave > 0
-        ? 1 - smooth(Math.min(1, leave / INTRO.back))
-        : smooth(Math.min(1, (at - INTRO.credits) / INTRO.fly))
-    camera.position.lerpVectors(PAN_TO, eye, k)
-    camera.lookAt(new THREE.Vector3().lerpVectors(PAN_LOOK, screen, k))
-    if (arrived >= INTRO.ping && !ping) {
+    if (phase !== 'message') useIntro.setState({ phase: 'message' })
+    // cắt cảnh như phim: không bay tới, khung hình kế đã ở ngay trước màn hình máy tính
+    camera.position.copy(eye)
+    camera.lookAt(screen)
+    const seen = at - INTRO.credits
+    if (seen >= INTRO.ping && !ping) {
       useIntro.setState({ ping: true })
       playNotify()
     }
-    if (leave >= INTRO.back) useIntro.setState({ phase: 'ask' })
+    // đọc xong tin nhắn: cắt cảnh về chỗ hiện chữ studio (nhánh 'ask' ở trên đặt camera), popup hỏi hiện luôn
+    if (seen >= INTRO.ping + INTRO.ask) useIntro.setState({ phase: 'ask' })
   })
   return null
 }

@@ -1,6 +1,52 @@
 # Giao diện
 
+## 2026-11-14
+
+### Viết lại cốt truyện: thợ cũ của shop QMK làm lại từ đầu
+
+- Yêu cầu (người dùng chốt, **thay bản "đang thất nghiệp, bạn cũ nhờ build"** ngày 13): người chơi là thợ build phím của shop QMK, shop dính bê bối nên
+  mang tiếng lây + mất hết khách; khách cũ (anh QuýB) vẫn tin, hỏi thăm rồi nhờ build 1 con 60%; còn 7.500k, quyết làm lại sự nghiệp + danh tiếng,
+  mơ mở cửa hàng riêng. Giao xong đơn đó khách đánh giá "dịch vụ vẫn tốt như ngày nào... thử nhận đơn assem và sửa chữa, mình giới thiệu thêm bạn" →
+  từ đó có nhiều đơn hơn. Bấm tranh QMK trên tường thì gợi lại câu chuyện.
+- `features/intro/introStore.ts`: `QMK_STORY` (10 đoạn ngắn lời tự ngẫm của người chơi), `tell(lines)` kể lần lượt kiểu phụ đề MiSide: chạy chữ, giữ 1,4s, ẩn, nghỉ 0,5s rồi đoạn sau (`say` huỷ chuỗi đang kể);
+  câu dấu ? `TIPS.bench` / `calendar` + `PC_LINE` viết lại theo truyện.
+- `scene/Room.tsx`: tranh graffiti QMK bọc `RoomSpot` "Ngắm tranh QMK" → `tell(QMK_STORY)` (bấm được mọi lúc đi lại, không chỉ lúc tập đi lại).
+- `features/intro/Greeting.tsx`: người dùng sửa: **Keeb-chan không kể cốt truyện** (người chơi tự ngẫm lại lúc ngắm tranh), chỉ chào + báo tin nhắn + hỏi tên (4 câu, `ASK` = 2).
+- `data/orders.ts`: 3 câu đầu `tutorialOrder().lines` = khách cũ hỏi thăm → không quan tâm chuyện shop → nhờ build 60%; `chatIntro` gửi cả 3 câu với đơn hướng dẫn.
+- `data/reviews.ts`: `OLD_CUSTOMER` = đánh giá riêng của đơn hướng dẫn khi đạt ≥ 3 sao, không hỏng / lỗi nút / trễ (làm tệ thì vẫn câu chê thường).
+  "Nhiều đơn hơn" = cơ chế sẵn có (ngày 2 trở đi có đợt đơn theo cấp xưởng), không thêm cơ chế mới; game chưa có đơn "sửa chữa", chỉ là lời khách.
+- Viền rê chuột của tranh (người dùng: "viền phải chỉ ở mép ngoài, đang viền cả trong khung; viền hơi mỏng"): `FramedArt` (CanvasPainting.tsx) đặt tên
+  `NO_OUTLINE` cho 4 thanh khung + mặt tranh, thêm 1 khối hộp vô hình (`colorWrite` / `depthWrite` false) trùm cả khung để vỏ ngược chỉ bám khối này;
+  `RoomSpot` tranh QMK `outlineScale={2}` (dày như viền lịch).
+- Dấu ? thứ 5 giữa tranh QMK lúc tập đi lại (`TipId` `'qmk'`, `TIP_AT.qmk` trong IntroSpots; `tipFirstClick('qmk')` kể `QMK_STORY`, bấm thẳng vào tranh cũng bỏ dấu ?).
+- Đang có phụ đề / kể dở chuỗi thì bấm dấu ? khác không ăn (`talking()` trong `tipFirstClick`, người dùng yêu cầu); dấu ? đó giữ nguyên, hết chữ mới bấm được.
+- Chưa kiểm tra trong trình duyệt (chỉ typecheck / lint / format).
+
 ## 2026-11-13
+
+### Đoạn mở đầu: cắt cảnh sang màn hình máy tính thay vì bay camera
+
+- Yêu cầu: "intro đang move tới màn hình máy tính khi có tin nhắn mới → không move tới mà cut cảnh như phim là đang ở màn hình rồi; trở về chỗ cũ hiện popup hướng dẫn cũng vậy".
+- `scene/room/IntroCam.tsx`: hết lia phòng thì đặt thẳng camera ở `pcEye` (bỏ đoạn bay `INTRO.fly`), báo tin nhắn sau `INTRO.ping` 0,8s, sau `INTRO.ask` 2s
+  đổi `phase = 'ask'` = cắt thẳng về `PAN_TO` + popup hỏi hiện luôn (bỏ đoạn lùi `INTRO.back`). `INTRO` chỉ còn `credits` / `ping` / `ask`.
+- Lưu ý: không thêm lại chuyển động camera giữa 2 cảnh này (người dùng muốn cắt cảnh).
+
+### Đoạn mở đầu: màn đen "NGÀY 1" → hành lang → góc kệ, dấu ? báo bấm được
+
+- Yêu cầu: mở đầu hiện màn đen chữ "NGÀY 1" in hoa giữa màn (ảnh mẫu) → cắt cảnh hành lang → góc kệ phía sau → góc máy hiện tại (chữ studio) → như cũ.
+  Dấu ? của lịch đặt chính giữa tờ lịch; lại gần tới mức tương tác được thì dấu ? đổi màu cho người chơi biết.
+- `introStore`: `IntroPhase` thêm `day` / `hall` / `shelf` (thời lượng `INTRO.day` 3s, `hall` / `shelf` 3,2s), `newGame` bắt đầu ở `day`.
+  `scene/room/introPath.ts`: `HALL_SHOT` (nhìn dọc hành lang về kệ nhận hàng), `SHELF_SHOT` (nhìn chéo kệ chưng bàn phím tường trước; hiểu "góc kệ phía sau" =
+  kệ sau lưng khi ngồi bàn build). `IntroCam`: bảng `cuts` theo thời gian, mỗi cảnh cắt thẳng, trong cảnh camera trôi chậm đều.
+  `Intro.tsx`: phase `day` phủ đen + chữ "Ngày {day}" (`font-head`, in hoa, `animate-credits` 2,5s); bỏ lớp đen tan dần cũ.
+- `scene/room/IntroSpots.tsx`: `TIP_AT.calendar` = tâm tờ lịch; `Mark` đo khoảng cách theo mặt sàn tới camera ≤ `REACH_M` thì đổi ảnh vàng → xanh lá
+  (`markTexture(fill)`), to lên 0,16 → 0,2m và phập phồng nhanh (áp cho cả 3 dấu ?).
+- Sửa (người dùng: "phải đưa con trỏ vào rồi mới đổi màu, không phải cứ trong tầm bấm"): `Mark` đổi màu theo rê trỏ (`onPointerOver / Move / Out` trên sprite + `inReach`),
+  không theo khoảng cách đứng.
+- Thêm dấu ? thứ 4 trên kệ giao hàng (`TipId` `ship`, câu phụ đề trong `TIPS`; người dùng: "phần kệ đặt đơn hoàn thành không có dấu ?").
+- Âm nút trong đoạn mở đầu (popup ✗ / ✓, nút ở lời chào `Greeting`): `playUiConfirm(ok)` trong `sound.ts` (2 nốt tam giác mềm, ✓ đi lên / ✗ đi xuống) thay
+  `playUiSelect` (tiếng gõ phím cơ, người dùng: "đang dùng chung sound với lúc assem là sai"). Menu màn tiêu đề vẫn `playUiSelect`.
+- Kiểm tra: Chrome ngầm chụp từng cảnh intro (đen NGÀY 1, hành lang, kệ, chữ studio, màn hình, popup). Dấu ? đổi màu chưa chụp.
 
 ### Đoạn mở đầu chạy mỗi lần "Chơi mới", bấm phím bất kỳ để bỏ qua
 
@@ -70,6 +116,7 @@
 - Góc nhìn khi đi lại chỉnh được: Cài đặt → mục "Góc nhìn & chuột" thanh trượt FOV 30–120°, mặc định 80° (người dùng chốt sau khi thử 110°; trước cố định 42° "như ống 50mm"),
   lưu theo máy `sbk-walk-fov` (`lib/fov.ts`). `WalkControls` đặt FOV camera theo đó (zoom con lăn thu hẹp từ FOV này), bay đứng dậy / ngồi xuống chuyển dần
   giữa FOV gốc 42° (ngồi bàn build / máy tính / đoạn mở đầu giữ nguyên) và FOV đi lại (`anim.fov0` / `sit`). Độ nhạy chuột đã có sẵn cùng mục.
+  (2026-11-13: mặc định 80° → 60° (người dùng chốt, thử 70° trước; 60° dọc ≈ 91° ngang): 80° dọc ≈ 112° ngang ở 16:9, phòng nhỏ bị méo mép; máy đã kéo thanh trượt giữ giá trị cũ. Đoạn mở đầu không đổi, vẫn quay ở 42°.)
 - Suốt lúc tập đi lại (`useIntro.learn` còn, cả bước `free`): ẩn khung lời dẫn `RoomGuide` và **mọi** dòng chữ đáy màn của `RoomHud`
   (dòng điều khiển + chữ gợi ý lúc rê vào vật) theo yêu cầu; chỉ còn vòng tròn, dấu ?, bong bóng "Tương tác", phụ đề.
 - Phụ đề `IntroCaption` chạy chữ dần (`Typed`, `TYPE_MS` 32ms / ký tự, phần chưa hiện vẫn chiếm chỗ); `say(text, ms)` = chạy hết chữ rồi giữ thêm `ms`.

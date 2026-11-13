@@ -58,6 +58,10 @@ const TEXTS = {
   ],
 }
 
+/** đánh giá của khách cũ đơn hướng dẫn (cốt truyện: thợ cũ của shop QMK làm lại từ đầu), khi làm đạt từ 3 sao, không hỏng / lỗi nút / trễ */
+const OLD_CUSTOMER =
+  'Dịch vụ của bạn vẫn tốt như ngày nào, đừng buồn vì chuyện cũ nữa. Sao bạn không thử tự nhận đơn assem và sửa chữa xem? Mình sẽ giới thiệu thêm vài người bạn dùng dịch vụ của bạn!'
+
 const base = (order: Order, day: number) => ({
   id: `${order.id}-${day}-${Math.random().toString(36).slice(2, 6)}`,
   day,
@@ -75,7 +79,9 @@ export function shipReview(order: Order, r: DeliveryResult, day: number): Review
       ? pick(TEXTS.defect).replace('{keys}', r.defects.slice(0, 4).join(', '))
       : r.late
         ? pick(TEXTS.late).replace('{n}', String(r.late))
-        : pick(r.stars >= 4 ? TEXTS.great : r.stars >= 3 ? TEXTS.ok : TEXTS.bad)
+        : order.tutorial && r.stars >= 3
+          ? OLD_CUSTOMER
+          : pick(r.stars >= 4 ? TEXTS.great : r.stars >= 3 ? TEXTS.ok : TEXTS.bad)
   return { ...base(order, day), stars: r.stars, text, kind: 'ship', rep: shipRep(r) }
 }
 

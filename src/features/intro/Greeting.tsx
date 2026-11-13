@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useGame } from '@/store'
-import { playUiSelect } from '@/sound'
+import { playUiConfirm } from '@/sound'
 import { Button } from '@/components/ui'
 import { KeyCap } from '@/components/game/ControlsHint'
 import { GuideGirl } from '@/components/art/GuideGirl'
 import { TOUR_ID } from '@/data/tourIds'
 
 /** câu hỏi tên xưởng (hiện ô nhập) là câu thứ mấy trong `lines` */
-const ASK = 3
+const ASK = 2
 
 /** nền chấm bi tím (kiểu màn hội thoại) */
 const BACKDROP = {
@@ -27,18 +27,17 @@ export function Greeting() {
   const [name, setName] = useState('')
   const tour = useGame((s) => !s.guideSeen.includes(TOUR_ID))
   const shop = name.trim()
-  // cốt truyện: người chơi đang thất nghiệp, bạn cũ (anh QuýB) nhắn nhờ build 1 con 60% → nảy ra ý mở xưởng build phím
+  // Keeb-chan không kể cốt truyện (người chơi tự ngẫm lại khi ngắm tranh QMK: `QMK_STORY` trong introStore), chỉ báo tin nhắn + hỏi tên xưởng
   const lines = [
     'Chào! Mình là Keeb-chan, trợ lý trong máy của bạn!',
-    'Anh QuýB, bạn cũ của bạn, vừa nhắn nhờ build giúp một con phím 60% kìa.',
-    'Mà nè... chơi phím bao nhiêu năm, giờ lại đang thất nghiệp. Sao bạn không mở luôn một xưởng build phím nhỉ?',
-    'Quyết vậy đi! Xưởng của bạn tên là gì?',
+    'Lâu lắm rồi máy mới có tin nhắn đó! Anh QuýB nhắn nhờ build giúp một con phím 60% kìa.',
+    'Trước khi bắt tay vào việc, xưởng của bạn tên là gì?',
     `"${shop}", tên hay đó! ${tour ? 'Đơn đầu tiên là của anh QuýB, để mình chỉ bạn từng bước nhé!' : 'Đơn đầu tiên là của anh QuýB, mở Mezzenger xem nhé!'}`,
   ]
   const asking = i === ASK
   const next = () => {
     if (asking && !shop) return
-    playUiSelect()
+    playUiConfirm()
     if (i < lines.length - 1) return setI(i + 1)
     const s = useGame.getState()
     useGame.setState({ name: shop })

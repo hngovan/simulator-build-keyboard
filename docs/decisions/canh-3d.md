@@ -1,5 +1,24 @@
 # Cảnh 3D & model
 
+## 2026-11-13
+
+### Màn hình máy tính: đứng xa không còn sáng viền / bấm được
+
+- Yêu cầu: "đang ở xa mà vẫn tương tác với máy tính được?" (viền xanh quanh màn hình hiện từ giữa phòng, bấm là bay vào máy).
+- Nguyên nhân: `Monitor` (`scene/models/Computer.tsx`) tự bắt hover + click rồi `stopPropagation`, không qua kiểm tra tầm với của `RoomSpot` bọc ngoài.
+- Đã làm: `Monitor` tự kiểm `inReach` khi đang đi lại (`reach`, state `near`): ngoài tầm `REACH_M` thì không viền, không bàn tay, bấm không ăn; ngồi bàn build vẫn bấm được.
+- Kiểm tra: typecheck + lint; chưa thử trong trình duyệt.
+
+### Nhiễu sọc chấm trên lịch / tranh / rèm khi đi lại (z-fighting)
+
+- Yêu cầu: "tại sao lại bị nhiễu hình ảnh khi tôi move trong phòng, ở intro cũng bị" (tờ lịch, tranh cốc cà phê, rèm lá lốm đốm màu nền phía sau).
+- Nguyên nhân: mặt cắt gần camera mặc định 0,1u (≈ 2mm, cần cho zoom sát keycap ở bàn build) → nhìn tường cách 3–4m (~180u) bộ đệm độ sâu 24 bit
+  chỉ phân biệt được ~0,02u, đúng bằng khe tờ lịch – bìa (0,5mm), tranh – nền giấy, lá rèm → 2 mặt tranh nhau từng điểm ảnh.
+- Đã làm (`scene/room/WalkControls.tsx`): đang đi lại (kể cả đoạn mở đầu, WalkControls vẫn gắn) đặt `camera.near = WALK_NEAR` (6cm ≈ 3,15u, mịn hơn ~30 lần),
+  rời chế độ đi lại trả lại near cũ. An toàn vì người cách tường ≥ `BODY_R` 22cm, thùng đang cầm cách mắt ~30cm.
+- Lưu ý: không hạ `WALK_NEAR` về gần 0; thêm vật sát mắt khi đi lại (< 6cm) sẽ bị cắt. Ngồi bàn build / máy tính vẫn near 0,1u.
+- Kiểm tra: typecheck; chưa xác nhận bằng mắt trên máy người dùng (Chrome ngầm không tái hiện nhiễu).
+
 ## 2026-11-12
 
 ### Dây điện + phích cắm trong phòng: trắng, dây khớp đuôi phích

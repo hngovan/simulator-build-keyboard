@@ -1,13 +1,13 @@
 import { useEffect } from 'react'
 import { Check, X } from 'lucide-react'
 import { useGame } from '@/store'
-import { playUiSelect } from '@/sound'
+import { playUiConfirm } from '@/sound'
 import { Button, HudCard } from '@/components/ui'
 import { ALL_TIPS, INTRO_OFF, useIntro } from './introStore'
 
 /** trả lời popup: có = bỏ dấu "đã xem tour" + tập đi lại (`LearnHud`, `IntroSpots`) rồi tự tới máy tính, không = đi lại tự do */
 function finish(guide: boolean) {
-  playUiSelect()
+  playUiConfirm(guide)
   if (guide) {
     // bật tour + tập đi lại: nhìn quanh → di chuyển → tự đi tới máy tính (thẻ tin nhắn còn trên màn hình 3D tới lúc ngồi vào máy)
     useGame.setState({ guideSeen: [] })
@@ -31,6 +31,7 @@ function finish(guide: boolean) {
 export function Intro() {
   const phase = useIntro((s) => s.phase)
   const ask = phase === 'ask'
+  const day = useGame((g) => g.day)
   useEffect(() => {
     if (!phase) return
     const onKey = (e: KeyboardEvent) => {
@@ -62,8 +63,17 @@ export function Intro() {
       aria-modal
       className="fixed inset-0 z-[3000] flex items-center justify-center px-4 select-none"
     >
-      {/* vào cảnh: màn đen tan dần */}
-      <div className="pointer-events-none absolute inset-0 animate-fade-out bg-black" />
+      {/* mở đầu như phim: màn đen, chữ "NGÀY 1" in hoa giữa màn hiện rồi tan, hết thì cắt thẳng sang cảnh hành lang */}
+      {phase === 'day' && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center bg-black">
+          <div
+            className="animate-credits font-head text-[64px] leading-none font-extrabold tracking-wider text-white uppercase max-md:text-[40px]"
+            style={{ animationDuration: '2.5s', animationDelay: '0.3s' }}
+          >
+            Ngày {day}
+          </div>
+        </div>
+      )}
       {/* phòng sáng màu: phủ tối cả màn cùng nhịp với chữ + chữ viền đen cho dễ đọc */}
       {phase === 'credits' && (
         <div className="pointer-events-none absolute inset-0 animate-credits bg-[#0d0f16]/60" />

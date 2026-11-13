@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useGame } from '@/store'
@@ -7,25 +7,38 @@ import { Y } from '@/data/steps'
 import { MouseIcon } from '@/components/game/ControlsHint'
 import { INTRO_OFF, tipFirstClick, useIntro, type TipId } from '@/features/intro/introStore'
 import { screenCenter } from '../models/computerLayout'
-import { CALENDAR, FLOOR_Y, HALL, M, RACK, ROOM } from './roomLayout'
+import {
+  BACK_M,
+  CALENDAR,
+  DOORWAY,
+  FLOOR_Y,
+  HALF_W,
+  HALL,
+  M,
+  RACK,
+  ROOM,
+  SHIP_SHELF,
+  inReach,
+} from './roomLayout'
 import { RoomSpot } from './RoomSpot'
 
-/** chỗ đặt dấu ? (đơn vị cảnh): lơ lửng trên mặt bàn build, cạnh phải tờ lịch, trên kệ nhận hàng cuối hành lang */
+/** chỗ đặt dấu ? (đơn vị cảnh): lơ lửng trên mặt bàn build, chính giữa tờ lịch, trên kệ nhận hàng cuối hành lang, trên kệ giao hàng */
 const TIP_AT: Record<TipId, [number, number, number]> = {
   bench: [0, Y.table + 0.3 * M, 0.1 * M],
-  calendar: [
-    (CALENDAR.w / 2 + 0.14) * M,
-    FLOOR_Y + (CALENDAR.y + CALENDAR.h / 2 - 0.08) * M,
-    ROOM.back + 0.08 * M,
-  ],
+  // chính giữa tờ lịch, nổi trước mặt giấy
+  calendar: [0, FLOOR_Y + CALENDAR.y * M, ROOM.back + 0.08 * M],
   // kệ sắt nhận hàng cuối hành lang: lơ lửng trên nóc kệ
   door: [RACK.x * M, FLOOR_Y + (RACK.h + 0.22) * M, (RACK.z + 0.1) * M],
+  // kệ giao hàng tường phải trong phòng (kệ sắt hạ thấp 80%): lơ lửng trên nóc kệ, nhích ra phía phòng
+  ship: [(SHIP_SHELF.x - 0.1) * M, FLOOR_Y + (RACK.h * 0.8 + 0.22) * M, SHIP_SHELF.z * M],
+  // chính giữa tranh graffiti QMK tường trái (toạ độ tranh trong Room.tsx), nổi trước mặt tranh
+  qmk: [(-HALF_W + 0.08) * M, FLOOR_Y + 1.6 * M, ((BACK_M + DOORWAY.z0) / 2) * M],
 }
 /** tới gần màn hình máy tính bấy nhiêu mét (theo mặt sàn) thì hiện bong bóng "Tương tác" */
 const NEAR_PC = 2.2
 
-/** ảnh dấu ?: hình tròn vàng viền trắng, chữ ? đậm */
-function markTexture() {
+/** ảnh dấu ?: hình tròn màu `fill` viền trắng, chữ ? đậm (vàng = còn xa, xanh lá = đã trong tầm với, bấm được) */
+function markTexture(fill: string) {
   const c = document.createElement('canvas')
   c.width = c.height = 128
   const g = c.getContext('2d')!
@@ -33,7 +46,7 @@ function markTexture() {
   g.beginPath()
   g.arc(64, 64, 60, 0, Math.PI * 2)
   g.fill()
-  g.fillStyle = '#ffcc2e'
+  g.fillStyle = fill
   g.beginPath()
   g.arc(64, 64, 50, 0, Math.PI * 2)
   g.fill()
@@ -105,18 +118,38 @@ function hitFirst(this: THREE.Sprite, ray: THREE.Raycaster, hits: THREE.Intersec
 }
 
 /**
- * dấu ? nhấp nhô, luôn quay về camera; bấm thì hiện phụ đề rồi mất. Không ghi độ sâu + vẽ sau cùng: phần trong suốt quanh hình tròn
+ * dấu ? nhấp nhô, luôn quay về camera (vàng; trỏ đúng vào nó trong tầm với thì xanh lá + to lên báo bấm được); bấm thì hiện phụ đề rồi mất. Không ghi độ sâu + vẽ sau cùng: phần trong suốt quanh hình tròn
  * (tấm ảnh vuông) không che khối mờ chỗ đặt thùng trên bàn phía sau (trước bị lộ ô vuông quanh dấu ?)
  */
-function Mark({ id, map }: { id: TipId; map: THREE.Texture }) {
+function Mark({ id, map, live }: { id: TipId; map: THREE.Texture; live: THREE.Texture }) {
   const ref = useRef<THREE.Sprite>(null)
   const at = TIP_AT[id]
+  // đang trỏ (tâm ngắm / con trỏ) đúng vào dấu ? và đứng trong tầm với: lúc này bấm là ăn
+  const hot = useRef(false)
+  const aim = (e: ThreeEvent<PointerEvent>) => (hot.current = inReach(e))
   useFrame(({ clock }) => {
-    if (ref.current) ref.current.position.y = Math.sin(clock.elapsedTime * 2.5) * 0.02 * M
+    const sp = ref.current
+    if (!sp) return
+    sp.position.y = Math.sin(clock.elapsedTime * 2.5) * 0.02 * M
+    // chỉ khi trỏ đúng vào dấu ? (không phải cứ đứng gần): đổi sang xanh lá + to lên, phập phồng nhanh
+    const want = hot.current ? live : map
+    if (sp.material.map !== want) {
+      sp.material.map = want
+      sp.material.needsUpdate = true
+    }
+    sp.scale.setScalar((hot.current ? 0.2 + Math.sin(clock.elapsedTime * 7) * 0.012 : 0.16) * M)
   })
   return (
     <RoomSpot label="Xem thử" outline={false} block position={at} onAct={() => tipFirstClick(id)}>
-      <sprite ref={ref} scale={0.16 * M} raycast={hitFirst} renderOrder={10}>
+      <sprite
+        ref={ref}
+        scale={0.16 * M}
+        raycast={hitFirst}
+        renderOrder={10}
+        onPointerOver={aim}
+        onPointerMove={aim}
+        onPointerOut={() => (hot.current = false)}
+      >
         <spriteMaterial map={map} toneMapped={false} depthWrite={false} />
       </sprite>
     </RoomSpot>
@@ -131,7 +164,8 @@ export function IntroSpots() {
   const walk = useGame((s) => s.walk)
   const free = useIntro((s) => s.learn === 'free')
   const tips = useIntro((s) => s.tips)
-  const map = useMemo(() => markTexture(), [])
+  const map = useMemo(() => markTexture('#ffcc2e'), [])
+  const live = useMemo(() => markTexture('#2ed3a0'), [])
   const chat = useMemo(() => chatTexture(), [])
   const near = useIntro((s) => s.nearPc)
   const pc = useMemo(() => screenCenter(), [])
@@ -157,7 +191,7 @@ export function IntroSpots() {
   return (
     <>
       {tips.map((id) => (
-        <Mark key={id} id={id} map={map} />
+        <Mark key={id} id={id} map={map} live={live} />
       ))}
       {/* máy tính: icon tin nhắn hiện sẵn từ đầu (thấy từ xa), tới gần thì đổi thành bong bóng "Tương tác" */}
       {!near && <PcMark at={[pc[0], pc[1] + 0.3 * M, pc[2]]} map={chat} />}

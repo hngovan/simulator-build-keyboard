@@ -13,6 +13,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.44',
+    date: '2026-11-14',
+    commits: [],
+    title: 'Cốt truyện mới: thợ cũ của shop QMK làm lại từ đầu',
+    items: [
+      'Cốt truyện viết lại: bạn từng là thợ build phím của shop QMK, shop dính bê bối nên mất hết khách; anh QuýB (khách cũ) vẫn tin và nhờ build 1 con 60%, từ 7.500k gây dựng lại danh tiếng',
+      'Bấm tranh QMK trên tường để tự ngẫm lại chuyện cũ: phụ đề chạy chữ từng đoạn ngắn rồi ẩn; lúc tập đi lại tranh có thêm dấu ?, đang chạy phụ đề thì không bấm được dấu ? khác',
+      'Tin nhắn của anh QuýB ở Mezzenger hỏi thăm rồi mới nhờ build; làm tốt đơn đầu thì nhận đánh giá riêng của khách cũ',
+      'Đoạn mở đầu dựng kiểu phim cắt cảnh: màn đen "NGÀY 1" → hành lang → góc kệ → chữ studio → màn hình báo tin nhắn; thêm dấu ? ở kệ giao hàng, dấu ? đổi xanh khi trỏ vào trong tầm với',
+      'Đứng xa không còn bấm được màn hình máy tính; đỡ nhiễu sọc trên lịch / tranh / rèm khi đi lại; FOV đi lại mặc định 60°',
+    ],
+  },
+  {
     version: '0.1.43',
     date: '2026-11-13',
     commits: ['e2e2602'],

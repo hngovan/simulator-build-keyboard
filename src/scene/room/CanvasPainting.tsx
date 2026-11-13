@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
+import { NO_OUTLINE } from '../common/hoverOutline'
 
 // Tranh treo tường vẽ bằng canvas (dùng chung cho các tranh tự vẽ) / tranh từ ảnh: khung + viền giấy + mặt tranh.
 // Đơn vị mét; gốc = tâm tranh, mặt quay +z. Chữ ký viết tay dùng font Caveat (OFL, đã dùng cho chữ khắc bàn)
@@ -73,7 +74,7 @@ function FramedArt({
           [w / 2 + mat + fw / 2, 0, fw, h + 2 * mat],
         ] as const
       ).map(([x, y, fwid, fh], i) => (
-        <mesh key={i} position={[x, y, 0.015]} castShadow>
+        <mesh key={i} name={NO_OUTLINE} position={[x, y, 0.015]} castShadow>
           <boxGeometry args={[fwid, fh, 0.03]} />
           <meshStandardMaterial
             color={frame}
@@ -83,14 +84,19 @@ function FramedArt({
         </mesh>
       ))}
       {mat > 0 && (
-        <mesh position-z={0.006}>
+        <mesh name={NO_OUTLINE} position-z={0.006}>
           <planeGeometry args={[w + 2 * mat, h + 2 * mat]} />
           <meshStandardMaterial color="#efe8d8" roughness={0.9} />
         </mesh>
       )}
-      <mesh position-z={0.008}>
+      <mesh name={NO_OUTLINE} position-z={0.008}>
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial map={tex} roughness={0.8} />
+      </mesh>
+      {/* khối vô hình trùm cả khung: viền rê chuột (`RoomSpot`) chỉ bám khối này → 1 đường bao mép ngoài, không viền từng thanh khung */}
+      <mesh position-z={0.015}>
+        <boxGeometry args={[w + 2 * (mat + fw), h + 2 * (mat + fw), 0.03]} />
+        <meshBasicMaterial colorWrite={false} depthWrite={false} />
       </mesh>
     </group>
   )

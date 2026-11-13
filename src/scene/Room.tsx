@@ -45,6 +45,8 @@ import { drawPhoenix } from './room/phoenixArt'
 import { drawBanknote } from './room/banknoteArt'
 import { drawQmk } from './room/qmkArt'
 import { CanvasPainting, ImagePainting } from './room/CanvasPainting'
+import { RoomSpot } from './room/RoomSpot'
+import { QMK_STORY, tell, tipFirstClick } from '@/features/intro/introStore'
 import { FrogPainting } from './room/FrogPainting'
 import { LIT_SHADE, RoomWindow } from './room/RoomWindow'
 import { WallCalendar } from './room/WallCalendar'
@@ -1006,19 +1008,25 @@ export function Room() {
         position={[1.95 * M, FLOOR_Y + 1.6 * M, ROOM.back]}
         scale={M}
       />
-      {/* tranh graffiti "QMK" kiểu bàn phím (vẽ canvas, ký keeb), tường trái góc cạnh bàn máy tính */}
-      <CanvasPainting
-        draw={drawQmk}
-        px={900}
-        py={560}
-        w={0.8}
-        h={0.5}
-        mat={0}
-        frame="#18181c"
-        position={[-HALF_W * M, FLOOR_Y + 1.6 * M, ((BACK_M + DOORWAY.z0) / 2) * M]}
-        rotation-y={Math.PI / 2}
-        scale={M}
-      />
+      {/* tranh graffiti "QMK" kiểu bàn phím (vẽ canvas, ký keeb), tường trái góc cạnh bàn máy tính; bấm vào = phụ đề kể lại cốt truyện */}
+      <RoomSpot
+        label="Ngắm tranh QMK"
+        outlineScale={2}
+        onAct={() => tipFirstClick('qmk') || tell(QMK_STORY)}
+      >
+        <CanvasPainting
+          draw={drawQmk}
+          px={900}
+          py={560}
+          w={0.8}
+          h={0.5}
+          mat={0}
+          frame="#18181c"
+          position={[-HALF_W * M, FLOOR_Y + 1.6 * M, ((BACK_M + DOORWAY.z0) / 2) * M]}
+          rotation-y={Math.PI / 2}
+          scale={M}
+        />
+      </RoomSpot>
       {/* lịch lớn trên tường sau, phía trên bàn build */}
       <group position={[0, FLOOR_Y + CALENDAR.y * M, ROOM.back + 0.01 * M]} scale={M}>
         <WallCalendar />

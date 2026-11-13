@@ -26,6 +26,8 @@ const ZOOM_MIN = 0.4
 const ZOOM_STEP = 0.12
 /** thời gian bay camera khi đứng dậy / ngồi xuống (s) */
 const FLY_S = 0.7
+/** mặt cắt gần của camera khi đi lại (6cm; mặc định 0,1u ≈ 2mm làm tường xa bị nhiễu độ sâu) */
+const WALK_NEAR = 0.06 * M
 
 const KEYS: Record<string, [number, number]> = {
   KeyW: [0, 1],
@@ -170,14 +172,23 @@ export function WalkControls() {
 
   // FOV gốc của camera: zoom tính theo nó, rời chế độ đi lại thì trả lại
   const baseFov = useRef(camera instanceof THREE.PerspectiveCamera ? camera.fov : 42)
+  // lấy camera qua state của R3F trong effect (không sửa thẳng giá trị lấy từ hook)
+  const getState = useThree((s) => s.get)
   useEffect(() => {
     const fov = baseFov.current
+    // mặt cắt gần: ngồi bàn build cần 0,1u (zoom sát keycap), nhưng đứng xa nhìn tường 3–4m thì bộ đệm độ sâu không đủ mịn → 2 mặt
+    // sát nhau (tờ lịch / bìa, tranh / nền giấy, lá rèm) tranh nhau từng điểm ảnh, nhiễu sọc chấm khi đi lại. Đi lại (cả đoạn mở đầu)
+    // đẩy mặt cắt gần ra `WALK_NEAR` (người cách tường ≥ `BODY_R`, thùng đang cầm cách mắt ~30cm), rời chế độ đi lại thì trả lại
+    const cam = getState().camera
+    const near = cam.near
+    cam.near = WALK_NEAR
+    cam.updateProjectionMatrix()
     return () => {
-      if (!(camera instanceof THREE.PerspectiveCamera)) return
-      camera.fov = fov
-      camera.updateProjectionMatrix()
+      cam.near = near
+      if (cam instanceof THREE.PerspectiveCamera) cam.fov = fov
+      cam.updateProjectionMatrix()
     }
-  }, [camera])
+  }, [getState])
 
   // dev: mở camera trong console như CameraRig (không có OrbitControls)
   const scene = useThree((s) => s.scene)

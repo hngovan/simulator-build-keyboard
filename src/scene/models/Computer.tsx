@@ -9,6 +9,7 @@ import { useGame } from '@/store'
 import { useHover } from '../common/useHover'
 import { HINT_COLOR, useHoverOutline } from '../common/hoverOutline'
 import { SCREEN } from './computerLayout'
+import { inReach } from '../room/roomLayout'
 import { useIntro } from '@/features/intro/introStore'
 
 // Màn hình (model ASUS) + thùng CPU (dựng bằng code), đơn vị mét; Room nhân M.
@@ -222,7 +223,14 @@ export function Monitor(props: { position?: [number, number, number]; rotationY?
   const { scene } = useGLTF(MONITOR_GLB)
   const zoomToPC = useGame((s) => s.zoomToPC)
   const [down, setDown] = useState<[number, number] | null>(null)
-  const { hover, bind } = useHover(true)
+  // đi lại: phải đứng trong tầm với (`inReach`) mới sáng viền / bấm được, như mọi vật khác trong phòng (ngồi bàn build thì luôn được)
+  const [near, setNear] = useState(true)
+  const reach = (e: ThreeEvent<PointerEvent | MouseEvent>) => {
+    const ok = !useGame.getState().walk || inReach(e)
+    if (ok !== near) setNear(ok)
+    return ok
+  }
+  const { hover, bind } = useHover(near)
   const ref = useRef<THREE.Group>(null)
   useHoverOutline(ref, hover)
   const model = useMemo(() => {
@@ -303,11 +311,17 @@ export function Monitor(props: { position?: [number, number, number]; rotationY?
       ref={ref}
       position={props.position}
       rotation-y={props.rotationY ?? 0}
-      {...bind}
+      onPointerOver={(e: ThreeEvent<PointerEvent>) => {
+        reach(e)
+        bind.onPointerOver(e)
+      }}
+      onPointerMove={reach}
+      onPointerOut={bind.onPointerOut}
       onPointerDown={(e: ThreeEvent<PointerEvent>) => setDown([e.clientX, e.clientY])}
       onClick={(e: ThreeEvent<MouseEvent>) => {
-        // kéo xoay camera thì không tính là bấm
+        // kéo xoay camera thì không tính là bấm; đứng xa thì không với tới
         if (down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 6) return
+        if (!reach(e)) return
         e.stopPropagation()
         zoomToPC()
       }}

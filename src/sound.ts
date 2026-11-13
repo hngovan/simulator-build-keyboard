@@ -319,6 +319,28 @@ export function playUiSelect() {
   noiseBurst(ac().currentTime, { freq: 900, q: 1.2, dur: 0.07, gain: 0.6 })
 }
 
+/**
+ * Nút trả lời trong đoạn mở đầu (popup hỏi hướng dẫn, lời chào Keeb-chan): tiếng "tinh" giao diện mềm, khác hẳn tiếng gõ phím cơ
+ * (`playUiSelect` nghe như đang lắp / gõ phím). `ok` = đồng ý: 2 nốt đi lên; không: 2 nốt đi xuống, trầm hơn
+ */
+export function playUiConfirm(ok = true) {
+  const a = ac()
+  const t = a.currentTime
+  ;(ok ? [587, 880] : [494, 370]).forEach((f, i) => {
+    const osc = a.createOscillator()
+    osc.type = 'triangle'
+    osc.frequency.value = f
+    const g = a.createGain()
+    const s = t + i * 0.09
+    g.gain.setValueAtTime(0.0001, s)
+    g.gain.exponentialRampToValueAtTime(0.22, s + 0.012)
+    g.gain.exponentialRampToValueAtTime(0.0001, s + 0.22)
+    osc.connect(g).connect(effectsGain!)
+    osc.start(s)
+    osc.stop(s + 0.24)
+  })
+}
+
 /** Tin nhắn mới (đoạn mở đầu: màn hình máy tính báo tin): 2 nốt chuông ngắn đi lên */
 export function playNotify() {
   const a = ac()

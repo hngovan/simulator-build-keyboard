@@ -367,7 +367,7 @@ export const createMetaSlice: StateCreator<GameState, [], [], MetaSlice> = (set,
     get().save()
     // chơi mới lần nào cũng chạy đoạn mở đầu (chữ studio → màn hình máy tính có tin nhắn mới → hỏi hướng dẫn), bấm phím bất kỳ để bỏ qua;
     // lời chào để cuối đoạn (`Intro`)
-    useIntro.setState({ ...INTRO_OFF, phase: 'credits' })
+    useIntro.setState({ ...INTRO_OFF, phase: 'day' })
   },
   startFree: () => {
     const s = get()

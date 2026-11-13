@@ -5,7 +5,7 @@ const KEY = 'sbk-walk-fov'
 export const FOV_MIN = 30
 export const FOV_MAX = 120
 /** mặc định rộng hơn góc gốc 42° (hẹp như ống kính 50mm, đi lại dễ chóng mặt) */
-export const FOV_DEFAULT = 80
+export const FOV_DEFAULT = 60
 
 function read() {
   try {
