@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.43',
     date: '2026-11-13',
-    commits: [],
+    commits: ['e2e2602'],
     title: 'Chỉnh góc nhìn (FOV) khi đi lại',
     items: [
       'Cài đặt → "Góc nhìn & chuột": thanh trượt FOV 30–120° khi đi lại trong phòng (mặc định 80°, trước cố định 42°), cạnh thanh độ nhạy chuột',
