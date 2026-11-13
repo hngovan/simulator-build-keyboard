@@ -102,7 +102,7 @@ function MouseSensSection() {
       </Row>
       <Row className="flex-col items-stretch gap-1.5">
         <div className="flex items-center justify-between gap-3 font-bold">
-          <span>Độ nhạy xoay nhìn</span>
+          <span>Độ nhạy chuột</span>
           <span className="flex items-center gap-2">
             {sens !== SENS_DEFAULT && (
               <Button
@@ -121,7 +121,7 @@ function MouseSensSection() {
           min={SENS_MIN}
           max={SENS_MAX}
           onChange={setMouseSens}
-          aria-label="Độ nhạy xoay nhìn"
+          aria-label="Độ nhạy chuột"
           title="Chỉnh độ nhạy chuột khi đi lại"
         />
       </Row>
