@@ -159,8 +159,8 @@ function MousePad(props: JSX.IntrinsicElements['group']) {
   )
 }
 
-/** keycap SA bàn phím trên bàn máy tính: phím chữ xám đậm, phím chức năng tối hơn, chữ trắng ngà */
-const DESK_CAP = { alpha: '#34363c', mod: '#222327', legend: '#e8e4da' }
+/** keycap DCS bàn phím trên bàn máy tính: cả bộ đen, chữ trắng font Gorton kiểu Wyse (font của profile DCS, `legendFont.ts`) */
+const DESK_CAP = { alpha: '#1c1d20', mod: '#1c1d20', legend: '#f4f4f2' }
 
 /** chỗ đặt bàn phím trên bàn (hệ bàn), xoay π/2: hệ bàn phím (x, y, z) → hệ bàn (z, y, −x), mặt trước (+z) ra phòng */
 const KB_AT: [number, number, number] = [0.11, DESK.h + 0.004, 0.06]
@@ -190,7 +190,7 @@ function buildDeskPlanck(dtbNodes: DtbNodes) {
   built ??= buildKeyboardModel(
     {
       ...caseSpec('planckAlu', 'black'),
-      keycapKit: 'sa',
+      keycapKit: 'dcs',
       capOf: (k) => (k.label.length > 1 || !k.label ? DESK_CAP.mod : DESK_CAP.alpha),
       legend: DESK_CAP.legend,
     },
@@ -317,6 +317,7 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
       </group>
       {/* dây: CPU → khe sau bàn vắt qua mép sau → chân màn hình; CPU → bàn phím; CPU → ổ điện tường */}
       <Cable
+        dark
         points={[
           [-0.22, 0.3, -0.475],
           [-0.3, 0.45, -0.3],
@@ -333,6 +334,7 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
           → vòng ra trước mũi chân đế → đầu cắm USB-C (`UsbCPlug`) cắm vào lỗ vách sau Planck */}
       {plug && (
         <Cable
+          dark
           r={0.0025}
           points={[
             [-0.22, 0.25, -0.435],
@@ -353,6 +355,7 @@ export function PcDesk(props: JSX.IntrinsicElements['group']) {
       {/* dây nguồn: đầu C13 cắm lưng CPU → thòng xuống sàn → lên phích CEE ở ổ tường */}
       <PowerInlet position={C13_AT} />
       <Cable
+        dark
         r={0.0035}
         points={[
           [C13_AT[0] - C13_LEN + 0.01, C13_AT[1], C13_AT[2]],

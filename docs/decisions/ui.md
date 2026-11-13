@@ -65,6 +65,11 @@
 - Cốt truyện (người dùng chốt, thay bản "ông chủ scammer hoàn lương" đã thử): người chơi đang thất nghiệp, bạn cũ anh QuýB nhắn nhờ build
   1 con 60% → nảy ra ý mở xưởng với kinh nghiệm chơi phím lâu năm; **người chơi là chủ xưởng**. Kể ở màn chào `Greeting` (5 câu, câu hỏi tên = `ASK`)
   - câu dấu ? / `PC_LINE` trong introStore (lời tự nói của người chơi). Tin nhắn đơn hướng dẫn trong Mezzenger chưa viết lại theo truyện.
+- Dây máy tính (màn hình, bàn phím, nguồn CPU) + đầu USB-C / phích CEE / đầu C13 về lại màu đen (`Cable dark`, `BLACK` trong Wiring.tsx); chỉ dây + phích đèn bàn build còn trắng (đảo một phần quyết định "dây điện trắng" 0.1.40).
+- Bàn phím Planck trên bàn máy tính: keycap SA xám → DCS đen cả bộ, chữ trắng font Open Gorton kiểu Wyse (`DESK_CAP`, `keycapKit: 'dcs'` trong PcDesk.tsx).
+- Góc nhìn khi đi lại chỉnh được: Cài đặt → mục "Góc nhìn & chuột" thanh trượt FOV 30–120°, mặc định 80° (người dùng chốt sau khi thử 110°; trước cố định 42° "như ống 50mm"),
+  lưu theo máy `sbk-walk-fov` (`lib/fov.ts`). `WalkControls` đặt FOV camera theo đó (zoom con lăn thu hẹp từ FOV này), bay đứng dậy / ngồi xuống chuyển dần
+  giữa FOV gốc 42° (ngồi bàn build / máy tính / đoạn mở đầu giữ nguyên) và FOV đi lại (`anim.fov0` / `sit`). Độ nhạy chuột đã có sẵn cùng mục.
 - Suốt lúc tập đi lại (`useIntro.learn` còn, cả bước `free`): ẩn khung lời dẫn `RoomGuide` và **mọi** dòng chữ đáy màn của `RoomHud`
   (dòng điều khiển + chữ gợi ý lúc rê vào vật) theo yêu cầu; chỉ còn vòng tròn, dấu ?, bong bóng "Tương tác", phụ đề.
 - Phụ đề `IntroCaption` chạy chữ dần (`Typed`, `TYPE_MS` 32ms / ký tự, phần chưa hiện vẫn chiếm chỗ); `say(text, ms)` = chạy hết chữ rồi giữ thêm `ms`.

@@ -8,6 +8,7 @@ import { KeyCap, MouseIcon } from '@/components/game/ControlsHint'
 import { cn } from '@/lib/format'
 import { setPerfHud, usePerfHud } from '@/lib/perfStats'
 import { SENS_DEFAULT, SENS_MAX, SENS_MIN, setMouseSens, useMouseSens } from '@/lib/mouseSens'
+import { FOV_DEFAULT, FOV_MAX, FOV_MIN, setFov, useFov } from '@/lib/fov'
 import {
   setDevMoney,
   setDevSpells,
@@ -68,14 +69,37 @@ function ConfirmExit({ onCancel }: { onCancel: () => void }) {
   )
 }
 
-/** Độ nhạy chuột khi đi lại trong phòng (hệ số × tốc độ xoay nhìn, lưu theo máy) */
+/** Góc nhìn (FOV) + độ nhạy chuột khi đi lại trong phòng (lưu theo máy: `lib/fov.ts`, `lib/mouseSens.ts`) */
 function MouseSensSection() {
   const sens = useMouseSens((s) => s.sens)
+  const fov = useFov((s) => s.fov)
   return (
     <Section
-      title="Chuột"
-      info="Tốc độ xoay góc nhìn khi đi lại trong phòng. Thấy chóng mặt thì kéo thấp xuống"
+      title="Góc nhìn & chuột"
+      info="Góc nhìn (FOV) và tốc độ xoay khi đi lại trong phòng. Thấy tù túng thì kéo FOV lên, thấy chóng mặt thì kéo độ nhạy xuống"
     >
+      <Row className="flex-col items-stretch gap-1.5">
+        <div className="flex items-center justify-between gap-3 font-bold">
+          <span>Góc nhìn (FOV)</span>
+          <span className="flex items-center gap-2">
+            {fov !== FOV_DEFAULT && (
+              <Button size="sm" title="Về góc nhìn mặc định" onClick={() => setFov(FOV_DEFAULT)}>
+                Mặc định
+              </Button>
+            )}
+            <span className="font-head text-lg text-green">{Math.round(fov)}°</span>
+          </span>
+        </div>
+        <Slider
+          value={fov}
+          min={FOV_MIN}
+          max={FOV_MAX}
+          step={1}
+          onChange={(v) => setFov(Math.round(v))}
+          aria-label="Góc nhìn khi đi lại"
+          title="Chỉnh góc nhìn (FOV) khi đi lại"
+        />
+      </Row>
       <Row className="flex-col items-stretch gap-1.5">
         <div className="flex items-center justify-between gap-3 font-bold">
           <span>Độ nhạy xoay nhìn</span>

@@ -4,16 +4,26 @@ import * as THREE from 'three'
 
 // Dây điện (dựng bằng code) + ổ cắm tường + công tắc đèn (model), dùng chung cho đèn bàn build, máy tính. Đơn vị mét
 
-/** dây + phích / đầu cắm trong phòng đều nhựa trắng (người dùng chọn; trước là đen) */
+/** chỉ dây + phích đèn bàn build là nhựa trắng; dây máy tính (màn hình, bàn phím, nguồn CPU) + đầu cắm của chúng màu đen (người dùng chọn) */
 const WHITE = '#ecebe6'
+const BLACK = '#16171a'
 const CABLE = new THREE.MeshStandardMaterial({ color: WHITE, roughness: 0.6 })
+const CABLE_DARK = new THREE.MeshStandardMaterial({ color: BLACK, roughness: 0.6 })
 const SWITCH_GLB = '/models/room/light-switch.glb'
 /** mặt sau mặt nạ công tắc lùi sau tâm model 2,5mm: dời ra cho mặt nạ áp sát tường (+0,5mm khỏi chớp hình) */
 const SWITCH_BACK = 0.003
 useGLTF.preload(SWITCH_GLB)
 
-/** Dây cáp mềm qua các điểm (m, hệ cha) */
-export function Cable({ points, r = 0.004 }: { points: [number, number, number][]; r?: number }) {
+/** Dây cáp mềm qua các điểm (m, hệ cha); `dark` = dây đen (dây máy tính), mặc định trắng (dây đèn) */
+export function Cable({
+  points,
+  r = 0.004,
+  dark = false,
+}: {
+  points: [number, number, number][]
+  r?: number
+  dark?: boolean
+}) {
   const geo = useMemo(
     () =>
       new THREE.TubeGeometry(
@@ -24,7 +34,7 @@ export function Cable({ points, r = 0.004 }: { points: [number, number, number][
       ),
     [points, r],
   )
-  return <mesh geometry={geo} material={CABLE} castShadow />
+  return <mesh geometry={geo} material={dark ? CABLE_DARK : CABLE} castShadow />
 }
 
 /**
@@ -74,14 +84,7 @@ function pick(scene: THREE.Object3D, re: RegExp) {
     const m = o as THREE.Mesh
     if (!m.isMesh) return
     m.castShadow = true
-    // vỏ nhựa đen của model → trắng cho khớp dây (chân kim loại / đồng giữ nguyên)
-    const mat = m.material as THREE.MeshStandardMaterial
-    if (/plastic/i.test(mat.name)) {
-      const white = mat.clone()
-      white.color.set(WHITE)
-      white.roughness = 0.5
-      m.material = white
-    }
+    // vỏ nhựa đen của model giữ nguyên (dây nguồn máy tính màu đen)
   })
   return c
 }
@@ -175,7 +178,7 @@ export function LightSwitch(props: JSX.IntrinsicElements['group']) {
   )
 }
 
-const PLUG_SHELL = new THREE.MeshStandardMaterial({ color: WHITE, roughness: 0.55 })
+const PLUG_SHELL = new THREE.MeshStandardMaterial({ color: BLACK, roughness: 0.55 })
 const PLUG_METAL = new THREE.MeshStandardMaterial({
   color: '#c9ccd2',
   metalness: 0.9,

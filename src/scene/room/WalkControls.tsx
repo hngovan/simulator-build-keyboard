@@ -7,6 +7,7 @@ import { pcEye, screenCenter } from '../models/computerLayout'
 import { BLOCKS, BODY_R, EYE_Y, M, SPOTS, WALK_AREAS } from './roomLayout'
 import { useRoom } from './roomStore'
 import { useMouseSens } from '@/lib/mouseSens'
+import { useFov } from '@/lib/fov'
 import { learnAdd, useIntro } from '@/features/intro/introStore'
 import { PAN_LOOK, PAN_TO } from './introPath'
 
@@ -138,6 +139,9 @@ export function WalkControls() {
       to: THREE.Vector3
       toQ: THREE.Quaternion
       then?: () => void
+      /** góc nhìn lúc bắt đầu bay (ghi ở khung đầu); `sit` = bay tới chỗ ngồi → về góc nhìn gốc, không thì ra góc nhìn đi lại (Cài đặt) */
+      fov0?: number
+      sit?: boolean
     },
   })
 
@@ -196,6 +200,7 @@ export function WalkControls() {
           to,
           toQ: new THREE.Quaternion().setFromRotationMatrix(m),
           then: r.fly.then,
+          sit: true,
         }
       }),
     [camera],
@@ -377,15 +382,22 @@ export function WalkControls() {
     const dt = Math.min(rawDt, 1 / 30)
     // zoom mượt về mức muốn; bay camera (ngồi / đứng) thì bỏ zoom
     if (s.anim) s.zoom = 0
-    if (Math.abs(s.shownZoom - s.zoom) > 1e-3 && cam instanceof THREE.PerspectiveCamera) {
+    if (Math.abs(s.shownZoom - s.zoom) > 1e-3)
       s.shownZoom += (s.zoom - s.shownZoom) * Math.min(1, dt * 10)
-      cam.fov = baseFov.current * (1 - s.shownZoom * (1 - ZOOM_MIN))
+    // góc nhìn đi lại lấy theo Cài đặt (`useFov`), zoom thu hẹp từ đó; đang bay thì chuyển dần giữa góc gốc (ngồi) ↔ góc đi lại
+    const walkFov = useFov.getState().fov
+    const setFov = (v: number) => {
+      if (!(cam instanceof THREE.PerspectiveCamera) || Math.abs(cam.fov - v) < 1e-3) return
+      cam.fov = v
       cam.updateProjectionMatrix()
     }
+    if (!s.anim) setFov(walkFov * (1 - s.shownZoom * (1 - ZOOM_MIN)))
     if (s.anim) {
       const a = s.anim
       a.t = Math.min(1, a.t + dt / FLY_S)
       const e = a.t * a.t * (3 - 2 * a.t)
+      a.fov0 ??= cam instanceof THREE.PerspectiveCamera ? cam.fov : baseFov.current
+      setFov(THREE.MathUtils.lerp(a.fov0, a.sit ? baseFov.current : walkFov, e))
       cam.position.lerpVectors(a.from, a.to, e)
       cam.quaternion.slerpQuaternions(a.fromQ, a.toQ, e)
       if (a.t >= 1) {
