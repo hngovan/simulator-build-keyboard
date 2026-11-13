@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.42',
     date: '2026-11-13',
-    commits: [],
+    commits: ['1bb688f'],
     title: 'Đoạn mở đầu mới: tập đi lại, Keeb-chan chào, cốt truyện',
     items: [
       'Chơi mới lần nào cũng có đoạn mở đầu (phím bất kỳ để bỏ qua, Esc không bỏ qua), nhạc riêng, camera bay vào màn hình rồi lùi về mới hỏi hướng dẫn',
