@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { hush, speak } from '@/data/voice'
+import { quiet } from '@/features/intro/introStore'
 
 /** câu đã đọc trong phiên (cho `once`) */
 const said = new Set<string>()
@@ -16,6 +17,8 @@ export function useSpeak(lines: (string | null | undefined)[], once = false) {
       if (said.has(key)) return
       said.add(key)
     }
+    // Keeb-chan nói thì lời tự ngẫm (phụ đề) đang kể dở im, 2 giọng không chen nhau
+    quiet()
     speak(key.split('\n'))
     return hush
   }, [key, once])

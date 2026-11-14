@@ -1,11 +1,11 @@
 {
   "Cái bàn theo mình từ hồi còn làm thợ ở QMK. Sau vụ bê bối, lâu lắm rồi chưa có con phím nào nằm trên này...": {
-    "file": "v-8c10cfe89f.mp3",
-    "dur": 7.17
+    "file": "v-05aa64452d.mp3",
+    "dur": 7.94
   },
   "Lại một ngày không có đơn... Hết việc trong ngày thì bấm vào lịch để sang ngày mới.": {
-    "file": "v-934d7b5c3a.mp3",
-    "dur": 4.45
+    "file": "v-b4fd59bcbc.mp3",
+    "dur": 5.05
   },
   "Kệ để hàng. Đồ người ta gửi tới với hàng mua về đều nằm ở đây.": {
     "file": "v-9c3e09d155.mp3",
@@ -32,8 +32,8 @@
     "dur": 3.52
   },
   "QMK...": {
-    "file": "v-962f2421cb.mp3",
-    "dur": 0.59
+    "file": "v-7a0bfd5756.mp3",
+    "dur": 1.05
   },
   "Hồi đó mình là thợ build phím của shop này.": {
     "file": "v-e564f1c903.mp3",
@@ -44,20 +44,20 @@
     "dur": 2.66
   },
   "Rồi shop dính bê bối.": {
-    "file": "v-f115900924.mp3",
-    "dur": 1.17
+    "file": "v-f897fe6792.mp3",
+    "dur": 1.99
   },
   "Mình chẳng làm gì sai... mà vẫn mang tiếng lây.": {
     "file": "v-9fe65f4abc.mp3",
     "dur": 2.82
   },
   "Khách cứ thế bỏ đi hết.": {
-    "file": "v-84554a6d68.mp3",
-    "dur": 1.23
+    "file": "v-7d6a7cac80.mp3",
+    "dur": 1.81
   },
   "Giờ trong ví chỉ còn đúng 7.500k.": {
-    "file": "v-2ab75793fe.mp3",
-    "dur": 2.22
+    "file": "v-d2db4c5999.mp3",
+    "dur": 2.81
   },
   "Nhưng tay nghề thì vẫn còn nguyên.": {
     "file": "v-29f2086fb0.mp3",
@@ -72,8 +72,8 @@
     "dur": 1.99
   },
   "Chào! Mình là Keeb-chan, trợ lý trong máy của bạn!": {
-    "file": "v-1ceb2457e9.mp3",
-    "dur": 2.22
+    "file": "v-9b9fc9325d.mp3",
+    "dur": 2.85
   },
   "Lâu lắm rồi máy mới có tin nhắn đó! Anh QuýB nhắn nhờ build giúp một con phím 60% kìa.": {
     "file": "v-9424af8319.mp3",
@@ -192,8 +192,8 @@
     "dur": 3.43
   },
   "Đủ món rồi! Mở Giỏ hàng để thanh toán.": {
-    "file": "v-d3eecd2b29.mp3",
-    "dur": 1.79
+    "file": "v-9a9aad868e.mp3",
+    "dur": 2.11
   },
   "Chọn tốc độ giao \"Hoả tốc\": hàng tới kệ cuối hành lang ngay hôm nay để build luôn (phí +50k mỗi món, đơn đầu cần làm ngay nên đáng). Mẹo: đơn hạn dài (còn 3–4 ngày) thì chọn Nhanh (mai tới) hoặc Tiết kiệm (2 ngày, miễn phí giao) cho đỡ tiền.": {
     "file": "v-2164aa2953.mp3",
@@ -216,8 +216,8 @@
     "dur": 5.86
   },
   "Đủ đồ rồi! Bấm chuột trái vào thùng để mở thùng, bắt đầu build nào ⌨️": {
-    "file": "v-09ea97c781.mp3",
-    "dur": 3.35
+    "file": "v-6aa02ac7d0.mp3",
+    "dur": 3.59
   },
   "Cứ làm theo mũi tên vàng trong cảnh. Xong mỗi bước, nút \"Bước tiếp theo\" ở giữa dưới màn hình sẽ sáng nhấp nháy: bấm để sang bước kế.": {
     "file": "v-380393b2e6.mp3",
@@ -236,12 +236,12 @@
     "dur": 5.32
   },
   "Xong rồi! Bấm \"Cho phím vào thùng\" để đóng gói, rồi đứng dậy cầm thùng đặt lên kệ giao hàng trong phòng là gửi khách.": {
-    "file": "v-e81811945d.mp3",
-    "dur": 5.13
+    "file": "v-05c0840162.mp3",
+    "dur": 5.42
   },
   "Đóng gói xong! Nhấn chuột trái vào thùng để cầm lên, rồi đứng dậy (nút quay lại góc trên trái) mang ra kệ giao hàng sát tường phải trong phòng.": {
-    "file": "v-dfd04c2efe.mp3",
-    "dur": 6.8
+    "file": "v-815ca93995.mp3",
+    "dur": 6.84
   },
   "Gõ từng phím bằng bàn phím thật (hoặc click phím 3D trên bàn) để test. Phím test rồi có chấm xanh; test đủ hết phím mới sang bước đóng gói được.": {
     "file": "v-5b438ca2f1.mp3",
@@ -292,8 +292,8 @@
     "dur": 5.73
   },
   "Thu tiền xong rồi! Hết việc hôm nay thì bấm vào lịch treo tường để kết thúc ngày, sang ngày mới có đơn mới.": {
-    "file": "v-0b13306323.mp3",
-    "dur": 4.6
+    "file": "v-07d6df7cdc.mp3",
+    "dur": 4.34
   },
   "Đang cầm thùng đã đóng gói. Mang tới kệ giao hàng sát tường phải trong phòng, bấm vào ô trống trên kệ để đặt = gửi cho khách.": {
     "file": "v-5d40c31e5c.mp3",
@@ -320,11 +320,11 @@
     "dur": 5.19
   },
   "Đơn đầu tiên là của anh QuýB, để mình chỉ bạn từng bước nhé!": {
-    "file": "v-9c0dbaa352.mp3",
-    "dur": 3.28
+    "file": "v-ee1d32e786.mp3",
+    "dur": 3.73
   },
   "Đơn đầu tiên là của anh QuýB, mở Mezzenger xem nhé!": {
-    "file": "v-15cffc55fe.mp3",
-    "dur": 3.16
+    "file": "v-ea02c1d116.mp3",
+    "dur": 3.55
   }
 }

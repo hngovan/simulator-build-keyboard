@@ -41,11 +41,40 @@ const spoken = (text: string) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+/**
+ * Thẻ cảm xúc của VieNeu-TTS (chỉ trong câu đọc, chữ trên màn hình không có): lời tự ngẫm buồn thêm tiếng thở dài đầu câu,
+ * Keeb-chan cười sau câu cảm thán đầu. Thẻ `[cười]` đứng đầu câu không ăn (đã thử), phải nằm giữa / cuối câu
+ */
+const SIGH = new Set([
+  TIPS.bench,
+  TIPS.calendar,
+  QMK_STORY[0],
+  QMK_STORY[3],
+  QMK_STORY[5],
+  QMK_STORY[6],
+])
+/** câu Keeb-chan bắt đầu bằng mấy chữ này thì cười sau dấu ! đầu tiên */
+const LAUGH = [
+  'Chào! Mình là',
+  'Tên hay đó!',
+  'Đủ đồ rồi!',
+  'Đủ món rồi!',
+  'Xong rồi!',
+  'Thu tiền xong rồi!',
+  'Đóng gói xong!',
+]
+const emote = (text: string, say: string) =>
+  SIGH.has(text)
+    ? `[thở dài] ${say}`
+    : LAUGH.some((head) => say.startsWith(head))
+      ? say.replace('!', '! [cười]')
+      : say
+
 /** câu → { giọng, câu đọc }; `say` = đọc khác chữ hiện (câu chốt màn chào: chữ hiện có tên xưởng đứng trước) */
 const want = new Map<string, { voice: string; say: string }>()
 const add = (voice: string, lines: string[], say?: (text: string) => string) => {
   for (const text of lines)
-    if (!want.has(text)) want.set(text, { voice, say: spoken(say ? say(text) : text) })
+    if (!want.has(text)) want.set(text, { voice, say: emote(text, spoken(say ? say(text) : text)) })
 }
 add(VOICE, [...Object.values(TIPS), ...PC_LINE, ...QMK_STORY])
 add(KEEB_VOICE, [...GREET, ...TOUR_LINES, ...BENCH_LINES, ...Object.values(ROOM_LINES)])

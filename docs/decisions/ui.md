@@ -21,6 +21,11 @@
 - Người dùng nhắc: biến môi trường phải có trong `.env.example` (`VIENEU_PY` / `VOICE` / `KEEB_VOICE` / `FORCE`), lệnh `gen:voice` phải có trong README (đã thêm mục "Sinh giọng đọc").
 - Người dùng: nhạc nền nhỏ đi một chút → `MUSIC_TRIM` 0,7 nhân vào kênh nhạc trong `applyAudioSettings` (không đổi số người chơi đã lưu).
 - (tiếp) Người dùng đổi giọng Keeb-chan sang **"Trúc Ly"** (Nữ · Bắc · tự nhiên) thay "Ngọc Trân"; sinh lại 64 câu.
+- (tiếp) Người dùng: giọng nam thêm chút thở dài ở đoạn gợi lại chuyện cũ, Keeb-chan chêm vài tiếng cười → thẻ cảm xúc VieNeu-TTS chỉ chèn vào câu đọc (`emote` trong gen-voice.ts):
+  `SIGH` = `[thở dài]` đầu câu (dấu ? bàn build / lịch, `QMK_STORY` câu 1 / 4 / 6 / 7), `LAUGH` = `[cười]` sau dấu ! đầu của 8 câu Keeb-chan (chào, "Tên hay đó!", "Đủ đồ rồi!"...).
+  Thử bằng đo độ dài + Whisper: `[thở dài]` đầu câu thêm ~0,6s tiếng thở, `[cười]` giữa câu thêm ~0,3s, **`[cười]` đầu câu không ăn**.
+- Lỗi người dùng báo: vừa bấm vào máy tính thì 2 giọng chen nhau (lời tự ngẫm "Có tin nhắn mới..." còn kể dở mà Keeb-chan đã chào). Sửa: `quiet()` (introStore) tắt phụ đề + chuỗi `tell`,
+  gọi lúc `pcZoom` (IntroSpots) và trong `useSpeak` trước khi Keeb-chan nói; ngược lại `say()` gọi `hush()` dừng chuỗi câu của Keeb-chan.
 - `captionId` (useIntro): `say` lại đúng câu đang hiện thì chữ chạy lại từ đầu (trước `key={text}` không dựng lại).
 - Đã kiểm trong trình duyệt: phụ đề chạy đúng nhịp, file mp3 tải 200; **chưa nghe thử bằng tai** (cách đọc "QMK" / "build" / "shop" cần người dùng nghe lại).
 

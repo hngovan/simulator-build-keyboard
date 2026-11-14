@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { VOICES } from '@/data/voice'
+import { VOICES, hush } from '@/data/voice'
 import { playVoice, stopVoice } from '@/sound'
 
 // Đoạn mở đầu mỗi lần chơi mới (không lưu trong save, bấm phím bất kỳ để bỏ qua), dựng kiểu phim cắt cảnh: màn đen "NGÀY 1" → hành lang →
@@ -159,10 +159,22 @@ export function say(text: string, ms = 2400) {
   window.clearTimeout(storyTimer)
   storyLeft = false
   useIntro.setState((s) => ({ caption: text, captionId: s.captionId + 1 }))
+  // Keeb-chan đang đọc dở chuỗi câu thì dừng hẳn (không để câu sau của Keeb-chan chen vào phụ đề)
+  hush()
   const voice = VOICES[text]
   if (voice) playVoice(voice.file)
   else stopVoice()
   captionTimer = window.setTimeout(() => useIntro.setState({ caption: null }), showMs(text, ms))
+}
+
+/** tắt phụ đề + giọng lời tự ngẫm đang chạy (Keeb-chan sắp nói / vừa vào máy tính: 2 giọng không chen nhau) */
+export function quiet() {
+  window.clearTimeout(captionTimer)
+  window.clearTimeout(storyTimer)
+  if (!talking()) return
+  storyLeft = false
+  stopVoice()
+  useIntro.setState({ caption: null })
 }
 
 /** kể lần lượt nhiều câu phụ đề (chạy hết chữ / hết giọng, giữ thêm chút, ẩn, nghỉ ngắn rồi sang câu sau); gọi lại = kể lại từ đầu */

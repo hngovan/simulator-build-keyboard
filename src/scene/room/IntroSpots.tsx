@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { useGame } from '@/store'
 import { Y } from '@/data/steps'
 import { MouseIcon } from '@/components/game/ControlsHint'
-import { INTRO_OFF, tipFirstClick, useIntro, type TipId } from '@/features/intro/introStore'
+import { INTRO_OFF, quiet, tipFirstClick, useIntro, type TipId } from '@/features/intro/introStore'
 import { screenCenter } from '../models/computerLayout'
 import {
   BACK_M,
@@ -173,6 +173,8 @@ export function IntroSpots() {
     () =>
       useGame.subscribe((s, prev) => {
         if (!s.pcZoom || prev.pcZoom || !useIntro.getState().learn) return
+        // vào máy tính: lời tự ngẫm đang kể dở ("Có tin nhắn mới...") im, khỏi chen giọng Keeb-chan chào
+        quiet()
         // thẻ tin nhắn trên màn hình 3D giữ tới lúc bay vào xong
         useIntro.setState({ ...INTRO_OFF, ping: true })
         window.setTimeout(() => useIntro.setState({ ping: false }), 1500)
