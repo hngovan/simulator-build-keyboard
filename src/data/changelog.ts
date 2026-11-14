@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.45',
     date: '2026-11-14',
-    commits: [],
+    commits: ['1596fb1'],
     title: 'Giọng đọc tiếng Việt cho phụ đề và Keeb-chan',
     items: [
       'Lời tự ngẫm của nhân vật (dấu ? lúc tập đi lại, màn hình máy tính, tranh QMK) có giọng đọc nam; phụ đề chờ đọc xong mới ẩn, các câu nối nhau nhanh hơn',
