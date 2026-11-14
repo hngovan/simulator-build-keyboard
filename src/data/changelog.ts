@@ -15,7 +15,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: '0.1.46',
     date: '2026-11-14',
-    commits: [],
+    commits: ['3c45328'],
     title: 'Keeb-chan nói ngắn gọn, có giọng ở mọi bước lắp',
     items: [
       'Chỉ còn Keeb-chan có giọng đọc (giọng Trúc Ly); lời tự ngẫm của nhân vật chính chỉ hiện phụ đề',
