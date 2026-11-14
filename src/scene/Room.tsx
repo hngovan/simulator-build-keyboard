@@ -46,7 +46,7 @@ import { drawBanknote } from './room/banknoteArt'
 import { drawQmk } from './room/qmkArt'
 import { CanvasPainting, ImagePainting } from './room/CanvasPainting'
 import { RoomSpot } from './room/RoomSpot'
-import { QMK_STORY, tell, tipFirstClick } from '@/features/intro/introStore'
+import { tipFirstClick, useIntro } from '@/features/intro/introStore'
 import { FrogPainting } from './room/FrogPainting'
 import { LIT_SHADE, RoomWindow } from './room/RoomWindow'
 import { WallCalendar } from './room/WallCalendar'
@@ -878,6 +878,8 @@ function Hallway({ maps }: { maps: MapSet }) {
 }
 
 export function Room() {
+  // tranh QMK chỉ bấm được 1 lần: lúc tập đi lại, khi dấu ? của nó còn (bấm xong dấu ? mất thì tranh thành vật trang trí)
+  const qmkTip = useIntro((s) => s.learn === 'free' && s.tips.includes('qmk'))
   const floorMaps = useTexture(FLOOR_TEX) as MapSet
   const wallMaps = useTexture(WALL_TEX) as MapSet
   // sàn phòng lấn sang trái hết bề dày tường trái: lấp khe dưới ô cửa sang hành lang (không cần thanh ngưỡng cửa), phần
@@ -1008,11 +1010,12 @@ export function Room() {
         position={[1.95 * M, FLOOR_Y + 1.6 * M, ROOM.back]}
         scale={M}
       />
-      {/* tranh graffiti "QMK" kiểu bàn phím (vẽ canvas, ký keeb), tường trái góc cạnh bàn máy tính; bấm vào = phụ đề kể lại cốt truyện */}
+      {/* tranh graffiti "QMK" kiểu bàn phím (vẽ canvas, ký keeb), tường trái góc cạnh bàn máy tính; bấm vào (1 lần duy nhất, lúc tập đi lại) = phụ đề kể lại cốt truyện */}
       <RoomSpot
         label="Ngắm tranh QMK"
         outlineScale={2}
-        onAct={() => tipFirstClick('qmk') || tell(QMK_STORY)}
+        active={qmkTip}
+        onAct={() => tipFirstClick('qmk')}
       >
         <CanvasPainting
           draw={drawQmk}

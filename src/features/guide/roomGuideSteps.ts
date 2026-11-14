@@ -12,6 +12,27 @@ export interface RoomGuideStep {
   target: GuideTarget | null
 }
 
+/** câu tĩnh của lời dẫn khi đi lại (`bun run gen:voice` sinh giọng Keeb-chan; câu ghép số ngày / tên khách không có giọng) */
+export const ROOM_LINES = {
+  start:
+    'Chào chủ xưởng mới! Đi tới bàn máy tính (theo mũi tên) và bấm vào màn hình để mở máy, nhận đơn đầu tiên.',
+  collect:
+    'Đã gửi đơn đầu tiên 🎉 Giờ thu tiền công: bấm vào màn hình máy tính, mở Mezzenger rồi bấm "Thu tiền" trong tin nhắn của khách.',
+  endDay:
+    'Thu tiền xong rồi! Hết việc hôm nay thì bấm vào lịch treo tường để kết thúc ngày, sang ngày mới có đơn mới.',
+  carryPacked:
+    'Đang cầm thùng đã đóng gói. Mang tới kệ giao hàng sát tường phải trong phòng, bấm vào ô trống trên kệ để đặt = gửi cho khách.',
+  takePacked: 'Phím đã đóng gói! Tới bàn build, nhấn chuột trái vào bàn để cầm thùng lên.',
+  carryBox:
+    'Đang cầm thùng đơn. Đi về bàn build trong phòng, bấm vào bàn để đặt thùng xuống rồi ngồi vào lắp.',
+  sitDown:
+    'Thùng đơn đã nằm trên bàn build. Bấm vào bàn để ngồi xuống, rồi bấm chuột trái vào thùng để bắt đầu lắp.',
+  parcel:
+    'Linh kiện tới rồi! Đi ra cửa phòng bên trái, rẽ vào hành lang tới kệ sắt cuối hành lang, bấm kiện Shopii (logo cam) để nhận.',
+  missing:
+    'Còn thiếu linh kiện cho đơn. Bấm màn hình máy tính, mở Shopii mua nốt (app Danh sách đơn ghi món còn thiếu).',
+}
+
 /**
  * Lời dẫn của Keeb-chan khi đi lại trong phòng cho người mới: chưa xem tour máy tính thì chỉ màn hình máy tính;
  * đang làm đơn hướng dẫn (chưa vào build) thì chỉ việc kế tiếp: nhận kiện ở kệ cuối hành lang → cầm thùng đơn → bàn build
@@ -19,7 +40,7 @@ export interface RoomGuideStep {
 export function roomGuide(s: GameState): RoomGuideStep | null {
   if (!s.guideSeen.includes(TOUR_ID))
     return {
-      text: 'Chào chủ xưởng mới! Đi tới bàn máy tính (theo mũi tên) và bấm vào màn hình để mở máy, nhận đơn đầu tiên.',
+      text: ROOM_LINES.start,
       target: 'pc',
     }
   // đơn hướng dẫn đã đóng gói: cầm thùng → kệ giao hàng → (đã gửi) bấm lịch kết thúc ngày
@@ -28,22 +49,22 @@ export function roomGuide(s: GameState): RoomGuideStep | null {
     const id = tut.order.id
     if (tut.shipped && tut.paid === false)
       return {
-        text: 'Đã gửi đơn đầu tiên 🎉 Giờ thu tiền công: bấm vào màn hình máy tính, mở Mezzenger rồi bấm "Thu tiền" trong tin nhắn của khách.',
+        text: ROOM_LINES.collect,
         target: 'pc',
       }
     if (tut.shipped)
       return {
-        text: 'Thu tiền xong rồi! Hết việc hôm nay thì bấm vào lịch treo tường để kết thúc ngày, sang ngày mới có đơn mới.',
+        text: ROOM_LINES.endDay,
         target: 'calendar',
       }
     if (s.held === id)
       return {
-        text: 'Đang cầm thùng đã đóng gói. Mang tới kệ giao hàng sát tường phải trong phòng, bấm vào ô trống trên kệ để đặt = gửi cho khách.',
+        text: ROOM_LINES.carryPacked,
         target: 'ship',
       }
     if (s.benchBox === id)
       return {
-        text: 'Phím đã đóng gói! Tới bàn build, nhấn chuột trái vào bàn để cầm thùng lên.',
+        text: ROOM_LINES.takePacked,
         target: 'bench',
       }
   }
@@ -52,17 +73,17 @@ export function roomGuide(s: GameState): RoomGuideStep | null {
   if (!o?.tutorial || s.build || s.result || s.guideSeen.includes(BENCH_TOUR_ID)) return null
   if (s.held === o.id)
     return {
-      text: 'Đang cầm thùng đơn. Đi về bàn build trong phòng, bấm vào bàn để đặt thùng xuống rồi ngồi vào lắp.',
+      text: ROOM_LINES.carryBox,
       target: 'bench',
     }
   if (s.benchBox === o.id)
     return {
-      text: 'Thùng đơn đã nằm trên bàn build. Bấm vào bàn để ngồi xuống, rồi bấm chuột trái vào thùng để bắt đầu lắp.',
+      text: ROOM_LINES.sitDown,
       target: 'bench',
     }
   if (s.parcels.some((p) => p.arrive <= s.day))
     return {
-      text: 'Linh kiện tới rồi! Đi ra cửa phòng bên trái, rẽ vào hành lang tới kệ sắt cuối hành lang, bấm kiện Shopii (logo cam) để nhận.',
+      text: ROOM_LINES.parcel,
       target: 'door',
     }
   const pending = s.parcels.filter((p) => p.arrive > s.day)
@@ -73,7 +94,7 @@ export function roomGuide(s: GameState): RoomGuideStep | null {
     }
   if (checkInventory(s.inventory, o).some((c) => !c.ok))
     return {
-      text: 'Còn thiếu linh kiện cho đơn. Bấm màn hình máy tính, mở Shopii mua nốt (app Danh sách đơn ghi món còn thiếu).',
+      text: ROOM_LINES.missing,
       target: 'pc',
     }
   if (s.boxes[o.id]?.at === 'door')

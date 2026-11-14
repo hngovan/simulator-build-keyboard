@@ -5,6 +5,8 @@ import { Button } from '@/components/ui'
 import { KeyCap } from '@/components/game/ControlsHint'
 import { GuideGirl } from '@/components/art/GuideGirl'
 import { TOUR_ID } from '@/data/tourIds'
+import { useSpeak } from '@/hooks/useSpeak'
+import { GREET, GREET_END } from './introStore'
 
 /** câu hỏi tên xưởng (hiện ô nhập) là câu thứ mấy trong `lines` */
 const ASK = 2
@@ -28,12 +30,10 @@ export function Greeting() {
   const tour = useGame((s) => !s.guideSeen.includes(TOUR_ID))
   const shop = name.trim()
   // Keeb-chan không kể cốt truyện (người chơi tự ngẫm lại khi ngắm tranh QMK: `QMK_STORY` trong introStore), chỉ báo tin nhắn + hỏi tên xưởng
-  const lines = [
-    'Chào! Mình là Keeb-chan, trợ lý trong máy của bạn!',
-    'Lâu lắm rồi máy mới có tin nhắn đó! Anh QuýB nhắn nhờ build giúp một con phím 60% kìa.',
-    'Trước khi bắt tay vào việc, xưởng của bạn tên là gì?',
-    `"${shop}", tên hay đó! ${tour ? 'Đơn đầu tiên là của anh QuýB, để mình chỉ bạn từng bước nhé!' : 'Đơn đầu tiên là của anh QuýB, mở Mezzenger xem nhé!'}`,
-  ]
+  const end = tour ? GREET_END.tour : GREET_END.free
+  const lines = [...GREET, `"${shop}", tên hay đó! ${end}`]
+  // câu chốt có tên xưởng người chơi gõ: giọng đọc sẵn chỉ có phần sau tên
+  useSpeak([i < GREET.length ? GREET[i] : end])
   const asking = i === ASK
   const next = () => {
     if (asking && !shop) return

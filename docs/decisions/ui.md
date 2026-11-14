@@ -2,6 +2,27 @@
 
 ## 2026-11-14
 
+### Giọng đọc cho phụ đề dấu ? (VieNeu-TTS)
+
+- Yêu cầu: dùng github.com/pnnbao97/VieNeu-TTS đọc thành tiếng lúc tương tác với các dấu ? trong game; người dùng đòi giọng "Trung Dũng".
+- Bản mã nguồn mở (gói pip `vieneu` 3.8.4, v3 Turbo) **không có giọng "Trung Dũng"** → tạm dùng "Mạnh Dũng" (Nam · Bắc · tự nhiên, gần tên nhất), chờ người dùng chốt.
+- Sinh sẵn file (không chạy model trong trình duyệt): `bun run gen:voice` = `scripts/gen-voice.ts` (gom câu `TIPS` / `PC_LINE` / `QMK_STORY`, bảng `SPEAK` đổi chữ máy
+  đọc sai: QMK → "Quy em ca", QuýB → "Quý Bê", 7.500k → "bảy triệu rưỡi"; tên file = sha1 giọng + câu) gọi `scripts/gen-voice.py` (VieNeu đọc, ffmpeg cắt lặng 2 đầu +
+  loudnorm + mp3 mono 80k) → `public/audio/voice/` (18 file, ~400KB) + `src/data/generated/voice.json`. Môi trường Python để ngoài repo (`D:/tools-vieneu/.venv`, `VIENEU_PY`).
+- Phát: `playVoice` / `stopVoice` trong `src/sound.ts` (kênh hiệu ứng, câu mới cắt câu cũ); `say()` tra `voice.json` theo đúng chuỗi câu, `showMs` giữ phụ đề không ngắn hơn giọng
+  (`tell` cũng chờ theo). Thiếu file thì im lặng như cũ.
+- (sửa cùng ngày) Người dùng chốt giọng **"Thái Sơn"** (Nam · giọng Nam · kể chuyện) thay "Mạnh Dũng"; chê ngắt quãng giữa các câu dài → `tell`: giữ sau khi hết chữ
+  1400 → 700ms (`STORY_HOLD`), nghỉ giữa 2 câu 500 → 250ms (`STORY_GAP`), đuôi sau giọng 500 → 250ms (`VOICE_TAIL`).
+- (tiếp) Người dùng: giọng Keeb-chan dùng **"Ngọc Trân"** (Nữ · Trung · tự nhiên). Gom câu tĩnh của Keeb-chan vào hằng để script lấy: `GREET` / `GREET_END` (introStore),
+  `TOUR_LINES` (Tour.tsx), `TUT_PACKED` / `TUT_TEST` / `TEST_STEPS` / `INTRO_STEPS` / `PAY_LINES` / `BENCH_LINES` (benchLines.ts, dời từ BenchTour / PayTour), `ROOM_LINES` (roomGuideSteps.ts).
+  Phát: `data/voice.ts` (`speak` đọc lần lượt, `hush`), `hooks/useSpeak` gắn ở `Spotlight` / `Greeting` / `RoomGuide` (`once`: lời dẫn đi lại mỗi câu đọc 1 lần / phiên).
+  Câu ghép lúc chơi không có giọng: `Xong bước "<tên>"!`, bước tuỳ chọn "<tên>", kiện tới ngày N, thùng đơn của <khách>, lời dẫn đầu vít (`BitTour`); câu chốt màn chào chỉ đọc phần sau tên xưởng
+  ("Tên hay đó! ..."). Script: giọng theo từng câu (`VOICE` / `KEEB_VOICE`), bảng `SPEAK` thêm k → nghìn, → / = / + / emoji. 82 file ~4,7MB.
+- Người dùng nhắc: biến môi trường phải có trong `.env.example` (`VIENEU_PY` / `VOICE` / `KEEB_VOICE` / `FORCE`), lệnh `gen:voice` phải có trong README (đã thêm mục "Sinh giọng đọc").
+- Người dùng: nhạc nền nhỏ đi một chút → `MUSIC_TRIM` 0,7 nhân vào kênh nhạc trong `applyAudioSettings` (không đổi số người chơi đã lưu).
+- `captionId` (useIntro): `say` lại đúng câu đang hiện thì chữ chạy lại từ đầu (trước `key={text}` không dựng lại).
+- Đã kiểm trong trình duyệt: phụ đề chạy đúng nhịp, file mp3 tải 200; **chưa nghe thử bằng tai** (cách đọc "QMK" / "build" / "shop" cần người dùng nghe lại).
+
 ### Viết lại cốt truyện: thợ cũ của shop QMK làm lại từ đầu
 
 - Yêu cầu (người dùng chốt, **thay bản "đang thất nghiệp, bạn cũ nhờ build"** ngày 13): người chơi là thợ build phím của shop QMK, shop dính bê bối nên
@@ -20,6 +41,8 @@
   `RoomSpot` tranh QMK `outlineScale={2}` (dày như viền lịch).
 - Dấu ? thứ 5 giữa tranh QMK lúc tập đi lại (`TipId` `'qmk'`, `TIP_AT.qmk` trong IntroSpots; `tipFirstClick('qmk')` kể `QMK_STORY`, bấm thẳng vào tranh cũng bỏ dấu ?).
 - Đang có phụ đề / kể dở chuỗi thì bấm dấu ? khác không ăn (`talking()` trong `tipFirstClick`, người dùng yêu cầu); dấu ? đó giữ nguyên, hết chữ mới bấm được.
+- (2026-11-14, sửa) Tranh QMK chỉ tương tác được **1 lần duy nhất** (người dùng yêu cầu): `RoomSpot` tranh `active` chỉ khi đang tập đi lại (`learn === 'free'`) và dấu ? `'qmk'`
+  còn; bấm xong (dấu ? hoặc thẳng vào tranh) thì tranh hết bấm được. Hiểu "hướng dẫn" = phần tập đi lại: chọn ✗ ở popup thì tranh không bấm được. **Không** mở lại bấm tranh tự do.
 - Chưa kiểm tra trong trình duyệt (chỉ typecheck / lint / format).
 
 ## 2026-11-13

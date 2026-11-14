@@ -15,7 +15,15 @@ import { usePack } from '@/features/bench/packStore'
 import { Spotlight } from './Spotlight'
 import { BENCH_TOUR_ID, BIT_TOUR_ID, SHIP_TOUR_ID, TEST_TOUR_ID } from '@/data/tourIds'
 import { holeOf, useTargetRect, type Hole } from './spotlightRect'
-import { TUT_INTRO, TUT_LINES, TUT_MISSING, TUT_READY } from './benchLines'
+import {
+  INTRO_STEPS,
+  TEST_STEPS,
+  TUT_LINES,
+  TUT_MISSING,
+  TUT_PACKED,
+  TUT_READY,
+  TUT_TEST,
+} from './benchLines'
 
 /**
  * Keeb-chan ở bàn build (chỉ nằm trong tour, không còn NPC đứng riêng):
@@ -84,7 +92,7 @@ export function BenchTour() {
       <Spotlight
         hole={null}
         top
-        text="Đóng gói xong! Nhấn chuột trái vào thùng để cầm lên, rồi đứng dậy (nút quay lại góc trên trái) mang ra kệ giao hàng sát tường phải trong phòng."
+        text={TUT_PACKED}
         actions={
           <Button size="sm" onClick={() => useGame.getState().seeGuide(SHIP_TOUR_ID)}>
             Bỏ qua hướng dẫn
@@ -96,24 +104,6 @@ export function BenchTour() {
   return mode ? <TutorialTour mode={mode} /> : null
 }
 
-/** giới thiệu bước test (bấm "Tiếp" / "Hiểu rồi") */
-const TEST_STEPS = [
-  {
-    target: 'hud-sound',
-    lines: [
-      'Máy đo âm thanh: số % là độ khớp với tiếng khách muốn (vd thock trầm, clack giòn).',
-      'Thanh cam = độ ồn (êm → ồn), thanh xanh = cao độ (trầm → giòn), vạch trắng là âm khách muốn. Âm do switch, plate, case, foam, lube quyết định: càng sát vạch trắng càng được chấm cao.',
-    ],
-  },
-  {
-    target: 'bench-objective',
-    lines: [
-      'Gõ từng phím bằng bàn phím thật (hoặc click phím 3D), phím test rồi có chấm xanh. Phím không có trên bàn phím của bạn (Fn, macro...) thì click.',
-      'Test hết phím rồi mới sang bước: bỏ sót là khách có thể báo lỗi nút; phím bấm không ăn thì quay lại bước lắp / hàn sửa.',
-    ],
-  },
-]
-
 /** Tour 1 lần ở bước test: sáng máy đo âm thanh rồi khung việc cần làm */
 function TestTour() {
   const [i, setI] = useState(0)
@@ -124,6 +114,7 @@ function TestTour() {
     <Spotlight
       hole={holeOf(rect)}
       label={`${i + 1} / ${TEST_STEPS.length}`}
+      voice={step.lines}
       text={
         <div className="flex flex-col gap-1.5">
           {step.lines.map((l) => (
@@ -193,22 +184,6 @@ function BitTour({ need }: { need: ScrewBit }) {
 
 const skipTour = () => useGame.getState().seeGuide(BENCH_TOUR_ID)
 
-/** giới thiệu HUD lúc mới vào build (bấm "Tiếp") */
-const INTRO_STEPS = [
-  {
-    target: 'hud-order',
-    text: 'Đây là yêu cầu của khách: layout, switch, keycap, kiểu lắp... Làm sai là bị chấm thấp đó.',
-  },
-  {
-    target: 'hud-steps',
-    text: 'Các bước build theo thứ tự. Bước đã làm thì bấm vào để quay lại sửa (lỡ tay thì Ctrl + Z).',
-  },
-  {
-    target: 'bench-objective',
-    text: `Khung này luôn ghi việc cần làm ngay bây giờ. ${TUT_INTRO[0]}`,
-  },
-]
-
 function TutorialTour({ mode }: { mode: string }) {
   // đang hỏi lại trước khi đóng gói (popup `ConfirmDeliver`): ẩn tour, không đè lên popup
   const asking = usePack((p) => p.ask)
@@ -263,7 +238,7 @@ function TutorialTour({ mode }: { mode: string }) {
       <Spotlight
         hole={null}
         top
-        text="Gõ từng phím bằng bàn phím thật (hoặc click phím 3D trên bàn) để test. Phím test rồi có chấm xanh; test đủ hết phím mới sang bước đóng gói được."
+        text={TUT_TEST}
         actions={
           <Button size="sm" onClick={skipTour}>
             Bỏ qua hướng dẫn
@@ -278,6 +253,7 @@ function TutorialTour({ mode }: { mode: string }) {
       hole={hole}
       // nút sang bước / đóng gói: chỉ viền nút, không chặn bấm (vẫn lùi bước ở danh sách bước, bấm thùng carton được)
       passive={kind === 'next' || kind === 'skip' || kind === 'pack'}
+      voice={lines}
       text={
         <div className="flex flex-col gap-1.5">
           {lines.map((l) => (

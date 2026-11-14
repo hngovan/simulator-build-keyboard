@@ -88,6 +88,50 @@ function playSfx(
   return true
 }
 
+let voiceSource: AudioBufferSourceNode | undefined
+/** lượt phát giọng mới nhất: file tải xong mà đã có lượt khác (hoặc đã dừng) thì bỏ */
+let voiceTurn = 0
+const voiceBuffers = new Map<string, Promise<AudioBuffer | null>>()
+
+/** dừng giọng đọc phụ đề đang phát */
+export function stopVoice() {
+  voiceTurn++
+  try {
+    voiceSource?.stop()
+  } catch {
+    /* chưa kịp phát */
+  }
+  voiceSource = undefined
+}
+
+/**
+ * Phát giọng đọc phụ đề (`public/audio/voice/<file>`, sinh bằng `bun run gen:voice`), theo âm lượng hiệu ứng; mỗi lúc chỉ 1 giọng
+ * (câu mới cắt câu cũ). Thiếu file thì im lặng
+ */
+export function playVoice(file: string) {
+  stopVoice()
+  const turn = voiceTurn
+  const a = ac()
+  let pending = voiceBuffers.get(file)
+  if (!pending) {
+    pending = fetch(`/audio/voice/${file}`)
+      .then((res) => (res.ok ? res.arrayBuffer() : null))
+      .then((data) => (data ? a.decodeAudioData(data) : null))
+      .catch(() => null)
+    voiceBuffers.set(file, pending)
+  }
+  void pending.then((buffer) => {
+    if (!buffer || turn !== voiceTurn) return
+    void a.resume().catch(() => undefined)
+    const source = a.createBufferSource()
+    source.buffer = buffer
+    source.connect(effectsGain!)
+    source.onended = () => source.disconnect()
+    source.start()
+    voiceSource = source
+  })
+}
+
 /**
  * Trang đã có tương tác (bấm / gõ phím) chưa: tạo AudioContext trước đó thì Chrome cảnh báo "AudioContext was not allowed to start"
  * (autoplay policy) → nhạc nền + tiếng rê chuột chờ tới lần tương tác đầu
@@ -109,6 +153,9 @@ function ac() {
   return ctx
 }
 
+/** hệ số hạ kênh nhạc (nhạc nền + nhạc mở đầu) so với mức người chơi đặt: nhạc nhỏ đi một chút cho khỏi lấn giọng đọc */
+const MUSIC_TRIM = 0.7
+
 /** Đồng bộ âm lượng đang lưu với các kênh Web Audio đã tạo. */
 export function applyAudioSettings(settings: AudioSettings) {
   audioSettings = settings
@@ -116,7 +163,7 @@ export function applyAudioSettings(settings: AudioSettings) {
   const t = ctx.currentTime
   effectsGain.gain.setTargetAtTime(settings.muted ? 0 : settings.effectsVolume, t, 0.02)
   musicGain.gain.setTargetAtTime(
-    settings.muted || settings.musicOff ? 0 : settings.musicVolume,
+    settings.muted || settings.musicOff ? 0 : settings.musicVolume * MUSIC_TRIM,
     t,
     0.02,
   )

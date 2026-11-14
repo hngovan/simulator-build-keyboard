@@ -376,3 +376,6 @@ export function Tour() {
     </Spotlight>
   )
 }
+
+/** mọi câu lời dẫn của tour máy tính (`bun run gen:voice` sinh giọng Keeb-chan) */
+export const TOUR_LINES = STEPS.map((s) => s.text)

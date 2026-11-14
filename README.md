@@ -160,6 +160,18 @@ bun run dev
 | `bun run lint:fix`     | Tự sửa các lỗi ESLint có thể sửa an toàn.                      |
 | `bun run format`       | Format source bằng Prettier và sắp xếp class Tailwind.         |
 | `bun run format:check` | Kiểm tra source đã đúng định dạng hay chưa.                    |
+| `bun run gen:voice`    | Sinh giọng đọc (VieNeu-TTS) cho phụ đề + lời Keeb-chan.        |
+
+### Sinh giọng đọc (`bun run gen:voice`)
+
+Giọng đọc lời tự ngẫm của người chơi (phụ đề dấu ?, tranh QMK) và lời Keeb-chan (màn chào, các tour) được sinh sẵn bằng
+[VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) chạy tại máy, lưu thành `public/audio/voice/*.mp3` +
+`src/data/generated/voice.json`. Đổi / thêm câu thoại thì chạy lại lệnh (câu đã có file được bỏ qua).
+
+- Cần Python có gói `vieneu` (để ngoài repo, vd `uv venv --python 3.11` rồi `uv pip install vieneu`) và `ffmpeg` trong PATH.
+- Biến môi trường (đặt trong `.env.local`, mẫu ở `.env.example`): `VIENEU_PY` = đường dẫn `python.exe` của môi trường đó,
+  `VOICE` = giọng người chơi (mặc định "Thái Sơn"), `KEEB_VOICE` = giọng Keeb-chan (mặc định "Ngọc Trân"), `FORCE=1` = sinh lại hết.
+- Chữ máy đọc sai (QMK, QuýB, 300k...) sửa ở bảng `SPEAK` trong `scripts/gen-voice.ts`.
 
 ## Deploy lên Vercel
 

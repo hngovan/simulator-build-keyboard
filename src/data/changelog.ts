@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.45',
+    date: '2026-11-14',
+    commits: [],
+    title: 'Giọng đọc tiếng Việt cho phụ đề và Keeb-chan',
+    items: [
+      'Lời tự ngẫm của nhân vật (dấu ? lúc tập đi lại, màn hình máy tính, tranh QMK) có giọng đọc nam; phụ đề chờ đọc xong mới ẩn, các câu nối nhau nhanh hơn',
+      'Keeb-chan nói thành tiếng ở màn chào, tour máy tính, tour bàn build, tour thu tiền và lời dẫn khi đi lại (câu có tên bước / tên khách / số ngày chưa có giọng)',
+      'Tranh QMK chỉ ngắm được 1 lần, lúc tập đi lại khi dấu ? còn',
+      'Nhạc nền nhỏ đi một chút cho khỏi lấn giọng đọc',
+    ],
+  },
+  {
     version: '0.1.44',
     date: '2026-11-14',
     commits: ['a7e9010'],

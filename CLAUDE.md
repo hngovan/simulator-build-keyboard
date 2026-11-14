@@ -289,6 +289,12 @@ vào `window.__r3f` để debug trong console.
 - Ảnh đơn / case Shopii / cửa sổ xem 3D dùng chung `buildKeyboardModel` (`features/apps/messenger/orderThumb.ts`).
 - Hội Phím Cơ: bài pass viết bằng thuật ngữ chợ phím che tình trạng thật (`data/market.ts`); inbox người bán (xin hình, check var,
   xin bớt, lowball, tự nhập giá `'offer'` popup, đi ăn xin `'beg'` → 10% được free, 70% người bán chặn, 20% ban chợ 3 ngày `marketBanUntil`...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
+- Giọng đọc sinh sẵn: `bun run gen:voice` (`scripts/gen-voice.ts` + `.py`, VieNeu-TTS chạy tại máy; biến môi trường trong `.env.example`: `VIENEU_PY` = python đã `pip install vieneu`,
+  `VOICE` = lời tự ngẫm của người chơi (`TIPS` / `PC_LINE` / `QMK_STORY`, mặc định "Thái Sơn"), `KEEB_VOICE` = lời Keeb-chan (`GREET` / `GREET_END` introStore, `TOUR_LINES` Tour.tsx,
+  `BENCH_LINES` benchLines.ts, `ROOM_LINES` roomGuideSteps.ts, mặc định "Ngọc Trân"); cần ffmpeg) → `public/audio/voice/*.mp3` + `src/data/generated/voice.json` (câu → file + độ dài, tra theo
+  đúng chuỗi câu: `data/voice.ts` `VOICES` / `speak` / `hush`). Phụ đề: `say()` phát `playVoice` (`src/sound.ts`, kênh hiệu ứng), giữ tới hết giọng (`showMs`). Keeb-chan: `hooks/useSpeak`
+  trong `Spotlight` (`text` là chuỗi thì tự đọc, nhiều đoạn thì prop `voice`), `Greeting`, `RoomGuide` (`once`). Câu ghép tên / số lúc chơi không có giọng.
+  **Đổi / thêm câu thoại thì chạy lại** (câu mới của Keeb-chan phải nằm trong các hằng trên). Kênh nhạc hạ `MUSIC_TRIM` 0,7 so với mức người chơi đặt.
 - Nhạc nền: xoay ngẫu nhiên `public/audio/bgm.mp3` / `bgm-2.mp3` / `bgm-3.mp3` (không lặp bài vừa nghe), không tải được thì loop tổng hợp (`src/sound.ts`).
 - Tiền linh kiện: giao xong khách trả đủ `budget` (`reimburse`), mua rẻ hơn thì phần dư là lãi, lố thì shop chịu; "Đã chi" = `partSpent` (chỉ món trong ô đối chiếu, switch / stab dư không tính).
 - Stab đếm theo cỡ dây: `short` 2u, `long` 6.25u, `long7` 7u (`StabCount`, `stabStock` / `stabNeed` / `stabText` trong parts.ts); phím ≥ 7u dùng dây 7u (`stabSpan` chân cách tâm 3u): 40% có space 10u (`space: '10u'`, Ctrl 1.25 + space 10 + Fn 1.5, 1 stab 7u).
@@ -325,7 +331,7 @@ vào `window.__r3f` để debug trong console.
 - Cốt truyện (`QMK_STORY` trong `features/intro/introStore.ts`): người chơi là thợ build phím của shop QMK, shop dính bê bối nên mang tiếng lây + mất hết khách;
   khách cũ anh QuýB (đơn hướng dẫn) vẫn tin, nhắn nhờ build 1 con 60%; còn 7.500k, làm lại từ đầu, mơ mở cửa hàng riêng. Keeb-chan (`Greeting`) không kể truyện; kể bằng lời tự ngẫm: câu dấu ? `TIPS` / `PC_LINE`,
   3 câu đầu `tutorialOrder().lines` (`chatIntro` gửi cả 3), đánh giá riêng đơn hướng dẫn `OLD_CUSTOMER` (reviews.ts, đạt ≥ 3 sao), bấm tranh graffiti QMK trên tường
-  (`RoomSpot` trong Room.tsx → `tell(QMK_STORY)` kể lần lượt bằng phụ đề).
+  (`RoomSpot` trong Room.tsx → `tipFirstClick('qmk')` → `tell(QMK_STORY)` kể lần lượt bằng phụ đề; chỉ bấm được 1 lần, lúc tập đi lại khi dấu ? còn).
 - Chuông thông báo (`components/game/NotifyBell.tsx`, chỉ ở taskbar máy tính, portal vào `data-desktop-frame`; tiền / uy tín / cấp `StatusChips` ở góc trên ngoài viền): `logNotify` ghi `Profile.inbox` + `unread` (`notify` / `addReviews` /
   bán đồ / fast bid / huỷ đơn trễ tự ghi), xoá từng cái hoặc xoá hết.
 - Esc (`hooks/useAppShortcuts.ts`, bỏ qua lúc test phím / đang gõ / có popup; popup nhỏ tự bắt Esc thì `preventDefault`) = bật / tắt popup Cài đặt

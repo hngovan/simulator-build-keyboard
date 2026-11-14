@@ -78,3 +78,5 @@ Quy tắc của người dùng:
 - 2026-11-08: case Bakeneko 65 (kkatano/bakeneko-65, **MIT**, © 2020 kkatano) → `assets/keyboards/bakeneko65/` (case STEP, plate DXF, viền PCB,
   layout KLE, LICENSE), `public/models/keyboards/bakeneko65/case.glb` (`bun run convert:cases`); ghi công `src/data/credits.ts` +
   `public/licenses/bakeneko-65-MIT.txt`. Bakeneko 60 đã có từ trước (repo kkatano/bakeneko-60, không tải lại).
+- 2026-11-14: giọng đọc phụ đề sinh bằng VieNeu-TTS (pnnbao97/VieNeu-TTS, mã nguồn **Apache 2.0**; README **không ghi giấy phép của checkpoint v3 Turbo / giọng mẫu
+  / âm thanh sinh ra** → coi như chỉ dùng cá nhân tới khi xem model card Hugging Face `pnnbao-ump`) → `public/audio/voice/*.mp3` (`bun run gen:voice`).

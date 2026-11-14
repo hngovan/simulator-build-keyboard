@@ -3,6 +3,7 @@ import type { Hole } from './spotlightRect'
 import { createPortal } from 'react-dom'
 import { HudCard } from '@/components/ui'
 import { GuideGirl } from '@/components/art/GuideGirl'
+import { useSpeak } from '@/hooks/useSpeak'
 
 // Lớp tour dùng chung (máy tính `Tour`, bàn build `BenchTour`): làm tối màn, chừa 1 ô sáng viền vàng nhấp nháy + bong bóng lời
 // Keeb-chan. Vùng tối chặn bấm ngoài ô sáng (không lạc khỏi tour); popup portal z cao hơn (chọn option z-[4500]) vẫn bấm được
@@ -45,6 +46,7 @@ export function Spotlight({
   passive = false,
   label,
   text,
+  voice,
   children,
   actions,
 }: {
@@ -61,12 +63,15 @@ export function Spotlight({
   /** góc phải tiêu đề bong bóng (vd "3 / 25") */
   label?: ReactNode
   text: ReactNode
+  /** các câu đọc thành tiếng khi `text` không phải chuỗi (lời dẫn nhiều đoạn); `text` là chuỗi thì tự đọc chuỗi đó */
+  voice?: string[]
   /** nội dung thêm dưới lời dẫn (vd danh sách món cần mua) */
   children?: ReactNode
   /** nút cuối bong bóng (Tiếp / Bỏ qua hướng dẫn) */
   actions?: ReactNode
 }) {
   const W = BUBBLE_W
+  useSpeak(voice ?? [typeof text === 'string' ? text : null])
   // đo chiều cao thật của bong bóng (lời dẫn dài / có danh sách món) để đặt kiểu tooltip, không tràn khỏi màn
   const ref = useRef<HTMLDivElement>(null)
   const [h, setH] = useState(200)

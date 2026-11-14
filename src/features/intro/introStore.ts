@@ -1,4 +1,6 @@
 import { create } from 'zustand'
+import { VOICES } from '@/data/voice'
+import { playVoice, stopVoice } from '@/sound'
 
 // Đoạn mở đầu mỗi lần chơi mới (không lưu trong save, bấm phím bất kỳ để bỏ qua), dựng kiểu phim cắt cảnh: màn đen "NGÀY 1" → hành lang →
 // góc kệ chưng bàn phím → chữ studio trên cảnh phòng → màn hình máy tính báo tin nhắn mới → về chỗ hiện chữ studio, popup hỏi có cần
@@ -65,6 +67,18 @@ export const QMK_STORY = [
   '...rồi sẽ có ngày mở cửa hàng của riêng mình.',
 ]
 
+/** Keeb-chan chào lần đầu ngồi máy tính (`Greeting`): 3 câu đầu, câu thứ 3 hỏi tên xưởng */
+export const GREET = [
+  'Chào! Mình là Keeb-chan, trợ lý trong máy của bạn!',
+  'Lâu lắm rồi máy mới có tin nhắn đó! Anh QuýB nhắn nhờ build giúp một con phím 60% kìa.',
+  'Trước khi bắt tay vào việc, xưởng của bạn tên là gì?',
+]
+/** câu chốt sau khi đặt tên (đứng sau `"<tên xưởng>", tên hay đó!`): có bật tour / không */
+export const GREET_END = {
+  tour: 'Đơn đầu tiên là của anh QuýB, để mình chỉ bạn từng bước nhé!',
+  free: 'Đơn đầu tiên là của anh QuýB, mở Mezzenger xem nhé!',
+}
+
 export const useIntro = create<{
   phase: IntroPhase | null
   /** màn hình 3D đã hiện thông báo tin nhắn mới */
@@ -76,6 +90,8 @@ export const useIntro = create<{
   tips: TipId[]
   /** phụ đề chữ to đáy màn */
   caption: string | null
+  /** lượt phụ đề (tăng mỗi lần `say`): bấm lại đúng câu đang hiện thì chữ vẫn chạy lại từ đầu */
+  captionId: number
   /** đang đứng gần màn hình máy tính lúc tập đi lại: hiện bong bóng "Tương tác", ẩn khung lời dẫn (khỏi đè nhau) */
   nearPc: boolean
   /** lúc tập đi lại đã bấm màn hình máy tính 1 lần (đã hiện phụ đề "có tin nhắn mới"): lần bấm sau mới vào máy */
@@ -87,6 +103,7 @@ export const useIntro = create<{
   progress: 0,
   tips: [],
   caption: null,
+  captionId: 0,
   nearPc: false,
   pcRead: false,
 }))
@@ -127,26 +144,34 @@ let storyTimer = 0
 let storyLeft = false
 /** đang có phụ đề / đang kể dở chuỗi: lúc này không bấm được dấu ? khác */
 const talking = () => useIntro.getState().caption !== null || storyLeft
-/** hiện phụ đề (chạy chữ dần), chạy hết chữ thì giữ thêm `ms` mili giây; đang kể dở chuỗi `tell` thì bỏ chuỗi đó */
+/** giọng đọc xong thì phụ đề còn giữ thêm bấy nhiêu ms */
+const VOICE_TAIL = 250
+/** `tell`: chạy hết chữ giữ thêm `STORY_HOLD` ms rồi ẩn, nghỉ `STORY_GAP` ms mới sang câu sau (trước 1400 / 500: người dùng chê ngắt quãng dài) */
+const STORY_HOLD = 700
+const STORY_GAP = 250
+/** phụ đề hiện bao lâu (ms): chạy hết chữ + giữ thêm `ms`, có giọng đọc thì không ngắn hơn giọng */
+const showMs = (text: string, ms: number) =>
+  Math.max(text.length * TYPE_MS + ms, (VOICES[text]?.dur ?? 0) * 1000 + VOICE_TAIL)
+
+/** hiện phụ đề (chạy chữ dần) + giọng đọc nếu có, chạy hết chữ thì giữ thêm `ms` mili giây; đang kể dở chuỗi `tell` thì bỏ chuỗi đó */
 export function say(text: string, ms = 2400) {
   window.clearTimeout(captionTimer)
   window.clearTimeout(storyTimer)
   storyLeft = false
-  useIntro.setState({ caption: text })
-  captionTimer = window.setTimeout(
-    () => useIntro.setState({ caption: null }),
-    text.length * TYPE_MS + ms,
-  )
+  useIntro.setState((s) => ({ caption: text, captionId: s.captionId + 1 }))
+  const voice = VOICES[text]
+  if (voice) playVoice(voice.file)
+  else stopVoice()
+  captionTimer = window.setTimeout(() => useIntro.setState({ caption: null }), showMs(text, ms))
 }
 
-/** kể lần lượt nhiều câu phụ đề (chạy hết chữ, giữ 1,4s, ẩn, nghỉ 0,5s rồi sang câu sau); gọi lại = kể lại từ đầu */
+/** kể lần lượt nhiều câu phụ đề (chạy hết chữ / hết giọng, giữ thêm chút, ẩn, nghỉ ngắn rồi sang câu sau); gọi lại = kể lại từ đầu */
 export function tell(lines: string[], i = 0) {
   if (i >= lines.length) return
-  // kiểu phụ đề MiSide: đoạn ngắn chạy chữ, giữ 1,4s rồi ẩn hẳn, nghỉ 0,5s mới hiện đoạn sau
-  const hold = 1400
-  say(lines[i], hold)
+  // kiểu phụ đề MiSide: đoạn ngắn chạy chữ, giữ rồi ẩn hẳn, nghỉ ngắn mới hiện đoạn sau
+  say(lines[i], STORY_HOLD)
   storyLeft = i < lines.length - 1
-  storyTimer = window.setTimeout(() => tell(lines, i + 1), lines[i].length * TYPE_MS + hold + 500)
+  storyTimer = window.setTimeout(() => tell(lines, i + 1), showMs(lines[i], STORY_HOLD) + STORY_GAP)
 }
 
 /**

@@ -93,10 +93,11 @@ function Typed({ text }: { text: string }) {
 /** Phụ đề chữ to giữa đáy màn (chữ trắng viền đen đậm cho dễ đọc trên mọi nền), chạy chữ dần (lời tự nói khi bấm dấu ? / màn hình máy tính lúc tập đi lại), `say()` trong introStore */
 export function IntroCaption() {
   const text = useIntro((s) => s.caption)
+  const id = useIntro((s) => s.captionId)
   if (!text) return null
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[2600] px-6 text-center font-head text-4xl leading-tight font-extrabold text-white select-none [-webkit-text-stroke:7px_#141821] [paint-order:stroke_fill] [text-shadow:0_4px_10px_rgba(0,0,0,0.6)] max-md:text-2xl">
-      <Typed key={text} text={text} />
+      <Typed key={id} text={text} />
     </div>
   )
 }

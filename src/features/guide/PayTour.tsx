@@ -4,6 +4,7 @@ import { Button } from '@/components/ui'
 import { Spotlight } from './Spotlight'
 import { holeOf, useTargetRect } from './spotlightRect'
 import { SHIP_TOUR_ID } from './roomGuideSteps'
+import { PAY_LINES } from './benchLines'
 
 /**
  * Tour nhỏ ở máy tính: đơn hướng dẫn đã gửi mà chưa thu tiền → tối màn, sáng icon Mezzenger (mở sẵn đúng hội thoại khách)
@@ -26,11 +27,7 @@ export function PayTour() {
   return (
     <Spotlight
       hole={hole}
-      text={
-        pay
-          ? 'Bấm "Thu tiền" để nhận tiền công + tiền linh kiện khách trả (budget). Mua rẻ hơn budget thì phần dư là lãi của shop!'
-          : 'Khách đã nhận phím, giờ thu tiền công nào. Mở Mezzenger, vào tin nhắn của khách.'
-      }
+      text={pay ? PAY_LINES.collect : PAY_LINES.open}
       actions={
         <Button size="sm" onClick={() => useGame.getState().seeGuide(SHIP_TOUR_ID)}>
           Bỏ qua hướng dẫn
