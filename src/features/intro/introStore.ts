@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import { VOICES, hush } from '@/data/voice'
-import { playVoice, stopVoice } from '@/sound'
+import { hush } from '@/data/voice'
 
 // Đoạn mở đầu mỗi lần chơi mới (không lưu trong save, bấm phím bất kỳ để bỏ qua), dựng kiểu phim cắt cảnh: màn đen "NGÀY 1" → hành lang →
 // góc kệ chưng bàn phím → chữ studio trên cảnh phòng → màn hình máy tính báo tin nhắn mới → về chỗ hiện chữ studio, popup hỏi có cần
@@ -144,16 +143,13 @@ let storyTimer = 0
 let storyLeft = false
 /** đang có phụ đề / đang kể dở chuỗi: lúc này không bấm được dấu ? khác */
 const talking = () => useIntro.getState().caption !== null || storyLeft
-/** giọng đọc xong thì phụ đề còn giữ thêm bấy nhiêu ms */
-const VOICE_TAIL = 250
 /** `tell`: chạy hết chữ giữ thêm `STORY_HOLD` ms rồi ẩn, nghỉ `STORY_GAP` ms mới sang câu sau (trước 1400 / 500: người dùng chê ngắt quãng dài) */
 const STORY_HOLD = 700
 const STORY_GAP = 250
-/** phụ đề hiện bao lâu (ms): chạy hết chữ + giữ thêm `ms`, có giọng đọc thì không ngắn hơn giọng */
-const showMs = (text: string, ms: number) =>
-  Math.max(text.length * TYPE_MS + ms, (VOICES[text]?.dur ?? 0) * 1000 + VOICE_TAIL)
+/** phụ đề hiện bao lâu (ms): chạy hết chữ + giữ thêm `ms` */
+const showMs = (text: string, ms: number) => text.length * TYPE_MS + ms
 
-/** hiện phụ đề (chạy chữ dần) + giọng đọc nếu có, chạy hết chữ thì giữ thêm `ms` mili giây; đang kể dở chuỗi `tell` thì bỏ chuỗi đó */
+/** hiện phụ đề (chạy chữ dần, không có giọng đọc: lời tự ngẫm của người chơi chỉ là chữ), chạy hết chữ thì giữ thêm `ms` mili giây; đang kể dở chuỗi `tell` thì bỏ chuỗi đó */
 export function say(text: string, ms = 2400) {
   window.clearTimeout(captionTimer)
   window.clearTimeout(storyTimer)
@@ -161,19 +157,15 @@ export function say(text: string, ms = 2400) {
   useIntro.setState((s) => ({ caption: text, captionId: s.captionId + 1 }))
   // Keeb-chan đang đọc dở chuỗi câu thì dừng hẳn (không để câu sau của Keeb-chan chen vào phụ đề)
   hush()
-  const voice = VOICES[text]
-  if (voice) playVoice(voice.file)
-  else stopVoice()
   captionTimer = window.setTimeout(() => useIntro.setState({ caption: null }), showMs(text, ms))
 }
 
-/** tắt phụ đề + giọng lời tự ngẫm đang chạy (Keeb-chan sắp nói / vừa vào máy tính: 2 giọng không chen nhau) */
+/** tắt phụ đề lời tự ngẫm đang chạy (Keeb-chan sắp nói / vừa vào máy tính) */
 export function quiet() {
   window.clearTimeout(captionTimer)
   window.clearTimeout(storyTimer)
   if (!talking()) return
   storyLeft = false
-  stopVoice()
   useIntro.setState({ caption: null })
 }
 

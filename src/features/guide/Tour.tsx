@@ -135,7 +135,8 @@ function buyPart(
       ? [
           {
             target: `opt-${product}`,
-            skip: ok,
+            // thẻ đang chọn sẵn đúng option (vd plate mặc định FR4): khỏi sáng ô option rồi nhảy ngay sang nút, tới thẳng "Thêm vào giỏ"
+            skip: (s: GameState) => ok(s) || optIs(product, pick.opt),
             until: (s: GameState) => ok(s) || optIs(product, pick.opt),
             list: true,
             text: `${intro} ${pick.text}`,
@@ -280,6 +281,8 @@ const STEPS: TourStep[] = [
 
 export function Tour() {
   const [i, setI] = useState(0)
+  // bước đã cuộn đích vào giữa khung xong (ô sáng + lời dẫn chỉ hiện từ lúc này, không sáng trước rồi mới cuộn)
+  const [settled, setSettled] = useState(-1)
   const step = STEPS[i]
   const rect = useTargetRect(step.target)
   const done = () => useGame.getState().seeGuide(TOUR_ID)
@@ -310,15 +313,34 @@ export function Tour() {
       return () => clearTimeout(t)
     }
     // thẻ sản phẩm cần mua: cuộn cả thẻ vào giữa khung cho thấy đủ tên + ô chọn + nút
-    const sc = window.setTimeout(() => {
+    // chờ giao diện dựng xong (~120ms) → cuộn → đích đứng yên 8 khung hình liền thì mới hiện ô sáng; đích chưa có (cửa sổ đang mở) chờ tối đa 1,5s
+    let sc = 0
+    let scrolled = false
+    let lastTop = NaN
+    let still = 0
+    const t0 = performance.now()
+    const settle = () => {
       const el = document.querySelector(`[data-tour="${step.target}"]`)
-      ;(el?.closest('[data-tour^="product-"]') ?? el)?.scrollIntoView({
-        block: 'center',
-        behavior: 'smooth',
-      })
-    }, 300)
+      const waited = performance.now() - t0
+      if (!el ? waited > 1500 : waited > 2500) return setSettled(i)
+      if (el && waited >= 120) {
+        if (!scrolled) {
+          scrolled = true
+          ;(el.closest('[data-tour^="product-"]') ?? el).scrollIntoView({
+            block: 'center',
+            behavior: 'smooth',
+          })
+        }
+        const top = el.getBoundingClientRect().top
+        still = top === lastTop ? still + 1 : 0
+        lastTop = top
+        if (still >= 8) return setSettled(i)
+      }
+      sc = requestAnimationFrame(settle)
+    }
+    sc = requestAnimationFrame(settle)
     const until = step.until
-    if (!until) return () => clearTimeout(sc)
+    if (!until) return () => cancelAnimationFrame(sc)
     let t = 0
     const check = (s: GameState) => {
       if (t || !until(s)) return
@@ -332,11 +354,13 @@ export function Tour() {
       unsub()
       clearInterval(poll)
       clearTimeout(t)
-      clearTimeout(sc)
+      cancelAnimationFrame(sc)
     }
   }, [i, step])
 
   const hole = holeOf(rect)
+  // đang cuộn tới đích: chỉ làm tối + chặn bấm, chưa sáng ô / chưa nói
+  if (settled !== i) return <div className="fixed inset-0 z-[2500] bg-black/65" data-tour-overlay />
   return (
     <Spotlight
       hole={hole}

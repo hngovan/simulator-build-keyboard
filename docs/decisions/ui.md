@@ -26,6 +26,20 @@
   Thử bằng đo độ dài + Whisper: `[thở dài]` đầu câu thêm ~0,6s tiếng thở, `[cười]` giữa câu thêm ~0,3s, **`[cười]` đầu câu không ăn**.
 - Lỗi người dùng báo: vừa bấm vào máy tính thì 2 giọng chen nhau (lời tự ngẫm "Có tin nhắn mới..." còn kể dở mà Keeb-chan đã chào). Sửa: `quiet()` (introStore) tắt phụ đề + chuỗi `tell`,
   gọi lúc `pcZoom` (IntroSpots) và trong `useSpeak` trước khi Keeb-chan nói; ngược lại `say()` gọi `hush()` dừng chuỗi câu của Keeb-chan.
+- (tiếp, chốt) Người dùng: **nhân vật chính không cần giọng đọc nữa, chỉ để Keeb-chan**. Bỏ nhóm `VOICE` / `SIGH` trong gen-voice.ts (18 file giọng nam bị dọn), `say()` không phát giọng,
+  `showMs` về lại chỉ theo chữ; giữ nhịp `STORY_HOLD` / `STORY_GAP`, `quiet()` (Keeb-chan nói thì tắt phụ đề) và `hush()`. Không thêm lại giọng người chơi nếu chưa được bảo.
+- (tiếp) Người dùng: bước mod / lắp stab không có giọng, **mọi bước đều phải có giọng**, và giọng phải **ngắn gọn nhất mà vẫn đủ ý** (lê thê thì không ai chờ nghe hết).
+  - Giọng đọc bản rút gọn, chữ trên màn hình giữ nguyên: `scripts/voice-short.ts` (`SHORT` tra theo đoạn đầu câu, `shortOf`; script báo dòng không khớp). 64 câu cũ dài 311s; giờ 96 câu (thêm 32 câu ngắn) chỉ 210s, câu dài nhất 12,3s → 4,9s.
+  - `STEP_VOICE` (benchLines.ts): mỗi bước lắp 1 câu chỉ đọc, không khung (`TutorialTour` `useSpeak` lúc `kind === 'act'`; trước đó đang lắp thì Keeb-chan im hẳn). Bước test giữ khung `TUT_TEST`.
+  - Khung có câu ghép: đọc câu chung `TUT_NEXT` / `TUT_SKIP` (xong bước / tuỳ chọn), `BIT_VOICE` (chọn đầu vít), `ROOM_VOICE` (kiện đang giao / ra kệ cầm thùng; `RoomGuideStep.voice`, `roomGuideVoice`).
+  - Vẫn chỉ ở đơn hướng dẫn (Keeb-chan chỉ nằm trong tour); đơn thường không có giọng.
+- (tiếp) Người dùng (kèm ảnh): khung Keeb-chan trên cùng lúc ra hành lang lấy kiện / thùng đơn **bỏ đi** → `RoomGuide` không vẽ khung khi `roomGuideTarget === 'door'` (giọng vẫn đọc);
+  mũi tên chỉ xuống lơ lửng giữa ô cửa "không hợp lý", người dùng vẽ mũi tên rẽ → `GuideMarker`: lúc phải qua cửa phòng (`viaDoor`) hiện mũi tên rẽ chữ L nằm ngang cao 1,05m
+  (`turnShape` + ExtrudeGeometry, thân theo hướng đi qua cửa, đầu bẻ về phía đích dọc tường, lật bằng scale âm), tới nơi vẫn là nón chỉ xuống. **Chưa xem trong trình duyệt** (chỉ soát bằng tính toạ độ).
+- (tiếp) Người dùng: tour mua đồ "tự nhiên nhảy vào option rồi thêm vào giỏ" → bước sáng ô option (`buyPart` có `pick`) trước chỉ `skip` khi món đã đủ; thẻ đang chọn sẵn đúng option thì
+  `until` đạt ngay, ô option sáng 0,6s rồi nhảy sang nút. Sửa: `skip` thêm `optIs(product, pick.opt)` → tới thẳng nút "Thêm vào giỏ". Option mặc định sai (switch "10 con") vẫn phải chọn.
+- (tiếp) Người dùng: tour máy tính sáng ô + nói trước rồi mới cuộn → phải cuộn xong mới focus. `Tour`: `settled` (chỉ số bước đã cuộn xong); mỗi bước chờ đích có mặt ~120ms → `scrollIntoView` →
+  đích đứng yên 8 khung hình liền mới vẽ `Spotlight` (trước đó chỉ lớp tối chặn bấm; đích chưa có chờ tối đa 1,5s, trần 2,5s). Giọng Keeb-chan cũng bắt đầu từ lúc đó.
 - `captionId` (useIntro): `say` lại đúng câu đang hiện thì chữ chạy lại từ đầu (trước `key={text}` không dựng lại).
 - Đã kiểm trong trình duyệt: phụ đề chạy đúng nhịp, file mp3 tải 200; **chưa nghe thử bằng tai** (cách đọc "QMK" / "build" / "shop" cần người dùng nghe lại).
 

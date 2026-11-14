@@ -13,15 +13,20 @@ import {
 import type { ScrewBit, ScrewStep, StepId } from '@/types'
 import { usePack } from '@/features/bench/packStore'
 import { Spotlight } from './Spotlight'
+import { useSpeak } from '@/hooks/useSpeak'
 import { BENCH_TOUR_ID, BIT_TOUR_ID, SHIP_TOUR_ID, TEST_TOUR_ID } from '@/data/tourIds'
 import { holeOf, useTargetRect, type Hole } from './spotlightRect'
 import {
+  BIT_VOICE,
   INTRO_STEPS,
+  STEP_VOICE,
   TEST_STEPS,
   TUT_LINES,
   TUT_MISSING,
+  TUT_NEXT,
   TUT_PACKED,
   TUT_READY,
+  TUT_SKIP,
   TUT_TEST,
 } from './benchLines'
 
@@ -158,6 +163,7 @@ function BitTour({ need }: { need: ScrewBit }) {
     <Spotlight
       hole={holeOf(rect)}
       side
+      voice={[BIT_VOICE]}
       text={
         <div className="flex flex-col gap-1.5">
           <p>
@@ -229,6 +235,12 @@ function TutorialTour({ mode }: { mode: string }) {
             ? [...(tut ?? []), `Bước "${title}" là tuỳ chọn, khách không yêu cầu: bấm "Bỏ qua".`]
             : (tut ?? [])
 
+  // đang làm bước lắp: không khung, chỉ giọng nhắc 1 câu ngắn (bước test có khung riêng)
+  const acting = kind === 'act' && !inIntro && !asking && step !== 'test'
+  useSpeak([acting ? STEP_VOICE[step as StepId] : null])
+  // giọng của khung: câu có tên bước thì đọc câu chung
+  const voice = kind === 'next' ? [TUT_NEXT] : kind === 'skip' ? [...(tut ?? []), TUT_SKIP] : lines
+
   // đang làm bước lắp (sau phần giới thiệu): không khung, không tối (khung việc cần làm + mũi tên vàng đã đủ rõ);
   // chỉ hiện lại khi xong bước / bước tuỳ chọn (sáng nút sang bước) hoặc đóng gói
   if (asking) return null
@@ -253,7 +265,7 @@ function TutorialTour({ mode }: { mode: string }) {
       hole={hole}
       // nút sang bước / đóng gói: chỉ viền nút, không chặn bấm (vẫn lùi bước ở danh sách bước, bấm thùng carton được)
       passive={kind === 'next' || kind === 'skip' || kind === 'pack'}
-      voice={lines}
+      voice={voice}
       text={
         <div className="flex flex-col gap-1.5">
           {lines.map((l) => (

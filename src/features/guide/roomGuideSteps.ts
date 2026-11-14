@@ -9,6 +9,8 @@ export { SHIP_TOUR_ID } from '@/data/tourIds'
 
 export interface RoomGuideStep {
   text: string
+  /** câu đọc thay cho `text` khi `text` ghép tên khách / số ngày (không có giọng sinh sẵn) */
+  voice?: string
   target: GuideTarget | null
 }
 
@@ -31,6 +33,12 @@ export const ROOM_LINES = {
     'Linh kiện tới rồi! Đi ra cửa phòng bên trái, rẽ vào hành lang tới kệ sắt cuối hành lang, bấm kiện Shopii (logo cam) để nhận.',
   missing:
     'Còn thiếu linh kiện cho đơn. Bấm màn hình máy tính, mở Shopii mua nốt (app Danh sách đơn ghi món còn thiếu).',
+}
+
+/** câu chỉ để đọc (khung hiện câu ghép số ngày / tên khách) */
+export const ROOM_VOICE = {
+  waiting: 'Kiện đang giao. Bấm lịch treo tường để chờ hàng tới.',
+  pickBox: 'Đủ đồ rồi! Ra kệ sắt cuối hành lang cầm thùng đơn lên.',
 }
 
 /**
@@ -90,6 +98,7 @@ export function roomGuide(s: GameState): RoomGuideStep | null {
   if (pending.length)
     return {
       text: `Kiện đang giao, tới ngày ${Math.min(...pending.map((p) => p.arrive))}. Bấm lịch treo tường để kết thúc ngày, chờ hàng tới.`,
+      voice: ROOM_VOICE.waiting,
       target: 'calendar',
     }
   if (checkInventory(s.inventory, o).some((c) => !c.ok))
@@ -100,6 +109,7 @@ export function roomGuide(s: GameState): RoomGuideStep | null {
   if (s.boxes[o.id]?.at === 'door')
     return {
       text: `Đủ đồ rồi! Ra kệ sắt cuối hành lang (cửa phòng bên trái), bấm thùng đơn của ${o.customer} để cầm lên.`,
+      voice: ROOM_VOICE.pickBox,
       target: 'door',
     }
   return null
@@ -108,3 +118,8 @@ export function roomGuide(s: GameState): RoomGuideStep | null {
 /** chỉ chỗ cần tới (selector giá trị đơn cho Zustand) */
 export const roomGuideTarget = (s: GameState) => roomGuide(s)?.target ?? null
 export const roomGuideText = (s: GameState) => roomGuide(s)?.text ?? null
+/** câu đọc thành tiếng của lời dẫn đang hiện */
+export const roomGuideVoice = (s: GameState) => {
+  const g = roomGuide(s)
+  return g ? (g.voice ?? g.text) : null
+}

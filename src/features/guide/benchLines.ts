@@ -69,6 +69,45 @@ export const PAY_LINES = {
     'Bấm "Thu tiền" để nhận tiền công + tiền linh kiện khách trả (budget). Mua rẻ hơn budget thì phần dư là lãi của shop!',
 }
 
+/**
+ * Keeb-chan nhắc bằng GIỌNG (không hiện khung) khi vào từng bước lắp ở đơn hướng dẫn: 1 câu thật ngắn, việc cụ thể đã có khung
+ * việc cần làm + mũi tên vàng. Bước `test` có khung riêng (`TUT_TEST`)
+ */
+export const STEP_VOICE: Partial<Record<StepId, string>> = {
+  unbox: 'Bấm vào thùng để mở hộp nào!',
+  caseOpen: 'Tháo vít để mở case ra.',
+  stabMod: 'Khách dặn stab phải êm. Mod stab theo mũi tên vàng nhé!',
+  stab: 'Lắp stab vào các phím dài.',
+  stabScrew: 'Vặn vít stab, nhả chuột ở vùng xanh.',
+  foam: 'Bấm vào PCB để lót foam.',
+  plate: 'Đặt plate lên PCB.',
+  switchLube: 'Mở switch ra rồi lube từng mẻ.',
+  switch: 'Cắm switch vào từng lỗ.',
+  solder: 'Hàn từng chân switch, nhả chuột ở vùng xanh.',
+  gasket: 'Dán gasket lên các tai plate.',
+  ring: 'Cuốn vòng O-ring quanh board.',
+  feet: 'Dán feet cao su vào đáy case.',
+  caseFoam: 'Lót foam xuống đáy case.',
+  coverOff: 'Tháo ốc rồi nhấc tấm tạ ra.',
+  dtb: 'Đặt daughterboard vào, siết 2 vít rồi cắm dây.',
+  coverOn: 'Lắp lại tấm tạ rồi siết ốc.',
+  jst: 'Cắm dây JST vào PCB.',
+  battery: 'Đặt pin vào rồi cắm dây pin.',
+  topCase: 'Úp case trên xuống plate.',
+  topScrew: 'Bắt vít plate vào case trên.',
+  bottomScrew: 'Bắt vít plate vào case dưới.',
+  caseIn: 'Thả board vào case.',
+  trayScrew: 'Bắt vít giữ PCB, nhả chuột ở vùng xanh.',
+  caseClose: 'Đậy case trên lại.',
+  caseScrew: 'Vặn vít đóng case.',
+  keycap: 'Cắm keycap lên switch.',
+}
+/** giọng khi xong bước / gặp bước tuỳ chọn (khung hiện câu có tên bước, giọng đọc câu chung) */
+/** giọng tour chọn đầu vít (`BitTour`, khung hiện câu có tên đầu vít) */
+export const BIT_VOICE = 'Bước này phải vặn vít! Chọn đúng đầu vít kẻo trượt ren.'
+export const TUT_NEXT = 'Xong rồi! Sang bước kế nào.'
+export const TUT_SKIP = 'Bước này tuỳ chọn, bấm Bỏ qua.'
+
 /** mọi câu tĩnh của Keeb-chan ở bàn build + thu tiền (`bun run gen:voice`) */
 export const BENCH_LINES = [
   ...TUT_MISSING,
@@ -80,4 +119,8 @@ export const BENCH_LINES = [
   ...TEST_STEPS.flatMap((s) => s.lines),
   ...INTRO_STEPS.map((s) => s.text),
   ...Object.values(PAY_LINES),
+  ...Object.values(STEP_VOICE),
+  TUT_NEXT,
+  TUT_SKIP,
+  BIT_VOICE,
 ]

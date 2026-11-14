@@ -13,6 +13,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: '0.1.46',
+    date: '2026-11-14',
+    commits: [],
+    title: 'Keeb-chan nói ngắn gọn, có giọng ở mọi bước lắp',
+    items: [
+      'Chỉ còn Keeb-chan có giọng đọc (giọng Trúc Ly); lời tự ngẫm của nhân vật chính chỉ hiện phụ đề',
+      'Đơn hướng dẫn: vào bước lắp nào Keeb-chan cũng nhắc 1 câu ngắn; giọng chỉ đọc ý chính, chữ trên màn hình vẫn đủ chi tiết',
+      'Ra hành lang lấy kiện / thùng đơn: bỏ khung lời dẫn trên cùng, ô cửa phòng có mũi tên rẽ chỉ hướng đi tiếp',
+      'Tour mua đồ: cuộn tới món cần mua xong mới sáng ô hướng dẫn; option đang chọn đúng sẵn thì tới thẳng nút "Thêm vào giỏ"',
+    ],
+  },
+  {
     version: '0.1.45',
     date: '2026-11-14',
     commits: ['1596fb1'],
