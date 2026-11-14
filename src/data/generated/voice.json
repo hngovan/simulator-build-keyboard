@@ -72,259 +72,259 @@
     "dur": 1.99
   },
   "Chào! Mình là Keeb-chan, trợ lý trong máy của bạn!": {
-    "file": "v-b5f8dbb9cf.mp3",
-    "dur": 2.81
+    "file": "v-1ceb2457e9.mp3",
+    "dur": 2.22
   },
   "Lâu lắm rồi máy mới có tin nhắn đó! Anh QuýB nhắn nhờ build giúp một con phím 60% kìa.": {
-    "file": "v-4248bd8309.mp3",
-    "dur": 6.1
+    "file": "v-9424af8319.mp3",
+    "dur": 4.74
   },
   "Trước khi bắt tay vào việc, xưởng của bạn tên là gì?": {
-    "file": "v-5d6c028e1f.mp3",
-    "dur": 2.96
+    "file": "v-59c34f84b0.mp3",
+    "dur": 2.3
   },
   "Khách đặt phím qua Mezzenger, tin vừa tới nằm trong đó. Bấm vào đây để mở xem đơn nhé!": {
-    "file": "v-fc76c1cbc6.mp3",
-    "dur": 5.82
+    "file": "v-2f78e57db6.mp3",
+    "dur": 4.31
   },
   "Đơn đầu tiên đây! Bấm vào để đọc yêu cầu: layout, loại switch, keycap, ngân sách, hạn giao.": {
-    "file": "v-854e99b070.mp3",
-    "dur": 5.92
+    "file": "v-7245a43b15.mp3",
+    "dur": 4.13
   },
   "Khách nhờ build 60% từ A tới Z: shop tự mua hết linh kiện, giao xong khách trả lại tiền đồ (trong budget) + tiền công. Bấm Nhận đơn.": {
-    "file": "v-5583680a52.mp3",
-    "dur": 9.37
+    "file": "v-d9f81b24d3.mp3",
+    "dur": 7.19
   },
   "Một bàn phím cần 6 món: case, PCB, plate, stab, switch, keycap (+ feet dán đáy). Mình chỉ từng món một, mở Shopii nào!": {
-    "file": "v-1eb08018fd.mp3",
-    "dur": 8.95
+    "file": "v-89a5be5511.mp3",
+    "dur": 6.3
   },
   "Tiếp theo là Case. Bấm mục \"Case\" ở cột trái.": {
-    "file": "v-9978f3e54e.mp3",
-    "dur": 3.06
+    "file": "v-615fe397b4.mp3",
+    "dur": 2.22
   },
   "Case = vỏ bàn phím. Thẻ \"Case 60%\" (nhựa ABS, 300k, lắp kiểu Tray mount dễ nhất); khách không dặn màu, màu nào cũng được. Bấm \"Thêm vào giỏ\".": {
-    "file": "v-6b728c5575.mp3",
-    "dur": 10.24
+    "file": "v-6cb3c99886.mp3",
+    "dur": 7.63
   },
   "Tiếp theo là PCB. Bấm mục \"PCB\" ở cột trái.": {
-    "file": "v-5b16d93e18.mp3",
-    "dur": 3.75
+    "file": "v-f98c0304f7.mp3",
+    "dur": 2.64
   },
   "PCB = mạch điện. Thẻ \"PCB 60%\" loại Hotswap: cắm switch thẳng vào mạch, không phải hàn. Bấm \"Thêm vào giỏ\".": {
-    "file": "v-5285be23f8.mp3",
-    "dur": 7.95
+    "file": "v-f90c0feab3.mp3",
+    "dur": 6.3
   },
   "Tiếp theo là Plate. Bấm mục \"Plate\" ở cột trái.": {
-    "file": "v-e1c89442bc.mp3",
-    "dur": 2.85
+    "file": "v-6e80f51dbe.mp3",
+    "dur": 2.22
   },
   "Plate = tấm đỡ giữ switch thẳng hàng. Ở thẻ \"Plate 60%\" bấm ô chọn chất liệu này → chọn \"FR4\" (rẻ, tiếng cân bằng).": {
-    "file": "v-01067198fe.mp3",
-    "dur": 9.19
+    "file": "v-b22b8c7c5d.mp3",
+    "dur": 6.58
   },
   "Đúng rồi, \"FR4\"! Giờ bấm \"Thêm vào giỏ\".": {
-    "file": "v-0cf4742929.mp3",
-    "dur": 3.68
+    "file": "v-81c243de8b.mp3",
+    "dur": 2.46
   },
   "Tiếp theo là Stab. Bấm mục \"Stab\" ở cột trái.": {
-    "file": "v-104c3c5918.mp3",
-    "dur": 3.01
+    "file": "v-b84896df37.mp3",
+    "dur": 2.33
   },
   "Stab giữ phím dài (Space, Shift, Enter, Backspace) không lệch. Thẻ \"Stab Cherry Clip-in\", giữ option \"Bộ TKL\" (đủ cho 60%, đừng mua lẻ). Bấm \"Thêm vào giỏ\".": {
-    "file": "v-105de6c717.mp3",
-    "dur": 12.35
+    "file": "v-f0f0cda2c4.mp3",
+    "dur": 8.51
   },
   "Tiếp theo là Switch. Bấm mục \"Switch\" ở cột trái.": {
-    "file": "v-687830d168.mp3",
-    "dur": 2.89
+    "file": "v-1fcbf3cf0e.mp3",
+    "dur": 2.35
   },
   "Switch = công tắc dưới mỗi phím, khách cần loại Linear. Ở thẻ \"Gateron Vàng\" (Linear, rẻ nhất) bấm ô \"10 con\" này → chọn \"70 con\" (60% có 61 phím, gói 10 không đủ; gói 70 còn rẻ hơn 10%).": {
-    "file": "v-04ce50ad9f.mp3",
-    "dur": 15.39
+    "file": "v-0be691d86d.mp3",
+    "dur": 11.3
   },
   "Đúng rồi, \"70 con\"! Giờ bấm \"Thêm vào giỏ\".": {
-    "file": "v-4d81da0f1d.mp3",
-    "dur": 2.66
+    "file": "v-40e593a491.mp3",
+    "dur": 2.07
   },
   "Tiếp theo là Keycap. Bấm mục \"Keycap\" ở cột trái.": {
-    "file": "v-18e103b70a.mp3",
-    "dur": 3.07
+    "file": "v-1022fc8135.mp3",
+    "dur": 2.31
   },
   "Keycap = nút bấm. Ở thẻ \"Keycap Cherry\" bấm ô chọn này → cột chất liệu chọn \"PBT\", cột màu chọn \"Trắng\" (đúng như khách dặn).": {
-    "file": "v-0311612c95.mp3",
-    "dur": 8.01
+    "file": "v-c91f2d194b.mp3",
+    "dur": 6.17
   },
   "Đúng rồi, \"PBT · Trắng\"! Giờ bấm \"Thêm vào giỏ\".": {
-    "file": "v-ad34beceee.mp3",
-    "dur": 3.37
+    "file": "v-39d8ab9249.mp3",
+    "dur": 2.51
   },
   "Còn feet cao su dán đáy case (bước lắp cuối bắt buộc). Bấm mục \"Lube & vật tư\".": {
-    "file": "v-0d09d0850e.mp3",
-    "dur": 5.49
+    "file": "v-5cdcc67dde.mp3",
+    "dur": 3.86
   },
   "Thẻ \"Feet cao su\": màu nào cũng được, 1 vỉ 4 cái là đủ. Bấm \"Thêm vào giỏ\".": {
-    "file": "v-6ffb12d2af.mp3",
-    "dur": 5.05
-  },
-  "Khách dặn stab phải êm, nên phải mod stab. Đầu tiên băng Urgo (Holee mod, dán lỗ stem cho wire bớt lắc): 1 cái dùng cho 2 stab, gói 10 là đủ. Bấm \"Thêm vào giỏ\".": {
-    "file": "v-127a6572ba.mp3",
-    "dur": 11.71
-  },
-  "Krytox 205g2: mỡ phết housing + slider stab (hợp nhất cho stab). Bấm \"Thêm vào giỏ\".": {
-    "file": "v-03d501f189.mp3",
-    "dur": 6.62
-  },
-  "Krytox XHT-BDZ: mỡ rất đặc phết wire stab, chống lạch cạch tốt nhất. Bấm \"Thêm vào giỏ\".": {
-    "file": "v-781f569f48.mp3",
-    "dur": 6.86
-  },
-  "Còn 2 dụng cụ mod stab. Bấm mục \"Dụng cụ\".": {
-    "file": "v-327198a9e6.mp3",
-    "dur": 2.78
-  },
-  "Kìm cắt chân stab: cắt chân stem stab Cherry cho bớt lạch cạch. Bấm \"Thêm vào giỏ\".": {
-    "file": "v-3ab0f35b44.mp3",
-    "dur": 5.57
-  },
-  "Cọ lube: để phết mỡ stab (sau này lube switch cũng dùng). Bấm \"Thêm vào giỏ\".": {
-    "file": "v-b8db774ef2.mp3",
-    "dur": 5
-  },
-  "Đủ món rồi! Mở Giỏ hàng để thanh toán.": {
-    "file": "v-38aee91e6d.mp3",
-    "dur": 2.61
-  },
-  "Chọn tốc độ giao \"Hoả tốc\": hàng tới kệ cuối hành lang ngay hôm nay để build luôn (phí +50k mỗi món, đơn đầu cần làm ngay nên đáng). Mẹo: đơn hạn dài (còn 3–4 ngày) thì chọn Nhanh (mai tới) hoặc Tiết kiệm (2 ngày, miễn phí giao) cho đỡ tiền.": {
-    "file": "v-ac6ff5625b.mp3",
-    "dur": 16.07
-  },
-  "Bấm \"Đặt hàng\". Tiền linh kiện shop ứng trước, giao phím xong khách trả lại (trong budget).": {
-    "file": "v-d8d9da4bf8.mp3",
-    "dur": 5.52
-  },
-  "Xong việc ở máy tính! Bấm đây đứng dậy: ra kệ cuối hành lang nhận kiện + cầm thùng đơn, đặt lên bàn build rồi bấm vào thùng để bắt đầu lắp!": {
-    "file": "v-a1e3a0ba2d.mp3",
-    "dur": 8.31
-  },
-  "Thùng đơn đã lên bàn nhưng còn thiếu đồ (khung liệt kê món thiếu ở giữa bàn).": {
-    "file": "v-b0f461d6e1.mp3",
-    "dur": 3.9
-  },
-  "Bấm nút quay lại góc trên trái để đứng dậy: kiện đã tới thì ra kệ cuối hành lang nhận, chưa mua thì vào máy tính mua ở Shopii.": {
-    "file": "v-96137dfb14.mp3",
-    "dur": 7.95
-  },
-  "Đủ đồ rồi! Bấm chuột trái vào thùng để mở thùng, bắt đầu build nào ⌨️": {
-    "file": "v-9d3e4d228c.mp3",
-    "dur": 4.15
-  },
-  "Cứ làm theo mũi tên vàng trong cảnh. Xong mỗi bước, nút \"Bước tiếp theo\" ở giữa dưới màn hình sẽ sáng nhấp nháy: bấm để sang bước kế.": {
-    "file": "v-a02599e2b4.mp3",
-    "dur": 7.56
-  },
-  "Bước nào tuỳ chọn mà khách không yêu cầu thì nút \"Bỏ qua\" sáng lên, bấm là được.": {
-    "file": "v-9fb8e32f2b.mp3",
+    "file": "v-38a5300448.mp3",
     "dur": 3.83
   },
+  "Khách dặn stab phải êm, nên phải mod stab. Đầu tiên băng Urgo (Holee mod, dán lỗ stem cho wire bớt lắc): 1 cái dùng cho 2 stab, gói 10 là đủ. Bấm \"Thêm vào giỏ\".": {
+    "file": "v-cffdaf3ef0.mp3",
+    "dur": 8.05
+  },
+  "Krytox 205g2: mỡ phết housing + slider stab (hợp nhất cho stab). Bấm \"Thêm vào giỏ\".": {
+    "file": "v-9384c97b19.mp3",
+    "dur": 5.37
+  },
+  "Krytox XHT-BDZ: mỡ rất đặc phết wire stab, chống lạch cạch tốt nhất. Bấm \"Thêm vào giỏ\".": {
+    "file": "v-d4bbcb3d39.mp3",
+    "dur": 4.98
+  },
+  "Còn 2 dụng cụ mod stab. Bấm mục \"Dụng cụ\".": {
+    "file": "v-6c4bb57cb1.mp3",
+    "dur": 2.22
+  },
+  "Kìm cắt chân stab: cắt chân stem stab Cherry cho bớt lạch cạch. Bấm \"Thêm vào giỏ\".": {
+    "file": "v-4003d9d90a.mp3",
+    "dur": 3.99
+  },
+  "Cọ lube: để phết mỡ stab (sau này lube switch cũng dùng). Bấm \"Thêm vào giỏ\".": {
+    "file": "v-495f37fa51.mp3",
+    "dur": 3.43
+  },
+  "Đủ món rồi! Mở Giỏ hàng để thanh toán.": {
+    "file": "v-d3eecd2b29.mp3",
+    "dur": 1.79
+  },
+  "Chọn tốc độ giao \"Hoả tốc\": hàng tới kệ cuối hành lang ngay hôm nay để build luôn (phí +50k mỗi món, đơn đầu cần làm ngay nên đáng). Mẹo: đơn hạn dài (còn 3–4 ngày) thì chọn Nhanh (mai tới) hoặc Tiết kiệm (2 ngày, miễn phí giao) cho đỡ tiền.": {
+    "file": "v-2164aa2953.mp3",
+    "dur": 12.29
+  },
+  "Bấm \"Đặt hàng\". Tiền linh kiện shop ứng trước, giao phím xong khách trả lại (trong budget).": {
+    "file": "v-62e33f8869.mp3",
+    "dur": 3.88
+  },
+  "Xong việc ở máy tính! Bấm đây đứng dậy: ra kệ cuối hành lang nhận kiện + cầm thùng đơn, đặt lên bàn build rồi bấm vào thùng để bắt đầu lắp!": {
+    "file": "v-d6ba6b41cd.mp3",
+    "dur": 6.4
+  },
+  "Thùng đơn đã lên bàn nhưng còn thiếu đồ (khung liệt kê món thiếu ở giữa bàn).": {
+    "file": "v-f0d96b0326.mp3",
+    "dur": 3.3
+  },
+  "Bấm nút quay lại góc trên trái để đứng dậy: kiện đã tới thì ra kệ cuối hành lang nhận, chưa mua thì vào máy tính mua ở Shopii.": {
+    "file": "v-d9f6ba8ca7.mp3",
+    "dur": 5.86
+  },
+  "Đủ đồ rồi! Bấm chuột trái vào thùng để mở thùng, bắt đầu build nào ⌨️": {
+    "file": "v-09ea97c781.mp3",
+    "dur": 3.35
+  },
+  "Cứ làm theo mũi tên vàng trong cảnh. Xong mỗi bước, nút \"Bước tiếp theo\" ở giữa dưới màn hình sẽ sáng nhấp nháy: bấm để sang bước kế.": {
+    "file": "v-380393b2e6.mp3",
+    "dur": 6.09
+  },
+  "Bước nào tuỳ chọn mà khách không yêu cầu thì nút \"Bỏ qua\" sáng lên, bấm là được.": {
+    "file": "v-6d99588cf0.mp3",
+    "dur": 3.34
+  },
   "Khách không yêu cầu foam, bấm \"Bỏ qua\" đang sáng ở dưới.": {
-    "file": "v-57fb163ac4.mp3",
-    "dur": 3.13
+    "file": "v-8b0f09febc.mp3",
+    "dur": 2.54
   },
   "Khách không yêu cầu lube, và lube cần đồ mở switch + mỡ (mở ở cấp xưởng 2). Bấm \"Bỏ qua\" đang sáng ở dưới.": {
-    "file": "v-cc6cc32eed.mp3",
-    "dur": 7.06
-  },
-  "Xong rồi! Bấm \"Cho phím vào thùng\" để đóng gói, rồi đứng dậy cầm thùng đặt lên kệ giao hàng trong phòng là gửi khách.": {
-    "file": "v-0c219b2eca.mp3",
-    "dur": 7.03
-  },
-  "Đóng gói xong! Nhấn chuột trái vào thùng để cầm lên, rồi đứng dậy (nút quay lại góc trên trái) mang ra kệ giao hàng sát tường phải trong phòng.": {
-    "file": "v-1d31c193aa.mp3",
-    "dur": 8.67
-  },
-  "Gõ từng phím bằng bàn phím thật (hoặc click phím 3D trên bàn) để test. Phím test rồi có chấm xanh; test đủ hết phím mới sang bước đóng gói được.": {
-    "file": "v-180361495d.mp3",
-    "dur": 9.31
-  },
-  "Máy đo âm thanh: số % là độ khớp với tiếng khách muốn (vd thock trầm, clack giòn).": {
-    "file": "v-8d3fd67bd2.mp3",
-    "dur": 5.85
-  },
-  "Thanh cam = độ ồn (êm → ồn), thanh xanh = cao độ (trầm → giòn), vạch trắng là âm khách muốn. Âm do switch, plate, case, foam, lube quyết định: càng sát vạch trắng càng được chấm cao.": {
-    "file": "v-8f76d65a45.mp3",
-    "dur": 11.9
-  },
-  "Gõ từng phím bằng bàn phím thật (hoặc click phím 3D), phím test rồi có chấm xanh. Phím không có trên bàn phím của bạn (Fn, macro...) thì click.": {
-    "file": "v-c2a49fe980.mp3",
-    "dur": 10.09
-  },
-  "Test hết phím rồi mới sang bước: bỏ sót là khách có thể báo lỗi nút; phím bấm không ăn thì quay lại bước lắp / hàn sửa.": {
-    "file": "v-255327550d.mp3",
-    "dur": 7.07
-  },
-  "Đây là yêu cầu của khách: layout, switch, keycap, kiểu lắp... Làm sai là bị chấm thấp đó.": {
-    "file": "v-e67a534c3b.mp3",
-    "dur": 5.54
-  },
-  "Các bước build theo thứ tự. Bước đã làm thì bấm vào để quay lại sửa (lỡ tay thì Ctrl + Z).": {
-    "file": "v-f77a57ad35.mp3",
-    "dur": 5.78
-  },
-  "Khung này luôn ghi việc cần làm ngay bây giờ. Cứ làm theo mũi tên vàng trong cảnh. Xong mỗi bước, nút \"Bước tiếp theo\" ở giữa dưới màn hình sẽ sáng nhấp nháy: bấm để sang bước kế.": {
-    "file": "v-2483a0c9c2.mp3",
-    "dur": 9.38
-  },
-  "Khách đã nhận phím, giờ thu tiền công nào. Mở Mezzenger, vào tin nhắn của khách.": {
-    "file": "v-2eaa0b3f22.mp3",
+    "file": "v-bf26031d26.mp3",
     "dur": 5.32
   },
+  "Xong rồi! Bấm \"Cho phím vào thùng\" để đóng gói, rồi đứng dậy cầm thùng đặt lên kệ giao hàng trong phòng là gửi khách.": {
+    "file": "v-e81811945d.mp3",
+    "dur": 5.13
+  },
+  "Đóng gói xong! Nhấn chuột trái vào thùng để cầm lên, rồi đứng dậy (nút quay lại góc trên trái) mang ra kệ giao hàng sát tường phải trong phòng.": {
+    "file": "v-dfd04c2efe.mp3",
+    "dur": 6.8
+  },
+  "Gõ từng phím bằng bàn phím thật (hoặc click phím 3D trên bàn) để test. Phím test rồi có chấm xanh; test đủ hết phím mới sang bước đóng gói được.": {
+    "file": "v-5b438ca2f1.mp3",
+    "dur": 6.88
+  },
+  "Máy đo âm thanh: số % là độ khớp với tiếng khách muốn (vd thock trầm, clack giòn).": {
+    "file": "v-f70870e751.mp3",
+    "dur": 4.59
+  },
+  "Thanh cam = độ ồn (êm → ồn), thanh xanh = cao độ (trầm → giòn), vạch trắng là âm khách muốn. Âm do switch, plate, case, foam, lube quyết định: càng sát vạch trắng càng được chấm cao.": {
+    "file": "v-3a58372973.mp3",
+    "dur": 8.19
+  },
+  "Gõ từng phím bằng bàn phím thật (hoặc click phím 3D), phím test rồi có chấm xanh. Phím không có trên bàn phím của bạn (Fn, macro...) thì click.": {
+    "file": "v-c47f4c6c68.mp3",
+    "dur": 6.84
+  },
+  "Test hết phím rồi mới sang bước: bỏ sót là khách có thể báo lỗi nút; phím bấm không ăn thì quay lại bước lắp / hàn sửa.": {
+    "file": "v-a18f7d6702.mp3",
+    "dur": 5.58
+  },
+  "Đây là yêu cầu của khách: layout, switch, keycap, kiểu lắp... Làm sai là bị chấm thấp đó.": {
+    "file": "v-bc6dcd113b.mp3",
+    "dur": 4.23
+  },
+  "Các bước build theo thứ tự. Bước đã làm thì bấm vào để quay lại sửa (lỡ tay thì Ctrl + Z).": {
+    "file": "v-71f43cf5ec.mp3",
+    "dur": 4.64
+  },
+  "Khung này luôn ghi việc cần làm ngay bây giờ. Cứ làm theo mũi tên vàng trong cảnh. Xong mỗi bước, nút \"Bước tiếp theo\" ở giữa dưới màn hình sẽ sáng nhấp nháy: bấm để sang bước kế.": {
+    "file": "v-9debd50628.mp3",
+    "dur": 8.02
+  },
+  "Khách đã nhận phím, giờ thu tiền công nào. Mở Mezzenger, vào tin nhắn của khách.": {
+    "file": "v-c6d3df1d80.mp3",
+    "dur": 3.46
+  },
   "Bấm \"Thu tiền\" để nhận tiền công + tiền linh kiện khách trả (budget). Mua rẻ hơn budget thì phần dư là lãi của shop!": {
-    "file": "v-ccd06e7c62.mp3",
-    "dur": 8.27
+    "file": "v-c6bd596cc9.mp3",
+    "dur": 5.41
   },
   "Chào chủ xưởng mới! Đi tới bàn máy tính (theo mũi tên) và bấm vào màn hình để mở máy, nhận đơn đầu tiên.": {
-    "file": "v-7a1cdbdaaf.mp3",
-    "dur": 6.75
+    "file": "v-db93e81b51.mp3",
+    "dur": 4.78
   },
   "Đã gửi đơn đầu tiên 🎉 Giờ thu tiền công: bấm vào màn hình máy tính, mở Mezzenger rồi bấm \"Thu tiền\" trong tin nhắn của khách.": {
-    "file": "v-c74c83f6cc.mp3",
-    "dur": 7.11
+    "file": "v-7927d7eefc.mp3",
+    "dur": 5.73
   },
   "Thu tiền xong rồi! Hết việc hôm nay thì bấm vào lịch treo tường để kết thúc ngày, sang ngày mới có đơn mới.": {
-    "file": "v-63e9bb8a94.mp3",
-    "dur": 6.39
+    "file": "v-0b13306323.mp3",
+    "dur": 4.6
   },
   "Đang cầm thùng đã đóng gói. Mang tới kệ giao hàng sát tường phải trong phòng, bấm vào ô trống trên kệ để đặt = gửi cho khách.": {
-    "file": "v-10d1833983.mp3",
-    "dur": 7.76
+    "file": "v-5d40c31e5c.mp3",
+    "dur": 5.7
   },
   "Phím đã đóng gói! Tới bàn build, nhấn chuột trái vào bàn để cầm thùng lên.": {
-    "file": "v-230f6ca75a.mp3",
-    "dur": 4.73
+    "file": "v-0b6e9b8062.mp3",
+    "dur": 3.28
   },
   "Đang cầm thùng đơn. Đi về bàn build trong phòng, bấm vào bàn để đặt thùng xuống rồi ngồi vào lắp.": {
-    "file": "v-c5469916f8.mp3",
-    "dur": 5.61
+    "file": "v-4d6cdee25f.mp3",
+    "dur": 4.36
   },
   "Thùng đơn đã nằm trên bàn build. Bấm vào bàn để ngồi xuống, rồi bấm chuột trái vào thùng để bắt đầu lắp.": {
-    "file": "v-7a40d0f48b.mp3",
-    "dur": 6.71
+    "file": "v-44b0f6005d.mp3",
+    "dur": 4.74
   },
   "Linh kiện tới rồi! Đi ra cửa phòng bên trái, rẽ vào hành lang tới kệ sắt cuối hành lang, bấm kiện Shopii (logo cam) để nhận.": {
-    "file": "v-3e20a0b463.mp3",
-    "dur": 8.49
+    "file": "v-105b3beb22.mp3",
+    "dur": 6.02
   },
   "Còn thiếu linh kiện cho đơn. Bấm màn hình máy tính, mở Shopii mua nốt (app Danh sách đơn ghi món còn thiếu).": {
-    "file": "v-dc8099043c.mp3",
-    "dur": 6.54
+    "file": "v-3ba361f6a9.mp3",
+    "dur": 5.19
   },
   "Đơn đầu tiên là của anh QuýB, để mình chỉ bạn từng bước nhé!": {
-    "file": "v-bcda713502.mp3",
-    "dur": 4.65
+    "file": "v-9c0dbaa352.mp3",
+    "dur": 3.28
   },
   "Đơn đầu tiên là của anh QuýB, mở Mezzenger xem nhé!": {
-    "file": "v-1cbd583761.mp3",
-    "dur": 4.69
+    "file": "v-15cffc55fe.mp3",
+    "dur": 3.16
   }
 }

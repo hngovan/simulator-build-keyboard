@@ -16,7 +16,7 @@ import { ROOM_LINES } from '../src/features/guide/roomGuideSteps'
 import { TOUR_LINES } from '../src/features/guide/Tour'
 
 const VOICE = process.env.VOICE || 'Thái Sơn'
-const KEEB_VOICE = process.env.KEEB_VOICE || 'Ngọc Trân'
+const KEEB_VOICE = process.env.KEEB_VOICE || 'Trúc Ly'
 const PY = process.env.VIENEU_PY || 'D:/tools-vieneu/.venv/Scripts/python.exe'
 const OUT = 'public/audio/voice'
 const MANIFEST = 'src/data/generated/voice.json'

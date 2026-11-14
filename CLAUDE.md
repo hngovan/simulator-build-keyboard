@@ -291,7 +291,7 @@ vào `window.__r3f` để debug trong console.
   xin bớt, lowball, tự nhập giá `'offer'` popup, đi ăn xin `'beg'` → 10% được free, 70% người bán chặn, 20% ban chợ 3 ngày `marketBanUntil`...) để dò lỗi / trả giá; hàng lỗi ghi `flaw` vào linh kiện → trừ điểm khi giao, seller bùng thì mất tiền.
 - Giọng đọc sinh sẵn: `bun run gen:voice` (`scripts/gen-voice.ts` + `.py`, VieNeu-TTS chạy tại máy; biến môi trường trong `.env.example`: `VIENEU_PY` = python đã `pip install vieneu`,
   `VOICE` = lời tự ngẫm của người chơi (`TIPS` / `PC_LINE` / `QMK_STORY`, mặc định "Thái Sơn"), `KEEB_VOICE` = lời Keeb-chan (`GREET` / `GREET_END` introStore, `TOUR_LINES` Tour.tsx,
-  `BENCH_LINES` benchLines.ts, `ROOM_LINES` roomGuideSteps.ts, mặc định "Ngọc Trân"); cần ffmpeg) → `public/audio/voice/*.mp3` + `src/data/generated/voice.json` (câu → file + độ dài, tra theo
+  `BENCH_LINES` benchLines.ts, `ROOM_LINES` roomGuideSteps.ts, mặc định "Trúc Ly"); cần ffmpeg) → `public/audio/voice/*.mp3` + `src/data/generated/voice.json` (câu → file + độ dài, tra theo
   đúng chuỗi câu: `data/voice.ts` `VOICES` / `speak` / `hush`). Phụ đề: `say()` phát `playVoice` (`src/sound.ts`, kênh hiệu ứng), giữ tới hết giọng (`showMs`). Keeb-chan: `hooks/useSpeak`
   trong `Spotlight` (`text` là chuỗi thì tự đọc, nhiều đoạn thì prop `voice`), `Greeting`, `RoomGuide` (`once`). Câu ghép tên / số lúc chơi không có giọng.
   **Đổi / thêm câu thoại thì chạy lại** (câu mới của Keeb-chan phải nằm trong các hằng trên). Kênh nhạc hạ `MUSIC_TRIM` 0,7 so với mức người chơi đặt.

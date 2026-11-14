@@ -20,6 +20,7 @@
   ("Tên hay đó! ..."). Script: giọng theo từng câu (`VOICE` / `KEEB_VOICE`), bảng `SPEAK` thêm k → nghìn, → / = / + / emoji. 82 file ~4,7MB.
 - Người dùng nhắc: biến môi trường phải có trong `.env.example` (`VIENEU_PY` / `VOICE` / `KEEB_VOICE` / `FORCE`), lệnh `gen:voice` phải có trong README (đã thêm mục "Sinh giọng đọc").
 - Người dùng: nhạc nền nhỏ đi một chút → `MUSIC_TRIM` 0,7 nhân vào kênh nhạc trong `applyAudioSettings` (không đổi số người chơi đã lưu).
+- (tiếp) Người dùng đổi giọng Keeb-chan sang **"Trúc Ly"** (Nữ · Bắc · tự nhiên) thay "Ngọc Trân"; sinh lại 64 câu.
 - `captionId` (useIntro): `say` lại đúng câu đang hiện thì chữ chạy lại từ đầu (trước `key={text}` không dựng lại).
 - Đã kiểm trong trình duyệt: phụ đề chạy đúng nhịp, file mp3 tải 200; **chưa nghe thử bằng tai** (cách đọc "QMK" / "build" / "shop" cần người dùng nghe lại).
 

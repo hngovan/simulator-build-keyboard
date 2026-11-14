@@ -170,7 +170,7 @@ Giọng đọc lời tự ngẫm của người chơi (phụ đề dấu ?, tran
 
 - Cần Python có gói `vieneu` (để ngoài repo, vd `uv venv --python 3.11` rồi `uv pip install vieneu`) và `ffmpeg` trong PATH.
 - Biến môi trường (đặt trong `.env.local`, mẫu ở `.env.example`): `VIENEU_PY` = đường dẫn `python.exe` của môi trường đó,
-  `VOICE` = giọng người chơi (mặc định "Thái Sơn"), `KEEB_VOICE` = giọng Keeb-chan (mặc định "Ngọc Trân"), `FORCE=1` = sinh lại hết.
+  `VOICE` = giọng người chơi (mặc định "Thái Sơn"), `KEEB_VOICE` = giọng Keeb-chan (mặc định "Trúc Ly"), `FORCE=1` = sinh lại hết.
 - Chữ máy đọc sai (QMK, QuýB, 300k...) sửa ở bảng `SPEAK` trong `scripts/gen-voice.ts`.
 
 ## Deploy lên Vercel
